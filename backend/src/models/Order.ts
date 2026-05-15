@@ -132,7 +132,7 @@ Order.init(
       }
     },
     orderNumber: {
-      type: DataTypes.STRING(20),
+      type: DataTypes.STRING(30),
       allowNull: false,
       unique: true,
       defaultValue: () => 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000),

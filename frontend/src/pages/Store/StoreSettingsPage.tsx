@@ -98,8 +98,8 @@ const StoreSettingsPage: React.FC = () => {
 
         {activeTab === 'domain' && (
           <DomainSettingsTab
-            initialData={settings?.domain || { subdomain: store?.subdomain }}
-            onSave={saveDomainSettings}
+            initialData={settings?.domain || { subdomain: store?.subdomain, customDomain: '', customDomainVerified: false, customDomainVerificationCode: '', sslEnabled: false } as any}
+            onSave={saveDomainSettings as any}
             isPro={isPro}
             currentPlan={currentPlan} // ✅ تمرير الخطة الحالية
           />
