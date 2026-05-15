@@ -52,6 +52,7 @@ export const register = async (
       const restaurant = await Restaurant.create({
         name: restaurantName,
         slug: slug,
+        subdomain: slug,
         email: email,
         phone: phone,
         planId: '11111111-1111-1111-1111-111111111111'
@@ -195,6 +196,7 @@ export const registerStore = async (
     const store = await Store.create({
       name: storeName,
       slug: uniqueSlug,
+      subdomain: uniqueSlug,
       email: email,
       phone: phone,
       userId: user.id,
