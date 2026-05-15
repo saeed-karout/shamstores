@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  IoStorefront, IoCart, IoSearch, IoFilter, IoHeart, IoLogOut, 
-  IoCall, IoLogoWhatsapp, IoArrowUp, IoClose, IoChevronDown, 
+import {
+  IoStorefront, IoCart, IoSearch, IoFilter, IoHeart, IoLogOut,
+  IoCall, IoLogoWhatsapp, IoArrowUp, IoClose, IoChevronDown,
   IoChevronUp, IoPerson, IoLocation, IoNavigate,
   IoHeartOutline, IoHeartSharp,
   IoTime
@@ -26,6 +26,14 @@ import { openWhatsApp } from '@/utils/helpers';
 import { DeliveryLocation } from '@/models/order';
 import { calculateDistance } from '@/utils/distance';
 import PublicMarketingSections, { PublicMarketingData } from '@/components/public/PublicMarketingSections';
+
+// ==================== Color Tokens ====================
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+};
 
 interface StorePublicMenuProps {
   businessId?: string;
@@ -55,22 +63,22 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
-  const { 
-    cart, 
-    addToCart, 
-    removeFromCart, 
-    updateQuantity, 
-    clearCart, 
-    getCartSubtotal, 
-    getCartCount 
+  const {
+    cart,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    getCartSubtotal,
+    getCartCount
   } = useCart();
-  const { 
-    isFavorite, 
-    toggleFavorite, 
+  const {
+    isFavorite,
+    toggleFavorite,
     getFavoritesCount,
-    loading: favoritesLoading 
+    loading: favoritesLoading
   } = useFavorites();
-  
+
   // State
   const [store, setStore] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -85,50 +93,50 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [showCartModal, setShowCartModal] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
-  
+
   // Order State
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', notes: '' });
   const [customerLocation, setCustomerLocation] = useState<DeliveryLocation | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
-  
+
   // Coupon State
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
-  
+
   // الحصول على slug بشكل آمن
   const currentSlug = propBusinessSlug || getCurrentSubdomain() || '';
-  
+
   // Effects
   useEffect(() => {
     const handleScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
+
   useEffect(() => {
     if (isAuthenticated && user) {
-      setCustomerInfo(prev => ({ 
-        ...prev, 
-        name: user.name || '', 
-        phone: user.phone || '' 
+      setCustomerInfo(prev => ({
+        ...prev,
+        name: user.name || '',
+        phone: user.phone || ''
       }));
     }
   }, [isAuthenticated, user]);
-  
+
   useEffect(() => {
     fetchStoreData();
   }, []);
-  
+
   useEffect(() => {
     if (customerLocation && store) {
       calculateDelivery();
     }
   }, [customerLocation, cart, discountAmount, store]);
-  
+
   const fetchStoreData = async () => {
     try {
       const response = await api.get('/public');
@@ -164,10 +172,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       setLoading(false);
     }
   };
-  
+
   const calculateDelivery = () => {
     if (!customerLocation || !store?.latitude || !store?.longitude) return;
-    
+
     try {
       const distance = calculateDistance(
         parseFloat(store.latitude),
@@ -175,32 +183,32 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         customerLocation.lat,
         customerLocation.lng
       );
-      
+
       setDeliveryDistance(Math.round(distance * 100) / 100);
-      
-      const settings = store.deliverySettings || { 
-        baseFee: 5, 
-        feePerKm: 2, 
-        minDistance: 1, 
+
+      const settings = store.deliverySettings || {
+        baseFee: 5,
+        feePerKm: 2,
+        minDistance: 1,
         freeDeliveryAbove: 100
       };
-      
+
       const currentSubtotal = getCartSubtotal() - discountAmount;
       let fee = settings.baseFee;
-      
+
       if (currentSubtotal >= settings.freeDeliveryAbove) {
         fee = 0;
       } else if (distance > settings.minDistance) {
         fee += (distance - settings.minDistance) * settings.feePerKm;
       }
-      
+
       setDeliveryFee(Math.round(fee));
     } catch (error) {
       console.error('Error calculating delivery fee:', error);
       setDeliveryFee(5);
     }
   };
-  
+
   const handleAddToCart = (product: any) => {
     addToCart({
       id: product.id,
@@ -213,7 +221,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     });
     toast.success('تمت الإضافة إلى السلة');
   };
-  
+
   const handleToggleFavorite = (product: any) => {
     toggleFavorite({
       id: product.id,
@@ -223,7 +231,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       image: product.imageUrl
     });
   };
-  
+
   const validateCoupon = async (code: string) => {
     if (!code || code.trim() === '') {
       toast.error('يرجى إدخال كود الكوبون');
@@ -233,14 +241,14 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     setValidatingCoupon(true);
     try {
       const subtotal = getCartSubtotal();
-      
+
       if (subtotal <= 0) {
         toast.error('لا يمكن تطبيق الكوبون على سلة فارغة');
         return;
       }
 
       const response = await api.get(`/coupons/validate/${code}?orderTotal=${subtotal}`);
-      
+
       setAppliedCoupon(response);
       setDiscountAmount(response.discountAmount || 0);
       setCouponCode(code);
@@ -255,14 +263,14 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       setValidatingCoupon(false);
     }
   };
-  
+
   const handleRemoveCoupon = () => {
     setCouponCode('');
     setAppliedCoupon(null);
     setDiscountAmount(0);
     toast.success('تم إزالة الكوبون');
   };
-  
+
   const handleLocationSelect = (location: DeliveryLocation | null) => {
     setCustomerLocation(location);
     setShowLocationPicker(false);
@@ -270,42 +278,42 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       toast.success('تم تحديد موقع التوصيل');
     }
   };
-  
+
   const validateOrder = () => {
     if (cart.length === 0) {
       toast.error('السلة فارغة');
       return false;
     }
-    
+
     if (!isAuthenticated) {
       toast.error('يرجى تسجيل الدخول لإتمام الطلب');
       localStorage.setItem('redirectAfterLogin', window.location.pathname);
       navigate('/user/login');
       return false;
     }
-    
+
     if (!customerInfo.name || !customerInfo.phone) {
       toast.error('يرجى إدخال الاسم ورقم الهاتف');
       return false;
     }
-    
+
     if (!customerLocation) {
       toast.error('يرجى تحديد موقع التوصيل');
       setShowLocationPicker(true);
       return false;
     }
-    
+
     return true;
   };
-  
+
   const submitOrder = async () => {
     if (!validateOrder()) return;
-    
+
     setSubmitting(true);
     try {
       const subtotal = getCartSubtotal();
       const total = (subtotal - discountAmount) + (deliveryFee || 0);
-      
+
       const orderData = {
         storeId: store?.id,
         customerName: customerInfo.name,
@@ -330,10 +338,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         deliveryFee: deliveryFee || 0,
         deliveryDistance: deliveryDistance,
       };
-      
+
       const response = await api.post('/orders', orderData);
       toast.success('تم إرسال الطلب بنجاح');
-      
+
       if (store?.whatsapp) {
         let message = `🆕 طلب جديد #${response.orderNumber || 'N/A'}\n`;
         message += `👤 ${customerInfo.name}\n📞 ${customerInfo.phone}\n`;
@@ -346,7 +354,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         });
         openWhatsApp(store.whatsapp, message);
       }
-      
+
       clearCart();
       setCouponCode('');
       setAppliedCoupon(null);
@@ -355,7 +363,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       setCustomerInfo({ name: '', phone: '', notes: '' });
       setCustomerLocation(null);
       setDeliveryFee(null);
-      
+
     } catch (error: any) {
       console.error('Error submitting order:', error);
       toast.error(error.response?.data?.error || 'فشل إرسال الطلب');
@@ -363,40 +371,43 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       setSubmitting(false);
     }
   };
-  
+
   const getFilteredProducts = () => {
     let filtered = [...products];
-    
+
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(p => p.categoryId === selectedCategory);
     }
-    
+
     if (searchQuery) {
-      filtered = filtered.filter(p => 
+      filtered = filtered.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.nameEn?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.sku?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-    
+
     if (sortBy === 'price-low') {
       filtered.sort((a, b) => (a.discountedPrice || a.price) - (b.discountedPrice || b.price));
     } else if (sortBy === 'price-high') {
       filtered.sort((a, b) => (b.discountedPrice || b.price) - (a.discountedPrice || a.price));
     }
-    
+
     return filtered;
   };
-  
+
   const filteredProducts = getFilteredProducts();
-  
+
   if (loading || favoritesLoading) return <Loader fullScreen />;
-  if (!store) return <div>لا توجد بيانات</div>;
-  
+  if (!store) return <div style={{ color: C.text, background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>لا توجد بيانات</div>;
+
   // ✅ تأكد من وجود slug قبل تمريره إلى ProductCard
   const storeSlug = store.slug || currentSlug;
-  
+
+  // Use business primary color for interactive elements, fallback to lime
+  const primaryColor = store.primaryColor || C.accent;
+
   return (
     <>
       <Helmet>
@@ -404,45 +415,53 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         <meta name="description" content={store.description} />
         {store.logo && <meta property="og:image" content={getImageUrl(store.logo)} />}
       </Helmet>
-      
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white" dir="rtl">
+
+      <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
         {/* Cover Image */}
         {store.coverImage && (
-          <div 
-            className="h-56 md:h-72 bg-cover bg-center relative"
-            style={{ backgroundImage: `url(${getImageUrl(store.coverImage)})` }}
+          <div
+            style={{
+              height: 224,
+              backgroundImage: `url(${getImageUrl(store.coverImage)})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              position: 'relative'
+            }}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,46,36,0.85) 0%, transparent 60%)' }} />
           </div>
         )}
-        
+
         {/* Store Header */}
-        <div className={`max-w-7xl mx-auto px-4 ${store.coverImage ? '-mt-20' : 'mt-6'} relative z-10`}>
-          <div className="bg-white rounded-2xl shadow-xl p-5 md:p-6">
-            <div className="flex flex-col md:flex-row items-center gap-5">
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', marginTop: store.coverImage ? -80 : 24, position: 'relative', zIndex: 10 }}>
+          <div style={{ background: C.card, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', padding: '20px 24px', border: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
               {store.logo && (
-                <img 
-                  src={getImageUrl(store.logo)} 
-                  alt={store.name} 
-                  className="w-20 h-20 md:w-24 md:h-24 rounded-2xl object-cover border-4 border-white shadow-lg"
+                <img
+                  src={getImageUrl(store.logo)}
+                  alt={store.name}
+                  style={{ width: 80, height: 80, borderRadius: 16, objectFit: 'cover', border: `3px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}
                 />
               )}
-              <div className="flex-1 text-center md:text-right">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{store.name}</h1>
+              <div style={{ flex: 1 }}>
+                <h1 style={{ fontSize: 26, fontWeight: 700, color: C.text, margin: 0 }}>{store.name}</h1>
                 {store.description && (
-                  <p className="text-gray-500 text-sm md:text-base mt-1">{store.description}</p>
+                  <p style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>{store.description}</p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div style={{ display: 'flex', gap: 8 }}>
                 {store.phone && (
-                  <a href={`tel:${store.phone}`} className="p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition">
+                  <a
+                    href={`tel:${store.phone}`}
+                    style={{ padding: 12, background: 'rgba(200,226,53,0.08)', border: `1px solid ${C.border}`, borderRadius: '50%', color: C.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
                     <IoCall size={20} />
                   </a>
                 )}
                 {store.whatsapp && (
-                  <button 
+                  <button
                     onClick={() => openWhatsApp(store.whatsapp, `مرحباً، أود الاستفسار عن ${store.name}`)}
-                    className="p-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition shadow-md"
+                    style={{ padding: 12, background: '#16A34A', color: '#fff', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(22,163,74,0.4)' }}
                   >
                     <IoLogoWhatsapp size={20} />
                   </button>
@@ -453,78 +472,106 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         </div>
 
         <PublicMarketingSections marketing={marketing} className="max-w-7xl mx-auto px-4 mt-4" />
-        
+
         {/* Search and Filters Bar */}
-        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md shadow-md mt-6">
-          <div className="max-w-7xl mx-auto px-4 py-3">
-            <div className="flex flex-wrap gap-3 items-center justify-between">
-              <div className="flex gap-2">
+        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: C.card, borderBottom: `1px solid ${C.border}`, marginTop: 24 }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => setShowSearch(!showSearch)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 rounded-xl hover:bg-gray-200 transition"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 16px',
+                    background: 'rgba(200,226,53,0.08)',
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 12,
+                    color: C.text,
+                    cursor: 'pointer',
+                    fontFamily: 'Cairo, sans-serif',
+                    fontSize: 14,
+                    fontWeight: 500
+                  }}
                 >
                   <IoSearch size={18} />
-                  <span className="hidden sm:inline font-medium">بحث</span>
+                  <span>بحث</span>
                 </button>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 rounded-xl hover:bg-gray-200 transition"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '10px 16px',
+                    background: 'rgba(200,226,53,0.08)',
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 12,
+                    color: C.text,
+                    cursor: 'pointer',
+                    fontFamily: 'Cairo, sans-serif',
+                    fontSize: 14,
+                    fontWeight: 500
+                  }}
                 >
                   <IoFilter size={18} />
-                  <span className="hidden sm:inline font-medium">ترتيب</span>
+                  <span>ترتيب</span>
                 </button>
               </div>
 
-              <button 
+              <button
                 onClick={() => navigate('/my-orders')}
-                className="relative px-4 py-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition shadow-md"
+                style={{ padding: '10px 16px', background: C.purple, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(167,139,250,0.3)' }}
               >
-                <IoTime size={18} className="inline ml-1" />
+                <IoTime size={18} style={{ display: 'inline', marginLeft: 4 }} />
                 طلباتي
               </button>
-              
-              <div className="flex gap-2">
-                <button 
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
                   onClick={() => navigate('/favorites')}
-                  className="relative px-4 py-2.5 bg-pink-500 text-white rounded-xl hover:bg-pink-600 transition shadow-md"
+                  style={{ position: 'relative', padding: '10px 16px', background: '#BE185D', color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(190,24,93,0.3)' }}
                 >
-                  <IoHeart size={18} className="inline ml-1" />
+                  <IoHeart size={18} style={{ display: 'inline', marginLeft: 4 }} />
                   المفضلة
                   {getFavoritesCount() > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                    <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {getFavoritesCount()}
                     </span>
                   )}
                 </button>
-                
+
                 {isAuthenticated ? (
                   <>
-                    <button 
-                      onClick={() => setShowCartModal(true)} 
-                      className="relative px-4 py-2.5 bg-green-500 text-white rounded-xl hover:bg-green-600 transition shadow-md"
+                    <button
+                      onClick={() => setShowCartModal(true)}
+                      style={{ position: 'relative', padding: '10px 16px', background: primaryColor, color: C.bg, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 600 }}
                     >
-                      <IoCart size={18} className="inline ml-1" />
+                      <IoCart size={18} style={{ display: 'inline', marginLeft: 4 }} />
                       سلة
                       {getCartCount() > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                        <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {getCartCount()}
                         </span>
                       )}
                     </button>
-                    <button onClick={logout} className="px-4 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition shadow-md">
-                      <IoLogOut size={18} className="inline ml-1" />
+                    <button
+                      onClick={logout}
+                      style={{ padding: '10px 16px', background: C.red, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                    >
+                      <IoLogOut size={18} style={{ display: 'inline', marginLeft: 4 }} />
                       خروج
                     </button>
                   </>
                 ) : (
-                  <Link to="/user/login" className="px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition shadow-md">
-                    <IoPerson size={18} className="inline ml-1" />
+                  <Link
+                    to="/user/login"
+                    style={{ padding: '10px 16px', background: C.blue, color: '#fff', borderRadius: 12, textDecoration: 'none', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                  >
+                    <IoPerson size={18} style={{ display: 'inline', marginLeft: 4 }} />
                     دخول
                   </Link>
                 )}
               </div>
             </div>
-            
+
             {/* Search Input */}
             <AnimatePresence>
               {showSearch && (
@@ -532,20 +579,32 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden mt-3"
+                  style={{ overflow: 'hidden', marginTop: 12 }}
                 >
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="ابحث عن منتج..."
-                    className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:ring-0 outline-none"
+                    style={{
+                      width: '100%',
+                      padding: 12,
+                      background: C.surf,
+                      border: `2px solid ${C.border}`,
+                      borderRadius: 12,
+                      color: C.text,
+                      outline: 'none',
+                      fontFamily: 'Cairo, sans-serif',
+                      fontSize: 14,
+                      boxSizing: 'border-box',
+                      transition: 'border-color 0.2s'
+                    }}
                     autoFocus
                   />
                 </motion.div>
               )}
             </AnimatePresence>
-            
+
             {/* Filters */}
             <AnimatePresence>
               {showFilters && (
@@ -553,23 +612,43 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden mt-3"
+                  style={{ overflow: 'hidden', marginTop: 12 }}
                 >
-                  <div className="flex flex-wrap gap-2">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     <button
                       onClick={() => setSortBy('price-low')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-                        sortBy === 'price-low' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 16px',
+                        borderRadius: 12,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'Cairo, sans-serif',
+                        fontSize: 13,
+                        transition: 'all 0.2s',
+                        background: sortBy === 'price-low' ? primaryColor : 'rgba(200,226,53,0.08)',
+                        color: sortBy === 'price-low' ? C.bg : C.text,
+                        boxShadow: sortBy === 'price-low' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                      }}
                     >
                       <IoChevronDown size={16} />
                       السعر: من الأقل
                     </button>
                     <button
                       onClick={() => setSortBy('price-high')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-xl transition ${
-                        sortBy === 'price-high' ? 'bg-green-500 text-white shadow-md' : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '8px 16px',
+                        borderRadius: 12,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'Cairo, sans-serif',
+                        fontSize: 13,
+                        transition: 'all 0.2s',
+                        background: sortBy === 'price-high' ? primaryColor : 'rgba(200,226,53,0.08)',
+                        color: sortBy === 'price-high' ? C.bg : C.text,
+                        boxShadow: sortBy === 'price-high' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                      }}
                     >
                       <IoChevronUp size={16} />
                       السعر: من الأعلى
@@ -580,17 +659,26 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             </AnimatePresence>
           </div>
         </div>
-        
+
         {/* Categories */}
-        <div className="max-w-7xl mx-auto px-4 py-5">
-          <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide">
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 16px' }}>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12 }}>
             <button
               onClick={() => setSelectedCategory('all')}
-              className={`px-5 py-2.5 rounded-xl whitespace-nowrap font-medium transition-all ${
-                selectedCategory === 'all' 
-                  ? 'bg-green-500 text-white shadow-md' 
-                  : 'bg-white border border-gray-200 hover:border-green-300 hover:shadow-sm'
-              }`}
+              style={{
+                padding: '10px 20px',
+                borderRadius: 12,
+                whiteSpace: 'nowrap',
+                fontWeight: 500,
+                border: selectedCategory === 'all' ? 'none' : `1px solid ${C.border}`,
+                cursor: 'pointer',
+                fontFamily: 'Cairo, sans-serif',
+                fontSize: 14,
+                transition: 'all 0.2s',
+                background: selectedCategory === 'all' ? primaryColor : C.card,
+                color: selectedCategory === 'all' ? C.bg : C.text,
+                boxShadow: selectedCategory === 'all' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+              }}
             >
               جميع المنتجات
             </button>
@@ -598,36 +686,48 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-5 py-2.5 rounded-xl whitespace-nowrap font-medium transition-all ${
-                  selectedCategory === cat.id 
-                    ? 'bg-green-500 text-white shadow-md' 
-                    : 'bg-white border border-gray-200 hover:border-green-300 hover:shadow-sm'
-                }`}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: 12,
+                  whiteSpace: 'nowrap',
+                  fontWeight: 500,
+                  border: selectedCategory === cat.id ? 'none' : `1px solid ${C.border}`,
+                  cursor: 'pointer',
+                  fontFamily: 'Cairo, sans-serif',
+                  fontSize: 14,
+                  transition: 'all 0.2s',
+                  background: selectedCategory === cat.id ? primaryColor : C.card,
+                  color: selectedCategory === cat.id ? C.bg : C.text,
+                  boxShadow: selectedCategory === cat.id ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                }}
               >
                 {cat.name}
               </button>
             ))}
           </div>
         </div>
-        
+
         {/* Products Grid */}
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 32px' }}>
           {filteredProducts.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl shadow-sm">
-              <IoStorefront className="text-6xl text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">لا توجد منتجات</p>
+            <div style={{ textAlign: 'center', padding: '80px 24px', background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
+              <IoStorefront style={{ fontSize: 64, color: C.muted, opacity: 0.3, display: 'block', margin: '0 auto 16px' }} />
+              <p style={{ color: C.muted, fontSize: 17 }}>لا توجد منتجات</p>
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="mt-4 text-green-500 underline font-medium">
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{ marginTop: 16, color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 500 }}
+                >
                   مسح البحث
                 </button>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 20 }}>
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
-                  storeSlug={storeSlug}  // ✅ استخدم storeSlug بدلاً من businessSlug
+                  storeSlug={storeSlug}
                   product={{
                     id: product.id,
                     name: product.name,
@@ -645,7 +745,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             </div>
           )}
         </div>
-        
+
         {/* Floating Buttons */}
         <AnimatePresence>
           {showScrollTop && (
@@ -654,13 +754,23 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="fixed bottom-24 right-4 z-30 w-12 h-12 bg-green-500 text-white rounded-full shadow-lg hover:bg-green-600 transition flex items-center justify-center"
+              style={{
+                position: 'fixed', bottom: 96, right: 16, zIndex: 30,
+                width: 48, height: 48,
+                background: primaryColor,
+                color: C.bg,
+                borderRadius: '50%',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
+              }}
             >
               <IoArrowUp size={22} />
             </motion.button>
           )}
         </AnimatePresence>
-        
+
         {/* Floating Cart Button */}
         {cart.length > 0 && (
           <motion.button
@@ -668,17 +778,26 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
             onClick={() => setShowCartModal(true)}
-            className="fixed bottom-6 left-4 z-30 bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-full shadow-2xl hover:scale-105 transition-transform"
+            style={{
+              position: 'fixed', bottom: 24, left: 16, zIndex: 30,
+              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
+              color: C.bg,
+              padding: 16,
+              borderRadius: '50%',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+            }}
           >
-            <div className="relative">
+            <div style={{ position: 'relative' }}>
               <IoCart size={26} />
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+              <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                 {getCartCount()}
               </span>
             </div>
           </motion.button>
         )}
-        
+
         {/* Cart Modal */}
         <CartModal
           isOpen={showCartModal}
@@ -707,7 +826,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           onCustomerLocationChange={setCustomerLocation}
         />
       </div>
-      
+
       <style>{`
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

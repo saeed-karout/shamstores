@@ -11,6 +11,12 @@ import toast from 'react-hot-toast';
 import Loader from '../../components/common/Loader';
 import { motion } from 'framer-motion';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
+
 interface Product {
   id: string;
   name: string;
@@ -91,9 +97,9 @@ const StoreInventoryPage: React.FC = () => {
   };
 
   const getStockStatus = (stock: number, threshold: number) => {
-    if (stock === 0) return { label: 'نفد المخزون', color: 'text-red-600', bg: 'bg-red-100', icon: IoAlertCircle };
-    if (stock <= threshold) return { label: 'مخزون منخفض', color: 'text-yellow-600', bg: 'bg-yellow-100', icon: IoWarning };
-    return { label: 'متوفر', color: 'text-green-600', bg: 'bg-green-100', icon: IoCheckmarkCircle };
+    if (stock === 0) return { label: 'نفد المخزون', color: C.red, bg: 'rgba(255,107,107,0.12)', icon: IoAlertCircle };
+    if (stock <= threshold) return { label: 'مخزون منخفض', color: '#FBB91F', bg: 'rgba(251,191,36,0.12)', icon: IoWarning };
+    return { label: 'متوفر', color: C.accent, bg: 'rgba(200,226,53,0.12)', icon: IoCheckmarkCircle };
   };
 
   const threshold = stats?.lowStockThreshold || 10;
@@ -110,19 +116,19 @@ const StoreInventoryPage: React.FC = () => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-4 md:p-6" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <IoCube className="text-green-600" />
+          <h1 style={{ color: C.text, fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IoCube style={{ color: C.accent, display: 'inline' }} />
             إدارة المخزون
           </h1>
-          <p className="text-gray-500 text-sm mt-1">تتبع وإدارة مخزون منتجات متجرك</p>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>تتبع وإدارة مخزون منتجات متجرك</p>
         </div>
         <button
           onClick={fetchData}
-          className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: C.accent, color: C.bg, border: 'none', borderRadius: 12, cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700 }}
         >
           <IoRefresh />
           تحديث
@@ -131,61 +137,61 @@ const StoreInventoryPage: React.FC = () => {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-white rounded-2xl shadow p-4">
-            <p className="text-gray-500 text-xs mb-1">إجمالي المنتجات</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.totalProducts}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>إجمالي المنتجات</p>
+            <p style={{ color: C.blue, fontSize: 24, fontWeight: 700 }}>{stats.totalProducts}</p>
           </div>
-          <div className="bg-white rounded-2xl shadow p-4">
-            <p className="text-gray-500 text-xs mb-1">إجمالي الوحدات</p>
-            <p className="text-2xl font-bold text-green-600">{stats.totalStock.toLocaleString()}</p>
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>إجمالي الوحدات</p>
+            <p style={{ color: C.accent, fontSize: 24, fontWeight: 700 }}>{stats.totalStock.toLocaleString()}</p>
           </div>
-          <div className="bg-white rounded-2xl shadow p-4">
-            <p className="text-gray-500 text-xs mb-1">مخزون منخفض</p>
-            <p className="text-2xl font-bold text-yellow-600">{stats.lowStock}</p>
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>مخزون منخفض</p>
+            <p style={{ color: '#FBB91F', fontSize: 24, fontWeight: 700 }}>{stats.lowStock}</p>
           </div>
-          <div className="bg-white rounded-2xl shadow p-4">
-            <p className="text-gray-500 text-xs mb-1">نفد المخزون</p>
-            <p className="text-2xl font-bold text-red-600">{stats.outOfStock}</p>
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>نفد المخزون</p>
+            <p style={{ color: C.red, fontSize: 24, fontWeight: 700 }}>{stats.outOfStock}</p>
           </div>
-          <div className="bg-white rounded-2xl shadow p-4">
-            <p className="text-gray-500 text-xs mb-1">قيمة المخزون</p>
-            <p className="text-lg font-bold text-emerald-600">{stats.totalValue.toLocaleString()} ل.س</p>
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+            <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>قيمة المخزون</p>
+            <p style={{ color: C.accent, fontSize: 17, fontWeight: 700 }}>{stats.totalValue.toLocaleString()} ل.س</p>
           </div>
         </div>
       )}
 
       {/* Alerts */}
       {stats && stats.outOfStock > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
-          <IoAlertCircle className="text-red-500 text-xl flex-shrink-0" />
-          <span className="text-red-700 text-sm">
+        <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 16, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IoAlertCircle style={{ color: C.red, fontSize: 20, flexShrink: 0 }} />
+          <span style={{ color: C.red, fontSize: 13 }}>
             تحذير: {stats.outOfStock} منتج{stats.outOfStock > 1 ? 'ات' : ''} نفد مخزونها. يرجى إعادة التخزين.
           </span>
         </div>
       )}
       {stats && stats.lowStock > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
-          <IoWarning className="text-yellow-500 text-xl flex-shrink-0" />
-          <span className="text-yellow-700 text-sm">
+        <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 16, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IoWarning style={{ color: '#FBB91F', fontSize: 20, flexShrink: 0 }} />
+          <span style={{ color: '#FBB91F', fontSize: 13 }}>
             تنبيه: {stats.lowStock} منتج{stats.lowStock > 1 ? 'ات' : ''} بمخزون منخفض (أقل من {threshold} وحدات).
           </span>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl shadow p-4 mb-6 flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <IoSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <IoSearch style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
           <input
             type="text"
             placeholder="بحث في المنتجات..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pr-9 pl-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300"
+            style={{ width: '100%', paddingRight: 36, paddingLeft: 16, paddingTop: 8, paddingBottom: 8, background: C.surf, border: '1px solid ' + C.border, borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
-        <div className="flex gap-2">
+        <div style={{ display: 'flex', gap: 8 }}>
           {[
             { key: 'all', label: 'الكل' },
             { key: 'low', label: 'مخزون منخفض' },
@@ -194,11 +200,12 @@ const StoreInventoryPage: React.FC = () => {
             <button
               key={f.key}
               onClick={() => setFilterMode(f.key as typeof filterMode)}
-              className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                filterMode === f.key
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              style={{
+                padding: '8px 12px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'Cairo, sans-serif', transition: 'all 0.2s',
+                ...(filterMode === f.key
+                  ? { background: C.accent, color: C.bg }
+                  : { background: C.surf, color: C.muted })
+              }}
             >
               {f.label}
             </button>
@@ -207,25 +214,25 @@ const StoreInventoryPage: React.FC = () => {
       </div>
 
       {/* Products Table */}
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
+      <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, overflow: 'hidden' }}>
         {filtered.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <IoCube className="text-5xl mx-auto mb-3 opacity-30" />
+          <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted }}>
+            <IoCube style={{ fontSize: 48, display: 'block', margin: '0 auto 12px', opacity: 0.3 }} />
             <p>لا توجد منتجات</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: C.surf }}>
                 <tr>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">المنتج</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">السعر</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">المخزون</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">الحالة</th>
-                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">إجراء</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>المنتج</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>السعر</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>المخزون</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الحالة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>إجراء</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {filtered.map(product => {
                   const status = getStockStatus(product.stock, threshold);
                   const StatusIcon = status.icon;
@@ -235,39 +242,41 @@ const StoreInventoryPage: React.FC = () => {
                     <motion.tr
                       key={product.id}
                       layout
-                      className="hover:bg-gray-50 transition-colors"
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      style={{ borderBottom: '1px solid ' + C.border }}
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                           {product.image ? (
                             <img
                               src={product.image}
                               alt={product.name}
-                              className="w-10 h-10 rounded-lg object-cover"
+                              style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }}
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
-                              <IoCube className="text-gray-400" />
+                            <div style={{ width: 40, height: 40, borderRadius: 8, background: C.surf, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <IoCube style={{ color: C.muted }} />
                             </div>
                           )}
                           <div>
-                            <p className="font-medium text-gray-800">{product.name}</p>
+                            <p style={{ color: C.text, fontWeight: 500 }}>{product.name}</p>
                             {product.category && (
-                              <p className="text-xs text-gray-400">{product.category.name}</p>
+                              <p style={{ color: C.muted, fontSize: 12 }}>{product.category.name}</p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
+                      <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>
                         {product.price.toLocaleString()} ل.س
                       </td>
-                      <td className="px-4 py-3">
+                      <td style={{ padding: '12px 16px' }}>
                         {isEditing ? (
-                          <div className="flex items-center gap-2">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <select
                               value={editState.type}
                               onChange={e => setEditState(prev => prev ? { ...prev, type: e.target.value as EditState['type'] } : null)}
-                              className="border rounded-lg px-2 py-1 text-sm"
+                              style={{ background: C.surf, border: '1px solid ' + C.border, borderRadius: 8, padding: '4px 8px', fontSize: 13, color: C.text, fontFamily: 'Cairo, sans-serif' }}
                             >
                               <option value="set">تعيين</option>
                               <option value="add">إضافة</option>
@@ -278,32 +287,32 @@ const StoreInventoryPage: React.FC = () => {
                               min="0"
                               value={editState.quantity}
                               onChange={e => setEditState(prev => prev ? { ...prev, quantity: Number(e.target.value) } : null)}
-                              className="w-20 border rounded-lg px-2 py-1 text-sm"
+                              style={{ width: 80, background: C.surf, border: '1px solid ' + C.border, borderRadius: 8, padding: '4px 8px', fontSize: 13, color: C.text, fontFamily: 'Cairo, sans-serif' }}
                             />
                           </div>
                         ) : (
-                          <span className="font-bold text-gray-800">{product.stock}</span>
+                          <span style={{ color: C.text, fontWeight: 700 }}>{product.stock}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.bg} ${status.color}`}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: status.bg, color: status.color }}>
                           <StatusIcon />
                           {status.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td style={{ padding: '12px 16px' }}>
                         {isEditing ? (
-                          <div className="flex gap-2">
+                          <div style={{ display: 'flex', gap: 8 }}>
                             <button
                               disabled={saving}
                               onClick={updateInventory}
-                              className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-60"
+                              style={{ padding: 8, background: C.accent, color: C.bg, border: 'none', borderRadius: 8, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
                             >
                               <IoSave />
                             </button>
                             <button
                               onClick={() => setEditState(null)}
-                              className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                              style={{ padding: 8, background: C.surf, color: C.muted, border: '1px solid ' + C.border, borderRadius: 8, cursor: 'pointer' }}
                             >
                               <IoClose />
                             </button>
@@ -311,7 +320,7 @@ const StoreInventoryPage: React.FC = () => {
                         ) : (
                           <button
                             onClick={() => setEditState({ productId: product.id, quantity: product.stock, type: 'set' })}
-                            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                            style={{ padding: 8, background: 'rgba(96,165,250,0.1)', color: C.blue, border: 'none', borderRadius: 8, cursor: 'pointer' }}
                           >
                             <IoPencil />
                           </button>

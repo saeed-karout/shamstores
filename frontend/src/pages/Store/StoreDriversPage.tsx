@@ -11,6 +11,12 @@ import toast from 'react-hot-toast';
 import Loader from '../../components/common/Loader';
 import { motion } from 'framer-motion';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
+
 interface Driver {
   id: string;
   name: string;
@@ -108,31 +114,36 @@ const StoreDriversPage: React.FC = () => {
 
   const activeCount = drivers.filter(d => d.isActive).length;
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: C.surf, border: '1px solid ' + C.border, borderRadius: 12,
+    padding: '8px 12px', color: C.text, fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box',
+  };
+
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-4 md:p-6" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <IoCar className="text-green-600" />
+          <h1 style={{ color: C.text, fontSize: 22, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IoCar style={{ color: C.accent, display: 'inline' }} />
             سائقو التوصيل
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {drivers.length} سائق — {activeCount} نشط
           </p>
         </div>
-        <div className="flex gap-2">
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={fetchDrivers}
-            className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+            style={{ padding: 8, background: C.surf, border: '1px solid ' + C.border, borderRadius: 12, cursor: 'pointer', color: C.muted }}
           >
             <IoRefresh />
           </button>
           <button
             onClick={() => { setShowModal(true); setForm(emptyForm); }}
-            className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: C.accent, color: C.bg, border: 'none', borderRadius: 12, cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700 }}
           >
             <IoAdd />
             إضافة سائق
@@ -141,64 +152,65 @@ const StoreDriversPage: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl shadow p-4 text-center">
-          <p className="text-gray-500 text-sm">إجمالي السائقين</p>
-          <p className="text-2xl font-bold text-blue-600">{drivers.length}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, textAlign: 'center' }}>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 4 }}>إجمالي السائقين</p>
+          <p style={{ color: C.blue, fontSize: 24, fontWeight: 700 }}>{drivers.length}</p>
         </div>
-        <div className="bg-white rounded-2xl shadow p-4 text-center">
-          <p className="text-gray-500 text-sm">نشط</p>
-          <p className="text-2xl font-bold text-green-600">{activeCount}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, textAlign: 'center' }}>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 4 }}>نشط</p>
+          <p style={{ color: C.accent, fontSize: 24, fontWeight: 700 }}>{activeCount}</p>
         </div>
-        <div className="bg-white rounded-2xl shadow p-4 text-center">
-          <p className="text-gray-500 text-sm">غير نشط</p>
-          <p className="text-2xl font-bold text-red-600">{drivers.length - activeCount}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, textAlign: 'center' }}>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 4 }}>غير نشط</p>
+          <p style={{ color: C.red, fontSize: 24, fontWeight: 700 }}>{drivers.length - activeCount}</p>
         </div>
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-2xl shadow p-4 mb-6">
-        <div className="relative">
-          <IoSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, marginBottom: 24 }}>
+        <div style={{ position: 'relative' }}>
+          <IoSearch style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
           <input
             type="text"
             placeholder="بحث بالاسم أو البريد الإلكتروني أو الهاتف..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pr-9 pl-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300"
+            style={{ ...inputStyle, paddingRight: 36 }}
           />
         </div>
       </div>
 
       {/* Drivers Grid */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <IoCar className="text-6xl mx-auto mb-4 opacity-30" />
-          <p className="text-lg mb-2">لا يوجد سائقون</p>
-          <p className="text-sm">أضف سائقاً للبدء في إدارة التوصيل</p>
+        <div style={{ textAlign: 'center', padding: '64px 0', color: C.muted }}>
+          <IoCar style={{ fontSize: 56, display: 'block', margin: '0 auto 16px', opacity: 0.3 }} />
+          <p style={{ fontSize: 17, marginBottom: 8 }}>لا يوجد سائقون</p>
+          <p style={{ fontSize: 13 }}>أضف سائقاً للبدء في إدارة التوصيل</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
           {filtered.map(driver => (
             <motion.div
               key={driver.id}
               layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow hover:shadow-md transition-shadow p-5"
+              style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 20 }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <IoCar className="text-green-600 text-xl" />
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 48, height: 48, background: 'rgba(200,226,53,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <IoCar style={{ color: C.accent, fontSize: 20 }} />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-800">{driver.name}</p>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                      driver.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}>
+                    <p style={{ color: C.text, fontWeight: 700 }}>{driver.name}</p>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 20, fontSize: 12,
+                      ...(driver.isActive
+                        ? { background: 'rgba(200,226,53,0.12)', color: C.accent }
+                        : { background: 'rgba(255,107,107,0.12)', color: C.red })
+                    }}>
                       {driver.isActive ? <IoCheckmarkCircle /> : <IoCloseCircle />}
                       {driver.isActive ? 'نشط' : 'غير نشط'}
                     </span>
@@ -206,34 +218,35 @@ const StoreDriversPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-2 text-sm text-gray-600 mb-4">
-                <div className="flex items-center gap-2">
-                  <IoMail className="text-blue-500 flex-shrink-0" />
-                  <span className="truncate" dir="ltr">{driver.email}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13, color: C.muted, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IoMail style={{ color: C.blue, flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} dir="ltr">{driver.email}</span>
                 </div>
                 {driver.phone && (
-                  <div className="flex items-center gap-2">
-                    <IoCall className="text-green-500 flex-shrink-0" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IoCall style={{ color: C.accent, flexShrink: 0 }} />
                     <span dir="ltr">{driver.phone}</span>
                   </div>
                 )}
               </div>
 
-              <div className="flex gap-2 pt-3 border-t">
+              <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: '1px solid ' + C.border }}>
                 <button
                   onClick={() => toggleStatus(driver)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    driver.isActive
-                      ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                      : 'bg-green-50 text-green-600 hover:bg-green-100'
-                  }`}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'Cairo, sans-serif',
+                    ...(driver.isActive
+                      ? { background: 'rgba(255,107,107,0.1)', color: C.red }
+                      : { background: 'rgba(200,226,53,0.1)', color: C.accent })
+                  }}
                 >
                   {driver.isActive ? 'تعطيل' : 'تفعيل'}
                 </button>
                 <button
                   disabled={deletingId === driver.id}
                   onClick={() => deleteDriver(driver.id)}
-                  className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-60"
+                  style={{ padding: '8px 12px', background: 'rgba(255,107,107,0.1)', color: C.red, border: 'none', borderRadius: 12, cursor: 'pointer', opacity: deletingId === driver.id ? 0.6 : 1 }}
                 >
                   <IoTrash />
                 </button>
@@ -245,43 +258,43 @@ const StoreDriversPage: React.FC = () => {
 
       {/* Add Driver Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+            style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, width: '100%', maxWidth: 448 }}
           >
             <form onSubmit={handleSubmit}>
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-bold">إضافة سائق جديد</h2>
+              <div style={{ padding: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                  <h2 style={{ color: C.text, fontSize: 17, fontWeight: 700 }}>إضافة سائق جديد</h2>
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="p-2 hover:bg-gray-100 rounded-xl"
+                    style={{ background: C.surf, border: '1px solid ' + C.border, borderRadius: 10, padding: 8, cursor: 'pointer', color: C.muted }}
                   >
                     <IoClose />
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      الاسم <span className="text-red-500">*</span>
+                    <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                      الاسم <span style={{ color: C.red }}>*</span>
                     </label>
                     <input
                       type="text"
                       value={form.name}
                       onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="اسم السائق"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
+                      style={inputStyle}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      البريد الإلكتروني <span className="text-red-500">*</span>
+                    <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                      البريد الإلكتروني <span style={{ color: C.red }}>*</span>
                     </label>
                     <input
                       type="email"
@@ -289,41 +302,41 @@ const StoreDriversPage: React.FC = () => {
                       onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="example@email.com"
                       dir="ltr"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
+                      style={inputStyle}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">رقم الهاتف</label>
+                    <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>رقم الهاتف</label>
                     <input
                       type="tel"
                       value={form.phone}
                       onChange={e => setForm(prev => ({ ...prev, phone: e.target.value }))}
                       placeholder="09xxxxxxxx"
                       dir="ltr"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
+                      style={inputStyle}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      كلمة المرور <span className="text-red-500">*</span>
+                    <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                      كلمة المرور <span style={{ color: C.red }}>*</span>
                     </label>
-                    <div className="relative">
+                    <div style={{ position: 'relative' }}>
                       <input
                         type={showPassword ? 'text' : 'password'}
                         value={form.password}
                         onChange={e => setForm(prev => ({ ...prev, password: e.target.value }))}
                         placeholder="كلمة مرور قوية"
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-green-300"
+                        style={{ ...inputStyle, paddingLeft: 40 }}
                         required
                         minLength={6}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(p => !p)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: C.muted }}
                       >
                         {showPassword ? <IoEyeOff /> : <IoEye />}
                       </button>
@@ -331,14 +344,14 @@ const StoreDriversPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 disabled:opacity-60 transition-colors"
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', background: C.accent, color: C.bg, border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'Cairo, sans-serif', opacity: saving ? 0.7 : 1 }}
                   >
                     {saving ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div style={{ width: 20, height: 20, border: '2px solid ' + C.bg, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                     ) : (
                       <>
                         <IoSave />
@@ -349,7 +362,7 @@ const StoreDriversPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors"
+                    style={{ padding: '12px 16px', background: C.surf, color: C.muted, border: '1px solid ' + C.border, borderRadius: 12, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
                   >
                     إلغاء
                   </button>
