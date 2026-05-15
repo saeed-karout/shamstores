@@ -1,38 +1,28 @@
-// frontend/src/components/layout/Sidebar.tsx
 
-import React, { useEffect, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 import {
-  IoHome,
-  IoRestaurant,
-  IoFastFood,
-  IoReceipt,
-  IoQrCode,
-  IoPeople,
-  IoStatsChart,
-  IoSettings,
-  IoPricetag,
-  IoRocket,
-  IoLockClosed,
-  IoPerson,
-  IoCar,
-  IoNavigate,
-  IoStorefront,
-  IoCube,
-  IoLogOut,
-  IoTime,
-  IoCash,
-  IoKey,
-  IoBagOutline,
-  IoGrid,
-  IoPricetags,
-  IoCart,
-  IoStorefrontOutline,
-  IoMegaphone, // ✅ أضف هذا الاستيراد
+  IoHome, IoRestaurant, IoFastFood, IoReceipt, IoQrCode, IoPeople,
+  IoStatsChart, IoSettings, IoPricetag, IoRocket, IoLockClosed,
+  IoCar, IoNavigate, IoStorefront, IoLogOut, IoKey,
+  IoBagOutline, IoPricetags, IoMegaphone,
 } from 'react-icons/io5';
+
+// ─── Design Tokens ────────────────────────────────────────────────
+const C = {
+  primary:  '#0D4A3A',
+  accent:   '#C8E235',
+  accentDk: '#A8C220',
+  bg:       '#082E24',
+  card:     '#112E23',
+  text:     '#E8F5E9',
+  muted:    '#9DC4AC',
+  border:   'rgba(200,226,53,0.15)',
+  red:      '#FF6B6B',
+};
 
 interface SidebarProps {
   isOpen: boolean;
@@ -40,395 +30,248 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-  const location = useLocation();
-  const { 
-    user, 
-    isSuperAdmin, 
-    isOwner, 
-    isRestaurantOwner, 
-    isStoreOwner, 
-    isStaff, 
-    role, 
-    logout 
+  const navigate = useNavigate();
+  const {
+    user, isSuperAdmin, isOwner, isRestaurantOwner,
+    isStoreOwner, isStaff, role, logout,
   } = useAuth();
   const permissions = usePermissions();
   const { plan: currentPlan, loading: planLoading, isPro, hasFeature } = useCurrentPlan();
-  const [todayDeliveries, setTodayDeliveries] = useState(0);
-  const [completedDeliveries, setCompletedDeliveries] = useState(0);
-
-  // جلب إحصائيات التوصيل للسائق
-  useEffect(() => {
-    if (role === 'delivery_driver') {
-      fetchDeliveryStats();
-    }
-  }, [role]);
-
-  const fetchDeliveryStats = async () => {
-    try {
-      const response = await fetch('/api/delivery/stats', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setTodayDeliveries(data.data.todayOrders || 0);
-        setCompletedDeliveries(data.data.completedOrders || 0);
-      }
-    } catch (error) {
-      console.error('Error fetching delivery stats:', error);
-    }
-  };
 
   const handleLogout = () => {
     localStorage.clear();
     logout();
-    window.location.href = '/';
+    navigate('/login');
   };
 
-  // ==================== قائمة السوبر أدمن ====================
-  const getAdminMenuItems = () => {
-    return [
-      { path: '/admin', icon: IoHome, label: 'الرئيسية' },
-      { path: '/admin/restaurants', icon: IoRestaurant, label: 'المطاعم' },
-      { path: '/admin/stores', icon: IoStorefront, label: 'المتاجر' },
-      { path: '/admin/features', icon: IoRocket, label: 'الميزات', badge: 'جديد' },
-      { path: '/admin/platform-settings', icon: IoSettings, label: 'إعدادات المنصة', badge: 'جديد' },
-      { path: '/admin/users', icon: IoPeople, label: 'المستخدمين' },
-      { path: '/admin/staff', icon: IoKey, label: 'موظفي المنصة' },
-      { path: '/admin/orders', icon: IoReceipt, label: 'الطلبات' },
-      { path: '/admin/drivers', icon: IoCar, label: 'السائقين' },
-      { path: '/admin/plans', icon: IoRocket, label: 'الخطط والاشتراكات' },
-      { path: '/admin/qr-codes', icon: IoQrCode, label: 'رموز QR' },
+  // ─── Menu Definitions ─────────────────────────────────────────
+  const adminMenu = [
+    { path: '/admin',                    icon: IoHome,       label: 'الرئيسية' },
+    { path: '/admin/restaurants',        icon: IoRestaurant, label: 'المطاعم' },
+    { path: '/admin/stores',             icon: IoStorefront, label: 'المتاجر' },
+    { path: '/admin/features',           icon: IoRocket,     label: 'الميزات', badge: 'جديد' },
+    { path: '/admin/platform-settings',  icon: IoSettings,   label: 'إعدادات المنصة', badge: 'جديد' },
+    { path: '/admin/users',              icon: IoPeople,     label: 'المستخدمين' },
+    { path: '/admin/staff',              icon: IoKey,        label: 'موظفي المنصة' },
+    { path: '/admin/orders',             icon: IoReceipt,    label: 'الطلبات' },
+    { path: '/admin/drivers',            icon: IoCar,        label: 'السائقين' },
+    { path: '/admin/plans',              icon: IoPricetags,  label: 'الخطط' },
+    { path: '/admin/qr-codes',           icon: IoQrCode,     label: 'رموز QR' },
+    { path: '/admin/marketing',          icon: IoMegaphone,  label: 'التسويق' },
+  ];
+
+  const restaurantMenu = () => {
+    const items: any[] = [
+      { path: '/dashboard', icon: IoHome,     label: 'الرئيسية' },
+      { path: '/menu',      icon: IoFastFood, label: 'القائمة' },
     ];
-  };
-
-  // ==================== قائمة مالك المطعم ====================
-  const getRestaurantOwnerMenuItems = () => {
-    const items = [
-      { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
-      { path: '/menu', icon: IoFastFood, label: 'القائمة' },
-    ];
-
-    if (permissions.checkPermission('onlineOrders')) {
-      items.push({ path: '/orders', icon: IoReceipt, label: 'الطلبات' });
-    }
-
+    if (permissions.checkPermission('onlineOrders'))
+      items.push({ path: '/orders',    icon: IoReceipt,    label: 'الطلبات' });
     if (permissions.checkPermission('tableQr')) {
-      items.push({ path: '/tables', icon: IoRestaurant, label: 'الطاولات' });
-      items.push({ path: '/qr-codes', icon: IoQrCode, label: 'رموز QR' });
+      items.push({ path: '/tables',    icon: IoRestaurant, label: 'الطاولات' });
+      items.push({ path: '/qr-codes',  icon: IoQrCode,     label: 'رموز QR' });
     }
-
-    if (permissions.checkPermission('coupons')) {
-      items.push({ path: '/coupons', icon: IoPricetag, label: 'الكوبونات' });
-    }
-
-    if (permissions.getMaxStaff() > 0) {
-      items.push({ path: '/staff', icon: IoPeople, label: 'موظفي المطعم' });
-    }
-
-    if (permissions.checkPermission('analytics')) {
+    if (permissions.checkPermission('coupons'))
+      items.push({ path: '/coupons',   icon: IoPricetag,   label: 'الكوبونات' });
+    if (permissions.getMaxStaff() > 0)
+      items.push({ path: '/staff',     icon: IoPeople,     label: 'الموظفين' });
+    if (permissions.checkPermission('analytics'))
       items.push({ path: '/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
-    }
-
     if (permissions.checkPermission('delivery')) {
-      items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
-      items.push({ path: '/drivers', icon: IoCar, label: 'السائقين' });
+      items.push({ path: '/delivery',  icon: IoNavigate,   label: 'التوصيل' });
+      items.push({ path: '/drivers',   icon: IoCar,        label: 'السائقين' });
     }
-
-    // ✅ إضافة التسويق للمالكين (للبانرات والعروض فقط)
-    if (permissions.checkPermission('marketing')) {
-      items.push({ path: '/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
-    }
-
-    items.push({ path: '/plans', icon: IoRocket, label: 'خطط الأسعار' });
-    items.push({ path: '/settings', icon: IoSettings, label: 'الإعدادات' });
-
+    if (permissions.checkPermission('marketing'))
+      items.push({ path: '/marketing', icon: IoMegaphone,  label: 'التسويق', badge: 'جديد' });
+    items.push({ path: '/plans',    icon: IoRocket,    label: 'خطط الأسعار' });
+    items.push({ path: '/settings', icon: IoSettings,  label: 'الإعدادات' });
     return items;
   };
 
-  // ==================== قائمة مالك المتجر ====================
-  const getStoreOwnerMenuItems = () => {
-    const items = [
-      { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
-      { path: '/store/products', icon: IoBagOutline, label: 'المنتجات' },
+  const storeMenu = () => {
+    const items: any[] = [
+      { path: '/dashboard',     icon: IoHome,       label: 'الرئيسية' },
+      { path: '/store/products',icon: IoBagOutline, label: 'المنتجات' },
     ];
-
-    if (hasFeature('hasInventory') || isPro) {
+    if (hasFeature('hasInventory') || isPro)
       items.push({ path: '/store/inventory', icon: IoStatsChart, label: 'المخزون' });
-    }
-
-    if (hasFeature('hasOnlineOrders') || isPro) {
-      items.push({ path: '/store/orders', icon: IoReceipt, label: 'الطلبات' });
-    }
-
-    if (hasFeature('hasCoupons') || isPro) {
-      items.push({ path: '/store/coupons', icon: IoPricetag, label: 'الكوبونات' });
-    }
-
-    const maxStaff = permissions.getMaxStaff?.() || 0;
-    if (maxStaff > 0) {
-      items.push({ path: '/store/staff', icon: IoPeople, label: 'موظفي المتجر' });
-    }
-
-    if (hasFeature('hasAnalytics') || isPro) {
+    if (hasFeature('hasOnlineOrders') || isPro)
+      items.push({ path: '/store/orders',    icon: IoReceipt,    label: 'الطلبات' });
+    if (hasFeature('hasCoupons') || isPro)
+      items.push({ path: '/store/coupons',   icon: IoPricetag,   label: 'الكوبونات' });
+    if ((permissions.getMaxStaff?.() || 0) > 0)
+      items.push({ path: '/store/staff',     icon: IoPeople,     label: 'الموظفين' });
+    if (hasFeature('hasAnalytics') || isPro)
       items.push({ path: '/store/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
-    }
-
     if (hasFeature('hasOnlineOrders') || isPro) {
-      items.push({ path: '/store/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
-      items.push({ path: '/store/drivers', icon: IoCar, label: 'السائقين' });
+      items.push({ path: '/store/delivery',  icon: IoNavigate,   label: 'التوصيل' });
+      items.push({ path: '/store/drivers',   icon: IoCar,        label: 'السائقين' });
     }
-
-    if (hasFeature('hasTableQr') || isPro) {
-      items.push({ path: '/store/qr-codes', icon: IoQrCode, label: 'رموز QR' });
-    }
-
-    // ✅ إضافة التسويق للمالكين (للبانرات والعروض فقط)
-    if (permissions.checkPermission('marketing')) {
-      items.push({ path: '/store/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
-    }
-
-    items.push({ path: '/store/plans', icon: IoRocket, label: 'خطط الأسعار' });
+    if (hasFeature('hasTableQr') || isPro)
+      items.push({ path: '/store/qr-codes',  icon: IoQrCode,     label: 'رموز QR' });
+    if (permissions.checkPermission('marketing'))
+      items.push({ path: '/store/marketing', icon: IoMegaphone,  label: 'التسويق', badge: 'جديد' });
+    items.push({ path: '/store/plans',    icon: IoRocket,   label: 'خطط الأسعار' });
     items.push({ path: '/store/settings', icon: IoSettings, label: 'الإعدادات' });
-
     return items;
   };
 
-  // ==================== قائمة الموظف ====================
-  const getStaffMenuItems = () => {
-    const items = [
-      { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
-    ];
-
-    if (permissions.checkPermission('viewMenu')) {
-      items.push({ path: '/menu', icon: IoFastFood, label: 'القائمة' });
-    }
-
-    if (permissions.checkPermission('viewOrders')) {
-      items.push({ path: '/orders', icon: IoReceipt, label: 'الطلبات' });
-    }
-
-    if (permissions.checkPermission('delivery')) {
-      items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
-    }
-
-    if (permissions.checkPermission('viewTables')) {
-      items.push({ path: '/tables', icon: IoRestaurant, label: 'الطاولات' });
-    }
-
+  const staffMenu = () => {
+    const items: any[] = [{ path: '/dashboard', icon: IoHome, label: 'الرئيسية' }];
+    if (permissions.checkPermission('viewMenu'))   items.push({ path: '/menu',     icon: IoFastFood,   label: 'القائمة' });
+    if (permissions.checkPermission('viewOrders')) items.push({ path: '/orders',   icon: IoReceipt,    label: 'الطلبات' });
+    if (permissions.checkPermission('delivery'))   items.push({ path: '/delivery', icon: IoNavigate,   label: 'التوصيل' });
+    if (permissions.checkPermission('viewTables')) items.push({ path: '/tables',   icon: IoRestaurant, label: 'الطاولات' });
     return items;
   };
 
-  // تحديد القائمة حسب الدور
-  const getMenuItems = () => {
-    if (isSuperAdmin) return getAdminMenuItems();
-    if (isRestaurantOwner) return getRestaurantOwnerMenuItems();
-    if (isStoreOwner) return getStoreOwnerMenuItems();
-    if (isStaff) return getStaffMenuItems();
-    if (role === 'delivery_driver') return [];
-    return [];
-  };
+  const menuItems = isSuperAdmin ? adminMenu
+    : isRestaurantOwner ? restaurantMenu()
+    : isStoreOwner      ? storeMenu()
+    : isStaff           ? staffMenu()
+    : [];
 
-  const menuItems = getMenuItems();
+  const roleBadge = isSuperAdmin   ? 'مدير المنصة'
+    : isRestaurantOwner ? 'مالك مطعم'
+    : isStoreOwner      ? 'مالك متجر'
+    : isStaff           ? 'موظف'
+    : role === 'delivery_driver' ? 'مندوب توصيل'
+    : 'مستخدم';
 
-  const getRoleBadge = () => {
-    if (isSuperAdmin) {
-      return <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">مدير المنصة</span>;
-    }
-    if (isRestaurantOwner) {
-      return <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">مالك مطعم</span>;
-    }
-    if (isStoreOwner) {
-      return <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">مالك متجر</span>;
-    }
-    if (role === 'staff') {
-      return <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">موظف</span>;
-    }
-    if (role === 'delivery_driver') {
-      return (
-        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full flex items-center gap-1">
-          <IoCar size={12} /> مندوب توصيل
-        </span>
-      );
-    }
-    return <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full">عميل</span>;
-  };
+  const planLabel = planLoading ? '...'
+    : !currentPlan ? ''
+    : ({ free: 'مجاني', basic: 'أساسي', pro: 'احترافي', enterprise: 'مؤسسي' } as Record<string,string>)[currentPlan.name] || currentPlan.name;
 
-  const getPlanName = () => {
-    if (planLoading) return 'جاري التحميل...';
-    if (!currentPlan) return 'لا توجد خطة';
-    
-    const planNames: Record<string, string> = {
-      free: 'الخطة المجانية',
-      basic: 'الخطة الأساسية',
-      pro: 'الخطة الاحترافية',
-      enterprise: 'الخطة المؤسسية'
-    };
-    
-    return planNames[currentPlan.name] || currentPlan.name;
-  };
-
-  const getPlanColor = () => {
-    if (!currentPlan) return 'bg-gray-100 text-gray-800';
-    switch (currentPlan.name) {
-      case 'pro': return 'bg-purple-100 text-purple-800';
-      case 'basic': return 'bg-blue-100 text-blue-800';
-      case 'enterprise': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const isOwnerRole = isRestaurantOwner || isStoreOwner;
+  const plansPath = isStoreOwner ? '/store/plans' : '/plans';
 
   return (
     <>
+      {/* Overlay (mobile) */}
       {isOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden" onClick={onClose} />
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+            zIndex: 40, backdropFilter: 'blur(3px)',
+          }}
+          className="lg:hidden"
+        />
       )}
 
-      <aside className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-30 lg:translate-x-0 overflow-y-auto ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        {/* Header */}
-        <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-              {isStoreOwner ? (
-                <IoStorefront className="text-white text-xl" />
-              ) : (
-                <IoRestaurant className="text-white text-xl" />
-              )}
+      {/* Sidebar Panel */}
+      <aside
+        style={{
+          position: 'fixed', top: 0, right: 0, height: '100vh', width: 248,
+          background: C.primary, zIndex: 50, display: 'flex', flexDirection: 'column',
+          borderLeft: `1px solid ${C.border}`, overflowY: 'auto',
+          transform: isOpen ? 'translateX(0)' : undefined,
+          transition: 'transform 0.3s ease',
+        }}
+        className="lg:translate-x-0 translate-x-full"
+      >
+        {/* ─── Logo ─── */}
+        <div style={{ padding: '20px 16px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 40, height: 40, background: C.accent, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 20, color: C.bg, fontWeight: 900 }}>S</span>
             </div>
             <div>
-              <h3 className="font-bold">ديجيتال مينو</h3>
-              <p className="text-xs opacity-80">
-                {isStoreOwner ? 'نظام إدارة المتاجر' : 'نظام إدارة المطاعم'}
-              </p>
+              <div style={{ color: C.accent, fontWeight: 800, fontSize: 15, lineHeight: 1 }}>SHAM STORES</div>
+              <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>
+                {isSuperAdmin ? 'لوحة الإدارة' : isStoreOwner ? 'إدارة المتجر' : 'إدارة المطعم'}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* User Info */}
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-2 mb-2">
-            <IoPerson className="text-gray-500" size={20} />
-            <h3 className="font-bold text-lg truncate">{user?.name || 'زائر'}</h3>
-          </div>
-          <p className="text-sm text-gray-500 mb-2 truncate">{user?.email || 'غير مسجل'}</p>
-          <div className="mb-2">{getRoleBadge()}</div>
-          
-          {/* Plan Info - للمالك فقط */}
-          {(isRestaurantOwner || isStoreOwner) && !isSuperAdmin && !planLoading && (
-            <div className="mt-2">
-              <span className={`text-xs px-2 py-1 rounded-full ${getPlanColor()}`}>
-                {getPlanName()}
-              </span>
-              {isPro && (
-                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full mr-2">
-                  ⭐ مميز
+        {/* ─── User Info ─── */}
+        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, background: `${C.accent}20`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.accent, fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+              {(user?.name || 'U')[0]}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: C.text, fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {user?.name || 'مستخدم'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
+                <span style={{ background: `${C.accent}20`, color: C.accent, fontSize: 10, padding: '1px 7px', borderRadius: 20, fontWeight: 600 }}>
+                  {roleBadge}
                 </span>
-              )}
-            </div>
-          )}
-
-          {/* Delivery Driver Stats */}
-          {role === 'delivery_driver' && (
-            <div className="mt-3 pt-3 border-t">
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>طلبات اليوم:</span>
-                <span className="font-bold text-blue-600">{todayDeliveries}</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>مكتملة:</span>
-                <span className="font-bold text-green-600">{completedDeliveries}</span>
+                {isOwnerRole && planLabel && (
+                  <span style={{ background: 'rgba(100,180,130,0.15)', color: C.muted, fontSize: 10, padding: '1px 7px', borderRadius: 20 }}>
+                    {planLabel}
+                  </span>
+                )}
               </div>
             </div>
-          )}
-
-          {/* Business Info */}
-          {isRestaurantOwner && user?.restaurantId && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs text-gray-500 truncate">
-                <span className="font-medium">رقم المطعم:</span><br />
-                {user.restaurantId.substring(0, 8)}...
-              </p>
-            </div>
-          )}
-          
-          {isStoreOwner && user?.storeId && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs text-gray-500 truncate">
-                <span className="font-medium">رقم المتجر:</span><br />
-                {user.storeId.substring(0, 8)}...
-              </p>
-            </div>
-          )}
+          </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="mt-5 px-2 pb-32">
+        {/* ─── Nav Items ─── */}
+        <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
           {menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               onClick={onClose}
-              className={({ isActive }) =>
-                `group flex items-center px-2 py-3 text-base font-medium rounded-md mb-1 transition-colors ${
-                  isActive
-                    ? 'bg-blue-100 text-blue-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`
-              }
+              end={item.path === '/admin' || item.path === '/dashboard'}
+              style={({ isActive }) => ({
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 10, marginBottom: 2,
+                textDecoration: 'none',
+                background: isActive ? `${C.accent}18` : 'transparent',
+                color: isActive ? C.accent : C.muted,
+                fontFamily: 'Cairo, sans-serif', fontSize: 13,
+                fontWeight: isActive ? 600 : 400,
+                transition: 'all 0.15s',
+                borderRight: isActive ? `3px solid ${C.accent}` : '3px solid transparent',
+              })}
             >
-              <item.icon className={`ml-3 h-5 w-5 ${location.pathname === item.path ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'}`} />
-              <span className="flex-1">{item.label}</span>
-              {item.badge === 'جديد' && (
-                <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">جديد</span>
-              )}
-              
-              {/* قفل للميزات غير المتاحة */}
-              {isRestaurantOwner && item.label === 'الطلبات' && !permissions.checkPermission('onlineOrders') && !isPro && (
-                <IoLockClosed className="text-gray-400" size={14} />
-              )}
-              {isRestaurantOwner && (item.label === 'طلبات التوصيل' || item.label === 'السائقين') && !permissions.checkPermission('delivery') && !isPro && (
-                <IoLockClosed className="text-gray-400" size={14} />
-              )}
-              
-              {/* قفل للميزات غير المتاحة في المتجر */}
-              {isStoreOwner && item.label === 'المخزون' && !hasFeature('hasInventory') && !isPro && (
-                <IoLockClosed className="text-gray-400" size={14} />
-              )}
-              {isStoreOwner && item.label === 'الكوبونات' && !hasFeature('hasCoupons') && !isPro && (
-                <IoLockClosed className="text-gray-400" size={14} />
-              )}
-              {isStoreOwner && item.label === 'الإحصائيات' && !hasFeature('hasAnalytics') && !isPro && (
-                <IoLockClosed className="text-gray-400" size={14} />
-              )}
-              {isStoreOwner && item.label === 'رموز QR' && !hasFeature('hasTableQr') && !isPro && (
-                <IoLockClosed className="text-gray-400" size={14} />
+              <item.icon size={17} />
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.badge && (
+                <span style={{ background: C.accent, color: C.bg, fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 20 }}>
+                  {item.badge}
+                </span>
               )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Upgrade Button for Non-Pro Owners */}
-        {(isRestaurantOwner || isStoreOwner) && !isSuperAdmin && !isPro && !planLoading && (
-          <div className="absolute bottom-16 left-0 right-0 p-4">
+        {/* ─── Upgrade Button ─── */}
+        {isOwnerRole && !isSuperAdmin && !isPro && !planLoading && (
+          <div style={{ padding: '0 12px 10px', flexShrink: 0 }}>
             <NavLink
-              to={isStoreOwner ? "/store/plans" : "/plans"}
+              to={plansPath}
               onClick={onClose}
-              className="block text-center bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold py-2 rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '10px', borderRadius: 10, textDecoration: 'none',
+                background: C.accent, color: C.bg, fontWeight: 700, fontSize: 13,
+                transition: 'all 0.2s',
+              }}
             >
-              ✨ ترقية الخطة الآن
+              <IoRocket size={15} /> ترقية الخطة
             </NavLink>
           </div>
         )}
 
-        {/* Logout Button */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
+        {/* ─── Logout ─── */}
+        <div style={{ padding: '12px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 12px', borderRadius: 10,
+              border: 'none', background: 'rgba(255,107,107,0.12)',
+              color: C.red, cursor: 'pointer',
+              fontFamily: 'Cairo, sans-serif', fontSize: 13, fontWeight: 600,
+              transition: 'all 0.15s',
+            }}
           >
-            <IoLogOut size={18} />
-            <span>تسجيل خروج</span>
+            <IoLogOut size={16} /> تسجيل خروج
           </button>
         </div>
       </aside>
@@ -437,3 +280,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 };
 
 export default Sidebar;
+

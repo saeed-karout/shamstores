@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { IoClose } from 'react-icons/io5';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ModalProps {
   isOpen: boolean;
@@ -9,57 +10,78 @@ interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  children,
-  size = 'md',
-}) => {
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+const maxWidths = { sm: 440, md: 560, lg: 720, xl: 960 };
 
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? 'hidden' : 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const sizeClasses = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-  };
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        {/* الخلفية */}
-        <div
-          className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
-          onClick={onClose}
-        />
-
-        {/* المحتوى */}
-        <div className={`inline-block align-bottom bg-white rounded-lg text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:w-full ${sizeClasses[size]}`}>
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div className="flex justify-between items-center mb-4">
-              {title && <h3 className="text-lg font-medium">{title}</h3>}
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
-              >
-                <IoClose size={24} />
-              </button>
-            </div>
-            {children}
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        style={{
+          background: '#112E23',
+          border: '1px solid rgba(200,226,53,0.15)',
+          borderRadius: 20,
+          width: '100%',
+          maxWidth: maxWidths[size],
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 12px 48px rgba(0,0,0,0.5)',
+          direction: 'rtl',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        {title && (
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '18px 24px', borderBottom: '1px solid rgba(200,226,53,0.15)',
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#E8F5E9', fontFamily: 'Cairo, sans-serif' }}>
+              {title}
+            </h3>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'rgba(200,226,53,0.08)', border: 'none', borderRadius: 8,
+                color: '#9DC4AC', cursor: 'pointer', padding: 6, display: 'flex',
+                transition: 'all 0.15s',
+              }}
+            >
+              <IoClose size={20} />
+            </button>
           </div>
+        )}
+
+        {/* Body */}
+        <div style={{ padding: title ? '20px 24px 24px' : '24px' }}>
+          {!title && (
+            <button
+              onClick={onClose}
+              style={{
+                float: 'left', background: 'rgba(200,226,53,0.08)', border: 'none',
+                borderRadius: 8, color: '#9DC4AC', cursor: 'pointer', padding: 6,
+                display: 'flex', marginBottom: 8,
+              }}
+            >
+              <IoClose size={20} />
+            </button>
+          )}
+          {children}
         </div>
       </div>
     </div>

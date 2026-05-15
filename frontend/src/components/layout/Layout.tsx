@@ -1,31 +1,80 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { IoMenu } from 'react-icons/io5';
+
+// Map route prefixes to page titles (Arabic)
+const pageTitles: Record<string, string> = {
+  '/admin/restaurants':       'المطاعم',
+  '/admin/stores':            'المتاجر',
+  '/admin/users':             'المستخدمين',
+  '/admin/orders':            'الطلبات',
+  '/admin/drivers':           'السائقين',
+  '/admin/plans':             'الخطط',
+  '/admin/features':          'الميزات',
+  '/admin/platform-settings': 'إعدادات المنصة',
+  '/admin/qr-codes':          'رموز QR',
+  '/admin/staff':             'موظفي المنصة',
+  '/admin/marketing':         'التسويق',
+  '/admin/settings':          'الإعدادات',
+  '/admin':                   'لوحة تحكم المنصة',
+  '/menu':                    'القائمة',
+  '/orders':                  'الطلبات',
+  '/tables':                  'الطاولات',
+  '/qr-codes':                'رموز QR',
+  '/coupons':                 'الكوبونات',
+  '/staff':                   'الموظفين',
+  '/delivery':                'التوصيل',
+  '/drivers':                 'السائقين',
+  '/analytics':               'الإحصائيات',
+  '/marketing':               'التسويق',
+  '/plans':                   'خطط الأسعار',
+  '/settings':                'الإعدادات',
+  '/dashboard':               'لوحة التحكم',
+  '/store/products':          'المنتجات',
+  '/store/inventory':         'المخزون',
+  '/store/orders':            'الطلبات',
+  '/store/coupons':           'الكوبونات',
+  '/store/staff':             'الموظفين',
+  '/store/delivery':          'التوصيل',
+  '/store/drivers':           'السائقين',
+  '/store/analytics':         'الإحصائيات',
+  '/store/settings':          'الإعدادات',
+  '/store/plans':             'خطط الأسعار',
+  '/store/qr-codes':          'رموز QR',
+  '/store/marketing':         'التسويق',
+};
+
+const getTitle = (pathname: string) => {
+  // Exact match first
+  if (pageTitles[pathname]) return pageTitles[pathname];
+  // Prefix match (longest first)
+  const match = Object.keys(pageTitles)
+    .filter(k => pathname.startsWith(k))
+    .sort((a, b) => b.length - a.length)[0];
+  return match ? pageTitles[match] : 'SHAM STORES';
+};
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const title = getTitle(location.pathname);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="flex">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        
-        {/* زر القائمة للجوال */}
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="lg:hidden fixed bottom-4 right-4 z-10 bg-blue-500 text-white p-3 rounded-full shadow-lg"
-        >
-          <IoMenu size={24} />
-        </button>
+    <div
+      style={{ display: 'flex', minHeight: '100vh', background: '#082E24', direction: 'rtl' }}
+    >
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        {/* المحتوى الرئيسي */}
-        <main className="flex-1 lg:mr-64">
-          <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <Outlet />
-          </div>
+      {/* Main content — offset by sidebar width on large screens */}
+      <div
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}
+        className="lg:mr-[248px]"
+      >
+        <Navbar onMenuOpen={() => setSidebarOpen(true)} title={title} />
+
+        <main style={{ flex: 1, overflowY: 'auto' }}>
+          <Outlet />
         </main>
       </div>
     </div>
