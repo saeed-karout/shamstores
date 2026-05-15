@@ -11,6 +11,23 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 interface Size {
   name: string;
   price: number;
@@ -21,6 +38,24 @@ interface Addon {
   name: string;
   price: number;
 }
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 12px',
+  background: C.surf,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  color: C.text,
+  outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 13,
+  fontWeight: 500,
+  marginBottom: 4,
+  color: C.muted,
+};
 
 const MenuPage: React.FC = () => {
   const {
@@ -45,13 +80,13 @@ const MenuPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [uploading, setUploading] = useState(false);
-  
+
   const [sizes, setSizes] = useState<Size[]>([
     { name: 'صغير', price: 0 },
     { name: 'وسط', price: 0 },
     { name: 'كبير', price: 0 }
   ]);
-  
+
   const [addons, setAddons] = useState<Addon[]>([]);
   const [newAddonName, setNewAddonName] = useState('');
   const [newAddonPrice, setNewAddonPrice] = useState('');
@@ -80,30 +115,15 @@ const MenuPage: React.FC = () => {
   });
 
   const resetCategoryForm = () => {
-    setCategoryForm({
-      name: '',
-      nameEn: '',
-      description: '',
-      descriptionEn: '',
-      image: '',
-    });
+    setCategoryForm({ name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
     setSelectedCategory(null);
   };
 
   const resetItemForm = () => {
     setItemForm({
-      categoryId: '',
-      name: '',
-      nameEn: '',
-      description: '',
-      descriptionEn: '',
-      price: '',
-      discountedPrice: '',
-      image: '',
-      preparationTime: '',
-      calories: '',
-      hasSizes: false,
-      hasAddons: false,
+      categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '',
+      price: '', discountedPrice: '', image: '', preparationTime: '', calories: '',
+      hasSizes: false, hasAddons: false,
     });
     setSizes([
       { name: 'صغير', price: 0 },
@@ -133,11 +153,7 @@ const MenuPage: React.FC = () => {
     try {
       const addonsObj = typeof addons === 'string' ? JSON.parse(addons) : addons;
       return Object.entries(addonsObj)
-        .map(([id, addon]: [string, any]) => ({ 
-          id, 
-          name: addon.name, 
-          price: Number(addon.price) 
-        }))
+        .map(([id, addon]: [string, any]) => ({ id, name: addon.name, price: Number(addon.price) }))
         .filter(addon => addon.price > 0);
     } catch (e) {
       return [];
@@ -145,18 +161,12 @@ const MenuPage: React.FC = () => {
   };
 
   const handleOpenCategoryModal = (category?: Category) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لإدارة الفئات');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لإدارة الفئات'); return; }
     if (category) {
       setSelectedCategory(category);
       setCategoryForm({
-        name: category.name,
-        nameEn: category.nameEn || '',
-        description: category.description || '',
-        descriptionEn: category.descriptionEn || '',
+        name: category.name, nameEn: category.nameEn || '',
+        description: category.description || '', descriptionEn: category.descriptionEn || '',
         image: category.image || '',
       });
     }
@@ -164,49 +174,23 @@ const MenuPage: React.FC = () => {
   };
 
   const handleOpenItemModal = (item?: MenuItem) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لإدارة العناصر');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لإدارة العناصر'); return; }
     if (item) {
       setSelectedItem(item);
       setItemForm({
-        categoryId: item.categoryId,
-        name: item.name,
-        nameEn: item.nameEn || '',
-        description: item.description || '',
-        descriptionEn: item.descriptionEn || '',
-        price: item.price.toString(),
-        discountedPrice: item.discountedPrice?.toString() || '',
-        image: item.image || '',
-        preparationTime: item.preparationTime?.toString() || '',
-        calories: item.calories?.toString() || '',
-        hasSizes: item.hasSizes,
-        hasAddons: item.hasAddons,
+        categoryId: item.categoryId, name: item.name, nameEn: item.nameEn || '',
+        description: item.description || '', descriptionEn: item.descriptionEn || '',
+        price: item.price.toString(), discountedPrice: item.discountedPrice?.toString() || '',
+        image: item.image || '', preparationTime: item.preparationTime?.toString() || '',
+        calories: item.calories?.toString() || '', hasSizes: item.hasSizes, hasAddons: item.hasAddons,
       });
-      
       if (item.sizes) {
-        const loadedSizes = Object.entries(item.sizes).map(([name, price]) => ({
-          name,
-          price: Number(price)
-        }));
-        setSizes(loadedSizes);
+        setSizes(Object.entries(item.sizes).map(([name, price]) => ({ name, price: Number(price) })));
       } else {
-        setSizes([
-          { name: 'صغير', price: 0 },
-          { name: 'وسط', price: 0 },
-          { name: 'كبير', price: 0 }
-        ]);
+        setSizes([{ name: 'صغير', price: 0 }, { name: 'وسط', price: 0 }, { name: 'كبير', price: 0 }]);
       }
-      
       if (item.addons) {
-        const loadedAddons = Object.entries(item.addons).map(([id, addon]: [string, any]) => ({
-          id,
-          name: addon.name,
-          price: Number(addon.price)
-        }));
-        setAddons(loadedAddons);
+        setAddons(Object.entries(item.addons).map(([id, addon]: [string, any]) => ({ id, name: addon.name, price: Number(addon.price) })));
       } else {
         setAddons([]);
       }
@@ -217,33 +201,18 @@ const MenuPage: React.FC = () => {
   };
 
   const handleAddAddon = () => {
-    if (!newAddonName || !newAddonPrice) {
-      toast.error('يرجى إدخال اسم وسعر الإضافة');
-      return;
-    }
-    
-    const newAddon: Addon = {
-      id: Date.now().toString(),
-      name: newAddonName,
-      price: parseFloat(newAddonPrice) || 0
-    };
-    
-    setAddons([...addons, newAddon]);
+    if (!newAddonName || !newAddonPrice) { toast.error('يرجى إدخال اسم وسعر الإضافة'); return; }
+    setAddons([...addons, { id: Date.now().toString(), name: newAddonName, price: parseFloat(newAddonPrice) || 0 }]);
     setNewAddonName('');
     setNewAddonPrice('');
   };
 
-  const handleRemoveAddon = (id: string) => {
-    setAddons(addons.filter(a => a.id !== id));
-  };
+  const handleRemoveAddon = (id: string) => setAddons(addons.filter(a => a.id !== id));
 
   const handleSizeChange = (index: number, field: 'name' | 'price', value: string) => {
     const updatedSizes = [...sizes];
-    if (field === 'price') {
-      updatedSizes[index].price = parseFloat(value) || 0;
-    } else {
-      updatedSizes[index].name = value;
-    }
+    if (field === 'price') updatedSizes[index].price = parseFloat(value) || 0;
+    else updatedSizes[index].name = value;
     setSizes(updatedSizes);
   };
 
@@ -269,31 +238,15 @@ const MenuPage: React.FC = () => {
         toast.error('يرجى إكمال جميع الحقول المطلوبة');
         return;
       }
-
       const basePrice = parseFloat(itemForm.price) || 0;
-
       const sizesObject: { [key: string]: number } = {};
       if (itemForm.hasSizes) {
-        sizes.forEach(size => {
-          if (size.name) {
-            const price = size.price > 0 ? size.price : basePrice;
-            sizesObject[size.name] = price;
-          }
-        });
+        sizes.forEach(size => { if (size.name) sizesObject[size.name] = size.price > 0 ? size.price : basePrice; });
       }
-
       const addonsObject: { [key: string]: { name: string; price: number } } = {};
       if (itemForm.hasAddons) {
-        addons.forEach(addon => {
-          if (addon.name && addon.price > 0) {
-            addonsObject[addon.id] = {
-              name: addon.name,
-              price: addon.price
-            };
-          }
-        });
+        addons.forEach(addon => { if (addon.name && addon.price > 0) addonsObject[addon.id] = { name: addon.name, price: addon.price }; });
       }
-
       const data = {
         ...itemForm,
         price: basePrice,
@@ -303,12 +256,10 @@ const MenuPage: React.FC = () => {
         sizes: itemForm.hasSizes ? sizesObject : null,
         addons: itemForm.hasAddons ? addonsObject : null,
       };
-
       if (!selectedItem && isOwner && menuItems.length >= permissions.getMaxItems()) {
         toast.error(`لقد تجاوزت الحد المسموح به من العناصر (${permissions.getMaxItems()})`);
         return;
       }
-
       if (selectedItem) {
         await updateMenuItem(selectedItem.id, data);
         toast.success('تم تحديث العنصر بنجاح');
@@ -324,11 +275,7 @@ const MenuPage: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لحذف الفئات');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لحذف الفئات'); return; }
     if (window.confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
       try {
         await deleteCategory(id);
@@ -340,11 +287,7 @@ const MenuPage: React.FC = () => {
   };
 
   const handleDeleteItem = async (id: string) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لحذف العناصر');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لحذف العناصر'); return; }
     if (window.confirm('هل أنت متأكد من حذف هذا العنصر؟')) {
       try {
         await deleteMenuItem(id);
@@ -358,17 +301,11 @@ const MenuPage: React.FC = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'category' | 'item') => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploading(true);
     try {
       const result = await api.upload<{ imageUrl: string }>('/upload', file, type === 'category' ? 'categories' : 'items');
-      
-      if (type === 'category') {
-        setCategoryForm({ ...categoryForm, image: result.imageUrl });
-      } else {
-        setItemForm({ ...itemForm, image: result.imageUrl });
-      }
-      
+      if (type === 'category') setCategoryForm({ ...categoryForm, image: result.imageUrl });
+      else setItemForm({ ...itemForm, image: result.imageUrl });
       toast.success('تم رفع الصورة بنجاح');
     } catch (error) {
       toast.error('فشل رفع الصورة');
@@ -380,65 +317,55 @@ const MenuPage: React.FC = () => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">إدارة القائمة</h1>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>إدارة القائمة</h1>
         {(isSuperAdmin || isOwner) && (
-          <div className="flex space-x-2 rtl:space-x-reverse">
-            <Button
-              variant="primary"
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
               onClick={() => handleOpenCategoryModal()}
+              style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
             >
-              <IoAdd className="inline ml-1" />
-              إضافة فئة
-            </Button>
-            <Button
-              variant="success"
+              <IoAdd /> إضافة فئة
+            </button>
+            <button
               onClick={() => handleOpenItemModal()}
+              style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none' }}
             >
-              <IoAdd className="inline ml-1" />
-              إضافة عنصر
-            </Button>
+              <IoAdd /> إضافة عنصر
+            </button>
           </div>
         )}
       </div>
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">الفئات</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Categories */}
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 16 }}>الفئات</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
           {categories.map(cat => (
-            <div key={cat.id} className="bg-white rounded-lg shadow p-4">
-              <div className="flex justify-between items-start">
+            <div key={cat.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <h3 className="font-semibold">{cat.name}</h3>
-                  {cat.nameEn && <p className="text-sm text-gray-500">{cat.nameEn}</p>}
+                  <h3 style={{ fontWeight: 600, color: C.text, margin: 0 }}>{cat.name}</h3>
+                  {cat.nameEn && <p style={{ fontSize: 13, color: C.muted, margin: '4px 0 0' }}>{cat.nameEn}</p>}
                 </div>
                 {(isSuperAdmin || isOwner) && (
-                  <div className="flex space-x-2 rtl:space-x-reverse">
-                    <button
-                      onClick={() => handleOpenCategoryModal(cat)}
-                      className="text-blue-500 hover:text-blue-700"
-                    >
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => handleOpenCategoryModal(cat)} style={{ background: 'none', border: 'none', color: C.accent, cursor: 'pointer', padding: 4 }}>
                       <IoPencil size={18} />
                     </button>
-                    <button
-                      onClick={() => handleDeleteCategory(cat.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
+                    <button onClick={() => handleDeleteCategory(cat.id)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', padding: 4 }}>
                       <IoTrash size={18} />
                     </button>
                   </div>
                 )}
               </div>
               {cat.image && (
-                <img 
-                  src={getImageUrl(cat.image)}
-                  alt={cat.name}
-                  className="w-full h-32 object-cover mt-2 rounded"
-                />
+                <img src={getImageUrl(cat.image)} alt={cat.name} style={{ width: '100%', height: 120, objectFit: 'cover', marginTop: 12, borderRadius: 8 }} />
               )}
-              <p className="text-sm text-gray-600 mt-2">{cat.description}</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>{cat.description}</p>
+              <p style={{ fontSize: 12, color: C.muted, marginTop: 4, opacity: 0.7 }}>
                 {menuItems.filter(i => i.categoryId === cat.id).length} عنصر
               </p>
             </div>
@@ -446,80 +373,62 @@ const MenuPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">عناصر القائمة</h2>
+      {/* Menu Items */}
+      <div>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 16 }}>عناصر القائمة</h2>
         {loading ? (
           <Loader />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
             {menuItems && menuItems.length > 0 ? (
               menuItems.map((item) => {
-                const basePrice = item.discountedPrice 
-                  ? Number(item.discountedPrice) 
-                  : Number(item.price);
-                
+                const basePrice = item.discountedPrice ? Number(item.discountedPrice) : Number(item.price);
                 return (
-                  <div key={item.id} className="bg-white rounded-lg shadow p-4">
-                    <div className="flex justify-between items-start">
+                  <div key={item.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <h3 className="font-semibold">{item.name}</h3>
-                        {item.nameEn && <p className="text-sm text-gray-500">{item.nameEn}</p>}
+                        <h3 style={{ fontWeight: 600, color: C.text, margin: 0 }}>{item.name}</h3>
+                        {item.nameEn && <p style={{ fontSize: 13, color: C.muted, margin: '4px 0 0' }}>{item.nameEn}</p>}
                       </div>
-                      <div className="flex space-x-2 rtl:space-x-reverse">
+                      <div style={{ display: 'flex', gap: 6 }}>
                         <button
                           onClick={() => toggleAvailability(item.id)}
-                          className={`${item.isAvailable ? 'text-green-500' : 'text-gray-400'} hover:opacity-75`}
+                          style={{ background: 'none', border: 'none', color: item.isAvailable ? C.accent : C.muted, cursor: 'pointer', padding: 4 }}
                           title={item.isAvailable ? 'إخفاء' : 'إظهار'}
                         >
                           {item.isAvailable ? <IoEye size={18} /> : <IoEyeOff size={18} />}
                         </button>
                         {(isSuperAdmin || isOwner) && (
                           <>
-                            <button
-                              onClick={() => handleOpenItemModal(item)}
-                              className="text-blue-500 hover:text-blue-700"
-                              title="تعديل"
-                            >
+                            <button onClick={() => handleOpenItemModal(item)} style={{ background: 'none', border: 'none', color: C.accent, cursor: 'pointer', padding: 4 }}>
                               <IoPencil size={18} />
                             </button>
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="text-red-500 hover:text-red-700"
-                              title="حذف"
-                            >
+                            <button onClick={() => handleDeleteItem(item.id)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', padding: 4 }}>
                               <IoTrash size={18} />
                             </button>
                           </>
                         )}
                       </div>
                     </div>
-                    
+
                     {item.image && (
-                      <img 
-                        src={getImageUrl(item.image)}
-                        alt={item.name}
-                        className="w-full h-32 object-cover mt-2 rounded"
-                      />
+                      <img src={getImageUrl(item.image)} alt={item.name} style={{ width: '100%', height: 120, objectFit: 'cover', marginTop: 12, borderRadius: 8 }} />
                     )}
-                    
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2">{item.description}</p>
-                    
-                    {/* عرض المقاسات */}
+
+                    <p style={{ fontSize: 13, color: C.muted, marginTop: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {item.description}
+                    </p>
+
                     {item.hasSizes && item.sizes && (
-                      <div className="mt-2 text-xs">
-                        <span className="font-medium text-gray-500">المقاسات:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {Object.entries(
-                            typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes
-                          ).map(([size, price]) => {
+                      <div style={{ marginTop: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: C.muted }}>المقاسات:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                          {Object.entries(typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes).map(([size, price]) => {
                             const priceNum = Number(price);
-                            let priceColor = 'text-gray-600';
-                            if (priceNum < basePrice) priceColor = 'text-green-600';
-                            if (priceNum > basePrice) priceColor = 'text-blue-600';
-                            
+                            const priceColor = priceNum < basePrice ? C.accent : priceNum > basePrice ? C.blue : C.muted;
                             return (
-                              <span key={size} className="bg-blue-50 px-2 py-1 rounded">
-                                {size}: <span className={`font-bold ${priceColor}`}>{priceNum.toFixed(2)} ل.س</span>
+                              <span key={size} style={{ background: C.surfL, padding: '2px 8px', borderRadius: 6, fontSize: 12, color: C.text }}>
+                                {size}: <span style={{ fontWeight: 700, color: priceColor }}>{priceNum.toFixed(2)} ل.س</span>
                               </span>
                             );
                           })}
@@ -527,43 +436,36 @@ const MenuPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* عرض الإضافات */}
                     {item.hasAddons && item.addons && (
-                      <div className="mt-2 text-xs">
-                        <span className="font-medium text-gray-500">الإضافات:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {Object.entries(
-                            typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons
-                          ).map(([id, addon]: [string, any]) => (
-                            <span key={id} className="bg-green-50 px-2 py-1 rounded">
-                              {addon.name}: <span className="font-bold">{Number(addon.price).toFixed(2)} ل.س</span>
+                      <div style={{ marginTop: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: C.muted }}>الإضافات:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                          {Object.entries(typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons).map(([id, addon]: [string, any]) => (
+                            <span key={id} style={{ background: C.prim, padding: '2px 8px', borderRadius: 6, fontSize: 12, color: C.text }}>
+                              {addon.name}: <span style={{ fontWeight: 700 }}>{Number(addon.price).toFixed(2)} ل.س</span>
                             </span>
                           ))}
                         </div>
                       </div>
                     )}
-                    
-                    <div className="flex justify-between items-center mt-3 pt-2 border-t">
-                      <span className="text-sm text-gray-500">
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: 13, color: C.muted }}>
                         {categories.find(c => c.id === item.categoryId)?.name || 'بدون فئة'}
                       </span>
-                      <div className="text-left">
+                      <div>
                         {item.discountedPrice && Number(item.discountedPrice) > 0 ? (
-                          <div className="flex items-center gap-1">
-                            <span className="font-bold text-green-600">
-                              {Number(item.discountedPrice).toFixed(2)} ل.س
-                            </span>
-                            <span className="text-sm text-gray-400 line-through">
-                              {Number(item.price).toFixed(2)} ل.س
-                            </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontWeight: 700, color: C.accent }}>{Number(item.discountedPrice).toFixed(2)} ل.س</span>
+                            <span style={{ fontSize: 12, color: C.muted, textDecoration: 'line-through' }}>{Number(item.price).toFixed(2)} ل.س</span>
                           </div>
                         ) : (
-                          <span className="font-bold">{Number(item.price).toFixed(2)} ل.س</span>
+                          <span style={{ fontWeight: 700, color: C.text }}>{Number(item.price).toFixed(2)} ل.س</span>
                         )}
                       </div>
                     </div>
-                    
-                    <div className="flex justify-between text-xs text-gray-400 mt-2">
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.muted, marginTop: 6, opacity: 0.7 }}>
                       <span>مشاهدات: {item.viewsCount || 0}</span>
                       <span>طلبات: {item.ordersCount || 0}</span>
                     </div>
@@ -571,7 +473,7 @@ const MenuPage: React.FC = () => {
                 );
               })
             ) : (
-              <div className="col-span-full text-center py-8 text-gray-500">
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '32px 0', color: C.muted }}>
                 لا توجد عناصر في القائمة. أضف عنصراً جديداً!
               </div>
             )}
@@ -579,335 +481,163 @@ const MenuPage: React.FC = () => {
         )}
       </div>
 
-      {/* Modal الفئات */}
+      {/* Category Modal */}
       <Modal
         isOpen={showCategoryModal}
-        onClose={() => {
-          setShowCategoryModal(false);
-          resetCategoryForm();
-        }}
+        onClose={() => { setShowCategoryModal(false); resetCategoryForm(); }}
         title={selectedCategory ? 'تعديل فئة' : 'إضافة فئة جديدة'}
       >
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium mb-1">اسم الفئة (عربي)</label>
-            <input
-              type="text"
-              value={categoryForm.name}
-              onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-              className="w-full p-2 border rounded"
-              required
-            />
+            <label style={labelStyle}>اسم الفئة (عربي)</label>
+            <input type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} style={inputStyle} required />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">اسم الفئة (إنجليزي)</label>
-            <input
-              type="text"
-              value={categoryForm.nameEn}
-              onChange={(e) => setCategoryForm({ ...categoryForm, nameEn: e.target.value })}
-              className="w-full p-2 border rounded"
-            />
+            <label style={labelStyle}>اسم الفئة (إنجليزي)</label>
+            <input type="text" value={categoryForm.nameEn} onChange={(e) => setCategoryForm({ ...categoryForm, nameEn: e.target.value })} style={inputStyle} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (عربي)</label>
-            <textarea
-              value={categoryForm.description}
-              onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-              className="w-full p-2 border rounded"
-              rows={3}
-            />
+            <label style={labelStyle}>الوصف (عربي)</label>
+            <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (إنجليزي)</label>
-            <textarea
-              value={categoryForm.descriptionEn}
-              onChange={(e) => setCategoryForm({ ...categoryForm, descriptionEn: e.target.value })}
-              className="w-full p-2 border rounded"
-              rows={3}
-            />
+            <label style={labelStyle}>الوصف (إنجليزي)</label>
+            <textarea value={categoryForm.descriptionEn} onChange={(e) => setCategoryForm({ ...categoryForm, descriptionEn: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">الصورة</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImageUpload(e, 'category')}
-              className="w-full p-2 border rounded"
-              disabled={uploading}
-            />
-            {uploading && <p className="text-sm text-blue-500 mt-1">جاري رفع الصورة...</p>}
-            {categoryForm.image && (
-              <img 
-                src={getImageUrl(categoryForm.image)}
-                alt="معاينة"
-                className="w-32 h-32 object-cover mt-2 rounded"
-              />
-            )}
+            <label style={labelStyle}>الصورة</label>
+            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'category')} style={inputStyle} disabled={uploading} />
+            {uploading && <p style={{ fontSize: 13, color: C.accent, marginTop: 4 }}>جاري رفع الصورة...</p>}
+            {categoryForm.image && <img src={getImageUrl(categoryForm.image)} alt="معاينة" style={{ width: 128, height: 128, objectFit: 'cover', marginTop: 8, borderRadius: 8 }} />}
           </div>
-          <Button
-            variant="primary"
+          <button
             onClick={handleSaveCategory}
-            fullWidth
-            loading={uploading}
+            disabled={uploading}
+            style={{ background: C.accent, color: C.bg, padding: '10px 0', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 15 }}
           >
             حفظ
-          </Button>
+          </button>
         </div>
       </Modal>
 
-      {/* Modal العناصر */}
+      {/* Item Modal */}
       <Modal
         isOpen={showItemModal}
-        onClose={() => {
-          setShowItemModal(false);
-          resetItemForm();
-        }}
+        onClose={() => { setShowItemModal(false); resetItemForm(); }}
         title={selectedItem ? 'تعديل عنصر' : 'إضافة عنصر جديد'}
         size="lg"
       >
-        <div className="space-y-4 max-h-96 overflow-y-auto p-2">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '70vh', overflowY: 'auto', paddingLeft: 4, paddingRight: 4 }}>
           <div>
-            <label className="block text-sm font-medium mb-1">الفئة</label>
-            <select
-              value={itemForm.categoryId}
-              onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })}
-              className="w-full p-2 border rounded"
-              required
-            >
-              <option value="">اختر الفئة</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
+            <label style={labelStyle}>الفئة</label>
+            <select value={itemForm.categoryId} onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })} style={{ ...inputStyle, appearance: 'none' }} required>
+              <option value="" style={{ background: C.surf }}>اختر الفئة</option>
+              {categories.map(cat => <option key={cat.id} value={cat.id} style={{ background: C.surf }}>{cat.name}</option>)}
             </select>
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">اسم العنصر (عربي)</label>
-            <input
-              type="text"
-              value={itemForm.name}
-              onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })}
-              className="w-full p-2 border rounded"
-              required
-            />
+            <label style={labelStyle}>اسم العنصر (عربي)</label>
+            <input type="text" value={itemForm.name} onChange={(e) => setItemForm({ ...itemForm, name: e.target.value })} style={inputStyle} required />
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">اسم العنصر (إنجليزي)</label>
-            <input
-              type="text"
-              value={itemForm.nameEn}
-              onChange={(e) => setItemForm({ ...itemForm, nameEn: e.target.value })}
-              className="w-full p-2 border rounded"
-            />
+            <label style={labelStyle}>اسم العنصر (إنجليزي)</label>
+            <input type="text" value={itemForm.nameEn} onChange={(e) => setItemForm({ ...itemForm, nameEn: e.target.value })} style={inputStyle} />
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (عربي)</label>
-            <textarea
-              value={itemForm.description}
-              onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })}
-              className="w-full p-2 border rounded"
-              rows={3}
-            />
+            <label style={labelStyle}>الوصف (عربي)</label>
+            <textarea value={itemForm.description} onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} />
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (إنجليزي)</label>
-            <textarea
-              value={itemForm.descriptionEn}
-              onChange={(e) => setItemForm({ ...itemForm, descriptionEn: e.target.value })}
-              className="w-full p-2 border rounded"
-              rows={3}
-            />
+            <label style={labelStyle}>الوصف (إنجليزي)</label>
+            <textarea value={itemForm.descriptionEn} onChange={(e) => setItemForm({ ...itemForm, descriptionEn: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} />
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">السعر الأساسي (ل.س)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={itemForm.price}
-                onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })}
-                className="w-full p-2 border rounded"
-                required
-                placeholder="0.00"
-              />
+              <label style={labelStyle}>السعر الأساسي (ل.س)</label>
+              <input type="number" step="0.01" min="0" value={itemForm.price} onChange={(e) => setItemForm({ ...itemForm, price: e.target.value })} style={inputStyle} placeholder="0.00" required />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">السعر بعد الخصم (ل.س)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={itemForm.discountedPrice}
-                onChange={(e) => setItemForm({ ...itemForm, discountedPrice: e.target.value })}
-                className="w-full p-2 border rounded"
-                placeholder="0.00"
-              />
+              <label style={labelStyle}>السعر بعد الخصم (ل.س)</label>
+              <input type="number" step="0.01" min="0" value={itemForm.discountedPrice} onChange={(e) => setItemForm({ ...itemForm, discountedPrice: e.target.value })} style={inputStyle} placeholder="0.00" />
             </div>
           </div>
-          
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">وقت التحضير (دقيقة)</label>
-              <input
-                type="number"
-                min="0"
-                value={itemForm.preparationTime}
-                onChange={(e) => setItemForm({ ...itemForm, preparationTime: e.target.value })}
-                className="w-full p-2 border rounded"
-                placeholder="30"
-              />
+              <label style={labelStyle}>وقت التحضير (دقيقة)</label>
+              <input type="number" min="0" value={itemForm.preparationTime} onChange={(e) => setItemForm({ ...itemForm, preparationTime: e.target.value })} style={inputStyle} placeholder="30" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">السعرات الحرارية</label>
-              <input
-                type="number"
-                min="0"
-                value={itemForm.calories}
-                onChange={(e) => setItemForm({ ...itemForm, calories: e.target.value })}
-                className="w-full p-2 border rounded"
-                placeholder="500"
-              />
+              <label style={labelStyle}>السعرات الحرارية</label>
+              <input type="number" min="0" value={itemForm.calories} onChange={(e) => setItemForm({ ...itemForm, calories: e.target.value })} style={inputStyle} placeholder="500" />
             </div>
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">الصورة</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImageUpload(e, 'item')}
-              className="w-full p-2 border rounded"
-              disabled={uploading}
-            />
-            {uploading && <p className="text-sm text-blue-500 mt-1">جاري رفع الصورة...</p>}
-            {itemForm.image && (
-              <img 
-                src={getImageUrl(itemForm.image)}
-                alt="معاينة"
-                className="w-32 h-32 object-cover mt-2 rounded"
-              />
-            )}
+            <label style={labelStyle}>الصورة</label>
+            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'item')} style={inputStyle} disabled={uploading} />
+            {uploading && <p style={{ fontSize: 13, color: C.accent, marginTop: 4 }}>جاري رفع الصورة...</p>}
+            {itemForm.image && <img src={getImageUrl(itemForm.image)} alt="معاينة" style={{ width: 128, height: 128, objectFit: 'cover', marginTop: 8, borderRadius: 8 }} />}
           </div>
-          
-          {/* خيار المقاسات */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={itemForm.hasSizes}
-                  onChange={(e) => setItemForm({ ...itemForm, hasSizes: e.target.checked })}
-                  className="ml-2"
-                />
-                <span className="font-medium">يوجد مقاسات مختلفة</span>
-              </label>
-            </div>
-            
+
+          {/* Sizes */}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={itemForm.hasSizes} onChange={(e) => setItemForm({ ...itemForm, hasSizes: e.target.checked })} style={{ accentColor: C.accent }} />
+              <span style={{ fontWeight: 500, color: C.text }}>يوجد مقاسات مختلفة</span>
+            </label>
             {itemForm.hasSizes && (
-              <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">تحديد المقاسات والأسعار</h4>
-                <p className="text-xs text-blue-600 mb-2">
-                  * اترك السعر 0 لاستخدام السعر الأساسي للمنتج ({Number(itemForm.price || 0).toFixed(2)} ل.س)
+              <div style={{ background: C.surf, borderRadius: 12, padding: 16, marginTop: 12 }}>
+                <h4 style={{ fontWeight: 500, color: C.text, marginBottom: 8 }}>تحديد المقاسات والأسعار</h4>
+                <p style={{ fontSize: 12, color: C.accent, marginBottom: 8 }}>
+                  * اترك السعر 0 لاستخدام السعر الأساسي ({Number(itemForm.price || 0).toFixed(2)} ل.س)
                 </p>
                 {sizes.map((size, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={size.name}
-                      onChange={(e) => handleSizeChange(index, 'name', e.target.value)}
-                      placeholder="اسم المقاس"
-                      className="flex-1 p-2 border rounded"
-                    />
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={size.price}
-                      onChange={(e) => handleSizeChange(index, 'price', e.target.value)}
-                      placeholder="السعر"
-                      className="w-32 p-2 border rounded"
-                    />
+                  <div key={index} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input type="text" value={size.name} onChange={(e) => handleSizeChange(index, 'name', e.target.value)} placeholder="اسم المقاس" style={{ ...inputStyle, flex: 1 }} />
+                    <input type="number" step="0.01" min="0" value={size.price} onChange={(e) => handleSizeChange(index, 'price', e.target.value)} placeholder="السعر" style={{ ...inputStyle, width: 100, flex: 'none' }} />
                   </div>
                 ))}
               </div>
             )}
           </div>
-          
-          {/* خيار الإضافات */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-3">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={itemForm.hasAddons}
-                  onChange={(e) => setItemForm({ ...itemForm, hasAddons: e.target.checked })}
-                  className="ml-2"
-                />
-                <span className="font-medium">يوجد إضافات</span>
-              </label>
-            </div>
-            
+
+          {/* Addons */}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={itemForm.hasAddons} onChange={(e) => setItemForm({ ...itemForm, hasAddons: e.target.checked })} style={{ accentColor: C.accent }} />
+              <span style={{ fontWeight: 500, color: C.text }}>يوجد إضافات</span>
+            </label>
             {itemForm.hasAddons && (
-              <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">إضافة إضافات جديدة</h4>
-                
+              <div style={{ background: C.surf, borderRadius: 12, padding: 16, marginTop: 12 }}>
+                <h4 style={{ fontWeight: 500, color: C.text, marginBottom: 12 }}>إضافة إضافات جديدة</h4>
                 {addons.map((addon) => (
-                  <div key={addon.id} className="flex items-center justify-between bg-white p-2 rounded border">
+                  <div key={addon.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: C.surfL, padding: '8px 12px', borderRadius: 8, marginBottom: 8 }}>
                     <div>
-                      <span className="font-medium">{addon.name}</span>
-                      <span className="mr-2 text-green-600">{addon.price} ل.س</span>
+                      <span style={{ fontWeight: 500, color: C.text }}>{addon.name}</span>
+                      <span style={{ marginRight: 8, color: C.accent }}>{addon.price} ل.س</span>
                     </div>
-                    <button
-                      onClick={() => handleRemoveAddon(addon.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
+                    <button onClick={() => handleRemoveAddon(addon.id)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer' }}>
                       <IoClose size={18} />
                     </button>
                   </div>
                 ))}
-                
-                <div className="flex gap-2 mt-2">
-                  <input
-                    type="text"
-                    value={newAddonName}
-                    onChange={(e) => setNewAddonName(e.target.value)}
-                    placeholder="اسم الإضافة"
-                    className="flex-1 p-2 border rounded"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newAddonPrice}
-                    onChange={(e) => setNewAddonPrice(e.target.value)}
-                    placeholder="السعر"
-                    className="w-24 p-2 border rounded"
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={handleAddAddon}
-                    size="sm"
-                  >
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <input type="text" value={newAddonName} onChange={(e) => setNewAddonName(e.target.value)} placeholder="اسم الإضافة" style={{ ...inputStyle, flex: 1 }} />
+                  <input type="number" step="0.01" min="0" value={newAddonPrice} onChange={(e) => setNewAddonPrice(e.target.value)} placeholder="السعر" style={{ ...inputStyle, width: 90, flex: 'none' }} />
+                  <button onClick={handleAddAddon} style={{ background: C.surfL, border: `1px solid ${C.border}`, color: C.text, padding: '8px 12px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     إضافة
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
           </div>
-          
-          <Button
-            variant="primary"
+
+          <button
             onClick={handleSaveItem}
-            fullWidth
-            loading={uploading}
+            disabled={uploading}
+            style={{ background: C.accent, color: C.bg, padding: '10px 0', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 15 }}
           >
             حفظ العنصر
-          </Button>
+          </button>
         </div>
       </Modal>
     </div>

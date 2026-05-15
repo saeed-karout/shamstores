@@ -6,14 +6,20 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
-import { 
-  IoArrowBack, IoCheckmark, IoClose, IoAdd, 
+import {
+  IoArrowBack, IoCheckmark, IoClose, IoAdd,
   IoTime, IoCalendar, IoSettings, IoWarning,
   IoRestaurant, IoStorefront, IoGlobe
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
 
 interface Feature {
   id: string;
@@ -67,7 +73,7 @@ const AdminBusinessFeatures: React.FC = () => {
 
   const handleEnableFeature = async () => {
     if (!selectedFeature) return;
-    
+
     try {
       await api.post(`/features/business/${type}/${id}/enable/${selectedFeature.code}`, {
         expiresAt: expiryDate || null
@@ -84,7 +90,7 @@ const AdminBusinessFeatures: React.FC = () => {
 
   const handleDisableFeature = async (feature: Feature) => {
     if (!window.confirm(`هل أنت متأكد من تعطيل ميزة "${feature.name}"؟`)) return;
-    
+
     try {
       await api.delete(`/features/business/${type}/${id}/disable/${feature.code}`);
       toast.success(`تم تعطيل ميزة "${feature.name}" بنجاح`);
@@ -96,33 +102,29 @@ const AdminBusinessFeatures: React.FC = () => {
 
   const getFilteredFeatures = () => {
     let filtered = [...features];
-    
     if (filterCategory !== 'all') {
       filtered = filtered.filter(f => f.category === filterCategory);
     }
-    
     return filtered;
   };
 
   const getStatusBadge = (feature: Feature) => {
     if (feature.isEnabled) {
-      if (feature.isOverridden) {
-        return (
-          <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs flex items-center gap-1">
-            <IoCheckmark size={12} />
-            مفعلة (تجاوز)
-          </span>
-        );
-      }
       return (
-        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs flex items-center gap-1">
+        <span style={{
+          padding: '2px 10px', background: 'rgba(200,226,53,0.12)', color: C.accent,
+          borderRadius: 999, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4
+        }}>
           <IoCheckmark size={12} />
-          مفعلة
+          {feature.isOverridden ? 'مفعلة (تجاوز)' : 'مفعلة'}
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs flex items-center gap-1">
+      <span style={{
+        padding: '2px 10px', background: 'rgba(255,107,107,0.12)', color: C.red,
+        borderRadius: 999, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4
+      }}>
         <IoClose size={12} />
         معطلة
       </span>
@@ -135,30 +137,49 @@ const AdminBusinessFeatures: React.FC = () => {
   const enabledCount = features.filter(f => f.isEnabled).length;
   const availableFeatures = features.filter(f => !f.isEnabled && !f.isCore);
 
+  const filterChips = [
+    { id: 'all', label: 'الكل' },
+    { id: 'restaurant', label: 'مطاعم' },
+    { id: 'store', label: 'متاجر' },
+    { id: 'both', label: 'مشترك' },
+  ];
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 12px',
+    background: C.surf,
+    border: '1px solid ' + C.border,
+    borderRadius: 10,
+    color: C.text,
+    fontFamily: 'Cairo, sans-serif',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
   return (
-    <div className="p-6" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <button
           onClick={() => navigate(`/admin/${type}s`)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
         >
           <IoArrowBack size={20} />
           العودة
         </button>
-        <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-            type === 'restaurant' ? 'bg-blue-100' : 'bg-green-100'
-          }`}>
-            {type === 'restaurant' ? (
-              <IoRestaurant className="text-blue-600 text-2xl" />
-            ) : (
-              <IoStorefront className="text-green-600 text-2xl" />
-            )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 12,
+            background: type === 'restaurant' ? 'rgba(96,165,250,0.12)' : 'rgba(200,226,53,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            {type === 'restaurant'
+              ? <IoRestaurant style={{ color: C.blue, fontSize: 24 }} />
+              : <IoStorefront style={{ color: C.accent, fontSize: 24 }} />}
           </div>
           <div>
-            <h1 className="text-2xl font-bold">{business?.name}</h1>
-            <p className="text-sm text-gray-500">
+            <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>{business?.name}</h1>
+            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>
               إدارة الميزات الإضافية لل{type === 'restaurant' ? 'مطعم' : 'متجر'}
             </p>
           </div>
@@ -166,133 +187,124 @@ const AdminBusinessFeatures: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">إجمالي الميزات</p>
-          <p className="text-2xl font-bold text-purple-600">{features.length}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>إجمالي الميزات</p>
+          <p style={{ color: C.purple, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{features.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">ميزات مفعلة</p>
-          <p className="text-2xl font-bold text-green-600">{enabledCount}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>ميزات مفعلة</p>
+          <p style={{ color: C.accent, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{enabledCount}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">ميزات متاحة للإضافة</p>
-          <p className="text-2xl font-bold text-blue-600">{availableFeatures.length}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>ميزات متاحة للإضافة</p>
+          <p style={{ color: C.blue, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{availableFeatures.length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilterCategory('all')}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              filterCategory === 'all' ? 'bg-purple-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            الكل
-          </button>
-          <button
-            onClick={() => setFilterCategory('restaurant')}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              filterCategory === 'restaurant' ? 'bg-purple-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            مطاعم
-          </button>
-          <button
-            onClick={() => setFilterCategory('store')}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              filterCategory === 'store' ? 'bg-purple-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            متاجر
-          </button>
-          <button
-            onClick={() => setFilterCategory('both')}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              filterCategory === 'both' ? 'bg-purple-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-            }`}
-          >
-            مشترك
-          </button>
+      <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {filterChips.map(chip => (
+            <button
+              key={chip.id}
+              onClick={() => setFilterCategory(chip.id)}
+              style={{
+                padding: '4px 14px',
+                borderRadius: 8,
+                fontSize: 13,
+                border: 'none',
+                cursor: 'pointer',
+                fontFamily: 'Cairo, sans-serif',
+                background: filterCategory === chip.id ? C.accent : C.surf,
+                color: filterCategory === chip.id ? C.bg : C.muted,
+              }}
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Features Table */}
       {filteredFeatures.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <IoGlobe className="text-gray-300 text-6xl mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد ميزات</h3>
-          <p className="text-gray-500">لا توجد ميزات متاحة</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
+          <IoGlobe style={{ color: C.muted, fontSize: 48, marginBottom: 16 }} />
+          <h3 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 8 }}>لا توجد ميزات</h3>
+          <p style={{ color: C.muted }}>لا توجد ميزات متاحة</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الميزة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الكود</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الفئة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">المجموعة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">السعر</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">انتهاء</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: C.surf }}>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الميزة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الكود</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الفئة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>المجموعة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>السعر</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الحالة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>انتهاء</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الإجراءات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {filteredFeatures.map((feature) => (
-                  <tr key={feature.code} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-800">{feature.name}</p>
-                        {feature.description && (
-                          <p className="text-xs text-gray-500">{feature.description}</p>
-                        )}
-                      </div>
+                  <tr
+                    key={feature.code}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    style={{ borderBottom: '1px solid ' + C.border }}
+                  >
+                    <td style={{ padding: '12px 16px' }}>
+                      <p style={{ color: C.text, fontWeight: 600, margin: 0 }}>{feature.name}</p>
+                      {feature.description && (
+                        <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>{feature.description}</p>
+                      )}
                     </td>
-                    <td className="px-6 py-4">
-                      <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                    <td style={{ padding: '12px 16px' }}>
+                      <code style={{ fontFamily: 'monospace', color: C.accent, background: C.bg, padding: '2px 8px', borderRadius: 6, fontSize: 12 }}>
                         {feature.code}
                       </code>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm">
-                        {feature.category === 'restaurant' ? 'مطعم' : 
-                         feature.category === 'store' ? 'متجر' : 'مشترك'}
-                      </span>
+                    <td style={{ padding: '12px 16px', color: C.text, fontSize: 13 }}>
+                      {feature.category === 'restaurant' ? 'مطعم' :
+                       feature.category === 'store' ? 'متجر' : 'مشترك'}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {getStatusBadge(feature)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {feature.price > 0 ? (
-                        <span className="font-bold text-green-600">{feature.price} ر.س</span>
+                        <span style={{ color: C.accent, fontWeight: 700 }}>{feature.price} ر.س</span>
                       ) : (
-                        <span className="text-green-600">مجانية</span>
+                        <span style={{ color: C.accent }}>مجانية</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {getStatusBadge(feature)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {feature.expiresAt ? (
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                        <span style={{ color: C.muted, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <IoTime size={12} />
                           {format(new Date(feature.expiresAt), 'dd/MM/yyyy', { locale: ar })}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">دائم</span>
+                        <span style={{ color: C.muted, fontSize: 12 }}>دائم</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {feature.isEnabled ? (
                         <button
                           onClick={() => handleDisableFeature(feature)}
-                          className="text-red-500 hover:text-red-700 transition text-sm"
                           disabled={feature.isCore}
+                          style={{
+                            color: feature.isCore ? C.muted : C.red,
+                            background: 'none', border: 'none', cursor: feature.isCore ? 'default' : 'pointer',
+                            fontSize: 13, fontFamily: 'Cairo, sans-serif'
+                          }}
                         >
                           تعطيل
                         </button>
@@ -302,13 +314,16 @@ const AdminBusinessFeatures: React.FC = () => {
                             setSelectedFeature(feature);
                             setShowEnableModal(true);
                           }}
-                          className="text-green-500 hover:text-green-700 transition text-sm"
+                          style={{
+                            color: C.accent, background: 'none', border: 'none',
+                            cursor: 'pointer', fontSize: 13, fontFamily: 'Cairo, sans-serif'
+                          }}
                         >
                           تفعيل
                         </button>
                       )}
-                     </td>
-                   </tr>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -326,16 +341,20 @@ const AdminBusinessFeatures: React.FC = () => {
         }}
         title={`➕ تفعيل ميزة "${selectedFeature?.name}"`}
       >
-        <div className="space-y-4">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex items-start gap-2">
-              <IoWarning className="text-yellow-500 mt-0.5" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{
+            background: 'rgba(200,226,53,0.06)',
+            border: '1px solid rgba(200,226,53,0.2)',
+            borderRadius: 10, padding: 16
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <IoWarning style={{ color: C.accent, marginTop: 2, flexShrink: 0 }} />
               <div>
-                <p className="text-sm text-yellow-800">
-                  الميزة: <span className="font-bold">{selectedFeature?.name}</span>
+                <p style={{ color: C.text, fontSize: 13, margin: 0 }}>
+                  الميزة: <span style={{ fontWeight: 700 }}>{selectedFeature?.name}</span>
                 </p>
-                <p className="text-sm text-yellow-700 mt-1">
-                  السعر: <span className="font-bold">{selectedFeature?.price} ر.س</span>
+                <p style={{ color: C.muted, fontSize: 13, marginTop: 4, marginBottom: 0 }}>
+                  السعر: <span style={{ fontWeight: 700 }}>{selectedFeature?.price} ر.س</span>
                   {selectedFeature?.isOneTime ? ' (دفعة واحدة)' : ' / شهرياً'}
                 </p>
               </div>
@@ -343,20 +362,22 @@ const AdminBusinessFeatures: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">تاريخ الانتهاء (اختياري)</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+              تاريخ الانتهاء (اختياري)
+            </label>
             <input
               type="date"
               value={expiryDate}
               onChange={(e) => setExpiryDate(e.target.value)}
-              className="w-full p-2 border rounded-lg"
+              style={inputStyle}
               min={format(new Date(), 'yyyy-MM-dd')}
             />
-            <p className="text-xs text-gray-500 mt-1">
+            <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>
               اتركه فارغاً للميزة الدائمة
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div style={{ display: 'flex', gap: 12 }}>
             <Button variant="primary" onClick={handleEnableFeature} fullWidth>
               تفعيل الميزة
             </Button>

@@ -1,13 +1,30 @@
 // pages/Admin/AdminDashboard.tsx
 
 import React, { useEffect, useState } from 'react';
-import { 
-  IoRestaurant, IoStorefront, IoPeople, IoReceipt, 
-  IoCar, IoRocket, IoSettings, IoTrendingUp, IoTime, 
+import {
+  IoRestaurant, IoStorefront, IoPeople, IoReceipt,
+  IoCar, IoRocket, IoSettings, IoTrendingUp, IoTime,
   IoCheckmarkCircle, IoWarning, IoCalendar
 } from 'react-icons/io5';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
+
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
 
 interface Stats {
   overview: {
@@ -52,100 +69,131 @@ const AdminDashboard: React.FC = () => {
   if (loading) return <Loader fullScreen />;
 
   const statCards = [
-    { title: 'المطاعم', value: stats?.overview.restaurants || 0, icon: IoRestaurant, color: 'blue' },
-    { title: 'المتاجر', value: stats?.overview.stores || 0, icon: IoStorefront, color: 'green' },
-    { title: 'المستخدمين', value: stats?.overview.users || 0, icon: IoPeople, color: 'purple' },
-    { title: 'السائقين', value: stats?.overview.drivers || 0, icon: IoCar, color: 'orange' },
-    { title: 'الطلبات', value: stats?.orders.total || 0, icon: IoReceipt, color: 'cyan' },
-    { title: 'الإيرادات', value: `${stats?.overview.revenue || 0} ل.س`, icon: IoTrendingUp, color: 'emerald' },
+    { title: 'المطاعم',    value: stats?.overview.restaurants || 0,                  icon: IoRestaurant,  iconColor: C.blue   },
+    { title: 'المتاجر',    value: stats?.overview.stores || 0,                        icon: IoStorefront,  iconColor: C.accent },
+    { title: 'المستخدمين', value: stats?.overview.users || 0,                         icon: IoPeople,      iconColor: C.purple },
+    { title: 'السائقين',   value: stats?.overview.drivers || 0,                       icon: IoCar,         iconColor: C.yellow },
+    { title: 'الطلبات',    value: stats?.orders.total || 0,                           icon: IoReceipt,     iconColor: C.red    },
+    { title: 'الإيرادات',  value: `${stats?.overview.revenue || 0} ل.س`,             icon: IoTrendingUp,  iconColor: C.accent },
   ];
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">لوحة تحكم المنصة</h1>
-      
+    <div style={{ padding: 24, background: C.bg, minHeight: '100vh', color: C.text }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, color: C.text }}>
+        لوحة تحكم المنصة
+      </h1>
+
       {/* بطاقات الإحصائيات */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
         {statCards.map((card, index) => (
-          <div key={index} className="bg-white rounded-2xl shadow-lg p-5 hover:shadow-xl transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 text-sm">{card.title}</p>
-                <p className="text-2xl font-bold mt-1">{card.value}</p>
-              </div>
-              <div className={`w-12 h-12 bg-${card.color}-100 rounded-xl flex items-center justify-center`}>
-                <card.icon className={`text-${card.color}-600 text-xl`} />
-              </div>
+          <div
+            key={index}
+            style={{
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 16,
+              padding: '20px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              transition: 'box-shadow 0.2s',
+            }}
+          >
+            <div>
+              <p style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>{card.title}</p>
+              <p style={{ color: C.text, fontSize: 22, fontWeight: 800 }}>{card.value}</p>
+            </div>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: `${card.iconColor}18`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <card.icon style={{ color: card.iconColor, fontSize: 20 }} />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
         {/* حالة الطلبات */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <IoReceipt className="text-blue-600" />
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IoReceipt style={{ color: C.accent }} />
             حالة الطلبات
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-yellow-50 rounded-xl">
-              <div className="text-2xl font-bold text-yellow-600">{stats?.orders.pending || 0}</div>
-              <div className="text-sm text-gray-600">قيد الانتظار</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ textAlign: 'center', padding: '16px 8px', background: `${C.yellow}14`, border: `1px solid ${C.yellow}30`, borderRadius: 12 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: C.yellow }}>{stats?.orders.pending || 0}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>قيد الانتظار</div>
             </div>
-            <div className="text-center p-4 bg-blue-50 rounded-xl">
-              <div className="text-2xl font-bold text-blue-600">{stats?.orders.delivering || 0}</div>
-              <div className="text-sm text-gray-600">قيد التوصيل</div>
+            <div style={{ textAlign: 'center', padding: '16px 8px', background: `${C.blue}14`, border: `1px solid ${C.blue}30`, borderRadius: 12 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: C.blue }}>{stats?.orders.delivering || 0}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>قيد التوصيل</div>
             </div>
-            <div className="text-center p-4 bg-green-50 rounded-xl">
-              <div className="text-2xl font-bold text-green-600">{stats?.orders.completed || 0}</div>
-              <div className="text-sm text-gray-600">مكتملة</div>
+            <div style={{ textAlign: 'center', padding: '16px 8px', background: `${C.accent}14`, border: `1px solid ${C.accent}30`, borderRadius: 12 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: C.accent }}>{stats?.orders.completed || 0}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>مكتملة</div>
             </div>
-            <div className="text-center p-4 bg-gray-50 rounded-xl">
-              <div className="text-2xl font-bold text-gray-600">{stats?.orders.total || 0}</div>
-              <div className="text-sm text-gray-600">الإجمالي</div>
+            <div style={{ textAlign: 'center', padding: '16px 8px', background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12 }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: C.text }}>{stats?.orders.total || 0}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>الإجمالي</div>
             </div>
           </div>
-          
-          <div className="mt-4 pt-4 border-t flex justify-between text-sm">
-            <div className="flex items-center gap-2">
-              <IoRestaurant className="text-blue-600" />
-              <span>طلبات المطاعم: {stats?.orders.restaurantOrders || 0}</span>
+
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.muted }}>
+              <IoRestaurant style={{ color: C.blue }} />
+              <span>طلبات المطاعم: <strong style={{ color: C.text }}>{stats?.orders.restaurantOrders || 0}</strong></span>
             </div>
-            <div className="flex items-center gap-2">
-              <IoStorefront className="text-green-600" />
-              <span>طلبات المتاجر: {stats?.orders.storeOrders || 0}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.muted }}>
+              <IoStorefront style={{ color: C.accent }} />
+              <span>طلبات المتاجر: <strong style={{ color: C.text }}>{stats?.orders.storeOrders || 0}</strong></span>
             </div>
           </div>
         </div>
 
         {/* الطلبات الأسبوعية */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <IoCalendar className="text-blue-600" />
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: C.text, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IoCalendar style={{ color: C.accent }} />
             الطلبات آخر 7 أيام
           </h2>
-          <div className="space-y-3">
-            {stats?.weeklyOrders?.map((day, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <div className="w-24 text-sm text-gray-600">{day.date}</div>
-                <div className="flex-1 h-8 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full flex items-center justify-end px-3 text-white text-xs"
-                    style={{ width: `${Math.min(100, (day.count / Math.max(...stats.weeklyOrders.map(d => d.count), 1)) * 100)}%` }}
-                  >
-                    {day.count > 0 && day.count}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {stats?.weeklyOrders?.map((day, index) => {
+              const maxCount = Math.max(...(stats.weeklyOrders.map(d => d.count)), 1);
+              const pct = Math.min(100, (day.count / maxCount) * 100);
+              return (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 88, fontSize: 12, color: C.muted, flexShrink: 0 }}>{day.date}</div>
+                  <div style={{ flex: 1, height: 28, background: C.surf, borderRadius: 99, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        width: `${pct}%`,
+                        height: '100%',
+                        background: `linear-gradient(90deg, ${C.prim}, ${C.accent})`,
+                        borderRadius: 99,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        paddingRight: 10,
+                        transition: 'width 0.4s ease',
+                      }}
+                    >
+                      {day.count > 0 && <span style={{ color: C.bg, fontSize: 11, fontWeight: 700 }}>{day.count}</span>}
+                    </div>
                   </div>
+                  <div style={{ width: 30, fontSize: 13, fontWeight: 700, color: C.text, textAlign: 'right' }}>{day.count}</div>
                 </div>
-                <div className="w-12 text-sm font-bold text-gray-700">{day.count}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* آخر تحديث */}
-      <div className="mt-6 text-center text-sm text-gray-500">
+      <div style={{ marginTop: 24, textAlign: 'center', fontSize: 12, color: C.muted }}>
         آخر تحديث: {stats?.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('ar-SA') : 'جاري التحميل...'}
       </div>
     </div>

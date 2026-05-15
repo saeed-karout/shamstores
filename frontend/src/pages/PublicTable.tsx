@@ -30,17 +30,12 @@ const PublicTable: React.FC = () => {
 
   const fetchTable = async () => {
     try {
-      console.log('Fetching table with ID:', tableId);
       const data = await api.get(`/tables/${tableId}`);
-      console.log('Table data:', data);
       setTable(data);
-      
-      // إذا كانت الطاولة من مطعم مختلف، نظهر رسالة
       if (data.restaurantId && slug && data.restaurantId !== slug) {
         setError('هذه الطاولة لا تنتمي لهذا المطعم');
       }
     } catch (error) {
-      console.error('Error fetching table:', error);
       setError('لم نتمكن من العثور على الطاولة');
     } finally {
       setLoading(false);
@@ -52,15 +47,15 @@ const PublicTable: React.FC = () => {
   return (
     <div>
       {error ? (
-        <div className="bg-red-500 text-white text-center py-3 px-4 sticky top-0 z-10 shadow-md">
-          <div className="max-w-7xl mx-auto">
-            <span className="font-bold">⚠️ {error}</span>
+        <div style={{ background: '#FF6B6B', color: '#fff', textAlign: 'center', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <span style={{ fontWeight: 700, fontFamily: 'Cairo, sans-serif' }}>⚠️ {error}</span>
           </div>
         </div>
       ) : table ? (
-        <div className="bg-gradient-to-r from-green-500 to-green-600 text-white text-center py-3 px-4 sticky top-0 z-10 shadow-md">
-          <div className="max-w-7xl mx-auto flex items-center justify-center gap-2">
-            <span className="font-bold">🔹 أنت على طاولة: {table.name}</span>
+        <div style={{ background: 'linear-gradient(90deg, #0D4A3A, #0F5C48)', color: '#C8E235', textAlign: 'center', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <span style={{ fontWeight: 700, fontFamily: 'Cairo, sans-serif' }}>🔹 أنت على طاولة: {table.name}</span>
           </div>
         </div>
       ) : null}

@@ -6,6 +6,12 @@ import QRGenerator from '../../components/qr/QRGenerator';
 import { IoQrCode, IoDownload, IoPrint } from 'react-icons/io5';
 import { useRestaurant } from '../../hooks/useRestaurant';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
+
 const QRCodesPage: React.FC = () => {
   const [tables, setTables] = useState<Table[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -22,7 +28,7 @@ const QRCodesPage: React.FC = () => {
         api.get<Table[]>('/tables'),
         api.get<MenuItem[]>('/menu/items')
       ]);
-      
+
       setTables(tablesData);
       setMenuItems(itemsData);
     } catch (error) {
@@ -34,193 +40,193 @@ const QRCodesPage: React.FC = () => {
 
   if (loading || restaurantLoading) return <Loader fullScreen />;
   if (!restaurant) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-gray-500">المطعم غير موجود</p>
+    <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ color: C.muted }}>المطعم غير موجود</p>
       </div>
     </div>
   );
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">رموز QR</h1>
-        <p className="text-gray-500">قم بإنشاء وتحميل رموز QR للمطعم والطاولات وعناصر القائمة</p>
-      </div>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ maxWidth: 1120, margin: '0 auto' }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ color: C.text, fontSize: 28, fontWeight: 800, marginBottom: 8 }}>رموز QR</h1>
+          <p style={{ color: C.muted }}>قم بإنشاء وتحميل رموز QR للمطعم والطاولات وعناصر القائمة</p>
+        </div>
 
-      {/* QR المطعم */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8 hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-1 h-6 bg-blue-500 rounded-full"></div>
-              <h2 className="text-xl font-semibold text-gray-800">QR المطعم</h2>
-            </div>
-            <p className="text-gray-600 mb-2">
-              رمز QR رئيسي للمطعم - يفتح القائمة الرئيسية مباشرة
-            </p>
-            <div className="bg-gray-50 rounded-lg p-3 inline-block">
-              <p className="text-sm text-gray-500 font-mono">
-                {window.location.origin}/{restaurant.slug}
+        {/* QR المطعم */}
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24, marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 4, height: 24, background: C.blue, borderRadius: 4 }}></div>
+                <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700 }}>QR المطعم</h2>
+              </div>
+              <p style={{ color: C.muted, marginBottom: 8 }}>
+                رمز QR رئيسي للمطعم - يفتح القائمة الرئيسية مباشرة
               </p>
-            </div>
-          </div>
-          <QRGenerator
-            type="restaurant"
-            slug={restaurant.slug}
-            buttonText={
-              <div className="flex items-center gap-2">
-                <IoQrCode size={18} />
-                <span>إنشاء QR المطعم</span>
-              </div>
-            }
-            restaurantLogo={restaurant.logo}
-            restaurantName={restaurant.name}
-            variant="primary"
-          />
-        </div>
-      </div>
-
-      {/* QR الطاولات */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-1 h-6 bg-green-500 rounded-full"></div>
-          <h2 className="text-xl font-semibold text-gray-800">QR الطاولات</h2>
-        </div>
-        <p className="text-gray-600 mb-4">
-          رموز QR خاصة بكل طاولة - عند المسح يفتح القائمة مع تحديد رقم الطاولة تلقائياً
-        </p>
-        
-        {tables.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">لا توجد طاولات. قم بإضافة طاولات أولاً</p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-              {tables.map(table => (
-                <div key={table.id} className="border border-gray-100 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">{table.name}</h3>
-                      <p className="text-sm text-gray-500">عدد المقاعد: {table.seats}</p>
-                      <p className="text-xs text-gray-400 mt-1">ID: {table.id.substring(0, 8)}...</p>
-                    </div>
-                    <QRGenerator
-                      type="table"
-                      id={table.id}
-                      name={table.name}
-                      slug={restaurant.slug}
-                      buttonText={<IoQrCode size={20} />}
-                      restaurantLogo={restaurant.logo}
-                      restaurantName={restaurant.name}
-                      variant="outline"
-                      className="p-2 hover:bg-blue-50 transition-colors"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-end mt-4 pt-4 border-t">
-              <QRGenerator
-                type="table"
-                id="all"
-                name="جميع الطاولات"
-                slug={restaurant.slug}
-                buttonText={
-                  <div className="flex items-center gap-2">
-                    <IoDownload size={16} />
-                    <span>تحميل QR لجميع الطاولات</span>
-                  </div>
-                }
-                restaurantLogo={restaurant.logo}
-                restaurantName={restaurant.name}
-                variant="outline"
-              />
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* QR عناصر القائمة */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-1 h-6 bg-purple-500 rounded-full"></div>
-          <h2 className="text-xl font-semibold text-gray-800">QR عناصر القائمة</h2>
-        </div>
-        <p className="text-gray-600 mb-4">
-          رموز QR خاصة بكل عنصر - للمشاركة المباشرة عبر وسائل التواصل
-        </p>
-
-        {menuItems.length === 0 ? (
-          <div className="text-center py-8 bg-gray-50 rounded-lg">
-            <p className="text-gray-500">لا توجد عناصر في القائمة. أضف عناصر أولاً</p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {menuItems.slice(0, 9).map(item => (
-                <div key={item.id} className="border border-gray-100 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800 line-clamp-1">{item.name}</h3>
-                      <p className="text-sm text-green-600 font-medium mt-1">
-                        {item.discountedPrice || item.price} ر.س
-                        {item.discountedPrice && (
-                          <span className="text-xs text-gray-400 line-through mr-1">
-                            {item.price} ر.س
-                          </span>
-                        )}
-                      </p>
-                      {item.shareToken && (
-                        <p className="text-xs text-gray-400 mt-1 font-mono">
-                          رمز: {item.shareToken.substring(0, 12)}...
-                        </p>
-                      )}
-                    </div>
-                    <QRGenerator
-                      type="item"
-                      id={item.id}
-                      name={item.name}
-                      slug={restaurant.slug}
-                      buttonText={<IoQrCode size={20} />}
-                      restaurantLogo={restaurant.logo}
-                      restaurantName={restaurant.name}
-                      variant="outline"
-                      className="p-2 hover:bg-purple-50 transition-colors"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {menuItems.length > 9 && (
-              <div className="text-center mt-6 pt-4 border-t">
-                <p className="text-gray-500">
-                  ... و {menuItems.length - 9} عنصر آخر
+              <div style={{ background: C.surf, borderRadius: 10, padding: 12, display: 'inline-block' }}>
+                <p style={{ color: C.muted, fontSize: 13, fontFamily: 'monospace' }}>
+                  {window.location.origin}/{restaurant.slug}
                 </p>
-                <button
-                  onClick={() => window.location.href = '/dashboard/menu'}
-                  className="mt-2 text-blue-500 hover:text-blue-600 text-sm"
-                >
-                  عرض جميع العناصر ←
-                </button>
               </div>
-            )}
-          </>
-        )}
-      </div>
+            </div>
+            <QRGenerator
+              type="restaurant"
+              slug={restaurant.slug}
+              buttonText={
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IoQrCode size={18} />
+                  <span>إنشاء QR المطعم</span>
+                </div>
+              }
+              restaurantLogo={restaurant.logo}
+              restaurantName={restaurant.name}
+              variant="primary"
+            />
+          </div>
+        </div>
 
-      {/* ملاحظات */}
-      <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-100">
-        <h3 className="font-semibold text-blue-800 mb-2">💡 نصائح:</h3>
-        <ul className="text-sm text-blue-700 space-y-1">
-          <li>• يمكنك تخصيص ألوان وتصميم QR Code من خلال زر "تخصيص التصميم"</li>
-          <li>• يمكنك تحميل QR Code بصيغة PNG أو SVG للطباعة</li>
-          <li>• QR الطاولات يساعد في معرفة الطاولة التي يطلب منها الزبون تلقائياً</li>
-          <li>• QR العناصر يمكن مشاركته عبر واتساب أو فيسبوك للترويج</li>
-        </ul>
+        {/* QR الطاولات */}
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24, marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <div style={{ width: 4, height: 24, background: C.accent, borderRadius: 4 }}></div>
+            <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700 }}>QR الطاولات</h2>
+          </div>
+          <p style={{ color: C.muted, marginBottom: 16 }}>
+            رموز QR خاصة بكل طاولة - عند المسح يفتح القائمة مع تحديد رقم الطاولة تلقائياً
+          </p>
+
+          {tables.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', background: C.surf, borderRadius: 12 }}>
+              <p style={{ color: C.muted }}>لا توجد طاولات. قم بإضافة طاولات أولاً</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
+                {tables.map(table => (
+                  <div key={table.id} style={{ border: '1px solid ' + C.border, borderRadius: 12, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <h3 style={{ color: C.text, fontWeight: 600 }}>{table.name}</h3>
+                        <p style={{ color: C.muted, fontSize: 13 }}>عدد المقاعد: {table.seats}</p>
+                        <p style={{ color: C.muted, fontSize: 11, marginTop: 4, fontFamily: 'monospace' }}>ID: {table.id.substring(0, 8)}...</p>
+                      </div>
+                      <QRGenerator
+                        type="table"
+                        id={table.id}
+                        name={table.name}
+                        slug={restaurant.slug}
+                        buttonText={<IoQrCode size={20} />}
+                        restaurantLogo={restaurant.logo}
+                        restaurantName={restaurant.name}
+                        variant="outline"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, paddingTop: 16, borderTop: '1px solid ' + C.border }}>
+                <QRGenerator
+                  type="table"
+                  id="all"
+                  name="جميع الطاولات"
+                  slug={restaurant.slug}
+                  buttonText={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <IoDownload size={16} />
+                      <span>تحميل QR لجميع الطاولات</span>
+                    </div>
+                  }
+                  restaurantLogo={restaurant.logo}
+                  restaurantName={restaurant.name}
+                  variant="outline"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* QR عناصر القائمة */}
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <div style={{ width: 4, height: 24, background: C.purple, borderRadius: 4 }}></div>
+            <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700 }}>QR عناصر القائمة</h2>
+          </div>
+          <p style={{ color: C.muted, marginBottom: 16 }}>
+            رموز QR خاصة بكل عنصر - للمشاركة المباشرة عبر وسائل التواصل
+          </p>
+
+          {menuItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', background: C.surf, borderRadius: 12 }}>
+              <p style={{ color: C.muted }}>لا توجد عناصر في القائمة. أضف عناصر أولاً</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+                {menuItems.slice(0, 9).map(item => (
+                  <div key={item.id} style={{ border: '1px solid ' + C.border, borderRadius: 12, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ color: C.text, fontWeight: 600, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.name}</h3>
+                        <p style={{ color: C.accent, fontWeight: 600, marginTop: 4, fontSize: 14 }}>
+                          {item.discountedPrice || item.price} ر.س
+                          {item.discountedPrice && (
+                            <span style={{ color: C.muted, fontSize: 12, textDecoration: 'line-through', marginRight: 4 }}>
+                              {item.price} ر.س
+                            </span>
+                          )}
+                        </p>
+                        {item.shareToken && (
+                          <p style={{ color: C.muted, fontSize: 11, marginTop: 4, fontFamily: 'monospace' }}>
+                            رمز: {item.shareToken.substring(0, 12)}...
+                          </p>
+                        )}
+                      </div>
+                      <QRGenerator
+                        type="item"
+                        id={item.id}
+                        name={item.name}
+                        slug={restaurant.slug}
+                        buttonText={<IoQrCode size={20} />}
+                        restaurantLogo={restaurant.logo}
+                        restaurantName={restaurant.name}
+                        variant="outline"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {menuItems.length > 9 && (
+                <div style={{ textAlign: 'center', marginTop: 24, paddingTop: 16, borderTop: '1px solid ' + C.border }}>
+                  <p style={{ color: C.muted }}>
+                    ... و {menuItems.length - 9} عنصر آخر
+                  </p>
+                  <button
+                    onClick={() => window.location.href = '/dashboard/menu'}
+                    style={{ marginTop: 8, color: C.blue, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontFamily: 'Cairo, sans-serif' }}
+                  >
+                    عرض جميع العناصر ←
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ملاحظات */}
+        <div style={{ marginTop: 32, padding: 16, background: 'rgba(96,165,250,0.08)', borderRadius: 12, border: '1px solid rgba(96,165,250,0.2)' }}>
+          <h3 style={{ color: C.blue, fontWeight: 600, marginBottom: 8 }}>💡 نصائح:</h3>
+          <ul style={{ color: C.muted, fontSize: 13, lineHeight: 2 }}>
+            <li>• يمكنك تخصيص ألوان وتصميم QR Code من خلال زر "تخصيص التصميم"</li>
+            <li>• يمكنك تحميل QR Code بصيغة PNG أو SVG للطباعة</li>
+            <li>• QR الطاولات يساعد في معرفة الطاولة التي يطلب منها الزبون تلقائياً</li>
+            <li>• QR العناصر يمكن مشاركته عبر واتساب أو فيسبوك للترويج</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

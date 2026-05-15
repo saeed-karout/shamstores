@@ -6,11 +6,11 @@ import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
-import { 
-  IoAdd, 
-  IoPencil, 
-  IoTrash, 
-  IoCopy, 
+import {
+  IoAdd,
+  IoPencil,
+  IoTrash,
+  IoCopy,
   IoCheckmark,
   IoTime,
   IoPricetag,
@@ -23,6 +23,42 @@ import {
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 12px',
+  background: C.surf,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  color: C.text,
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 13,
+  fontWeight: 500,
+  marginBottom: 4,
+  color: C.muted,
+};
 
 const CouponsPage: React.FC = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -45,19 +81,14 @@ const CouponsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    // السوبر أدمن يرى كل شيء بدون قيود
     if (isSuperAdmin) {
       fetchCoupons();
       return;
     }
-    
-    // الموظف لا يرى الكوبونات أبداً
     if (isStaff) {
       setLoading(false);
       return;
     }
-    
-    // المالك يمكنه رؤية الكوبونات إذا كانت الخطة تدعم
     if (isOwner && permissions.checkPermission('coupons')) {
       fetchCoupons();
     } else {
@@ -92,7 +123,6 @@ const CouponsPage: React.FC = () => {
   };
 
   const handleOpenModal = (coupon?: Coupon) => {
-    // السوبر أدمن يمكنه فتح المودال بدون قيود
     if (isSuperAdmin) {
       if (coupon) {
         setSelectedCoupon(coupon);
@@ -111,19 +141,17 @@ const CouponsPage: React.FC = () => {
       setShowModal(true);
       return;
     }
-    
-    // الموظف لا يمكنه فتح المودال
+
     if (isStaff) {
       toast.error('ليس لديك صلاحية لإدارة الكوبونات');
       return;
     }
 
-    // المالك يحتاج للتحقق من الخطة
     if (isOwner && !permissions.checkPermission('coupons')) {
       permissions.showUpgradePrompt('coupons');
       return;
     }
-    
+
     if (coupon) {
       setSelectedCoupon(coupon);
       setFormData({
@@ -158,7 +186,6 @@ const CouponsPage: React.FC = () => {
         minOrder: parseFloat(formData.minOrder) || 0,
         usageLimit: parseInt(formData.usageLimit) || 1,
       };
-
       if (selectedCoupon) {
         await api.put(`/coupons/${selectedCoupon.id}`, dataToSend);
         toast.success('تم تحديث الكوبون بنجاح');
@@ -175,7 +202,6 @@ const CouponsPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    // السوبر أدمن يمكنه الحذف بدون قيود
     if (isSuperAdmin) {
       if (!window.confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
       try {
@@ -187,15 +213,13 @@ const CouponsPage: React.FC = () => {
       }
       return;
     }
-    
-    // الموظف لا يمكنه الحذف
+
     if (isStaff) {
       toast.error('ليس لديك صلاحية لحذف الكوبونات');
       return;
     }
 
     if (!window.confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
-    
     try {
       await api.delete(`/coupons/${id}`);
       toast.success('تم حذف الكوبون بنجاح');
@@ -214,64 +238,61 @@ const CouponsPage: React.FC = () => {
     const now = new Date();
     const start = new Date(coupon.startDate);
     const end = new Date(coupon.endDate);
-
     if (now < start) return 'upcoming';
     if (now > end) return 'expired';
     if (coupon.usedCount >= coupon.usageLimit) return 'exhausted';
     return 'active';
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = (status: string): React.CSSProperties => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'upcoming': return 'bg-blue-100 text-blue-800';
-      case 'expired': return 'bg-red-100 text-red-800';
-      case 'exhausted': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active':    return { background: 'rgba(200,226,53,0.15)', color: C.accent };
+      case 'upcoming':  return { background: 'rgba(96,165,250,0.15)', color: C.blue };
+      case 'expired':   return { background: 'rgba(255,107,107,0.15)', color: C.red };
+      case 'exhausted': return { background: 'rgba(157,196,172,0.15)', color: C.muted };
+      default:          return { background: 'rgba(157,196,172,0.15)', color: C.muted };
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return 'نشط';
-      case 'upcoming': return 'قادم';
-      case 'expired': return 'منتهي';
+      case 'active':    return 'نشط';
+      case 'upcoming':  return 'قادم';
+      case 'expired':   return 'منتهي';
       case 'exhausted': return 'مستنفذ';
-      default: return status;
+      default:          return status;
     }
   };
 
-  // عرض رسالة للموظف
+  // Staff access denied
   if (isStaff) {
     return (
-      <div className="p-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
-          <IoLockClosed className="text-yellow-500 text-5xl mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">غير مصرح</h2>
-          <p className="text-gray-600">
-            ليس لديك صلاحية الوصول إلى صفحة الكوبونات.
-          </p>
+      <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: 'center' }}>
+          <IoLockClosed style={{ color: C.yellow, fontSize: 48, marginBottom: 16 }} />
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>غير مصرح</h2>
+          <p style={{ color: C.muted }}>ليس لديك صلاحية الوصول إلى صفحة الكوبونات.</p>
         </div>
       </div>
     );
   }
 
-  // عرض رسالة للمالك إذا كانت الخطة لا تدعم الكوبونات (وليس سوبر أدمن)
+  // Owner without coupon plan
   if (isOwner && !permissions.checkPermission('coupons') && !isSuperAdmin) {
     return (
-      <div className="p-6">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
-          <IoWarning className="text-yellow-500 text-5xl mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">الميزة غير متاحة</h2>
-          <p className="text-gray-600 mb-4">
+      <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: 'center' }}>
+          <IoWarning style={{ color: C.yellow, fontSize: 48, marginBottom: 16 }} />
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>الميزة غير متاحة</h2>
+          <p style={{ color: C.muted, marginBottom: 20 }}>
             نظام الكوبونات غير متاح في خطتك الحالية. قم بترقية خطتك للاستفادة من هذه الميزة.
           </p>
-          <Button
-            variant="primary"
+          <button
             onClick={() => window.location.href = '/plans'}
+            style={{ background: C.accent, color: C.bg, padding: '10px 28px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 15 }}
           >
             عرض خطط الترقية
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -280,207 +301,189 @@ const CouponsPage: React.FC = () => {
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">إدارة الكوبونات</h1>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>إدارة الكوبونات</h1>
           {isSuperAdmin && (
-            <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full flex items-center gap-1">
-              <IoShield className="text-purple-600" />
+            <span style={{ background: 'rgba(167,139,250,0.15)', color: C.purple, fontSize: 12, padding: '4px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <IoShield size={14} />
               صلاحية كاملة
             </span>
           )}
         </div>
-        {/* السوبر أدمن والمالك (إذا كانت الخطة تدعم) يمكنهم الإضافة */}
         {(isSuperAdmin || (isOwner && permissions.checkPermission('coupons'))) && (
-          <Button
-            variant="primary"
+          <button
             onClick={() => handleOpenModal()}
+            style={{ background: C.accent, color: C.bg, padding: '8px 20px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none', fontSize: 14 }}
           >
-            <IoAdd className="inline ml-1" />
+            <IoAdd size={16} />
             إضافة كوبون
-          </Button>
+          </button>
         )}
       </div>
 
-      {/* الإحصائيات - تظهر للجميع */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
+      {/* Stats Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p className="text-sm text-gray-500">إجمالي الكوبونات</p>
-              <p className="text-2xl font-bold">{coupons.length}</p>
+              <p style={{ fontSize: 13, color: C.muted, margin: '0 0 6px' }}>إجمالي الكوبونات</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color: C.text, margin: 0 }}>{coupons.length}</p>
             </div>
-            <IoPricetag className="text-blue-500 text-3xl" />
+            <IoPricetag style={{ color: C.blue, fontSize: 32 }} />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p className="text-sm text-gray-500">كوبونات نشطة</p>
-              <p className="text-2xl font-bold text-green-600">
+              <p style={{ fontSize: 13, color: C.muted, margin: '0 0 6px' }}>كوبونات نشطة</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color: C.accent, margin: 0 }}>
                 {coupons.filter(c => getStatus(c) === 'active').length}
               </p>
             </div>
-            <IoCheckmark className="text-green-500 text-3xl" />
+            <IoCheckmark style={{ color: C.accent, fontSize: 32 }} />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p className="text-sm text-gray-500">قادمة</p>
-              <p className="text-2xl font-bold text-blue-600">
+              <p style={{ fontSize: 13, color: C.muted, margin: '0 0 6px' }}>قادمة</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color: C.blue, margin: 0 }}>
                 {coupons.filter(c => getStatus(c) === 'upcoming').length}
               </p>
             </div>
-            <IoTime className="text-blue-500 text-3xl" />
+            <IoTime style={{ color: C.blue, fontSize: 32 }} />
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p className="text-sm text-gray-500">منتهية</p>
-              <p className="text-2xl font-bold text-red-600">
+              <p style={{ fontSize: 13, color: C.muted, margin: '0 0 6px' }}>منتهية</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color: C.red, margin: 0 }}>
                 {coupons.filter(c => getStatus(c) === 'expired' || getStatus(c) === 'exhausted').length}
               </p>
             </div>
-            <IoWarning className="text-red-500 text-3xl" />
+            <IoWarning style={{ color: C.red, fontSize: 32 }} />
           </div>
         </div>
       </div>
 
-      {/* قائمة الكوبونات */}
+      {/* Coupons Table / Empty State */}
       {coupons.length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <IoPricetag className="text-gray-300 text-5xl mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد كوبونات</h3>
-          <p className="text-gray-500 mb-4">
-            {(isSuperAdmin || (isOwner && permissions.checkPermission('coupons'))) 
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: 'center' }}>
+          <IoPricetag style={{ color: C.muted, fontSize: 48, marginBottom: 16, opacity: 0.4 }} />
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 8 }}>لا توجد كوبونات</h3>
+          <p style={{ color: C.muted, marginBottom: 20 }}>
+            {(isSuperAdmin || (isOwner && permissions.checkPermission('coupons')))
               ? 'قم بإضافة أول كوبون الآن'
               : 'لا توجد كوبونات متاحة'}
           </p>
           {(isSuperAdmin || (isOwner && permissions.checkPermission('coupons'))) && (
-            <Button
-              variant="primary"
+            <button
               onClick={() => handleOpenModal()}
+              style={{ background: C.accent, color: C.bg, padding: '10px 24px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              <IoAdd className="inline ml-1" />
+              <IoAdd size={16} />
               إضافة كوبون
-            </Button>
+            </button>
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  الكود
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  النوع
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  الوصف
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  الخصم
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  الفترة
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  الاستخدام
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  الحالة
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                  الإجراءات
-                </th>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: C.surf }}>
+                {['الكود', 'النوع', 'الوصف', 'الخصم', 'الفترة', 'الاستخدام', 'الحالة', 'الإجراءات'].map(h => (
+                  <th key={h} style={{ padding: '12px 16px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: C.muted, textTransform: 'uppercase', borderBottom: `1px solid ${C.border}` }}>
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody>
               {coupons.map(coupon => {
                 const status = getStatus(coupon);
                 return (
-                  <tr key={coupon.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <code className="bg-gray-100 px-2 py-1 rounded font-mono">
+                  <tr
+                    key={coupon.id}
+                    style={{ borderTop: `1px solid ${C.border}` }}
+                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(200,226,53,0.04)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
+                  >
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <code style={{ background: C.surf, padding: '2px 8px', borderRadius: 6, fontFamily: 'monospace', color: C.accent, fontSize: 13 }}>
                           {coupon.code}
                         </code>
                         <button
                           onClick={() => copyCode(coupon.code)}
-                          className="text-gray-400 hover:text-blue-500"
+                          style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', padding: 0 }}
+                          title="نسخ"
                         >
-                          <IoCopy size={16} />
+                          <IoCopy size={15} />
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                       {coupon.isRestaurantOnly ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                          <IoRestaurant />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'rgba(96,165,250,0.15)', color: C.blue, borderRadius: 20, fontSize: 12 }}>
+                          <IoRestaurant size={13} />
                           داخل المطعم
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                          <IoGlobe />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'rgba(200,226,53,0.15)', color: C.accent, borderRadius: 20, fontSize: 12 }}>
+                          <IoGlobe size={13} />
                           عام
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-900">{coupon.description}</p>
+                    <td style={{ padding: '14px 16px' }}>
+                      <p style={{ fontSize: 13, color: C.text, margin: 0 }}>{coupon.description}</p>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                       {coupon.discountType === 'percentage' ? (
-                        <span className="font-bold text-green-600">{coupon.discountValue}%</span>
+                        <span style={{ fontWeight: 700, color: C.accent }}>{coupon.discountValue}%</span>
                       ) : (
-                        <span className="font-bold text-green-600">{coupon.discountValue} ر.س</span>
+                        <span style={{ fontWeight: 700, color: C.accent }}>{coupon.discountValue} ر.س</span>
                       )}
                       {coupon.minOrder > 0 && (
-                        <p className="text-xs text-gray-500">الحد الأدنى: {coupon.minOrder} ر.س</p>
+                        <p style={{ fontSize: 12, color: C.muted, margin: '2px 0 0' }}>الحد الأدنى: {coupon.minOrder} ر.س</p>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontSize: 13, color: C.muted }}>
                       <div>من: {format(new Date(coupon.startDate), 'dd/MM/yyyy')}</div>
                       <div>إلى: {format(new Date(coupon.endDate), 'dd/MM/yyyy')}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-center">
-                        <span className="font-bold">{coupon.usedCount}</span>
-                        <span className="text-gray-500"> / {coupon.usageLimit}</span>
-                      </div>
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      <span style={{ fontWeight: 700, color: C.text }}>{coupon.usedCount}</span>
+                      <span style={{ color: C.muted }}> / {coupon.usageLimit}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(status)}`}>
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                      <span style={{ ...getStatusStyle(status), padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                         {getStatusText(status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex space-x-2 rtl:space-x-reverse">
-                        {/* السوبر أدمن والمالك (إذا كانت الخطة تدعم) يمكنهم التعديل والحذف */}
-                        {(isSuperAdmin || (isOwner && permissions.checkPermission('coupons'))) && (
-                          <>
-                            <button
-                              onClick={() => handleOpenModal(coupon)}
-                              className="text-blue-500 hover:text-blue-700"
-                              title="تعديل"
-                            >
-                              <IoPencil size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(coupon.id)}
-                              className="text-red-500 hover:text-red-700"
-                              title="حذف"
-                            >
-                              <IoTrash size={18} />
-                            </button>
-                          </>
-                        )}
-                      </div>
+                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
+                      {(isSuperAdmin || (isOwner && permissions.checkPermission('coupons'))) && (
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button
+                            onClick={() => handleOpenModal(coupon)}
+                            style={{ background: 'none', border: 'none', color: C.blue, cursor: 'pointer', padding: 4 }}
+                            title="تعديل"
+                          >
+                            <IoPencil size={17} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(coupon.id)}
+                            style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', padding: 4 }}
+                            title="حذف"
+                          >
+                            <IoTrash size={17} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
@@ -490,62 +493,59 @@ const CouponsPage: React.FC = () => {
         </div>
       )}
 
-      {/* مودال إضافة/تعديل كوبون */}
+      {/* Add/Edit Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          resetForm();
-        }}
+        onClose={() => { setShowModal(false); resetForm(); }}
         title={selectedCoupon ? 'تعديل كوبون' : 'إضافة كوبون جديد'}
         size="lg"
       >
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium mb-1">كود الكوبون</label>
-            <div className="flex gap-2">
+            <label style={labelStyle}>كود الكوبون</label>
+            <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="text"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                className="flex-1 p-2 border rounded font-mono"
+                style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }}
                 placeholder="مثال: SAVE20"
                 required
               />
-              <Button
-                variant="outline"
+              <button
                 onClick={generateRandomCode}
+                style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.text, padding: '8px 14px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 500 }}
               >
                 توليد عشوائي
-              </Button>
+              </button>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف</label>
+            <label style={labelStyle}>الوصف</label>
             <input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-2 border rounded"
+              style={inputStyle}
               placeholder="وصف الكوبون"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">نوع الخصم</label>
+              <label style={labelStyle}>نوع الخصم</label>
               <select
                 value={formData.discountType}
                 onChange={(e) => setFormData({ ...formData, discountType: e.target.value as 'percentage' | 'fixed' })}
-                className="w-full p-2 border rounded"
+                style={{ ...inputStyle, appearance: 'none' }}
               >
-                <option value="percentage">نسبة مئوية</option>
-                <option value="fixed">قيمة ثابتة</option>
+                <option value="percentage" style={{ background: C.surf }}>نسبة مئوية</option>
+                <option value="fixed" style={{ background: C.surf }}>قيمة ثابتة</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">
+              <label style={labelStyle}>
                 {formData.discountType === 'percentage' ? 'نسبة الخصم' : 'قيمة الخصم'}
               </label>
               <input
@@ -554,85 +554,85 @@ const CouponsPage: React.FC = () => {
                 min="0"
                 value={formData.discountValue}
                 onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
-                className="w-full p-2 border rounded"
+                style={inputStyle}
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">الحد الأدنى للطلب</label>
+              <label style={labelStyle}>الحد الأدنى للطلب</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={formData.minOrder}
                 onChange={(e) => setFormData({ ...formData, minOrder: e.target.value })}
-                className="w-full p-2 border rounded"
+                style={inputStyle}
                 placeholder="0 = بدون حد"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">حد الاستخدام</label>
+              <label style={labelStyle}>حد الاستخدام</label>
               <input
                 type="number"
                 min="1"
                 value={formData.usageLimit}
                 onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-                className="w-full p-2 border rounded"
+                style={inputStyle}
                 placeholder="عدد مرات الاستخدام"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">تاريخ البدء</label>
+              <label style={labelStyle}>تاريخ البدء</label>
               <input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full p-2 border rounded"
+                style={inputStyle}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">تاريخ الانتهاء</label>
+              <label style={labelStyle}>تاريخ الانتهاء</label>
               <input
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full p-2 border rounded"
+                style={inputStyle}
                 required
               />
             </div>
           </div>
 
-          {/* نوع الكوبون */}
-          <div className="border-t pt-4">
-            <label className="flex items-center gap-2 mb-2">
+          {/* Coupon type */}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 12 }}>
               <input
                 type="checkbox"
                 checked={formData.isRestaurantOnly}
                 onChange={(e) => setFormData({ ...formData, isRestaurantOnly: e.target.checked })}
-                className="w-4 h-4 text-blue-500 rounded"
+                style={{ accentColor: C.accent, width: 16, height: 16 }}
               />
-              <span className="font-medium">كوبون خاص بالمطعم</span>
+              <span style={{ fontWeight: 500, color: C.text }}>كوبون خاص بالمطعم</span>
             </label>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-start gap-2">
+            <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 {formData.isRestaurantOnly ? (
-                  <IoRestaurant className="text-blue-600 mt-1" size={18} />
+                  <IoRestaurant style={{ color: C.blue, marginTop: 2 }} size={18} />
                 ) : (
-                  <IoGlobe className="text-green-600 mt-1" size={18} />
+                  <IoGlobe style={{ color: C.accent, marginTop: 2 }} size={18} />
                 )}
                 <div>
-                  <p className="text-sm font-medium">
+                  <p style={{ fontSize: 14, fontWeight: 600, color: C.text, margin: '0 0 4px' }}>
                     {formData.isRestaurantOnly ? 'يعمل فقط داخل المطعم' : 'يعمل في أي مكان'}
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    {formData.isRestaurantOnly 
+                  <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
+                    {formData.isRestaurantOnly
                       ? 'يمكن استخدام هذا الكوبون فقط عند الطلب من داخل المطعم (مع مسح QR الطاولة)'
                       : 'يمكن استخدام هذا الكوبون في أي طلب سواء داخل المطعم أو خارجه'}
                   </p>
@@ -641,13 +641,12 @@ const CouponsPage: React.FC = () => {
             </div>
           </div>
 
-          <Button
-            variant="primary"
+          <button
             onClick={handleSave}
-            fullWidth
+            style={{ background: C.accent, color: C.bg, padding: '10px 0', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 15 }}
           >
             حفظ
-          </Button>
+          </button>
         </div>
       </Modal>
     </div>
