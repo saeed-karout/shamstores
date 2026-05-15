@@ -1,9 +1,9 @@
-// pages/Admin/AdminRestaurantDetails.tsx - أضف هذا القسم
+// pages/Admin/AdminRestaurantDetails.tsx
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  IoArrowBack, IoSave, IoTrash, IoKey, IoEye, IoEyeOff, 
+import {
+  IoArrowBack, IoSave, IoTrash, IoKey, IoEye, IoEyeOff,
   IoRestaurant, IoLocation, IoCall, IoMail, IoLogoWhatsapp,
   IoColorPalette, IoSettings, IoLink, IoWarning, IoMegaphone,
   IoRefresh
@@ -13,10 +13,16 @@ import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
+
 interface Restaurant {
   id: string;
   name: string;
-  slug: string;  // ✅ أضف slug
+  slug: string;
   email: string;
   phone: string;
   whatsapp: string;
@@ -42,7 +48,7 @@ const AdminRestaurantDetails: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [checkingSlug, setCheckingSlug] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState(true);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -84,13 +90,12 @@ const AdminRestaurantDetails: React.FC = () => {
     }
   };
 
-  // ✅ التحقق من توفر slug
   const checkSlugAvailability = async (slug: string) => {
     if (!slug || slug === restaurant?.slug) {
       setSlugAvailable(true);
       return;
     }
-    
+
     setCheckingSlug(true);
     try {
       const response = await api.get(`/admin/check-slug?slug=${slug}&type=restaurant&id=${id}`);
@@ -118,7 +123,6 @@ const AdminRestaurantDetails: React.FC = () => {
   };
 
   const handleUpdate = async () => {
-    // ✅ التحقق من slug قبل الحفظ
     if (!slugAvailable && formData.slug !== restaurant?.slug) {
       toast.error('الرابط غير متاح، يرجى اختيار رابط آخر');
       return;
@@ -176,335 +180,370 @@ const AdminRestaurantDetails: React.FC = () => {
   };
 
   if (loading) return <Loader fullScreen />;
-  if (!restaurant) return <div>المطعم غير موجود</div>;
+  if (!restaurant) return <div style={{ color: C.text, padding: 24 }}>المطعم غير موجود</div>;
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 12px',
+    background: C.surf,
+    border: '1px solid ' + C.border,
+    borderRadius: 10,
+    color: C.text,
+    fontFamily: 'Cairo, sans-serif',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: 13, fontWeight: 600, color: C.muted, marginBottom: 6
+  };
 
   return (
-    <div className="p-6">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <button
           onClick={() => navigate('/admin/restaurants')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
         >
           <IoArrowBack size={20} />
           العودة
         </button>
-        <h1 className="text-2xl font-bold">{restaurant.name}</h1>
-        <span className={`px-2 py-1 rounded-full text-xs ${restaurant.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>{restaurant.name}</h1>
+        <span style={{
+          padding: '2px 12px', borderRadius: 999, fontSize: 12,
+          background: restaurant.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)',
+          color: restaurant.isActive ? C.accent : C.red,
+        }}>
           {restaurant.isActive ? 'نشط' : 'غير نشط'}
         </span>
-        <div className="flex-1"></div>
+        <div style={{ flex: 1 }} />
         <button
           onClick={() => navigate(`/admin/business/restaurant/${id}/marketing`)}
-          className="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-200 flex items-center gap-1"
+          style={{
+            background: 'rgba(96,165,250,0.12)', color: C.blue,
+            padding: '6px 14px', borderRadius: 10, fontSize: 13,
+            border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            fontFamily: 'Cairo, sans-serif'
+          }}
         >
           <IoMegaphone size={16} />
           الإعلانات
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* معلومات المطعم */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">معلومات المطعم</h2>
-            <div className="flex gap-2">
-              {!editing ? (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-                >
-                  تعديل
-                </button>
-              ) : (
-                <>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: 24, flexWrap: 'wrap' } as React.CSSProperties}>
+          {/* معلومات المطعم */}
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>معلومات المطعم</h2>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {!editing ? (
                   <button
-                    onClick={handleUpdate}
-                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center gap-2"
+                    onClick={() => setEditing(true)}
+                    style={{ background: C.blue, color: '#fff', padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
                   >
-                    <IoSave size={18} />
-                    حفظ
+                    تعديل
                   </button>
-                  <button
-                    onClick={() => setEditing(false)}
-                    className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
-                  >
-                    إلغاء
-                  </button>
-                </>
-              )}
-              <button
-                onClick={handleDelete}
-                className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center gap-2"
-              >
-                <IoTrash size={18} />
-                حذف
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">اسم المطعم</label>
-              {editing ? (
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
-                />
-              ) : (
-                <p className="text-gray-700">{restaurant.name}</p>
-              )}
-            </div>
-
-            {/* ✅ حقل الرابط (slug) */}
-            <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-                <IoLink size={16} />
-                الرابط (Slug)
-              </label>
-              {editing ? (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formData.slug}
-                      onChange={handleSlugChange}
-                      className={`flex-1 p-2 border rounded-lg ${
-                        !slugAvailable && formData.slug !== restaurant.slug
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-300'
-                      }`}
-                      placeholder="my-restaurant"
-                      dir="ltr"
-                    />
+                ) : (
+                  <>
                     <button
-                      type="button"
-                      onClick={generateSlug}
-                      className="px-3 bg-gray-200 rounded-lg hover:bg-gray-300"
-                      title="توليد رابط تلقائي"
+                      onClick={handleUpdate}
+                      style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Cairo, sans-serif', fontWeight: 700 }}
                     >
-                      <IoRefresh size={18} />
+                      <IoSave size={18} />
+                      حفظ
                     </button>
-                  </div>
-                  {checkingSlug && (
-                    <p className="text-sm text-gray-500">جاري التحقق من الرابط...</p>
-                  )}
-                  {!slugAvailable && formData.slug !== restaurant.slug && (
-                    <p className="text-sm text-red-600 flex items-center gap-1">
-                      <IoWarning size={14} />
-                      هذا الرابط مستخدم بالفعل، يرجى اختيار رابط آخر
-                    </p>
-                  )}
-                  {slugAvailable && formData.slug !== restaurant.slug && formData.slug && (
-                    <p className="text-sm text-green-600">✓ هذا الرابط متاح</p>
-                  )}
-                  <p className="text-xs text-gray-500">
-                    الرابط الخاص بمطعمك: {window.location.origin}/{formData.slug || '...'}
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-gray-700 font-mono">{restaurant.slug}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    رابط المطعم: {window.location.origin}/{restaurant.slug}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">البريد الإلكتروني</label>
-              {editing ? (
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
-                />
-              ) : (
-                <p className="text-gray-700">{restaurant.email}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">رقم الهاتف</label>
-                {editing ? (
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full p-2 border rounded-lg"
-                  />
-                ) : (
-                  <p className="text-gray-700">{restaurant.phone || '-'}</p>
+                    <button
+                      onClick={() => setEditing(false)}
+                      style={{ background: C.surf, color: C.muted, padding: '8px 16px', borderRadius: 10, border: '1px solid ' + C.border, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
+                    >
+                      إلغاء
+                    </button>
+                  </>
                 )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">واتساب</label>
-                {editing ? (
-                  <input
-                    type="tel"
-                    value={formData.whatsapp}
-                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                    className="w-full p-2 border rounded-lg"
-                  />
-                ) : (
-                  <p className="text-gray-700">{restaurant.whatsapp || '-'}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">العنوان</label>
-              {editing ? (
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
-                />
-              ) : (
-                <p className="text-gray-700">{restaurant.address || '-'}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">الوصف</label>
-              {editing ? (
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
-                  rows={3}
-                />
-              ) : (
-                <p className="text-gray-700">{restaurant.description || '-'}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">اللون الأساسي</label>
-                {editing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                      className="w-12 h-10 border rounded"
-                    />
-                    <input
-                      type="text"
-                      value={formData.primaryColor}
-                      onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                      className="flex-1 p-2 border rounded-lg"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded" style={{ backgroundColor: restaurant.primaryColor }} />
-                    <span>{restaurant.primaryColor}</span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">اللون الثانوي</label>
-                {editing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={formData.secondaryColor}
-                      onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                      className="w-12 h-10 border rounded"
-                    />
-                    <input
-                      type="text"
-                      value={formData.secondaryColor}
-                      onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                      className="flex-1 p-2 border rounded-lg"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded" style={{ backgroundColor: restaurant.secondaryColor }} />
-                    <span>{restaurant.secondaryColor}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">الحالة</label>
-              {editing ? (
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-5 h-5"
-                  />
-                  <span>مفعل</span>
-                </label>
-              ) : (
-                <span className={restaurant.isActive ? 'text-green-600' : 'text-red-600'}>
-                  {restaurant.isActive ? 'نشط' : 'غير نشط'}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* معلومات إضافية - كما هي */}
-        <div className="space-y-6">
-          {/* الخطة */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-4">الخطة</h2>
-            <p><span className="text-gray-500">الخطة:</span> {restaurant.plan?.name || '-'}</p>
-            <p><span className="text-gray-500">السعر:</span> {restaurant.plan?.price || 0} ل.س/شهر</p>
-            <p><span className="text-gray-500">تاريخ التسجيل:</span> {new Date(restaurant.createdAt).toLocaleDateString('ar-SA')}</p>
-          </div>
-
-          {/* إعادة تعيين كلمة المرور */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <IoKey size={20} />
-              إعادة تعيين كلمة المرور
-            </h2>
-            <div className="space-y-3">
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="كلمة المرور الجديدة"
-                  className="w-full p-2 border rounded-lg pr-10"
-                />
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  onClick={handleDelete}
+                  style={{ background: C.red, color: '#fff', padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'Cairo, sans-serif' }}
                 >
-                  {showPassword ? <IoEyeOff size={18} /> : <IoEye size={18} />}
+                  <IoTrash size={18} />
+                  حذف
                 </button>
               </div>
-              <Button variant="primary" onClick={handleResetPassword} fullWidth>
-                إعادة تعيين كلمة المرور
-              </Button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* اسم المطعم */}
+              <div>
+                <label style={labelStyle}>اسم المطعم</label>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    style={inputStyle}
+                  />
+                ) : (
+                  <p style={{ color: C.text, margin: 0 }}>{restaurant.name}</p>
+                )}
+              </div>
+
+              {/* حقل الرابط (slug) */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IoLink size={16} />
+                  الرابط (Slug)
+                </label>
+                {editing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        value={formData.slug}
+                        onChange={handleSlugChange}
+                        style={{
+                          ...inputStyle,
+                          flex: 1,
+                          border: `1px solid ${!slugAvailable && formData.slug !== restaurant.slug ? C.red : C.border}`,
+                          background: !slugAvailable && formData.slug !== restaurant.slug ? 'rgba(255,107,107,0.08)' : C.surf,
+                        }}
+                        placeholder="my-restaurant"
+                        dir="ltr"
+                      />
+                      <button
+                        type="button"
+                        onClick={generateSlug}
+                        style={{ padding: '0 12px', background: C.surf, border: '1px solid ' + C.border, borderRadius: 10, cursor: 'pointer', color: C.muted }}
+                        title="توليد رابط تلقائي"
+                      >
+                        <IoRefresh size={18} />
+                      </button>
+                    </div>
+                    {checkingSlug && (
+                      <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>جاري التحقق من الرابط...</p>
+                    )}
+                    {!slugAvailable && formData.slug !== restaurant.slug && (
+                      <p style={{ color: C.red, fontSize: 12, margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <IoWarning size={14} />
+                        هذا الرابط مستخدم بالفعل، يرجى اختيار رابط آخر
+                      </p>
+                    )}
+                    {slugAvailable && formData.slug !== restaurant.slug && formData.slug && (
+                      <p style={{ color: C.accent, fontSize: 12, margin: 0 }}>✓ هذا الرابط متاح</p>
+                    )}
+                    <p style={{ color: C.muted, fontSize: 11, margin: 0 }}>
+                      الرابط الخاص بمطعمك: {window.location.origin}/{formData.slug || '...'}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ color: C.accent, fontFamily: 'monospace', margin: 0 }}>{restaurant.slug}</p>
+                    <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
+                      رابط المطعم: {window.location.origin}/{restaurant.slug}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* البريد الإلكتروني */}
+              <div>
+                <label style={labelStyle}>البريد الإلكتروني</label>
+                {editing ? (
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    style={inputStyle}
+                  />
+                ) : (
+                  <p style={{ color: C.text, margin: 0 }}>{restaurant.email}</p>
+                )}
+              </div>
+
+              {/* الهاتف والواتساب */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>رقم الهاتف</label>
+                  {editing ? (
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      style={inputStyle}
+                    />
+                  ) : (
+                    <p style={{ color: C.text, margin: 0 }}>{restaurant.phone || '-'}</p>
+                  )}
+                </div>
+                <div>
+                  <label style={labelStyle}>واتساب</label>
+                  {editing ? (
+                    <input
+                      type="tel"
+                      value={formData.whatsapp}
+                      onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                      style={inputStyle}
+                    />
+                  ) : (
+                    <p style={{ color: C.text, margin: 0 }}>{restaurant.whatsapp || '-'}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* العنوان */}
+              <div>
+                <label style={labelStyle}>العنوان</label>
+                {editing ? (
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    style={inputStyle}
+                  />
+                ) : (
+                  <p style={{ color: C.text, margin: 0 }}>{restaurant.address || '-'}</p>
+                )}
+              </div>
+
+              {/* الوصف */}
+              <div>
+                <label style={labelStyle}>الوصف</label>
+                {editing ? (
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    style={{ ...inputStyle, resize: 'vertical' }}
+                    rows={3}
+                  />
+                ) : (
+                  <p style={{ color: C.text, margin: 0 }}>{restaurant.description || '-'}</p>
+                )}
+              </div>
+
+              {/* الألوان */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>اللون الأساسي</label>
+                  {editing ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        type="color"
+                        value={formData.primaryColor}
+                        onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                        style={{ width: 48, height: 40, border: '1px solid ' + C.border, borderRadius: 8, background: C.surf, cursor: 'pointer' }}
+                      />
+                      <input
+                        type="text"
+                        value={formData.primaryColor}
+                        onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: restaurant.primaryColor, border: '1px solid ' + C.border }} />
+                      <span style={{ color: C.text }}>{restaurant.primaryColor}</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label style={labelStyle}>اللون الثانوي</label>
+                  {editing ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        type="color"
+                        value={formData.secondaryColor}
+                        onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
+                        style={{ width: 48, height: 40, border: '1px solid ' + C.border, borderRadius: 8, background: C.surf, cursor: 'pointer' }}
+                      />
+                      <input
+                        type="text"
+                        value={formData.secondaryColor}
+                        onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: restaurant.secondaryColor, border: '1px solid ' + C.border }} />
+                      <span style={{ color: C.text }}>{restaurant.secondaryColor}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* الحالة */}
+              <div>
+                <label style={labelStyle}>الحالة</label>
+                {editing ? (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      style={{ width: 18, height: 18, cursor: 'pointer' }}
+                    />
+                    <span style={{ color: C.text }}>مفعل</span>
+                  </label>
+                ) : (
+                  <span style={{ color: restaurant.isActive ? C.accent : C.red }}>
+                    {restaurant.isActive ? 'نشط' : 'غير نشط'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* معلومات المالك */}
-          {restaurant.users && restaurant.users.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4">معلومات المالك</h2>
-              <p><span className="text-gray-500">الاسم:</span> {restaurant.users[0].name}</p>
-              <p><span className="text-gray-500">البريد:</span> {restaurant.users[0].email}</p>
-              <p><span className="text-gray-500">الهاتف:</span> {restaurant.users[0].phone || '-'}</p>
+          {/* الجانب الأيسر */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* الخطة */}
+            <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+              <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginTop: 0, marginBottom: 16 }}>الخطة</h2>
+              <p style={{ color: C.text, margin: '0 0 8px' }}><span style={{ color: C.muted }}>الخطة:</span> {restaurant.plan?.name || '-'}</p>
+              <p style={{ color: C.text, margin: '0 0 8px' }}><span style={{ color: C.muted }}>السعر:</span> {restaurant.plan?.price || 0} ل.س/شهر</p>
+              <p style={{ color: C.text, margin: 0 }}><span style={{ color: C.muted }}>تاريخ التسجيل:</span> {new Date(restaurant.createdAt).toLocaleDateString('ar-SA')}</p>
             </div>
-          )}
+
+            {/* إعادة تعيين كلمة المرور */}
+            <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+              <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginTop: 0, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoKey size={20} />
+                إعادة تعيين كلمة المرور
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="كلمة المرور الجديدة"
+                    style={{ ...inputStyle, paddingLeft: 40 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: C.muted }}
+                  >
+                    {showPassword ? <IoEyeOff size={18} /> : <IoEye size={18} />}
+                  </button>
+                </div>
+                <Button variant="primary" onClick={handleResetPassword} fullWidth>
+                  إعادة تعيين كلمة المرور
+                </Button>
+              </div>
+            </div>
+
+            {/* معلومات المالك */}
+            {restaurant.users && restaurant.users.length > 0 && (
+              <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+                <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginTop: 0, marginBottom: 16 }}>معلومات المالك</h2>
+                <p style={{ color: C.text, margin: '0 0 8px' }}><span style={{ color: C.muted }}>الاسم:</span> {restaurant.users[0].name}</p>
+                <p style={{ color: C.text, margin: '0 0 8px' }}><span style={{ color: C.muted }}>البريد:</span> {restaurant.users[0].email}</p>
+                <p style={{ color: C.text, margin: 0 }}><span style={{ color: C.muted }}>الهاتف:</span> {restaurant.users[0].phone || '-'}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

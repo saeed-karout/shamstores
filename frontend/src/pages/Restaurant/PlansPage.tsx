@@ -5,28 +5,27 @@ import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { 
-  IoCheckmark, 
-  IoClose, 
-  IoRocket, 
-  IoBusiness, 
-  IoStar,
-  IoWarning,
-  IoLogoWhatsapp,
-  IoSend,
-  IoTime,
-  IoCheckmarkCircle,
-  IoCloseCircle,
-  IoEye,
-  IoChatbubbleEllipses,
-  IoAdd,
-  IoPencil,
-  IoTrash,
-  IoSettings
-} from 'react-icons/io5';
+import { IoCheckmark, IoClose, IoRocket, IoBusiness, IoStar, IoWarning, IoLogoWhatsapp, IoSend, IoTime, IoCheckmarkCircle, IoCloseCircle, IoEye, IoChatbubbleEllipses, IoAdd, IoPencil, IoTrash, IoSettings } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  accent: '#C8E235',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  yellow: '#FBBF24',
+  blue:   '#60A5FA',
+};
+
+const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 14, outline: 'none', boxSizing: 'border-box' };
+const labelStyle: React.CSSProperties = { display: 'block', color: C.muted, fontSize: 13, marginBottom: 6 };
 
 const PlansPage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -40,39 +39,17 @@ const PlansPage: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [rejectReason, setRejectReason] = useState('');
-  
-  // حالة إدارة الخطط للمسؤول
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
-  const [planForm, setPlanForm] = useState({
-    name: 'free',
-    price: '',
-    maxItems: '',
-    maxTables: '',
-    maxStaff: '',
-    hasWhatsapp: false,
-    hasOnlineOrders: false,
-    hasCustomDomain: false,
-    hasAnalytics: false,
-    hasTableQr: false,
-    hasMultiLanguage: false,
-    hasPromotions: false,
-    hasCoupons: false,
-    description: ''
-  });
+  const [planForm, setPlanForm] = useState({ name: 'free', price: '', maxItems: '', maxTables: '', maxStaff: '', hasWhatsapp: false, hasOnlineOrders: false, hasCustomDomain: false, hasAnalytics: false, hasTableQr: false, hasMultiLanguage: false, hasPromotions: false, hasCoupons: false, description: '' });
 
   const { user, isAdmin } = useAuth();
-
-  // التحقق من صلاحية super admin
   const isSuperAdminUser = user?.role === 'super_admin';
 
   useEffect(() => {
     fetchData();
-    if (isAdmin) {
-      fetchUpgradeRequests();
-    } else {
-      fetchMyRequests();
-    }
+    if (isAdmin) fetchUpgradeRequests();
+    else fetchMyRequests();
   }, [isAdmin]);
 
   const fetchData = async () => {
@@ -83,472 +60,193 @@ const PlansPage: React.FC = () => {
       ]);
       setPlans(plansData);
       setCurrentPlan(currentPlanData);
-    } catch (error) {
-      console.error('Error fetching plans:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
   const fetchUpgradeRequests = async () => {
-    try {
-      const requests = await api.get('/admin/upgrade-requests');
-      setUpgradeRequests(requests);
-    } catch (error) {
-      console.error('Error fetching upgrade requests:', error);
-    }
+    try { const r = await api.get('/admin/upgrade-requests'); setUpgradeRequests(r); } catch {}
   };
-
   const fetchMyRequests = async () => {
-    try {
-      const requests = await api.get('/admin/user/upgrade-requests');
-      setMyRequests(requests);
-    } catch (error) {
-      console.error('Error fetching my requests:', error);
-    }
+    try { const r = await api.get('/admin/user/upgrade-requests'); setMyRequests(r); } catch {}
   };
 
-  // دوال إدارة الخطط للمسؤول
   const handleOpenPlanModal = (plan?: Plan) => {
     if (plan) {
       setEditingPlan(plan);
-      setPlanForm({
-        name: plan.name,
-        price: plan.price.toString(),
-        maxItems: plan.maxItems.toString(),
-        maxTables: plan.maxTables.toString(),
-        maxStaff: plan.maxStaff.toString(),
-        hasWhatsapp: plan.hasWhatsapp,
-        hasOnlineOrders: plan.hasOnlineOrders,
-        hasCustomDomain: plan.hasCustomDomain,
-        hasAnalytics: plan.hasAnalytics,
-        hasTableQr: plan.hasTableQr,
-        hasMultiLanguage: plan.hasMultiLanguage,
-        hasPromotions: plan.hasPromotions,
-        hasCoupons: plan.hasCoupons,
-        description: plan.description || ''
-      });
+      setPlanForm({ name: plan.name, price: plan.price.toString(), maxItems: plan.maxItems.toString(), maxTables: plan.maxTables.toString(), maxStaff: plan.maxStaff.toString(), hasWhatsapp: plan.hasWhatsapp, hasOnlineOrders: plan.hasOnlineOrders, hasCustomDomain: plan.hasCustomDomain, hasAnalytics: plan.hasAnalytics, hasTableQr: plan.hasTableQr, hasMultiLanguage: plan.hasMultiLanguage, hasPromotions: plan.hasPromotions, hasCoupons: plan.hasCoupons, description: plan.description || '' });
     } else {
       setEditingPlan(null);
-      setPlanForm({
-        name: 'free',
-        price: '',
-        maxItems: '',
-        maxTables: '',
-        maxStaff: '',
-        hasWhatsapp: false,
-        hasOnlineOrders: false,
-        hasCustomDomain: false,
-        hasAnalytics: false,
-        hasTableQr: false,
-        hasMultiLanguage: false,
-        hasPromotions: false,
-        hasCoupons: false,
-        description: ''
-      });
+      setPlanForm({ name: 'free', price: '', maxItems: '', maxTables: '', maxStaff: '', hasWhatsapp: false, hasOnlineOrders: false, hasCustomDomain: false, hasAnalytics: false, hasTableQr: false, hasMultiLanguage: false, hasPromotions: false, hasCoupons: false, description: '' });
     }
     setShowPlanModal(true);
   };
 
   const handleSavePlan = async () => {
     try {
-      const dataToSend = {
-        ...planForm,
-        price: parseFloat(planForm.price) || 0,
-        maxItems: parseInt(planForm.maxItems) || 0,
-        maxTables: parseInt(planForm.maxTables) || 0,
-        maxStaff: parseInt(planForm.maxStaff) || 0,
-      };
-
-      if (editingPlan) {
-        await api.put(`/plans/${editingPlan.id}`, dataToSend);
-        toast.success('تم تحديث الخطة بنجاح');
-      } else {
-        await api.post('/plans', dataToSend);
-        toast.success('تم إنشاء الخطة بنجاح');
-      }
-      setShowPlanModal(false);
-      fetchData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'حدث خطأ');
-    }
+      const data = { ...planForm, price: parseFloat(planForm.price) || 0, maxItems: parseInt(planForm.maxItems) || 0, maxTables: parseInt(planForm.maxTables) || 0, maxStaff: parseInt(planForm.maxStaff) || 0 };
+      if (editingPlan) { await api.put(`/plans/${editingPlan.id}`, data); toast.success('تم تحديث الخطة'); }
+      else { await api.post('/plans', data); toast.success('تم إنشاء الخطة'); }
+      setShowPlanModal(false); fetchData();
+    } catch (error: any) { toast.error(error.response?.data?.error || 'حدث خطأ'); }
   };
 
   const handleDeletePlan = async (planId: string) => {
     if (!window.confirm('هل أنت متأكد من حذف هذه الخطة؟')) return;
-    
+    try { await api.delete(`/plans/${planId}`); toast.success('تم الحذف'); fetchData(); }
+    catch (error: any) { toast.error(error.response?.data?.error || 'حدث خطأ'); }
+  };
+
+  const handleUpgrade = (plan: Plan) => { setSelectedPlan(plan); setShowUpgradeModal(true); };
+
+  const sendUpgradeRequest = async () => {
+    if (!selectedPlan) return;
     try {
-      await api.delete(`/plans/${planId}`);
-      toast.success('تم حذف الخطة بنجاح');
-      fetchData();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'حدث خطأ');
-    }
+      await api.post('/admin/upgrade-request', { planId: selectedPlan.id, entityType: 'restaurant', entityId: user?.restaurantId, notes: `طلب ترقية من خطة ${currentPlan?.name} إلى خطة ${selectedPlan.name}` });
+      toast.success('تم إرسال طلب الترقية'); setShowUpgradeModal(false); fetchMyRequests();
+    } catch (error: any) { toast.error(error.response?.data?.error || 'حدث خطأ'); }
   };
 
-  const handleUpgrade = (plan: Plan) => {
-    setSelectedPlan(plan);
-    setShowUpgradeModal(true);
+  const handleAdminUpgrade = async (requestId: string) => {
+    try {
+      await api.post(`/admin/approve-upgrade/${requestId}`); toast.success('تمت الموافقة');
+      fetchUpgradeRequests();
+      const req = upgradeRequests.find(r => r.id === requestId);
+      if (req?.userWhatsapp) window.open(`https://wa.me/${req.userWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent('تمت الموافقة على طلب الترقية الخاص بك. شكراً لثقتك!')}`, '_blank');
+    } catch (error: any) { toast.error(error.response?.data?.error || 'حدث خطأ'); }
   };
 
-  // في PlansPage.tsx، قم بتحديث دالة sendUpgradeRequest
-
-const sendUpgradeRequest = async () => {
-  if (!selectedPlan) return;
-
-  try {
-    // ✅ إرسال البيانات بالشكل الصحيح
-    await api.post('/admin/upgrade-request', {
-      planId: selectedPlan.id,
-      entityType: 'restaurant',
-      entityId: user?.restaurantId,
-      notes: `طلب ترقية من خطة ${currentPlan?.name} إلى خطة ${selectedPlan.name}`
-    });
-
-    toast.success('تم إرسال طلب الترقية بنجاح');
-    setShowUpgradeModal(false);
-    fetchMyRequests();
-  } catch (error: any) {
-    console.error('Error sending upgrade request:', error);
-    toast.error(error.response?.data?.error || 'حدث خطأ في إرسال الطلب');
-  }
-};
-
-  
-const handleAdminUpgrade = async (requestId: string) => {
-  try {
-    await api.post(`/admin/approve-upgrade/${requestId}`);
-    toast.success('تمت الموافقة على طلب الترقية بنجاح');
-    fetchUpgradeRequests();
-    
-    // فتح واتساب للتواصل مع العميل بعد الموافقة
-    const request = upgradeRequests.find(r => r.id === requestId);
-    if (request?.userWhatsapp) {
-      const message = `تمت الموافقة على طلب الترقية الخاص بك. شكراً لثقتك!`;
-      window.open(`https://wa.me/${request.userWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
-    }
-  } catch (error: any) {
-    toast.error(error.response?.data?.error || 'حدث خطأ');
-  }
-};
-
-  const openRejectModal = (request: any) => {
-    setSelectedRequest(request);
-    setRejectReason('');
-    setShowRejectModal(true);
-  };
+  const openRejectModal = (request: any) => { setSelectedRequest(request); setRejectReason(''); setShowRejectModal(true); };
 
   const handleRejectRequest = async () => {
     if (!selectedRequest) return;
-
     try {
-      await api.post('/admin/reject-upgrade', {
-        requestId: selectedRequest.id,
-        reason: rejectReason
-      });
-      
-      toast.success('تم رفض الطلب');
-      setShowRejectModal(false);
-      fetchUpgradeRequests();
-      
-      // فتح واتساب للتواصل مع العميل بعد الرفض - استخدام رقم واتساب العميل
-      if (selectedRequest.userWhatsapp) {
-        const message = `نأسف، تم رفض طلب الترقية الخاص بك. ${rejectReason ? `السبب: ${rejectReason}` : ''}`;
-        window.open(`https://wa.me/${selectedRequest.userWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'حدث خطأ');
-    }
+      await api.post('/admin/reject-upgrade', { requestId: selectedRequest.id, reason: rejectReason });
+      toast.success('تم رفض الطلب'); setShowRejectModal(false); fetchUpgradeRequests();
+      if (selectedRequest.userWhatsapp) window.open(`https://wa.me/${selectedRequest.userWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`نأسف، تم رفض طلب الترقية. ${rejectReason ? `السبب: ${rejectReason}` : ''}`)}`, '_blank');
+    } catch (error: any) { toast.error(error.response?.data?.error || 'حدث خطأ'); }
   };
 
   const contactViaWhatsApp = (whatsapp: string, name: string) => {
-    if (!whatsapp) {
-      toast.error('رقم واتساب غير متوفر');
-      return;
-    }
-    const message = `مرحباً ${name}، بخصوص طلب الترقية...`;
-    window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
+    if (!whatsapp) { toast.error('رقم واتساب غير متوفر'); return; }
+    window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`مرحباً ${name}، بخصوص طلب الترقية...`)}`, '_blank');
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-            <IoTime />
-            قيد الانتظار
-          </span>
-        );
-      case 'approved':
-        return (
-          <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-            <IoCheckmarkCircle />
-            تمت الموافقة
-          </span>
-        );
-      case 'rejected':
-        return (
-          <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-            <IoCloseCircle />
-            مرفوض
-          </span>
-        );
-      default:
-        return null;
-    }
+    const cfg: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
+      pending:  { label: 'قيد الانتظار', color: C.yellow, bg: 'rgba(251,191,36,0.15)', Icon: IoTime },
+      approved: { label: 'تمت الموافقة', color: C.accent, bg: 'rgba(200,226,53,0.15)', Icon: IoCheckmarkCircle },
+      rejected: { label: 'مرفوض',        color: C.red,    bg: 'rgba(255,107,107,0.15)', Icon: IoCloseCircle },
+    };
+    const s = cfg[status]; if (!s) return null;
+    return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: s.bg, color: s.color }}><s.Icon size={12} />{s.label}</span>;
   };
 
-  const getPlanIcon = (planName: string) => {
-    switch (planName) {
-      case 'free':
-        return <IoStar className="text-gray-400" size={32} />;
-      case 'basic':
-        return <IoBusiness className="text-blue-500" size={32} />;
-      case 'pro':
-        return <IoRocket className="text-purple-500" size={32} />;
-      default:
-        return <IoStar />;
-    }
-  };
+  const getPlanIcon = (n: string) => n === 'pro' ? <IoRocket size={32} style={{ color: '#A78BFA' }} /> : n === 'basic' ? <IoBusiness size={32} style={{ color: C.blue }} /> : <IoStar size={32} style={{ color: C.muted }} />;
+  const getPlanTitle = (n: string) => ({ free: 'المجانية', basic: 'الأساسية', pro: 'الاحترافية' })[n] || n;
+  const getCurrentPlanTitle = () => currentPlan ? getPlanTitle(currentPlan.name) : 'مجانية';
 
-  const getPlanTitle = (planName: string) => {
-    switch (planName) {
-      case 'free':
-        return 'المجانية';
-      case 'basic':
-        return 'الأساسية';
-      case 'pro':
-        return 'الاحترافية';
-      default:
-        return planName;
-    }
-  };
-
-  const getCurrentPlanTitle = () => {
-    if (!currentPlan) return 'مجانية';
-    return getPlanTitle(currentPlan.name);
-  };
+  const FEATURES: { key: keyof typeof planForm; label: string }[] = [
+    { key: 'hasWhatsapp', label: 'زر واتساب' }, { key: 'hasOnlineOrders', label: 'طلبات أونلاين' },
+    { key: 'hasCustomDomain', label: 'دومين خاص' }, { key: 'hasAnalytics', label: 'إحصائيات متقدمة' },
+    { key: 'hasTableQr', label: 'QR للطاولات' }, { key: 'hasMultiLanguage', label: 'لغات متعددة' },
+    { key: 'hasPromotions', label: 'عروض وخصومات' }, { key: 'hasCoupons', label: 'كوبونات' },
+  ];
 
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">خطط الأسعار</h1>
-        <p className="text-gray-600">
-          اختر الخطة المناسبة لمطعمك واستمتع بالمميزات
-        </p>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      {/* Title */}
+      <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <h1 style={{ color: C.text, fontSize: 26, fontWeight: 800, marginBottom: 8 }}>خطط الأسعار</h1>
+        <p style={{ color: C.muted, fontSize: 14 }}>اختر الخطة المناسبة لمطعمك واستمتع بالمميزات</p>
       </div>
 
-      {/* شريط أدوات المسؤول */}
+      {/* Admin toolbar */}
       {isSuperAdminUser && (
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4 mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <IoSettings size={24} />
-              <span className="font-bold">لوحة تحكم المسؤول - إدارة الخطط</span>
-            </div>
-            <Button
-              variant="primary"
-              onClick={() => handleOpenPlanModal()}
-              className="bg-white text-purple-600 hover:bg-gray-100"
-            >
-              <IoAdd className="inline ml-1" />
-              إضافة خطة جديدة
-            </Button>
+        <div style={{ background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: 14, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#A78BFA', fontWeight: 700 }}>
+            <IoSettings size={20} /> لوحة تحكم المسؤول - إدارة الخطط
           </div>
+          <Button variant="primary" size="sm" onClick={() => handleOpenPlanModal()}>
+            <IoAdd size={14} style={{ marginLeft: 4 }} /> إضافة خطة
+          </Button>
         </div>
       )}
 
-      {/* الخطة الحالية */}
+      {/* Current plan banner */}
       {currentPlan && !isSuperAdminUser && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <span className="text-blue-600 font-semibold">خطتك الحالية:</span>
-              <span className="text-lg font-bold mr-2">{getCurrentPlanTitle()}</span>
-            </div>
-            <div className="flex gap-2">
-              {!isAdmin && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowMyRequests(true)}
-                >
-                  <IoEye className="inline ml-1" />
-                  طلباتي
-                </Button>
-              )}
-              {currentPlan.name !== 'pro' && (
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    const nextPlan = plans.find(p => 
-                      p.name === 'pro' || (p.name === 'basic' && currentPlan.name === 'free')
-                    );
-                    if (nextPlan) handleUpgrade(nextPlan);
-                  }}
-                >
-                  ترقية الخطة
-                </Button>
-              )}
-            </div>
+        <div style={{ background: 'rgba(200,226,53,0.08)', border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <span style={{ color: C.muted, fontSize: 13 }}>خطتك الحالية: </span>
+            <span style={{ color: C.accent, fontWeight: 700, fontSize: 16 }}>{getCurrentPlanTitle()}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {!isAdmin && <Button variant="secondary" size="sm" onClick={() => setShowMyRequests(true)}><IoEye size={14} style={{ marginLeft: 4 }} />طلباتي</Button>}
+            {currentPlan.name !== 'pro' && (
+              <Button variant="primary" size="sm" onClick={() => { const p = plans.find(p => p.name === 'pro' || (p.name === 'basic' && currentPlan.name === 'free')); if (p) handleUpgrade(p); }}>
+                ترقية الخطة
+              </Button>
+            )}
           </div>
         </div>
       )}
 
-      {/* بطاقات الخطط */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Plan cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 32 }}>
         {plans.map(plan => {
-          const isCurrentPlan = currentPlan?.id === plan.id && !isSuperAdminUser;
-
+          const isCurrent = currentPlan?.id === plan.id && !isSuperAdminUser;
+          const isPro = plan.name === 'pro';
           return (
-            <div
-              key={plan.id}
-              className={`bg-white rounded-lg shadow-lg overflow-hidden transform transition hover:scale-105 ${
-                isCurrentPlan ? 'ring-2 ring-blue-500' : ''
-              } ${isSuperAdminUser ? 'border-2 border-purple-200' : ''}`}
-            >
-              {/* رأس البطاقة */}
-              <div className="p-6 text-center bg-gradient-to-br from-gray-50 to-gray-100 relative">
-                {isSuperAdminUser && (
-                  <div className="absolute top-2 left-2 flex gap-1">
-                    <button
-                      onClick={() => handleOpenPlanModal(plan)}
-                      className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                      title="تعديل الخطة"
-                    >
-                      <IoPencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDeletePlan(plan.id)}
-                      className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
-                      title="حذف الخطة"
-                    >
-                      <IoTrash size={16} />
-                    </button>
-                  </div>
-                )}
+            <div key={plan.id} style={{ background: C.card, border: `${isCurrent || isPro ? '2px' : '1px'} solid ${isCurrent ? C.accent : isPro ? 'rgba(167,139,250,0.4)' : C.border}`, borderRadius: 20, overflow: 'hidden', position: 'relative' }}>
+              {isPro && <div style={{ position: 'absolute', top: 12, right: 12, background: C.accent, color: C.bg, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>الأكثر شعبية</div>}
+              {isSuperAdminUser && (
+                <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 4 }}>
+                  <button onClick={() => handleOpenPlanModal(plan)} style={{ background: 'rgba(96,165,250,0.2)', border: 'none', borderRadius: 6, color: C.blue, cursor: 'pointer', padding: 6, display: 'flex' }}><IoPencil size={14} /></button>
+                  <button onClick={() => handleDeletePlan(plan.id)} style={{ background: 'rgba(255,107,107,0.2)', border: 'none', borderRadius: 6, color: C.red, cursor: 'pointer', padding: 6, display: 'flex' }}><IoTrash size={14} /></button>
+                </div>
+              )}
+              <div style={{ background: C.surf, padding: '28px 24px 20px', textAlign: 'center', borderBottom: `1px solid ${C.border}` }}>
                 {getPlanIcon(plan.name)}
-                <h3 className="text-xl font-bold mt-2">
-                  {getPlanTitle(plan.name)}
-                </h3>
-                <div className="mt-4">
+                <div style={{ color: C.accent, fontSize: 18, fontWeight: 800, marginTop: 10 }}>{getPlanTitle(plan.name)}</div>
+                <div style={{ marginTop: 12 }}>
                   {plan.price === 0 ? (
-                    <span className="text-3xl font-bold">مجاني</span>
+                    <span style={{ color: C.text, fontSize: 32, fontWeight: 900 }}>مجاني</span>
                   ) : (
                     <>
-                      <span className="text-3xl font-bold">{plan.price}</span>
-                      <span className="text-gray-500"> ر.س/شهر</span>
+                      <span style={{ color: C.text, fontSize: 32, fontWeight: 900 }}>{plan.price}</span>
+                      <span style={{ color: C.muted, fontSize: 14 }}> ر.س/شهر</span>
                     </>
                   )}
                 </div>
               </div>
-
-              {/* المميزات */}
-              <div className="p-6">
-                <ul className="space-y-3">
-                  <li className="flex items-center">
-                    <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    <span>عدد العناصر: {plan.maxItems === 999999 ? 'غير محدود' : plan.maxItems}</span>
-                  </li>
-                  <li className="flex items-center">
-                    <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    <span>عدد الطاولات: {plan.maxTables === 999999 ? 'غير محدود' : plan.maxTables}</span>
-                  </li>
-                  <li className="flex items-center">
-                    <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    <span>عدد الموظفين: {plan.maxStaff}</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasWhatsapp ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>زر واتساب</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasOnlineOrders ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>طلبات أونلاين</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasCustomDomain ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>دومين خاص</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasAnalytics ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>إحصائيات متقدمة</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasTableQr ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>QR للطاولات</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasMultiLanguage ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>لغات متعددة</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasPromotions ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>عروض وخصومات</span>
-                  </li>
-                  <li className="flex items-center">
-                    {plan.hasCoupons ? (
-                      <IoCheckmark className="text-green-500 ml-2" size={20} />
-                    ) : (
-                      <IoClose className="text-red-500 ml-2" size={20} />
-                    )}
-                    <span>كوبونات</span>
-                  </li>
+              <div style={{ padding: 24 }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px' }}>
+                  {[
+                    `عدد العناصر: ${plan.maxItems === 999999 ? 'غير محدود' : plan.maxItems}`,
+                    `عدد الطاولات: ${plan.maxTables === 999999 ? 'غير محدود' : plan.maxTables}`,
+                    `عدد الموظفين: ${plan.maxStaff}`,
+                  ].map((item, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text, fontSize: 13, marginBottom: 8 }}>
+                      <IoCheckmark size={16} style={{ color: C.accent, flexShrink: 0 }} />{item}
+                    </li>
+                  ))}
+                  {FEATURES.map(f => {
+                    const on = (plan as any)[f.key];
+                    return (
+                      <li key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, color: on ? C.text : C.muted, fontSize: 13, marginBottom: 8 }}>
+                        {on ? <IoCheckmark size={16} style={{ color: C.accent, flexShrink: 0 }} /> : <IoClose size={16} style={{ color: C.red, flexShrink: 0 }} />}
+                        {f.label}
+                      </li>
+                    );
+                  })}
                 </ul>
-
-                {plan.description && (
-                  <p className="text-sm text-gray-500 mt-4 border-t pt-4">
-                    {plan.description}
-                  </p>
-                )}
-
-                {/* زر الاختيار - يظهر فقط للمستخدمين العاديين */}
+                {plan.description && <p style={{ color: C.muted, fontSize: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12, marginBottom: 16 }}>{plan.description}</p>}
                 {!isSuperAdminUser && (
-                  isCurrentPlan ? (
-                    <button
-                      disabled
-                      className="w-full mt-6 bg-gray-300 text-gray-600 py-2 rounded-lg cursor-not-allowed"
-                    >
-                      خطتك الحالية
-                    </button>
+                  isCurrent ? (
+                    <button disabled style={{ width: '100%', padding: '11px', background: C.surf, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 10, fontFamily: 'Cairo, sans-serif', fontWeight: 600, fontSize: 14, cursor: 'not-allowed' }}>خطتك الحالية</button>
                   ) : (
-                    <Button
-                      variant={plan.price === 0 ? 'outline' : 'primary'}
-                      onClick={() => handleUpgrade(plan)}
-                      fullWidth
-                      className="mt-6"
-                    >
-                      {plan.price === 0 ? 'الاشتراك مجاني' : 'ترقية الآن'}
-                    </Button>
+                    <Button variant={plan.price === 0 ? 'secondary' : 'primary'} onClick={() => handleUpgrade(plan)} fullWidth>{plan.price === 0 ? 'الاشتراك مجاني' : 'ترقية الآن'}</Button>
                   )
                 )}
               </div>
@@ -557,421 +255,149 @@ const handleAdminUpgrade = async (requestId: string) => {
         })}
       </div>
 
-      {/* مودال إدارة الخطط للمسؤول */}
-      <Modal
-        isOpen={showPlanModal}
-        onClose={() => setShowPlanModal(false)}
-        title={editingPlan ? 'تعديل خطة' : 'إضافة خطة جديدة'}
-        size="lg"
-      >
-        <div className="space-y-4 max-h-96 overflow-y-auto p-2">
-        <div>
-  <label className="block text-sm font-medium mb-1">اسم الخطة</label>
-  <input
-    type="text"
-    value={planForm.name}
-    onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
-    className="w-full p-2 border rounded"
-    placeholder="أدخل اسم الخطة (مثال: premium)"
-    required
-  />
-  <p className="text-xs text-gray-500 mt-1">
-    يمكنك إدخال أي اسم جديد للخطة (free, basic, pro, premium, enterprise, etc.)
-  </p>
-</div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">السعر (ر.س)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={planForm.price}
-              onChange={(e) => setPlanForm({ ...planForm, price: e.target.value })}
-              className="w-full p-2 border rounded"
-            />
+      {/* Admin upgrade requests table */}
+      {isAdmin && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', marginTop: 16 }}>
+          <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>طلبات الترقية</h2>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">الحد الأقصى للعناصر</label>
-              <input
-                type="number"
-                value={planForm.maxItems}
-                onChange={(e) => setPlanForm({ ...planForm, maxItems: e.target.value })}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">الحد الأقصى للطاولات</label>
-              <input
-                type="number"
-                value={planForm.maxTables}
-                onChange={(e) => setPlanForm({ ...planForm, maxTables: e.target.value })}
-                className="w-full p-2 border rounded"
-              />
-            </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: C.surf }}>
+                  {['المستخدم', 'واتساب', 'الخطة', 'المبلغ', 'التاريخ', 'الحالة', 'الإجراءات'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12, fontWeight: 600 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {upgradeRequests.map((req: any) => (
+                  <tr key={req.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{req.userName}</div>
+                      <div style={{ color: C.muted, fontSize: 11 }}>{req.userEmail}</div>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {req.userWhatsapp ? (
+                        <button onClick={() => contactViaWhatsApp(req.userWhatsapp, req.userName)} style={{ background: 'none', border: 'none', color: '#4CAF7D', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontFamily: 'Cairo, sans-serif' }}>
+                          <IoLogoWhatsapp size={14} />{req.userWhatsapp}
+                        </button>
+                      ) : <span style={{ color: C.muted, fontSize: 12 }}>غير متوفر</span>}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: C.text, fontSize: 13 }}>{req.planName}</td>
+                    <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 700, fontSize: 13 }}>{req.price} ر.س</td>
+                    <td style={{ padding: '12px 16px', color: C.muted, fontSize: 12 }}>{format(new Date(req.createdAt), 'dd/MM/yyyy', { locale: ar })}</td>
+                    <td style={{ padding: '12px 16px' }}>{getStatusBadge(req.status)}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      {req.status === 'pending' && (
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <Button variant="success" size="sm" onClick={() => handleAdminUpgrade(req.id)}>قبول</Button>
+                          <Button variant="danger" size="sm" onClick={() => openRejectModal(req)}>رفض</Button>
+                          {req.userWhatsapp && <Button variant="secondary" size="sm" onClick={() => contactViaWhatsApp(req.userWhatsapp, req.userName)}><IoChatbubbleEllipses size={14} /></Button>}
+                        </div>
+                      )}
+                      {req.status === 'rejected' && req.reason && <div style={{ color: C.red, fontSize: 12 }}>السبب: {req.reason}</div>}
+                    </td>
+                  </tr>
+                ))}
+                {upgradeRequests.length === 0 && (
+                  <tr><td colSpan={7} style={{ padding: 32, textAlign: 'center', color: C.muted }}>لا توجد طلبات ترقية حالياً</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
+        </div>
+      )}
 
-          <div>
-            <label className="block text-sm font-medium mb-1">الحد الأقصى للموظفين</label>
-            <input
-              type="number"
-              value={planForm.maxStaff}
-              onChange={(e) => setPlanForm({ ...planForm, maxStaff: e.target.value })}
-              className="w-full p-2 border rounded"
-            />
+      {/* Plan CRUD Modal */}
+      <Modal isOpen={showPlanModal} onClose={() => setShowPlanModal(false)} title={editingPlan ? 'تعديل خطة' : 'إضافة خطة جديدة'} size="lg">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '70vh', overflowY: 'auto' }}>
+          <div><label style={labelStyle}>اسم الخطة</label><input style={inputStyle} value={planForm.name} onChange={e => setPlanForm({ ...planForm, name: e.target.value })} placeholder="free / basic / pro" /></div>
+          <div><label style={labelStyle}>السعر (ر.س)</label><input style={inputStyle} type="number" step="0.01" value={planForm.price} onChange={e => setPlanForm({ ...planForm, price: e.target.value })} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div><label style={labelStyle}>الحد الأقصى للعناصر</label><input style={inputStyle} type="number" value={planForm.maxItems} onChange={e => setPlanForm({ ...planForm, maxItems: e.target.value })} /></div>
+            <div><label style={labelStyle}>الحد الأقصى للطاولات</label><input style={inputStyle} type="number" value={planForm.maxTables} onChange={e => setPlanForm({ ...planForm, maxTables: e.target.value })} /></div>
           </div>
-
-          <div className="border-t pt-4">
-            <h3 className="font-bold mb-2">المميزات</h3>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasWhatsapp}
-                  onChange={(e) => setPlanForm({ ...planForm, hasWhatsapp: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>زر واتساب</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasOnlineOrders}
-                  onChange={(e) => setPlanForm({ ...planForm, hasOnlineOrders: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>طلبات أونلاين</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasCustomDomain}
-                  onChange={(e) => setPlanForm({ ...planForm, hasCustomDomain: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>دومين خاص</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasAnalytics}
-                  onChange={(e) => setPlanForm({ ...planForm, hasAnalytics: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>إحصائيات متقدمة</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasTableQr}
-                  onChange={(e) => setPlanForm({ ...planForm, hasTableQr: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>QR للطاولات</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasMultiLanguage}
-                  onChange={(e) => setPlanForm({ ...planForm, hasMultiLanguage: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>لغات متعددة</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasPromotions}
-                  onChange={(e) => setPlanForm({ ...planForm, hasPromotions: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>عروض وخصومات</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={planForm.hasCoupons}
-                  onChange={(e) => setPlanForm({ ...planForm, hasCoupons: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>كوبونات</span>
-              </label>
+          <div><label style={labelStyle}>الحد الأقصى للموظفين</label><input style={inputStyle} type="number" value={planForm.maxStaff} onChange={e => setPlanForm({ ...planForm, maxStaff: e.target.value })} /></div>
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+            <div style={{ color: C.text, fontWeight: 700, marginBottom: 12 }}>المميزات</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {FEATURES.map(f => (
+                <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: C.text, fontSize: 13 }}>
+                  <input type="checkbox" checked={(planForm as any)[f.key]} onChange={e => setPlanForm({ ...planForm, [f.key]: e.target.checked })} style={{ accentColor: C.accent }} />
+                  {f.label}
+                </label>
+              ))}
             </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">الوصف</label>
-            <textarea
-              value={planForm.description}
-              onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
-              className="w-full p-2 border rounded"
-              rows={3}
-            />
-          </div>
-
-          <Button
-            variant="primary"
-            onClick={handleSavePlan}
-            fullWidth
-          >
-            حفظ
-          </Button>
+          <div><label style={labelStyle}>الوصف</label><textarea style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }} value={planForm.description} onChange={e => setPlanForm({ ...planForm, description: e.target.value })} /></div>
+          <Button variant="primary" onClick={handleSavePlan} fullWidth>حفظ</Button>
         </div>
       </Modal>
 
-      {/* مودال طلباتي */}
-      <Modal
-        isOpen={showMyRequests}
-        onClose={() => setShowMyRequests(false)}
-        title="طلبات الترقية الخاصة بي"
-        size="lg"
-      >
-        <div className="space-y-4 max-h-96 overflow-y-auto p-2">
+      {/* My Requests Modal */}
+      <Modal isOpen={showMyRequests} onClose={() => setShowMyRequests(false)} title="طلبات الترقية الخاصة بي" size="lg">
+        <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
           {myRequests.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">لا توجد طلبات سابقة</p>
+            <p style={{ color: C.muted, textAlign: 'center', padding: 32 }}>لا توجد طلبات سابقة</p>
           ) : (
             myRequests.map((req: any) => (
-              <div key={req.id} className="border rounded-lg p-4 hover:shadow-md transition">
-                <div className="flex justify-between items-start mb-2">
+              <div key={req.id} style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                   <div>
-                    <h3 className="font-bold">طلب ترقية إلى خطة {req.planName}</h3>
-                    <p className="text-sm text-gray-500">
-                      تاريخ الطلب: {format(new Date(req.createdAt), 'dd/MM/yyyy hh:mm a', { locale: ar })}
-                    </p>
+                    <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>طلب ترقية إلى خطة {req.planName}</div>
+                    <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{format(new Date(req.createdAt), 'dd/MM/yyyy hh:mm a', { locale: ar })}</div>
                   </div>
                   {getStatusBadge(req.status)}
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                  <div>
-                    <span className="text-gray-500">المبلغ:</span>
-                    <span className="font-bold mr-2 text-green-600">{req.price} ر.س</span>
-                  </div>
-                  {req.status === 'approved' && req.approvedAt && (
-                    <div>
-                      <span className="text-gray-500">تاريخ الموافقة:</span>
-                      <span className="mr-2">{format(new Date(req.approvedAt), 'dd/MM/yyyy')}</span>
-                    </div>
-                  )}
-                  {req.status === 'rejected' && req.reason && (
-                    <div className="col-span-2 mt-2 p-3 bg-red-50 rounded-lg">
-                      <span className="text-gray-700 font-medium">سبب الرفض:</span>
-                      <p className="text-red-600 mt-1">{req.reason}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* زر التواصل مع الدعم */}
-                {req.status === 'pending' && (
-                  <div className="mt-3 flex justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const whatsappNumber = user?.restaurant?.whatsapp || import.meta.env.VITE_WHATSAPP || '966500000000';
-                        const message = `استفسار بخصوص طلب الترقية إلى خطة ${req.planName}`;
-                        window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
-                      }}
-                    >
-                      <IoLogoWhatsapp className="inline ml-1" />
-                      التواصل مع الدعم
-                    </Button>
-                  </div>
-                )}
+                <div style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>المبلغ: {req.price} ر.س</div>
+                {req.status === 'rejected' && req.reason && <div style={{ background: 'rgba(255,107,107,0.1)', borderRadius: 8, padding: 10, marginTop: 8, color: C.red, fontSize: 13 }}>سبب الرفض: {req.reason}</div>}
               </div>
             ))
           )}
         </div>
       </Modal>
 
-      {/* مودال تأكيد الترقية */}
-      <Modal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        title="طلب ترقية الخطة"
-      >
+      {/* Upgrade Confirm Modal */}
+      <Modal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} title="طلب ترقية الخطة">
         {selectedPlan && (
-          <div className="space-y-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <IoWarning className="text-yellow-500 ml-2" size={24} />
-                <div>
-                  <h3 className="font-semibold mb-1">إجراءات الترقية</h3>
-                  <p className="text-sm text-gray-600">
-                    سيتم إرسال طلب ترقية إلى المسؤول. بعد الدفع، سيقوم المسؤول بتفعيل خطتك الجديدة.
-                  </p>
-                </div>
-              </div>
+          <div>
+            <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', gap: 12 }}>
+              <IoWarning size={22} style={{ color: C.yellow, flexShrink: 0 }} />
+              <p style={{ color: C.muted, fontSize: 13 }}>سيتم إرسال طلب ترقية إلى المسؤول. بعد الدفع، سيقوم المسؤول بتفعيل خطتك الجديدة.</p>
             </div>
-
-            <div className="border rounded-lg p-4">
-              <h4 className="font-semibold mb-2">ملخص الترقية:</h4>
-              <p>الخطة الحالية: <span className="font-bold">{getCurrentPlanTitle()}</span></p>
-              <p>الخطة الجديدة: <span className="font-bold text-blue-600">{getPlanTitle(selectedPlan.name)}</span></p>
-              <p className="mt-2">المبلغ: <span className="text-xl font-bold text-green-600">{selectedPlan.price} ر.س</span>/شهر</p>
+            <div style={{ background: C.surf, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+              <div style={{ color: C.muted, fontSize: 13, marginBottom: 4 }}>الخطة الحالية: <span style={{ color: C.text, fontWeight: 600 }}>{getCurrentPlanTitle()}</span></div>
+              <div style={{ color: C.muted, fontSize: 13, marginBottom: 4 }}>الخطة الجديدة: <span style={{ color: C.accent, fontWeight: 700 }}>{getPlanTitle(selectedPlan.name)}</span></div>
+              <div style={{ color: C.muted, fontSize: 13 }}>المبلغ: <span style={{ color: C.accent, fontWeight: 800, fontSize: 18 }}>{selectedPlan.price} ر.س</span>/شهر</div>
             </div>
-
-            <div className="flex space-x-2 rtl:space-x-reverse">
-              <Button
-                variant="outline"
-                onClick={() => setShowUpgradeModal(false)}
-                fullWidth
-              >
-                إلغاء
-              </Button>
-              <Button
-                variant="primary"
-                onClick={sendUpgradeRequest}
-                fullWidth
-              >
-                <IoSend className="inline ml-1" />
-                إرسال طلب الترقية
-              </Button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Button variant="secondary" onClick={() => setShowUpgradeModal(false)} fullWidth>إلغاء</Button>
+              <Button variant="primary" onClick={sendUpgradeRequest} fullWidth><IoSend size={14} style={{ marginLeft: 6 }} />إرسال طلب الترقية</Button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* مودال رفض الطلب */}
-      <Modal
-        isOpen={showRejectModal}
-        onClose={() => setShowRejectModal(false)}
-        title="رفض طلب الترقية"
-      >
+      {/* Reject Modal */}
+      <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="رفض طلب الترقية">
         {selectedRequest && (
-          <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <IoWarning className="text-red-500 ml-2" size={24} />
-                <div>
-                  <h3 className="font-semibold mb-1">تأكيد الرفض</h3>
-                  <p className="text-sm text-gray-600">
-                    سيتم رفض طلب الترقية للعميل {selectedRequest.userName} إلى خطة {selectedRequest.planName}
-                  </p>
-                </div>
-              </div>
+          <div>
+            <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', gap: 12 }}>
+              <IoWarning size={22} style={{ color: C.red, flexShrink: 0 }} />
+              <p style={{ color: C.muted, fontSize: 13 }}>سيتم رفض طلب الترقية للعميل {selectedRequest.userName} إلى خطة {selectedRequest.planName}</p>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">سبب الرفض (اختياري)</label>
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="اكتب سبب الرفض هنا..."
-                className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-red-500 focus:ring-0 transition-all"
-                rows={4}
-              />
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>سبب الرفض (اختياري)</label>
+              <textarea style={{ ...inputStyle, minHeight: 100, resize: 'vertical' }} value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="اكتب سبب الرفض هنا..." />
             </div>
-
-            <div className="flex space-x-2 rtl:space-x-reverse">
-              <Button
-                variant="outline"
-                onClick={() => setShowRejectModal(false)}
-                fullWidth
-              >
-                إلغاء
-              </Button>
-              <Button
-                variant="danger"
-                onClick={handleRejectRequest}
-                fullWidth
-              >
-                تأكيد الرفض
-              </Button>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Button variant="secondary" onClick={() => setShowRejectModal(false)} fullWidth>إلغاء</Button>
+              <Button variant="danger" onClick={handleRejectRequest} fullWidth>تأكيد الرفض</Button>
             </div>
           </div>
         )}
       </Modal>
-
-      {/* لوحة تحكم الأدمن - طلبات الترقية */}
-      {isAdmin && (
-        <div className="mt-12">
-          <h2 className="text-xl font-bold mb-4">طلبات الترقية</h2>
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right">المستخدم</th>
-                  <th className="px-6 py-3 text-right">رقم واتساب</th>
-                  <th className="px-6 py-3 text-right">الخطة المطلوبة</th>
-                  <th className="px-6 py-3 text-right">المبلغ</th>
-                  <th className="px-6 py-3 text-right">التاريخ</th>
-                  <th className="px-6 py-3 text-right">الحالة</th>
-                  <th className="px-6 py-3 text-right">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {upgradeRequests.map((req: any) => (
-                  <tr key={req.id}>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium">{req.userName}</p>
-                        <p className="text-xs text-gray-500">{req.userEmail}</p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-  {req.userWhatsapp ? (
-    <button
-      onClick={() => contactViaWhatsApp(req.userWhatsapp, req.userName)}
-      className="flex items-center gap-1 text-green-600 hover:text-green-700"
-    >
-      <IoLogoWhatsapp />
-      {req.userWhatsapp}
-    </button>
-  ) : (
-    <span className="text-gray-400">غير متوفر</span>
-  )}
-</td>
-                    <td className="px-6 py-4 font-medium">{req.planName}</td>
-                    <td className="px-6 py-4 text-green-600 font-bold">{req.price} ر.س</td>
-                    <td className="px-6 py-4 text-sm">
-                      {format(new Date(req.createdAt), 'dd/MM/yyyy hh:mm a', { locale: ar })}
-                    </td>
-                    <td className="px-6 py-4">
-                      {getStatusBadge(req.status)}
-                    </td>
-                    <td className="px-6 py-4">
-                      {req.status === 'pending' && (
-                        <div className="flex space-x-2 rtl:space-x-reverse">
-                          <Button
-                            size="sm"
-                            variant="success"
-                            onClick={() => handleAdminUpgrade(req.id, req.userId, req.planId)}
-                          >
-                            قبول
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => openRejectModal(req)}
-                          >
-                            رفض
-                          </Button>
-                          {req.userWhatsapp && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => contactViaWhatsApp(req.userWhatsapp, req.userName)}
-                            >
-                              <IoChatbubbleEllipses />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                      {req.status === 'rejected' && req.reason && (
-                        <div className="text-sm text-red-600 max-w-xs">
-                          السبب: {req.reason}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

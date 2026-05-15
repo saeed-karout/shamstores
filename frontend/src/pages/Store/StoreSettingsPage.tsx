@@ -21,7 +21,7 @@ const StoreSettingsPage: React.FC = () => {
   const { user } = useAuth();
   const { plan: currentPlan, loading: planLoading } = useCurrentPlan(); // ✅ جلب الخطة الحالية
   const { settings, loading: settingsLoading, saving, saveGeneralSettings, saveDesignSettings, saveDeliverySettings, saveSocialSettings, savePaymentSettings, saveNotificationSettings, saveDomainSettings } = useStoreSettings(store?.id);
-  
+
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [uploading, setUploading] = useState(false);
 
@@ -51,15 +51,15 @@ const StoreSettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6" dir="rtl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">🛍️ إعدادات المتجر</h1>
-        <p className="text-gray-500 text-sm mt-1">قم بتخصيص إعدادات متجرك وجعله فريداً</p>
+    <div style={{ background: '#082E24', minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ color: '#E8F5E9', fontSize: 22, fontWeight: 800, marginBottom: 4 }}>🛍️ إعدادات المتجر</h1>
+        <p style={{ color: '#9DC4AC', fontSize: 13, marginTop: 4 }}>قم بتخصيص إعدادات متجرك وجعله فريداً</p>
       </div>
 
       <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} isPro={isPro} />
 
-      <div className="bg-white rounded-2xl shadow-lg p-6 mt-4">
+      <div style={{ background: '#112E23', border: '1px solid rgba(200,226,53,0.15)', borderRadius: 20, padding: 24, marginTop: 16 }}>
         {activeTab === 'general' && (
           <GeneralSettingsTab
             initialData={settings?.general || store}

@@ -22,18 +22,24 @@ import MarketingSectionCard from '../../components/marketing/MarketingSectionCar
 import MarketingSectionForm from '../../components/marketing/MarketingSectionForm';
 import api from '../../services/api';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+};
+
 // الأقسام المسموح للمالكين بإضافتها (بدون الإعلانات)
 const ALLOWED_SECTIONS: { type: MarketingSectionType; title: string; icon: JSX.Element; description: string }[] = [
   {
     type: 'banner',
     title: 'البانرات',
-    icon: <IoImage className="w-5 h-5" />,
+    icon: <IoImage style={{ width: 20, height: 20 }} />,
     description: 'بانرات ترويجية تظهر في أعلى الصفحة'
   },
   {
     type: 'offer',
     title: 'العروض',
-    icon: <IoPricetag className="w-5 h-5" />,
+    icon: <IoPricetag style={{ width: 20, height: 20 }} />,
     description: 'عروض خاصة وخصومات لجذب العملاء'
   }
 ];
@@ -41,7 +47,7 @@ const ALLOWED_SECTIONS: { type: MarketingSectionType; title: string; icon: JSX.E
 const BusinessMarketing: React.FC = () => {
   const { user, isRestaurantOwner, isStoreOwner, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<MarketingSection[]>([]);
   const [editingSection, setEditingSection] = useState<MarketingSection | null>(null);
@@ -54,24 +60,24 @@ const BusinessMarketing: React.FC = () => {
   useEffect(() => {
     const fetchBusinessData = async () => {
       if (authLoading) return;
-      
+
       setFetchingBusiness(true);
       try {
         let businessType: 'restaurant' | 'store' = 'store';
         let businessData = null;
-        
+
         // محاولة جلب بيانات المتجر أولاً
         try {
           const storeResponse = await api.get('/store/profile');
           console.log('Store profile:', storeResponse);
-          
+
           let storeData = storeResponse;
           if (storeResponse?.data?.data) {
             storeData = storeResponse.data.data;
           } else if (storeResponse?.data) {
             storeData = storeResponse.data;
           }
-          
+
           if (storeData && storeData.id) {
             businessType = 'store';
             businessData = storeData;
@@ -79,20 +85,20 @@ const BusinessMarketing: React.FC = () => {
         } catch (storeError) {
           console.log('Not a store or store fetch failed');
         }
-        
+
         // إذا لم يتم العثور على متجر، جرب المطعم
         if (!businessData) {
           try {
             const restaurantResponse = await api.get('/restaurants/profile');
             console.log('Restaurant profile:', restaurantResponse);
-            
+
             let restaurantData = restaurantResponse;
             if (restaurantResponse?.data?.data) {
               restaurantData = restaurantResponse.data.data;
             } else if (restaurantResponse?.data) {
               restaurantData = restaurantResponse.data;
             }
-            
+
             if (restaurantData && restaurantData.id) {
               businessType = 'restaurant';
               businessData = restaurantData;
@@ -101,7 +107,7 @@ const BusinessMarketing: React.FC = () => {
             console.log('Not a restaurant or restaurant fetch failed');
           }
         }
-        
+
         if (businessData && businessData.id) {
           setBusinessInfo({
             type: businessType,
@@ -135,7 +141,7 @@ const BusinessMarketing: React.FC = () => {
         setFetchingBusiness(false);
       }
     };
-    
+
     fetchBusinessData();
   }, [user, authLoading, navigate]);
 
@@ -148,7 +154,7 @@ const BusinessMarketing: React.FC = () => {
 
   const fetchMarketingData = async () => {
     if (!businessInfo) return;
-    
+
     try {
       setLoading(true);
       const data = await marketingService.getSettings(businessInfo.type, businessInfo.id);
@@ -165,7 +171,7 @@ const BusinessMarketing: React.FC = () => {
 
   const handleCreateSection = async (data: any) => {
     if (!businessInfo) return;
-    
+
     try {
       await marketingService.createSection(businessInfo.type, businessInfo.id, data);
       toast.success('تم إنشاء العنصر التسويقي بنجاح');
@@ -181,7 +187,7 @@ const BusinessMarketing: React.FC = () => {
 
   const handleUpdateSection = async (data: any) => {
     if (!editingSection || !businessInfo) return;
-    
+
     try {
       await marketingService.updateSection(
         editingSection.id,
@@ -216,7 +222,7 @@ const BusinessMarketing: React.FC = () => {
 
   const handleToggleActive = async (sectionId: string, currentStatus: boolean) => {
     if (!businessInfo) return;
-    
+
     const section = sections.find(s => s.id === sectionId);
     if (!section) return;
 
@@ -242,10 +248,14 @@ const BusinessMarketing: React.FC = () => {
   // حالات التحميل
   if (authLoading || fetchingBusiness) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل بيانات المتجر...</p>
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64, border: `4px solid ${C.accent}`,
+            borderTopColor: 'transparent', borderRadius: '50%',
+            animation: 'spin 1s linear infinite', margin: '0 auto 16px'
+          }} />
+          <p style={{ color: C.muted }}>جاري تحميل بيانات المتجر...</p>
         </div>
       </div>
     );
@@ -253,16 +263,20 @@ const BusinessMarketing: React.FC = () => {
 
   if (!businessInfo) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md text-center">
-          <IoWarning className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">لم يتم العثور على نشاط تجاري</h2>
-          <p className="text-gray-600 mb-6">
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 32, maxWidth: 420, textAlign: 'center' }}>
+          <IoWarning style={{ width: 64, height: 64, color: '#FBBF24', display: 'block', margin: '0 auto 16px' }} />
+          <h2 style={{ color: C.text, fontSize: 20, fontWeight: 700, marginBottom: 8 }}>لم يتم العثور على نشاط تجاري</h2>
+          <p style={{ color: C.muted, marginBottom: 24 }}>
             يبدو أنه لا يوجد لديك متجر أو مطعم. يرجى إنشاء نشاط تجاري أولاً.
           </p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            style={{
+              padding: '8px 24px', background: C.accent, color: C.bg,
+              border: 'none', borderRadius: 12, fontWeight: 600,
+              fontFamily: 'Cairo, sans-serif', cursor: 'pointer'
+            }}
           >
             العودة للوحة التحكم
           </button>
@@ -273,46 +287,59 @@ const BusinessMarketing: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل بيانات التسويق...</p>
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64, border: `4px solid ${C.accent}`,
+            borderTopColor: 'transparent', borderRadius: '50%',
+            animation: 'spin 1s linear infinite', margin: '0 auto 16px'
+          }} />
+          <p style={{ color: C.muted }}>جاري تحميل بيانات التسويق...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Cairo, sans-serif', padding: '32px 0' }} dir="rtl">
+      <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 16px' }}>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <IoStorefront className="text-green-500 text-3xl" />
-                <h1 className="text-2xl font-bold text-gray-900">إدارة التسويق</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <IoStorefront style={{ color: C.accent, fontSize: 28 }} />
+                <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700 }}>إدارة التسويق</h1>
               </div>
-              <p className="text-gray-600">
+              <p style={{ color: C.muted }}>
                 {businessInfo.name} • أضف بانرات وعروض للترويج لمتجرك وجذب المزيد من العملاء
               </p>
             </div>
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 16px', background: C.surf,
+                border: `1px solid ${C.border}`, borderRadius: 12,
+                color: C.muted, fontFamily: 'Cairo, sans-serif', cursor: 'pointer'
+              }}
             >
-              <IoArrowBack className="w-4 h-4" />
+              <IoArrowBack style={{ width: 16, height: 16 }} />
               العودة للوحة التحكم
             </button>
           </div>
         </div>
 
         {/* Info Banner */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
-          <IoWarning className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">📢 ملاحظة مهمة</p>
-            <p className="text-blue-700">
+        <div style={{
+          marginBottom: 24, padding: 16, background: 'rgba(96,165,250,0.08)',
+          border: '1px solid rgba(96,165,250,0.2)', borderRadius: 12,
+          display: 'flex', alignItems: 'flex-start', gap: 12
+        }}>
+          <IoWarning style={{ width: 20, height: 20, color: C.blue, flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 14, color: C.blue }}>
+            <p style={{ fontWeight: 500, marginBottom: 4 }}>📢 ملاحظة مهمة</p>
+            <p style={{ color: C.muted }}>
               الإعلانات العامة يتم إضافتها بواسطة إدارة المنصة فقط. يمكنك إضافة البانرات والعروض الخاصة بمتجرك.
               البانرات والعروض تظهر للعملاء عند تصفح صفحة متجرك.
             </p>
@@ -320,18 +347,22 @@ const BusinessMarketing: React.FC = () => {
         </div>
 
         {/* Marketing Sections */}
-        <div className="space-y-8">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {ALLOWED_SECTIONS.map(({ type, title, icon, description }) => {
             const filteredSections = getSectionsByType(type);
-            
+
             return (
-              <div key={type} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      {icon}
-                      <h2 className="text-lg font-bold text-white">{title}</h2>
-                      <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">
+              <div key={type} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+                {/* Section header */}
+                <div style={{ background: C.surf, padding: '16px 24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: C.accent }}>{icon}</span>
+                      <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700 }}>{title}</h2>
+                      <span style={{
+                        background: 'rgba(200,226,53,0.15)', color: C.accent,
+                        fontSize: 12, padding: '2px 8px', borderRadius: 20
+                      }}>
                         {filteredSections.length}
                       </span>
                     </div>
@@ -341,19 +372,24 @@ const BusinessMarketing: React.FC = () => {
                         setEditingSection(null);
                         setShowForm(true);
                       }}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '6px 12px', background: C.accent, color: C.bg,
+                        border: 'none', borderRadius: 10, fontFamily: 'Cairo, sans-serif',
+                        fontWeight: 600, fontSize: 14, cursor: 'pointer'
+                      }}
                     >
-                      <IoAdd className="w-4 h-4" />
+                      <IoAdd style={{ width: 16, height: 16 }} />
                       <span>إضافة جديد</span>
                     </button>
                   </div>
-                  <p className="text-white/80 text-sm mt-1 mr-7">{description}</p>
+                  <p style={{ color: C.muted, fontSize: 14, marginTop: 4, marginRight: 28 }}>{description}</p>
                 </div>
 
-                <div className="p-4">
+                <div style={{ padding: 16 }}>
                   {filteredSections.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <span className="text-2xl block mb-2">{icon}</span>
+                    <div style={{ textAlign: 'center', padding: '32px 0', color: C.muted }}>
+                      <span style={{ fontSize: 28, display: 'block', marginBottom: 8, color: C.accent }}>{icon}</span>
                       <p>لا توجد {title} حالياً</p>
                       <button
                         onClick={() => {
@@ -361,13 +397,17 @@ const BusinessMarketing: React.FC = () => {
                           setEditingSection(null);
                           setShowForm(true);
                         }}
-                        className="mt-3 px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                        style={{
+                          marginTop: 12, padding: '8px 16px', background: 'transparent',
+                          border: `1px solid ${C.accent}`, borderRadius: 12, color: C.accent,
+                          fontFamily: 'Cairo, sans-serif', cursor: 'pointer'
+                        }}
                       >
                         أضف أول {title}
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
                       {filteredSections.map((section) => (
                         <MarketingSectionCard
                           key={section.id}

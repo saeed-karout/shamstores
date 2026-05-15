@@ -1,11 +1,22 @@
-// frontend/src/pages/auth/DeliveryLogin.tsx
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { IoCar, IoMail, IoLockClosed, IoEye, IoEyeOff, IoWarning } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+};
 
 const DeliveryLogin: React.FC = () => {
   const navigate = useNavigate();
@@ -15,16 +26,15 @@ const DeliveryLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // عرض وضع الصيانة
   if (isMaintenanceMode) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center max-w-md">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <IoWarning className="text-yellow-500 text-2xl" />
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} dir="rtl">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 40, textAlign: 'center', maxWidth: 400 }}>
+          <div style={{ width: 64, height: 64, background: 'rgba(255,107,107,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <IoWarning size={28} style={{ color: C.red }} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">🔧 وضع الصيانة</h1>
-          <p className="text-gray-600">المنصة تحت الصيانة حالياً.</p>
+          <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700, marginBottom: 8 }}>المنصة تحت الصيانة</h1>
+          <p style={{ color: C.muted, fontSize: 14 }}>يرجى المحاولة لاحقاً.</p>
         </div>
       </div>
     );
@@ -32,21 +42,17 @@ const DeliveryLogin: React.FC = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email || !password) {
       toast.error('يرجى إدخال البريد الإلكتروني وكلمة المرور');
       return;
     }
-
     setLoading(true);
     try {
       const response = await api.post('/auth/login', { email, password });
-      
       if (response.user?.role === 'delivery_driver') {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
         localStorage.setItem('userRole', 'delivery_driver');
-        
         toast.success(`مرحباً ${response.user.name}`);
         navigate('/driver/dashboard');
       } else {
@@ -60,81 +66,101 @@ const DeliveryLogin: React.FC = () => {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', paddingRight: 38, paddingLeft: 14, paddingTop: 11, paddingBottom: 11,
+    background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10,
+    color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 14, outline: 'none',
+    boxSizing: 'border-box',
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-purple-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      {/* Background decoration */}
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: -120, right: -120, width: 400, height: 400, background: 'rgba(200,226,53,0.04)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: -100, left: -100, width: 300, height: 300, background: 'rgba(200,226,53,0.03)', borderRadius: '50%' }} />
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 420, position: 'relative' }}>
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-            <IoCar className="text-white text-4xl" />
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ width: 64, height: 64, background: 'rgba(200,226,53,0.12)', border: `1px solid ${C.border}`, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+            <IoCar size={30} style={{ color: C.accent }} />
           </div>
-          <h1 className="text-3xl font-bold text-white">{platformName}</h1>
-          <p className="text-white/70 mt-2">تطبيق مندوب التوصيل</p>
-          <p className="text-white/50 text-xs mt-1">
-            الحد الأقصى للمحاولات: {maxLoginAttempts}
-          </p>
+          <div style={{ color: C.accent, fontWeight: 800, fontSize: 22, letterSpacing: 1 }}>{platformName || 'SHAM STORES'}</div>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>بوابة مندوبي التوصيل</p>
+          {maxLoginAttempts && (
+            <p style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>الحد الأقصى للمحاولات: {maxLoginAttempts}</p>
+          )}
         </div>
 
-        {/* Login Form */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                البريد الإلكتروني
-              </label>
-              <div className="relative">
-                <IoMail className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+        {/* Card */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 28 }}>
+          <form onSubmit={handleLogin}>
+            {/* Email */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 6 }}>البريد الإلكتروني</label>
+              <div style={{ position: 'relative' }}>
+                <IoMail size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="example@domain.com"
+                  onChange={e => setEmail(e.target.value)}
                   required
+                  placeholder="example@domain.com"
+                  dir="ltr"
+                  style={inputStyle}
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                كلمة المرور
-              </label>
-              <div className="relative">
-                <IoLockClosed className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            {/* Password */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 6 }}>كلمة المرور</label>
+              <div style={{ position: 'relative' }}>
+                <IoLockClosed size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pr-10 pl-12 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="••••••••"
+                  onChange={e => setPassword(e.target.value)}
                   required
+                  placeholder="••••••••"
+                  style={{ ...inputStyle, paddingLeft: 38 }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <IoEyeOff size={20} /> : <IoEye size={20} />}
+                <button type="button" onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', padding: 0 }}>
+                  {showPassword ? <IoEyeOff size={16} /> : <IoEye size={16} />}
                 </button>
               </div>
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-bold hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50"
+              style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: loading ? C.acDk : C.accent, color: C.bg, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
-              {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+              {loading ? (
+                <><div style={{ width: 18, height: 18, border: `2px solid ${C.bg}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> جاري الدخول...</>
+              ) : (
+                <><IoCar size={16} /> تسجيل الدخول</>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              ليس لديك حساب؟ تواصل مع إدارة {platformName}
+          <div style={{ marginTop: 20, textAlign: 'center' }}>
+            <p style={{ color: C.muted, fontSize: 12 }}>
+              ليس لديك حساب؟ تواصل مع إدارة المنصة
             </p>
+            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+              <Link to="/login" style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}>دخول المطاعم والمتاجر</Link>
+              <span style={{ color: C.border }}>|</span>
+              <Link to="/user/login" style={{ color: C.muted, fontSize: 12, textDecoration: 'none' }}>دخول العملاء</Link>
+            </div>
           </div>
         </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };

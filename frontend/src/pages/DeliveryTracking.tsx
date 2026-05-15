@@ -1,11 +1,23 @@
-// pages/DeliveryTracking.tsx
-
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { IoLocation, IoNavigate, IoCall, IoTime, IoCheckmarkCircle } from 'react-icons/io5';
+import { IoLocation, IoNavigate, IoCall, IoTime, IoCheckmarkCircle, IoCar } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 import Loader from '../components/common/Loader';
+
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  accent: '#C8E235',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#FBBF24',
+};
 
 interface DeliveryOrder {
   id: string;
@@ -21,6 +33,16 @@ interface DeliveryOrder {
   notes?: string;
 }
 
+const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+  pending:    { label: 'قيد الانتظار',  color: C.yellow,  bg: 'rgba(251,191,36,0.15)' },
+  preparing:  { label: 'قيد التحضير',  color: C.blue,    bg: 'rgba(96,165,250,0.15)' },
+  ready:      { label: 'جاهز للتوصيل', color: C.accent,  bg: 'rgba(200,226,53,0.15)' },
+  delivering: { label: 'قيد التوصيل',  color: C.blue,    bg: 'rgba(96,165,250,0.15)' },
+  delivered:  { label: 'تم التوصيل',   color: C.accent,  bg: 'rgba(200,226,53,0.15)' },
+};
+
+const STEPS = ['pending', 'preparing', 'ready', 'delivering', 'delivered'];
+
 const DeliveryTracking: React.FC = () => {
   const { orderId } = useParams();
   const [order, setOrder] = useState<DeliveryOrder | null>(null);
@@ -29,7 +51,6 @@ const DeliveryTracking: React.FC = () => {
 
   useEffect(() => {
     fetchOrderDetails();
-    // تحميل خريطة Google Maps
     if (!document.querySelector('#google-maps-script')) {
       const script = document.createElement('script');
       script.id = 'google-maps-script';
@@ -61,114 +82,120 @@ const DeliveryTracking: React.FC = () => {
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'قيد الانتظار';
-      case 'preparing': return 'قيد التحضير';
-      case 'ready': return 'جاهز للتوصيل';
-      case 'delivering': return 'قيد التوصيل';
-      case 'delivered': return 'تم التوصيل';
-      default: return status;
-    }
-  };
-
   if (loading) return <Loader fullScreen />;
-  if (!order) return <div>الطلب غير موجود</div>;
+  if (!order) return (
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontFamily: 'Cairo, sans-serif' }}>
+      الطلب غير موجود
+    </div>
+  );
+
+  const status = statusConfig[order.status] || { label: order.status, color: C.muted, bg: 'rgba(157,196,172,0.1)' };
+  const currentStepIndex = STEPS.indexOf(order.status);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* بطاقة معلومات الطلب */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6">
-            <h1 className="text-2xl font-bold">طلب #{order.orderNumber}</h1>
-            <p className="text-sm opacity-90 mt-1">
-              {new Date(order.createdAt).toLocaleString('ar-SA')}
-            </p>
-          </div>
-          
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div style={{ minHeight: '100vh', background: C.bg, padding: '24px 16px', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+
+        {/* Header card */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, overflow: 'hidden', marginBottom: 16 }}>
+          <div style={{ background: C.prim, padding: '20px 24px', borderBottom: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <h3 className="font-bold text-lg mb-3">معلومات العميل</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <IoLocation className="text-gray-400" />
-                    <span>{order.customerName}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <IoCall className="text-gray-400" />
-                    <a href={`tel:${order.customerPhone}`} className="text-blue-500">
-                      {order.customerPhone}
-                    </a>
-                  </div>
+                <div style={{ color: C.accent, fontWeight: 800, fontSize: 18 }}>طلب #{order.orderNumber}</div>
+                <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>
+                  <IoTime size={12} style={{ marginLeft: 4, verticalAlign: 'middle' }} />
+                  {new Date(order.createdAt).toLocaleString('ar-SA')}
                 </div>
               </div>
-              
-              <div>
-                <h3 className="font-bold text-lg mb-3">حالة الطلب</h3>
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${
-                    order.status === 'delivered' ? 'bg-green-500' :
-                    order.status === 'delivering' ? 'bg-blue-500' :
-                    order.status === 'ready' ? 'bg-yellow-500' :
-                    'bg-gray-400'
-                  }`} />
-                  <span className="font-medium">{getStatusText(order.status)}</span>
+              <span style={{ padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: status.bg, color: status.color }}>
+                {status.label}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ padding: 24 }}>
+            {/* Progress steps */}
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24, gap: 0 }}>
+              {STEPS.map((step, i) => {
+                const done = i <= currentStepIndex;
+                const sc = statusConfig[step];
+                return (
+                  <React.Fragment key={step}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? C.accent : C.surf, border: `2px solid ${done ? C.accent : C.border}`, transition: 'all 0.3s' }}>
+                        {done ? <IoCheckmarkCircle size={18} style={{ color: C.bg }} /> : <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.border }} />}
+                      </div>
+                      <div style={{ color: done ? C.accent : C.muted, fontSize: 10, marginTop: 4, textAlign: 'center' }}>{sc?.label}</div>
+                    </div>
+                    {i < STEPS.length - 1 && (
+                      <div style={{ flex: 2, height: 2, background: i < currentStepIndex ? C.accent : C.border, transition: 'all 0.3s', marginBottom: 20 }} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            {/* Customer info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ background: C.surf, borderRadius: 12, padding: 16 }}>
+                <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>معلومات العميل</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text, fontSize: 14, marginBottom: 6 }}>
+                  <IoLocation size={14} style={{ color: C.accent }} />
+                  {order.customerName}
                 </div>
+                <a href={`tel:${order.customerPhone}`} style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.accent, fontSize: 14, textDecoration: 'none' }}>
+                  <IoCall size={14} />
+                  {order.customerPhone}
+                </a>
+              </div>
+
+              <div style={{ background: C.surf, borderRadius: 12, padding: 16 }}>
+                <div style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>المجموع</div>
+                <div style={{ color: C.accent, fontSize: 26, fontWeight: 800 }}>{order.total}</div>
+                <div style={{ color: C.muted, fontSize: 12 }}>ل.س</div>
               </div>
             </div>
-            
+
+            {/* Delivery address */}
             {order.deliveryAddress && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-                <h3 className="font-bold mb-2 flex items-center gap-2">
-                  <IoNavigate className="text-blue-600" />
-                  عنوان التوصيل
-                </h3>
-                <p className="text-gray-700 mb-3">{order.deliveryAddress}</p>
+              <div style={{ background: 'rgba(200,226,53,0.06)', border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.accent, fontWeight: 700, marginBottom: 8 }}>
+                  <IoNavigate size={16} /> عنوان التوصيل
+                </div>
+                <p style={{ color: C.text, fontSize: 14, marginBottom: 12 }}>{order.deliveryAddress}</p>
                 <button
                   onClick={openInGoogleMaps}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all flex items-center gap-2"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: C.accent, color: C.bg, border: 'none', borderRadius: 8, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
                 >
-                  <IoNavigate />
-                  فتح في خرائط جوجل
+                  <IoNavigate size={14} /> فتح في خرائط جوجل
                 </button>
               </div>
             )}
-            
+
+            {/* Notes */}
             {order.notes && (
-              <div className="mt-4 p-4 bg-yellow-50 rounded-xl">
-                <h3 className="font-bold mb-2">ملاحظات</h3>
-                <p className="text-gray-700">{order.notes}</p>
+              <div style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 12, padding: 16, marginTop: 16 }}>
+                <div style={{ color: C.yellow, fontWeight: 700, marginBottom: 6, fontSize: 14 }}>ملاحظات</div>
+                <p style={{ color: C.text, fontSize: 14 }}>{order.notes}</p>
               </div>
             )}
-            
-            <div className="mt-6 pt-4 border-t">
-              <div className="flex justify-between items-center">
-                <span className="font-bold text-lg">المجموع</span>
-                <span className="text-2xl font-bold text-green-600">{order.total} ل.س</span>
-              </div>
-            </div>
           </div>
         </div>
-        
-        {/* خريطة الموقع */}
+
+        {/* Map */}
         {order.deliveryLat && order.deliveryLng && mapLoaded && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="p-4 border-b">
-              <h2 className="font-bold text-lg flex items-center gap-2">
-                <IoLocation className="text-red-500" />
-                موقع التوصيل على الخريطة
-              </h2>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoLocation size={18} style={{ color: C.red }} />
+              <span style={{ color: C.text, fontWeight: 700, fontSize: 15 }}>موقع التوصيل</span>
             </div>
-            <div className="h-96">
+            <div style={{ height: 320 }}>
               <iframe
                 title="Delivery Location"
                 width="100%"
                 height="100%"
-                frameBorder="0"
-                style={{ border: 0 }}
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${order.deliveryLng-0.01},${order.deliveryLat-0.01},${order.deliveryLng+0.01},${order.deliveryLat+0.01}&layer=mapnik&marker=${order.deliveryLat},${order.deliveryLng}`}
+                style={{ border: 0, display: 'block' }}
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${order.deliveryLng - 0.01},${order.deliveryLat - 0.01},${order.deliveryLng + 0.01},${order.deliveryLat + 0.01}&layer=mapnik&marker=${order.deliveryLat},${order.deliveryLng}`}
                 allowFullScreen
               />
             </div>

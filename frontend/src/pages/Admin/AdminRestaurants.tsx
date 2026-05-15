@@ -7,6 +7,23 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 interface Restaurant {
   id: string;
   name: string;
@@ -77,25 +94,65 @@ const AdminRestaurants: React.FC = () => {
 
   if (loading) return <Loader fullScreen />;
 
+  const inputStyle: React.CSSProperties = {
+    background: C.surf,
+    border: `1px solid ${C.border}`,
+    borderRadius: 10,
+    color: C.text,
+    padding: '8px 40px 8px 14px',
+    fontSize: 14,
+    outline: 'none',
+    width: 220,
+  };
+
+  const selectStyle: React.CSSProperties = {
+    background: C.surf,
+    border: `1px solid ${C.border}`,
+    borderRadius: 10,
+    color: C.text,
+    padding: '8px 14px',
+    fontSize: 14,
+    outline: 'none',
+    cursor: 'pointer',
+  };
+
+  const thStyle: React.CSSProperties = {
+    padding: '12px 16px',
+    textAlign: 'right',
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: 600,
+    background: C.surf,
+    whiteSpace: 'nowrap',
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: '12px 16px',
+    color: C.text,
+    fontSize: 13,
+    borderBottom: `1px solid ${C.border}`,
+    verticalAlign: 'middle',
+  };
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">إدارة المطاعم</h1>
-        <div className="flex gap-3">
-          <div className="relative">
+    <div style={{ padding: 24, background: C.bg, minHeight: '100vh', color: C.text }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text }}>إدارة المطاعم</h1>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
             <input
               type="text"
               placeholder="بحث..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              style={inputStyle}
             />
-            <IoSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <IoSearch style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
           </div>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="p-2 border rounded-lg"
+            style={selectStyle}
           >
             <option value="all">الكل</option>
             <option value="active">نشط</option>
@@ -104,68 +161,85 @@ const AdminRestaurants: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50">
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
+            <thead>
               <tr>
-                <th className="py-3 px-4 text-right">اسم المطعم</th>
-                <th className="py-3 px-4 text-right">البريد الإلكتروني</th>
-                <th className="py-3 px-4 text-right">رقم الهاتف</th>
-                <th className="py-3 px-4 text-right">الخطة</th>
-                <th className="py-3 px-4 text-right">المالك</th>
-                <th className="py-3 px-4 text-right">الحالة</th>
-                <th className="py-3 px-4 text-right">تاريخ التسجيل</th>
-                <th className="py-3 px-4 text-right">إجراءات</th>
+                <th style={thStyle}>اسم المطعم</th>
+                <th style={thStyle}>البريد الإلكتروني</th>
+                <th style={thStyle}>رقم الهاتف</th>
+                <th style={thStyle}>الخطة</th>
+                <th style={thStyle}>المالك</th>
+                <th style={thStyle}>الحالة</th>
+                <th style={thStyle}>تاريخ التسجيل</th>
+                <th style={thStyle}>إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {filteredRestaurants.map((restaurant) => (
-                <tr key={restaurant.id} className="border-t hover:bg-gray-50">
-                  <td 
-                    className="py-3 px-4 font-medium text-blue-600 cursor-pointer hover:underline"
+                <tr
+                  key={restaurant.id}
+                  style={{ transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td
+                    style={{ ...tdStyle, color: C.accent, cursor: 'pointer', fontWeight: 600 }}
                     onClick={() => handleViewDetails(restaurant.id)}
                   >
                     {restaurant.name}
                   </td>
-                  <td className="py-3 px-4">{restaurant.email}</td>
-                  <td className="py-3 px-4">{restaurant.phone || '-'}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                  <td style={tdStyle}>{restaurant.email}</td>
+                  <td style={tdStyle}>{restaurant.phone || '-'}</td>
+                  <td style={tdStyle}>
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                      background: `${C.blue}20`, color: C.blue,
+                    }}>
                       {restaurant.plan?.name || 'free'}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    {restaurant.users?.[0]?.name || '-'}
-                  </td>
-                  <td className="py-3 px-4">
+                  <td style={tdStyle}>{restaurant.users?.[0]?.name || '-'}</td>
+                  <td style={tdStyle}>
                     <button
                       onClick={() => toggleStatus(restaurant.id, restaurant.isActive)}
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        restaurant.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}
+                      style={{
+                        padding: '3px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                        border: 'none', cursor: 'pointer',
+                        background: restaurant.isActive ? `${C.accent}20` : `${C.red}20`,
+                        color: restaurant.isActive ? C.accent : C.red,
+                      }}
                     >
                       {restaurant.isActive ? 'نشط' : 'غير نشط'}
                     </button>
                   </td>
-                  <td className="py-3 px-4 text-sm">
+                  <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
                     {new Date(restaurant.createdAt).toLocaleDateString('ar-SA')}
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex gap-2">
+                  <td style={tdStyle}>
+                    <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         onClick={() => handleViewDetails(restaurant.id)}
-                        className="p-1 text-blue-500 hover:text-blue-700"
                         title="عرض التفاصيل"
+                        style={{
+                          padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                          background: `${C.accent}15`, color: C.accent,
+                          display: 'flex', alignItems: 'center',
+                        }}
                       >
-                        <IoEye size={18} />
+                        <IoEye size={16} />
                       </button>
                       <button
                         onClick={() => deleteRestaurant(restaurant.id, restaurant.name)}
-                        className="p-1 text-red-500 hover:text-red-700"
                         title="حذف"
+                        style={{
+                          padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                          background: `${C.red}15`, color: C.red,
+                          display: 'flex', alignItems: 'center',
+                        }}
                       >
-                        <IoTrash size={18} />
+                        <IoTrash size={16} />
                       </button>
                     </div>
                   </td>
@@ -177,8 +251,8 @@ const AdminRestaurants: React.FC = () => {
       </div>
 
       {filteredRestaurants.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">لا توجد مطاعم</p>
+        <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted, fontSize: 14 }}>
+          لا توجد مطاعم
         </div>
       )}
     </div>

@@ -1,244 +1,156 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import Button from '@/components/common/Button';
-import { 
-  IoRestaurant, 
-  IoMail, 
-  IoLockClosed, 
-  IoPerson, 
-  IoCall,
-  IoArrowBack,
-  IoWarning
-} from 'react-icons/io5';
+import { IoMail, IoLockClosed, IoPerson, IoCall, IoWarning, IoPersonAdd } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import { useSettingsContext } from '@/contexts/SettingsContext';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+};
+
 const UserRegister: React.FC = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: ''
-  });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '' });
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
- const { isMaintenanceMode, platformName } = useSettingsContext();
+  const { isMaintenanceMode } = useSettingsContext();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (formData.password !== formData.confirmPassword) {
       toast.error('كلمة المرور غير متطابقة');
       return;
     }
-
     setLoading(true);
     try {
-      await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        phone: formData.phone,
-        restaurantName: '' 
-      });
-      
-      // بعد التسجيل، نوجه المستخدم إلى الصفحة السابقة
+      await register({ name: formData.name, email: formData.email, password: formData.password, phone: formData.phone, restaurantName: '' });
       const redirectTo = localStorage.getItem('redirectAfterLogin') || '/';
       localStorage.removeItem('redirectAfterLogin');
       navigate(redirectTo);
     } catch (error) {
-      // الخطأ يتم معالجته في الهوك
+      // error handled in hook
     } finally {
       setLoading(false);
     }
   };
 
-
-   if (isMaintenanceMode) {
+  if (isMaintenanceMode) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center max-w-md">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <IoWarning className="text-yellow-500 text-2xl" />
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} dir="rtl">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 40, textAlign: 'center', maxWidth: 400 }}>
+          <div style={{ width: 64, height: 64, background: 'rgba(255,107,107,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <IoWarning size={28} style={{ color: C.red }} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">🔧 وضع الصيانة</h1>
-          <p className="text-gray-600">المنصة تحت الصيانة حالياً. يرجى المحاولة لاحقاً.</p>
+          <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700, marginBottom: 8 }}>المنصة تحت الصيانة</h1>
+          <p style={{ color: C.muted, fontSize: 14 }}>يرجى المحاولة لاحقاً.</p>
         </div>
       </div>
     );
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', paddingRight: 38, paddingLeft: 14, paddingTop: 11, paddingBottom: 11,
+    background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10,
+    color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 14, outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const fields = [
+    { id: 'name', label: 'الاسم الكامل', type: 'text', placeholder: 'محمد أحمد', icon: <IoPerson size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} /> },
+    { id: 'email', label: 'البريد الإلكتروني', type: 'email', placeholder: 'your@email.com', dir: 'ltr' as const, icon: <IoMail size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} /> },
+    { id: 'phone', label: 'رقم الهاتف', type: 'tel', placeholder: '05xxxxxxxx', dir: 'ltr' as const, icon: <IoCall size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} /> },
+    { id: 'password', label: 'كلمة المرور', type: 'password', placeholder: '••••••••', icon: <IoLockClosed size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} /> },
+    { id: 'confirmPassword', label: 'تأكيد كلمة المرور', type: 'password', placeholder: '••••••••', icon: <IoLockClosed size={16} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} /> },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <Link to="/" className="flex items-center text-blue-600 mb-4 hover:text-blue-800">
-          <IoArrowBack className="ml-1" />
-          العودة للقائمة
-        </Link>
-        <div className="flex justify-center">
-          <div className="bg-white p-3 rounded-full shadow-lg">
-            <IoRestaurant className="h-12 w-12 text-blue-500" />
-          </div>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          إنشاء حساب جديد
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          للتسوق والطلب من المطاعم
-        </p>
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      {/* Background decoration */}
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: -120, right: -120, width: 400, height: 400, background: 'rgba(200,226,53,0.04)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: -100, left: -100, width: 300, height: 300, background: 'rgba(200,226,53,0.03)', borderRadius: '50%' }} />
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-2xl sm:rounded-3xl sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                الاسم الكامل
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoPerson className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="محمد أحمد"
-                />
-              </div>
-            </div>
+      <div style={{ width: '100%', maxWidth: 440, position: 'relative' }}>
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ width: 56, height: 56, background: C.accent, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <span style={{ fontSize: 24, fontWeight: 900, color: C.bg }}>S</span>
+          </div>
+          <div style={{ color: C.accent, fontWeight: 800, fontSize: 20, letterSpacing: 1 }}>SHAM STORES</div>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إنشاء حساب عميل جديد</p>
+        </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                البريد الإلكتروني
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoMail className="h-5 w-5 text-gray-400" />
+        {/* Card */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 28 }}>
+          <form onSubmit={handleSubmit}>
+            {fields.map(f => (
+              <div key={f.id} style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', color: C.muted, fontSize: 13, marginBottom: 6 }}>{f.label}</label>
+                <div style={{ position: 'relative' }}>
+                  {f.icon}
+                  <input
+                    id={f.id}
+                    name={f.id}
+                    type={f.type}
+                    required
+                    value={(formData as any)[f.id]}
+                    onChange={handleChange}
+                    placeholder={f.placeholder}
+                    dir={f.dir}
+                    style={inputStyle}
+                  />
                 </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="your@email.com"
-                />
               </div>
-            </div>
+            ))}
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                رقم الهاتف
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoCall className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="05xxxxxxxx"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                كلمة المرور
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoLockClosed className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="********"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                تأكيد كلمة المرور
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoLockClosed className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  required
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="********"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Button
+            <div style={{ marginTop: 20 }}>
+              <button
                 type="submit"
-                variant="primary"
-                fullWidth
-                loading={loading}
+                disabled={loading}
+                style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: loading ? C.acDk : C.accent, color: C.bg, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 15, cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
-                إنشاء حساب
-              </Button>
+                {loading ? (
+                  <><div style={{ width: 18, height: 18, border: `2px solid ${C.bg}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> جاري التسجيل...</>
+                ) : (
+                  <><IoPersonAdd size={16} /> إنشاء حساب</>
+                )}
+              </button>
             </div>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">لديك حساب بالفعل؟</span>
-              </div>
+          <div style={{ marginTop: 20, textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ flex: 1, height: 1, background: C.border }} />
+              <span style={{ color: C.muted, fontSize: 12 }}>لديك حساب بالفعل؟</span>
+              <div style={{ flex: 1, height: 1, background: C.border }} />
             </div>
-
-            <div className="mt-6">
-              <Link
-                to="/user/login"
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                تسجيل الدخول
-              </Link>
-            </div>
+            <Link to="/user/login" style={{ display: 'block', width: '100%', padding: '11px 0', background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', fontWeight: 600, fontSize: 14, textDecoration: 'none', textAlign: 'center' }}>
+              تسجيل الدخول
+            </Link>
           </div>
         </div>
+
+        <div style={{ textAlign: 'center', marginTop: 20 }}>
+          <Link to="/" style={{ color: C.muted, fontSize: 13, textDecoration: 'none' }}>← العودة للرئيسية</Link>
+        </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };

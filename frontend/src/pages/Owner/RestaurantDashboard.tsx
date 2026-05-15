@@ -1,5 +1,4 @@
 // pages/Owner/RestaurantDashboard.tsx
-// هذا هو نفس الكود الذي أرسلته ولكن مع تغيير اسم المكون
 
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -23,6 +22,23 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 interface DashboardStats {
   todayOrders: number;
   todaySales: number;
@@ -32,6 +48,24 @@ interface DashboardStats {
   recentOrders: any[];
   salesData: Array<{ date: string; sales: number }>;
 }
+
+const getStatusBadgeStyle = (status: string): React.CSSProperties => {
+  const base: React.CSSProperties = {
+    padding: '2px 10px',
+    borderRadius: 999,
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    display: 'inline-block',
+  };
+  switch (status) {
+    case 'pending':    return { ...base, background: 'rgba(245,158,11,0.15)', color: C.yellow };
+    case 'preparing':  return { ...base, background: 'rgba(96,165,250,0.15)', color: C.blue };
+    case 'ready':      return { ...base, background: 'rgba(200,226,53,0.15)', color: C.accent };
+    case 'served':     return { ...base, background: 'rgba(157,196,172,0.15)', color: C.muted };
+    case 'cancelled':  return { ...base, background: 'rgba(255,107,107,0.15)', color: C.red };
+    default:           return { ...base, background: 'rgba(157,196,172,0.15)', color: C.muted };
+  }
+};
 
 const RestaurantDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -64,7 +98,7 @@ const RestaurantDashboard: React.FC = () => {
 
       if (salesHistory.data?.dailyStats) {
         salesHistory.data.dailyStats.forEach((day: any) => {
-          const dayIndex = last7Days.findIndex(d => 
+          const dayIndex = last7Days.findIndex(d =>
             d.date === format(new Date(day.date), 'dd/MM')
           );
           if (dayIndex !== -1) {
@@ -90,53 +124,69 @@ const RestaurantDashboard: React.FC = () => {
   };
 
   const quickActions = [
-    { label: 'إضافة عنصر للقائمة', icon: IoAdd, path: '/menu', color: 'blue' },
-    { label: 'عرض الطلبات', icon: IoReceipt, path: '/orders', color: 'green' },
-    { label: 'إنشاء QR للطاولات', icon: IoQrCode, path: '/tables', color: 'purple' },
-    { label: 'إضافة موظف', icon: IoPeople, path: '/staff', color: 'orange' },
-    { label: 'عرض الإحصائيات', icon: IoStatsChart, path: '/analytics', color: 'red' },
-    { label: 'تعديل الإعدادات', icon: IoSettings, path: '/settings', color: 'gray' },
+    { label: 'إضافة عنصر للقائمة', icon: IoAdd, path: '/menu' },
+    { label: 'عرض الطلبات', icon: IoReceipt, path: '/orders' },
+    { label: 'إنشاء QR للطاولات', icon: IoQrCode, path: '/tables' },
+    { label: 'إضافة موظف', icon: IoPeople, path: '/staff' },
+    { label: 'عرض الإحصائيات', icon: IoStatsChart, path: '/analytics' },
+    { label: 'تعديل الإعدادات', icon: IoSettings, path: '/settings' },
   ];
 
   const statCards = [
-    { title: 'طلبات اليوم', value: stats?.todayOrders || 0, icon: IoReceipt, color: 'blue', path: '/orders' },
-    { title: 'مبيعات اليوم', value: `${stats?.todaySales?.toFixed(2) || 0} ر.س`, icon: IoPricetag, color: 'green', path: '/analytics' },
-    { title: 'عناصر القائمة', value: stats?.totalMenuItems || 0, icon: IoFastFood, color: 'purple', path: '/menu' },
-    { title: 'الطاولات', value: stats?.totalTables || 0, icon: IoRestaurant, color: 'orange', path: '/tables' },
+    { title: 'طلبات اليوم', value: stats?.todayOrders || 0, icon: IoReceipt, path: '/orders' },
+    { title: 'مبيعات اليوم', value: `${stats?.todaySales?.toFixed(2) || 0} ر.س`, icon: IoPricetag, path: '/analytics' },
+    { title: 'عناصر القائمة', value: stats?.totalMenuItems || 0, icon: IoFastFood, path: '/menu' },
+    { title: 'الطاولات', value: stats?.totalTables || 0, icon: IoRestaurant, path: '/tables' },
   ];
 
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem', color: C.text }} dir="rtl">
+
       {/* الترحيب */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">مرحباً {user?.name} 👋</h1>
-        <p className="text-gray-600 mt-2">
-          {restaurant?.name} • {new Date().toLocaleDateString('ar-SA', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.875rem', fontWeight: 800, color: C.text, margin: 0 }}>
+          مرحباً {user?.name} 👋
+        </h1>
+        <p style={{ color: C.muted, marginTop: '0.5rem', fontSize: '0.95rem' }}>
+          {restaurant?.name} •{' '}
+          {new Date().toLocaleDateString('ar-SA', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
           })}
         </p>
       </div>
 
       {/* بطاقات الإحصائيات السريعة */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ marginBottom: '2rem' }}>
         {statCards.map((card, index) => (
           <Link
             key={index}
             to={card.path}
-            className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
+            style={{
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              borderRadius: 16,
+              padding: '1.5rem',
+              textDecoration: 'none',
+              display: 'block',
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = C.surfL)}
+            onMouseLeave={e => (e.currentTarget.style.background = C.card)}
           >
-            <div className="flex items-center justify-between">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
-                <p className="text-gray-500 text-sm">{card.title}</p>
-                <p className="text-2xl font-bold mt-2">{card.value}</p>
+                <p style={{ color: C.muted, fontSize: '0.875rem', margin: 0 }}>{card.title}</p>
+                <p style={{ color: C.accent, fontSize: '1.5rem', fontWeight: 800, marginTop: '0.5rem', marginBottom: 0 }}>
+                  {card.value}
+                </p>
               </div>
-              <div className={`p-3 bg-${card.color}-100 rounded-full`}>
-                <card.icon className={`text-${card.color}-500`} size={24} />
+              <div style={{ width: 48, height: 48, background: 'rgba(200,226,53,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <card.icon style={{ color: C.accent, fontSize: 22 }} />
               </div>
             </div>
           </Link>
@@ -144,25 +194,50 @@ const RestaurantDashboard: React.FC = () => {
       </div>
 
       {/* إجراءات سريعة (للموبايل) */}
-      <div className="lg:hidden mb-6">
+      <div className="lg:hidden" style={{ marginBottom: '1.5rem' }}>
         <button
           onClick={() => setShowQuickActions(!showQuickActions)}
-          className="w-full bg-blue-500 text-white py-3 rounded-lg flex items-center justify-center"
+          style={{
+            width: '100%',
+            background: C.accent,
+            color: C.bg,
+            fontWeight: 700,
+            padding: '0.75rem',
+            borderRadius: 10,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            fontSize: '0.95rem',
+          }}
         >
-          <IoAdd className="ml-2" />
+          <IoAdd style={{ fontSize: 20 }} />
           إجراءات سريعة
         </button>
         {showQuickActions && (
-          <div className="mt-2 bg-white rounded-lg shadow p-4">
-            <div className="grid grid-cols-2 gap-2">
+          <div style={{ marginTop: '0.5rem', background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
               {quickActions.map((action, index) => (
                 <Link
                   key={index}
                   to={action.path}
-                  className="p-3 text-center hover:bg-gray-50 rounded-lg"
+                  style={{
+                    padding: '0.75rem',
+                    textAlign: 'center',
+                    background: C.surf,
+                    borderRadius: 10,
+                    textDecoration: 'none',
+                    color: C.text,
+                    display: 'block',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = C.surfL)}
+                  onMouseLeave={e => (e.currentTarget.style.background = C.surf)}
                 >
-                  <action.icon className={`mx-auto text-${action.color}-500 mb-1`} size={20} />
-                  <span className="text-xs">{action.label}</span>
+                  <action.icon style={{ color: C.accent, fontSize: 20, display: 'block', margin: '0 auto 4px' }} />
+                  <span style={{ fontSize: '0.75rem' }}>{action.label}</span>
                 </Link>
               ))}
             </div>
@@ -170,22 +245,31 @@ const RestaurantDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* الرسم البياني للمبيعات */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">المبيعات خلال آخر 7 أيام</h2>
-          <div className="h-64">
+      {/* الرسم البياني + التنبيهات */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ marginBottom: '2rem' }}>
+
+        {/* الرسم البياني */}
+        <div className="lg:col-span-2" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, marginTop: 0, marginBottom: '1rem' }}>
+            المبيعات خلال آخر 7 أيام
+          </h2>
+          <div style={{ height: 256 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats?.salesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 12 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                <YAxis tick={{ fill: C.muted, fontSize: 12 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                <Tooltip
+                  contentStyle={{ background: C.prim, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text }}
+                  labelStyle={{ color: C.muted }}
+                />
                 <Line
                   type="monotone"
                   dataKey="sales"
-                  stroke="#3B82F6"
-                  strokeWidth={2}
+                  stroke={C.accent}
+                  strokeWidth={2.5}
+                  dot={{ fill: C.accent, r: 4 }}
+                  activeDot={{ r: 6, fill: C.accent }}
                   name="المبيعات"
                 />
               </LineChart>
@@ -193,73 +277,75 @@ const RestaurantDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* تنبيهات سريعة */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">تنبيهات</h2>
-          <div className="space-y-3">
+        {/* التنبيهات */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, marginTop: 0, marginBottom: '1rem' }}>تنبيهات</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             {stats?.pendingOrders > 0 && (
-              <div className="flex items-start p-3 bg-yellow-50 rounded-lg">
-                <IoWarning className="text-yellow-500 ml-2 mt-1" size={18} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12 }}>
+                <IoWarning style={{ color: C.yellow, fontSize: 18, flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <p className="font-medium">طلبات معلقة</p>
-                  <p className="text-sm text-gray-600">لديك {stats.pendingOrders} طلب في انتظار المراجعة</p>
+                  <p style={{ fontWeight: 600, color: C.text, margin: '0 0 2px' }}>طلبات معلقة</p>
+                  <p style={{ fontSize: '0.8rem', color: C.muted, margin: 0 }}>لديك {stats.pendingOrders} طلب في انتظار المراجعة</p>
                 </div>
               </div>
             )}
             {stats?.totalMenuItems === 0 && (
-              <div className="flex items-start p-3 bg-red-50 rounded-lg">
-                <IoWarning className="text-red-500 ml-2 mt-1" size={18} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 12 }}>
+                <IoWarning style={{ color: C.red, fontSize: 18, flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <p className="font-medium">القائمة فارغة</p>
-                  <p className="text-sm text-gray-600">أضف عناصر للقائمة ليتمكن الزبائن من الطلب</p>
+                  <p style={{ fontWeight: 600, color: C.text, margin: '0 0 2px' }}>القائمة فارغة</p>
+                  <p style={{ fontSize: '0.8rem', color: C.muted, margin: 0 }}>أضف عناصر للقائمة ليتمكن الزبائن من الطلب</p>
                 </div>
               </div>
             )}
             {(!restaurant?.logo || !restaurant?.coverImage) && (
-              <div className="flex items-start p-3 bg-blue-50 rounded-lg">
-                <IoWarning className="text-blue-500 ml-2 mt-1" size={18} />
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', padding: '0.75rem', background: 'rgba(200,226,53,0.08)', border: `1px solid ${C.border}`, borderRadius: 12 }}>
+                <IoWarning style={{ color: C.accent, fontSize: 18, flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <p className="font-medium">إكمال الملف الشخصي</p>
-                  <p className="text-sm text-gray-600">أضف شعار وصورة غلاف للمطعم</p>
+                  <p style={{ fontWeight: 600, color: C.text, margin: '0 0 2px' }}>إكمال الملف الشخصي</p>
+                  <p style={{ fontSize: '0.8rem', color: C.muted, margin: 0 }}>أضف شعار وصورة غلاف للمطعم</p>
                 </div>
               </div>
+            )}
+            {stats?.pendingOrders === 0 && stats?.totalMenuItems > 0 && restaurant?.logo && restaurant?.coverImage && (
+              <p style={{ color: C.muted, fontSize: '0.875rem', textAlign: 'center', margin: '1rem 0' }}>لا توجد تنبيهات جديدة</p>
             )}
           </div>
         </div>
       </div>
 
       {/* آخر الطلبات */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="px-6 py-4 border-b flex justify-between items-center">
-          <h2 className="text-lg font-semibold">آخر الطلبات</h2>
-          <Link to="/orders" className="text-blue-500 hover:text-blue-700 text-sm">
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, margin: 0 }}>آخر الطلبات</h2>
+          <Link to="/orders" style={{ color: C.accent, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
             عرض الكل
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">رقم الطلب</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">الطاولة</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">الحالة</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">المجموع</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500">الوقت</th>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: C.surf }}>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>رقم الطلب</th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>الطاولة</th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>الحالة</th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>المجموع</th>
+                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>الوقت</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody>
               {stats?.recentOrders.map((order: any) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">{order.orderNumber}</td>
-                  <td className="px-6 py-4">{order.table?.name || '-'}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
-                      order.status === 'ready' ? 'bg-green-100 text-green-800' :
-                      order.status === 'served' ? 'bg-gray-100 text-gray-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                <tr
+                  key={order.id}
+                  style={{ borderTop: `1px solid ${C.border}`, transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = C.surfL)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td style={{ padding: '1rem 1.5rem', color: C.text, fontSize: '0.875rem' }}>{order.orderNumber}</td>
+                  <td style={{ padding: '1rem 1.5rem', color: C.muted, fontSize: '0.875rem' }}>{order.table?.name || '-'}</td>
+                  <td style={{ padding: '1rem 1.5rem' }}>
+                    <span style={getStatusBadgeStyle(order.status)}>
                       {order.status === 'pending' && 'قيد الانتظار'}
                       {order.status === 'preparing' && 'قيد التحضير'}
                       {order.status === 'ready' && 'جاهز'}
@@ -267,12 +353,19 @@ const RestaurantDashboard: React.FC = () => {
                       {order.status === 'cancelled' && 'ملغي'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-medium">{order.total} ر.س</td>
-                  <td className="px-6 py-4 text-gray-500">
+                  <td style={{ padding: '1rem 1.5rem', color: C.accent, fontWeight: 700, fontSize: '0.875rem' }}>{order.total} ر.س</td>
+                  <td style={{ padding: '1rem 1.5rem', color: C.muted, fontSize: '0.875rem' }}>
                     {format(new Date(order.createdAt), 'hh:mm a')}
                   </td>
                 </tr>
               ))}
+              {(!stats?.recentOrders || stats.recentOrders.length === 0) && (
+                <tr>
+                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: C.muted, fontSize: '0.875rem' }}>
+                    لا توجد طلبات بعد
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
