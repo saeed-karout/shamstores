@@ -1,6 +1,6 @@
 // frontend/src/api/marketing.ts
 
-import apiClient from './client';
+import apiClient from '../services/api/client';
 import {
   MarketingSection,
   MarketingSettings,

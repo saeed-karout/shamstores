@@ -101,8 +101,8 @@ const queryClient = new QueryClient({
 
 // ==================== مكون التوجيه للمالك ====================
 const DashboardRouter: React.FC = () => {
-  const { user, isRestaurantOwner, isStoreOwner, isLoading } = useAuth();
-  
+  const { user, isRestaurantOwner, isStoreOwner, loading: isLoading } = useAuth();
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -156,7 +156,7 @@ const NotFoundPage: React.FC = () => {
 
 // ==================== التطبيق الرئيسي للدومين الرئيسي ====================
 const MainApp: React.FC = () => {
-  const { isLoading } = useAuth();
+  const { loading: isLoading } = useAuth();
 
   if (isLoading) {
     return (
