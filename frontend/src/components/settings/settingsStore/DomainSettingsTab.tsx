@@ -1,25 +1,33 @@
-// src/components/settings/DomainSettingsTab.tsx
+// src/components/settings/settingsStore/DomainSettingsTab.tsx
 
 import React, { useState, useEffect } from 'react';
-import { IoGlobe, IoCheckmarkCircle, IoCopy, IoInformation, IoWarning, IoRefresh } from 'react-icons/io5';
+import { IoGlobe, IoCheckmarkCircle, IoCopy, IoInformation, IoWarning, IoLink } from 'react-icons/io5';
 import { DomainSettings } from '@/types/stores/settings.types';
-import { useDomainSettings } from '@/hooks/stores/useDomainSettings';
-import Button from '@/components/common/Button';
 import toast from 'react-hot-toast';
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', yellow: '#FBBF24', green: '#4ADE80',
+};
 
 interface DomainSettingsTabProps {
   initialData: DomainSettings;
   onSave: (data: Partial<DomainSettings>) => Promise<void>;
   isPro?: boolean;
-  currentPlan?: any; // ✅ إضافة خطة المستخدم الحالية
+  currentPlan?: any;
 }
 
-const DomainSettingsTab: React.FC<DomainSettingsTabProps> = ({ 
-  initialData, 
-  onSave, 
+const DomainSettingsTab: React.FC<DomainSettingsTabProps> = ({
+  initialData,
+  onSave,
   isPro = false,
-  currentPlan 
+  currentPlan
 }) => {
+  const [subdomain, setSubdomain] = useState('');
+  const [savingSubdomain, setSavingSubdomain] = useState(false);
+  const [subdomainSaved, setSubdomainSaved] = useState(false);
+
   const [customDomain, setCustomDomain] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -28,37 +36,55 @@ const DomainSettingsTab: React.FC<DomainSettingsTabProps> = ({
   const [copied, setCopied] = useState<string | null>(null);
   const [loadingDns, setLoadingDns] = useState(false);
 
-  // التحقق مما إذا كانت الخطة تدعم الدومين المخصص
   const hasCustomDomainFeature = currentPlan?.hasCustomDomain === true || isPro === true;
 
-  // جلب إعدادات DNS
   const fetchDnsSettings = async () => {
     setLoadingDns(true);
     try {
       const response = await fetch('/api/store/settings/domain/dns', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await response.json();
-      if (data.success) {
-        setDnsSettings(data.data);
-      }
+      if (data.success) setDnsSettings(data.data);
     } catch (error) {
-      console.error('Error fetching DNS settings:', error);
       toast.error('فشل تحميل إعدادات DNS');
     } finally {
       setLoadingDns(false);
     }
   };
 
-  // التحقق من الدومين
-  const verifyDomain = async () => {
-    if (!customDomain) {
-      toast.error('الرجاء إدخال الدومين');
+  const saveSubdomain = async () => {
+    if (!subdomain.trim()) {
+      toast.error('الرجاء إدخال الـ subdomain');
       return;
     }
+    setSavingSubdomain(true);
+    try {
+      const response = await fetch('/api/store/settings/subdomain', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ subdomain: subdomain.trim().toLowerCase() })
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('تم حفظ الـ subdomain بنجاح');
+        setSubdomainSaved(true);
+        setSubdomain(data.data.subdomain);
+      } else {
+        toast.error(data.error || 'فشل حفظ الـ subdomain');
+      }
+    } catch {
+      toast.error('فشل حفظ الـ subdomain');
+    } finally {
+      setSavingSubdomain(false);
+    }
+  };
 
+  const verifyDomain = async () => {
+    if (!customDomain) { toast.error('الرجاء إدخال الدومين'); return; }
     setVerifying(true);
     try {
       const response = await fetch('/api/store/settings/domain/verify', {
@@ -69,59 +95,40 @@ const DomainSettingsTab: React.FC<DomainSettingsTabProps> = ({
         },
         body: JSON.stringify({ customDomain })
       });
-      
       const data = await response.json();
-      
       if (data.success && data.verified) {
         toast.success('تم التحقق من الدومين وتفعيله بنجاح!');
         setIsVerified(true);
-        await onSave({ 
-          customDomain, 
-          customDomainVerified: true, 
-          customDomainVerifiedAt: new Date() 
-        });
+        await onSave({ customDomain, customDomainVerified: true, customDomainVerifiedAt: new Date() });
       } else {
         toast.error(data.error || 'فشل التحقق من الدومين');
-        // عرض تعليمات DNS إذا فشل التحقق
         setShowInstructions(true);
         await fetchDnsSettings();
       }
     } catch (error: any) {
-      console.error('Error verifying domain:', error);
       toast.error(error.message || 'فشل التحقق من الدومين');
     } finally {
       setVerifying(false);
     }
   };
 
-  // إزالة الدومين
   const removeDomain = async () => {
     if (!confirm('هل أنت متأكد من إزالة الدومين المخصص؟')) return;
-
     try {
       const response = await fetch('/api/store/settings/domain', {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
-      
       const data = await response.json();
-      
       if (data.success) {
         toast.success('تم إزالة الدومين المخصص بنجاح');
         setCustomDomain('');
         setIsVerified(false);
-        await onSave({ 
-          customDomain: '', 
-          customDomainVerified: false, 
-          customDomainVerifiedAt: undefined 
-        });
+        await onSave({ customDomain: '', customDomainVerified: false, customDomainVerifiedAt: undefined });
       } else {
         toast.error(data.error || 'فشل إزالة الدومين');
       }
-    } catch (error) {
-      console.error('Error removing domain:', error);
+    } catch {
       toast.error('فشل إزالة الدومين');
     }
   };
@@ -135,179 +142,173 @@ const DomainSettingsTab: React.FC<DomainSettingsTabProps> = ({
 
   useEffect(() => {
     if (initialData) {
+      setSubdomain((initialData as any).subdomain || '');
+      setSubdomainSaved(!!(initialData as any).subdomain);
       setCustomDomain(initialData.customDomain || '');
       setIsVerified(initialData.customDomainVerified || false);
     }
-    if (hasCustomDomainFeature) {
-      fetchDnsSettings();
-    }
+    if (hasCustomDomainFeature) fetchDnsSettings();
   }, [initialData, hasCustomDomainFeature]);
 
-  // إذا كانت الخطة لا تدعم الدومين المخصص
-  if (!hasCustomDomainFeature) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <IoGlobe className="text-yellow-500 text-4xl" />
-        </div>
-        <h3 className="text-xl font-bold mb-2">🌐 الدومين المخصص</h3>
-        <p className="text-gray-600 mb-4">
-          هذه الميزة متاحة فقط في الخطة الاحترافية
-        </p>
-        <Button variant="primary" onClick={() => window.location.href = '/plans'}>
-          ترقية الخطة
-        </Button>
-      </div>
-    );
-  }
+  const inputStyle: React.CSSProperties = {
+    flex: 1, padding: '10px 14px', borderRadius: 10, border: `1px solid ${C.border}`,
+    background: C.surf, color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 14,
+    outline: 'none', direction: 'ltr',
+  };
 
-  // إذا كان الدومين مفعلاً
-  if (isVerified && customDomain) {
-    return (
-      <div className="text-center py-12">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <IoCheckmarkCircle className="text-green-600 text-5xl" />
-        </div>
-        <h3 className="text-xl font-bold mb-2">✅ الدومين مفعل</h3>
-        <p className="text-gray-600 mb-4">
-          متجرك متاح الآن على: <br />
-          <a 
-            href={`https://${customDomain}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-green-600 font-medium underline"
-          >
-            {customDomain}
-          </a>
-        </p>
-        <div className="mt-4">
-          <p className="text-sm text-gray-500 mb-3">
-            ⚠️ ملاحظة: قد يستغرق تفعيل الدومين بالكامل حتى 48 ساعة
-          </p>
-          <Button variant="danger" onClick={removeDomain}>
-            إزالة الدومين
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const btnPrimary: React.CSSProperties = {
+    padding: '10px 20px', borderRadius: 10, border: 'none', background: C.accent,
+    color: '#082E24', fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14,
+    cursor: 'pointer', whiteSpace: 'nowrap',
+  };
+
+  const btnDanger: React.CSSProperties = {
+    ...btnPrimary, background: C.red, color: '#fff',
+  };
+
+  const sectionCard: React.CSSProperties = {
+    background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, marginBottom: 20,
+  };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-blue-50 p-4 rounded-xl">
-        <div className="flex items-start gap-3">
-          <IoInformation className="text-blue-500 text-xl mt-0.5" />
+    <div dir="rtl" style={{ fontFamily: 'Cairo, sans-serif' }}>
+
+      {/* Subdomain Section - Available to all */}
+      <div style={sectionCard}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${C.blue}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IoLink size={18} style={{ color: C.blue }} />
+          </div>
           <div>
-            <h3 className="font-semibold text-blue-800 mb-1">ما هو الدومين المخصص؟</h3>
-            <p className="text-sm text-blue-700">
-              الدومين المخصص يسمح لك باستخدام عنوان URL الخاص بك بدلاً من subdomain.example.com. 
-              مثال: يمكنك استخدام shop.com بدلاً من shop.example.com
-            </p>
+            <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, margin: 0 }}>رابط المتجر (Subdomain)</h3>
+            <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>سيكون رابط متجرك على المنصة</p>
           </div>
         </div>
-      </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">الدومين المخصص</label>
-        <div className="flex gap-2">
+        <div style={{ background: `${C.blue}10`, border: `1px solid ${C.blue}30`, borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', gap: 8 }}>
+          <IoInformation size={16} style={{ color: C.blue, marginTop: 2, flexShrink: 0 }} />
+          <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>
+            بعد الحفظ سيكون متجرك متاحاً على: <span style={{ color: C.accent, fontWeight: 700, direction: 'ltr', display: 'inline-block' }}>{subdomain || 'my-store'}.shamstores.com</span>
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
           <input
             type="text"
-            value={customDomain}
-            onChange={(e) => setCustomDomain(e.target.value)}
-            placeholder="مثال: myshop.com"
-            className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-green-500"
-            dir="ltr"
+            value={subdomain}
+            onChange={(e) => { setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); setSubdomainSaved(false); }}
+            placeholder="my-store"
+            style={inputStyle}
           />
-          <Button 
-            onClick={verifyDomain} 
-            variant="primary" 
-            disabled={verifying || !customDomain}
+          <button
+            onClick={saveSubdomain}
+            disabled={savingSubdomain || !subdomain.trim()}
+            style={{ ...btnPrimary, opacity: savingSubdomain || !subdomain.trim() ? 0.6 : 1 }}
           >
-            {verifying ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                جاري التحقق...
-              </div>
-            ) : (
-              'تحقق'
-            )}
-          </Button>
+            {savingSubdomain ? 'جاري الحفظ...' : 'حفظ'}
+          </button>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
-          أدخل الدومين بدون http:// أو https://
-        </p>
+        <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>أحرف إنجليزية صغيرة وأرقام وشرطات فقط، 3-63 حرفاً</p>
+
+        {subdomainSaved && (
+          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <IoCheckmarkCircle size={16} style={{ color: C.green }} />
+            <span style={{ color: C.green, fontSize: 12 }}>
+              متجرك متاح على: <a href={`https://${subdomain}.shamstores.com`} target="_blank" rel="noopener noreferrer" style={{ color: C.accent }}>{subdomain}.shamstores.com</a>
+            </span>
+            <button onClick={() => copyToClipboard(`https://${subdomain}.shamstores.com`, 'sub')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted, padding: 2 }}>
+              <IoCopy size={14} />
+            </button>
+            {copied === 'sub' && <span style={{ color: C.green, fontSize: 11 }}>✓ تم النسخ</span>}
+          </div>
+        )}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setShowInstructions(!showInstructions)}
-        className="text-green-600 text-sm underline hover:text-green-700"
-      >
-        {showInstructions ? 'إخفاء التعليمات' : 'عرض تعليمات إعداد DNS'}
-      </button>
-
-      {showInstructions && dnsSettings && (
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-          <h4 className="font-medium mb-3 flex items-center gap-2">
-            <IoWarning className="text-yellow-500" />
-            إعدادات DNS المطلوبة
-          </h4>
-          <div className="space-y-3">
-            <div className="border-b pb-3">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-mono bg-white px-2 py-1 rounded text-sm font-bold">CNAME Record</span>
-                <button
-                  onClick={() => copyToClipboard(dnsSettings.instructions.cname.value, 'cname')}
-                  className="text-gray-500 hover:text-green-600 transition"
-                >
-                  <IoCopy size={18} />
-                </button>
-              </div>
-              <div className="text-sm space-y-1 bg-white p-2 rounded">
-                <p><span className="text-gray-600">الاسم (Name/Host):</span> <code className="bg-gray-100 px-1">{dnsSettings.instructions.cname.name}</code></p>
-                <p><span className="text-gray-600">القيمة (Value/Points to):</span> <code className="bg-gray-100 px-1">{dnsSettings.instructions.cname.value}</code></p>
-                <p><span className="text-gray-600">TTL:</span> {dnsSettings.instructions.cname.ttl}</p>
-              </div>
-              {copied === 'cname' && (
-                <p className="text-green-600 text-xs mt-1">✓ تم نسخ القيمة</p>
-              )}
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-mono bg-white px-2 py-1 rounded text-sm font-bold">TXT Record</span>
-                <button
-                  onClick={() => copyToClipboard(dnsSettings.instructions.txt.value, 'txt')}
-                  className="text-gray-500 hover:text-green-600 transition"
-                >
-                  <IoCopy size={18} />
-                </button>
-              </div>
-              <div className="text-sm space-y-1 bg-white p-2 rounded">
-                <p><span className="text-gray-600">الاسم (Name/Host):</span> <code className="bg-gray-100 px-1">{dnsSettings.instructions.txt.name}</code></p>
-                <p><span className="text-gray-600">القيمة (Value/Text):</span> <code className="bg-gray-100 px-1 break-all">{dnsSettings.instructions.txt.value}</code></p>
-                <p><span className="text-gray-600">TTL:</span> {dnsSettings.instructions.txt.ttl}</p>
-              </div>
-              {copied === 'txt' && (
-                <p className="text-green-600 text-xs mt-1">✓ تم نسخ القيمة</p>
-              )}
-            </div>
+      {/* Custom Domain Section */}
+      <div style={sectionCard}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${C.accent}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IoGlobe size={18} style={{ color: C.accent }} />
           </div>
-          <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
-            <p className="text-xs text-yellow-800 flex items-start gap-2">
-              <IoWarning className="mt-0.5 flex-shrink-0" />
-              ⏱️ قد يستغرق تفعيل إعدادات DNS من 30 دقيقة إلى 48 ساعة حسب مزود الخدمة
+          <div>
+            <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, margin: 0 }}>دومين مخصص</h3>
+            <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>
+              {hasCustomDomainFeature ? 'استخدم نطاقك الخاص بدلاً من subdomain.shamstores.com' : 'متاح في الخطة الاحترافية فقط'}
             </p>
           </div>
+          {!hasCustomDomainFeature && (
+            <span style={{ marginRight: 'auto', background: `${C.yellow}22`, color: C.yellow, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700 }}>Pro</span>
+          )}
         </div>
-      )}
 
-      {loadingDns && (
-        <div className="flex items-center justify-center gap-2 text-gray-500">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-500 border-t-transparent" />
-          <span>جاري تحميل إعدادات DNS...</span>
-        </div>
-      )}
+        {!hasCustomDomainFeature ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <p style={{ color: C.muted, fontSize: 13, marginBottom: 12 }}>ترقية خطتك للوصول إلى هذه الميزة</p>
+            <button onClick={() => window.location.href = '/plans'} style={btnPrimary}>ترقية الخطة</button>
+          </div>
+        ) : isVerified && customDomain ? (
+          <div style={{ textAlign: 'center', padding: '12px 0' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: `${C.green}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <IoCheckmarkCircle size={28} style={{ color: C.green }} />
+            </div>
+            <p style={{ color: C.text, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>الدومين مفعل</p>
+            <a href={`https://${customDomain}`} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: 13 }}>{customDomain}</a>
+            <p style={{ color: C.muted, fontSize: 11, margin: '8px 0' }}>قد يستغرق تفعيل الدومين بالكامل حتى 48 ساعة</p>
+            <button onClick={removeDomain} style={{ ...btnDanger, marginTop: 8 }}>إزالة الدومين</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+              <input
+                type="text"
+                value={customDomain}
+                onChange={(e) => setCustomDomain(e.target.value)}
+                placeholder="myshop.com"
+                style={inputStyle}
+              />
+              <button onClick={verifyDomain} disabled={verifying || !customDomain} style={{ ...btnPrimary, opacity: verifying || !customDomain ? 0.6 : 1 }}>
+                {verifying ? 'جاري التحقق...' : 'تحقق'}
+              </button>
+            </div>
+            <p style={{ color: C.muted, fontSize: 11 }}>أدخل الدومين بدون http:// أو https://</p>
+
+            <button type="button" onClick={() => setShowInstructions(!showInstructions)} style={{ background: 'none', border: 'none', color: C.accent, fontSize: 12, cursor: 'pointer', padding: 0, marginTop: 8, textDecoration: 'underline' }}>
+              {showInstructions ? 'إخفاء تعليمات DNS' : 'عرض تعليمات إعداد DNS'}
+            </button>
+
+            {showInstructions && dnsSettings && (
+              <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16, marginTop: 12 }}>
+                <h4 style={{ color: C.text, fontSize: 13, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoWarning size={14} style={{ color: C.yellow }} /> إعدادات DNS المطلوبة
+                </h4>
+                {['cname', 'txt'].map((type) => (
+                  <div key={type} style={{ marginBottom: 12, padding: 12, background: C.card, borderRadius: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <code style={{ background: `${C.accent}22`, color: C.accent, padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>{type.toUpperCase()} Record</code>
+                      <button onClick={() => copyToClipboard(dnsSettings.instructions[type].value, type)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.muted }}>
+                        <IoCopy size={14} />
+                      </button>
+                    </div>
+                    <div style={{ fontSize: 12, color: C.muted, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span>الاسم: <code style={{ color: C.text }}>{dnsSettings.instructions[type].name}</code></span>
+                      <span>القيمة: <code style={{ color: C.text, wordBreak: 'break-all' }}>{dnsSettings.instructions[type].value}</code></span>
+                      <span>TTL: <code style={{ color: C.text }}>{dnsSettings.instructions[type].ttl}</code></span>
+                    </div>
+                    {copied === type && <p style={{ color: C.green, fontSize: 11, marginTop: 4 }}>✓ تم نسخ القيمة</p>}
+                  </div>
+                ))}
+                <p style={{ color: C.yellow, fontSize: 11, marginTop: 8 }}>
+                  قد يستغرق تفعيل DNS من 30 دقيقة إلى 48 ساعة
+                </p>
+              </div>
+            )}
+
+            {loadingDns && (
+              <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>جاري تحميل إعدادات DNS...</p>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

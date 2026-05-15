@@ -1974,6 +1974,60 @@ export const removeCustomDomain = async (req: AuthRequest, res: Response): Promi
 
 
 
+// تحديث الـ subdomain للمتجر
+export const updateSubdomain = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const storeId = await getStoreId(req);
+
+    if (!storeId) {
+      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+      return;
+    }
+
+    const store = await Store.findByPk(storeId);
+
+    if (!store) {
+      res.status(404).json({ success: false, error: 'المتجر غير موجود' });
+      return;
+    }
+
+    const { subdomain } = req.body;
+
+    if (!subdomain) {
+      res.status(400).json({ success: false, error: 'الـ subdomain مطلوب' });
+      return;
+    }
+
+    // التحقق من صيغة الـ subdomain
+    const subdomainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i;
+    if (!subdomainRegex.test(subdomain) || subdomain.length < 3 || subdomain.length > 63) {
+      res.status(400).json({ success: false, error: 'صيغة الـ subdomain غير صحيحة. يجب أن يكون بين 3 و 63 حرفاً ويحتوي على أحرف وأرقام وشرطات فقط' });
+      return;
+    }
+
+    // التحقق من عدم وجود نفس الـ subdomain لمتجر آخر
+    const existing = await Store.findOne({
+      where: { subdomain: subdomain.toLowerCase() }
+    });
+
+    if (existing && existing.id !== storeId) {
+      res.status(409).json({ success: false, error: 'هذا الـ subdomain محجوز بالفعل، الرجاء اختيار اسم آخر' });
+      return;
+    }
+
+    await store.update({ subdomain: subdomain.toLowerCase() });
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الـ subdomain بنجاح',
+      data: { subdomain: subdomain.toLowerCase() }
+    });
+  } catch (error) {
+    console.error('Error updating subdomain:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث الـ subdomain' });
+  }
+};
+
 // ==================== الدوال العامة (Public Routes) ====================
 
 export const getPublicStore = async (req: Request, res: Response) => {
