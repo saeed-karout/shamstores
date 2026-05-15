@@ -3,14 +3,20 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  IoCheckmarkCircle, IoTime, IoCar, IoRestaurant, 
+import {
+  IoCheckmarkCircle, IoTime, IoCar, IoRestaurant,
   IoLocation, IoCall, IoWallet, IoArrowBack,
   IoMap, IoRefresh, IoCopy, IoShare
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+};
 
 interface OrderStatus {
   id: string;
@@ -115,12 +121,12 @@ const TrackOrder: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-500';
-      case 'processing': return 'bg-blue-500';
-      case 'shipped': return 'bg-purple-500';
-      case 'delivered': return 'bg-green-500';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-gray-500';
+      case 'pending': return '#FBBF24';
+      case 'processing': return C.blue;
+      case 'shipped': return C.purple;
+      case 'delivered': return C.accent;
+      case 'cancelled': return C.red;
+      default: return C.muted;
     }
   };
 
@@ -143,10 +149,14 @@ const TrackOrder: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">جاري تحميل معلومات الطلب...</p>
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 48, height: 48, border: `2px solid ${C.accent}`,
+            borderTopColor: 'transparent', borderRadius: '50%',
+            animation: 'spin 1s linear infinite', margin: '0 auto'
+          }} />
+          <p style={{ marginTop: 16, color: C.muted, fontFamily: 'Cairo, sans-serif' }}>جاري تحميل معلومات الطلب...</p>
         </div>
       </div>
     );
@@ -154,12 +164,18 @@ const TrackOrder: React.FC = () => {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">الطلب غير موجود</h2>
-          <p className="text-gray-500 mb-6">{error || 'لم نتمكن من العثور على الطلب'}</p>
-          <Link to="/" className="px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition">
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ textAlign: 'center', maxWidth: 420, fontFamily: 'Cairo, sans-serif' }}>
+          <div style={{ fontSize: 64, marginBottom: 16 }}>⚠️</div>
+          <h2 style={{ color: C.text, fontSize: 24, fontWeight: 700, marginBottom: 8 }}>الطلب غير موجود</h2>
+          <p style={{ color: C.muted, marginBottom: 24 }}>{error || 'لم نتمكن من العثور على الطلب'}</p>
+          <Link
+            to="/"
+            style={{
+              padding: '12px 24px', background: C.accent, color: C.bg,
+              borderRadius: 12, textDecoration: 'none', fontWeight: 600
+            }}
+          >
             العودة إلى الرئيسية
           </Link>
         </div>
@@ -177,67 +193,90 @@ const TrackOrder: React.FC = () => {
   const currentStep = getStatusStep(order.status);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white" dir="rtl">
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition">
+      <div style={{ background: '#0D3B2E', position: 'sticky', top: 0, zIndex: 20 }}>
+        <div style={{ maxWidth: 768, margin: '0 auto', padding: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button
+              onClick={() => navigate(-1)}
+              style={{ padding: 8, background: C.surf, border: 'none', borderRadius: '50%', cursor: 'pointer', color: C.text }}
+            >
               <IoArrowBack size={24} />
             </button>
-            <h1 className="text-xl font-bold">تتبع الطلب</h1>
-            <button onClick={shareOrder} className="p-2 hover:bg-gray-100 rounded-full transition">
+            <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700 }}>تتبع الطلب</h1>
+            <button
+              onClick={shareOrder}
+              style={{ padding: 8, background: C.surf, border: 'none', borderRadius: '50%', cursor: 'pointer', color: C.text }}
+            >
               <IoShare size={22} />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6">
+      <div style={{ maxWidth: 768, margin: '0 auto', padding: '24px 16px' }}>
         {/* Order Number */}
-        <div className="bg-white rounded-2xl shadow-md p-5 mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <p className="text-gray-500 text-sm">رقم الطلب</p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold text-gray-800 font-mono">{order.orderNumber}</p>
-                <button onClick={copyOrderNumber} className="p-1 text-gray-400 hover:text-green-500 transition">
+              <p style={{ color: C.muted, fontSize: 14 }}>رقم الطلب</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <p style={{ color: C.text, fontSize: 28, fontWeight: 700, fontFamily: 'monospace' }}>{order.orderNumber}</p>
+                <button
+                  onClick={copyOrderNumber}
+                  style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: C.muted }}
+                >
                   <IoCopy size={18} />
                 </button>
               </div>
             </div>
-            <div className={`px-4 py-2 rounded-full text-white font-medium ${getStatusColor(order.status)}`}>
+            <div style={{
+              padding: '8px 16px', borderRadius: 20, fontWeight: 500,
+              background: `${getStatusColor(order.status)}20`,
+              color: getStatusColor(order.status),
+            }}>
               {getStatusText(order.status)}
             </div>
           </div>
         </div>
 
         {/* Status Timeline */}
-        <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-          <h2 className="font-bold text-lg mb-6">حالة الطلب</h2>
-          <div className="relative">
-            <div className="absolute top-5 right-0 left-0 h-0.5 bg-gray-200">
-              <div 
-                className="h-full bg-green-500 transition-all duration-500"
-                style={{ width: `${(currentStep / (statusSteps.length - 1)) * 100}%` }}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
+          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 24 }}>حالة الطلب</h2>
+          <div style={{ position: 'relative' }}>
+            {/* Track line */}
+            <div style={{ position: 'absolute', top: 20, right: 0, left: 0, height: 2, background: C.surf }}>
+              <div
+                style={{
+                  height: '100%', background: C.accent, transition: 'width 0.5s',
+                  width: `${(currentStep / (statusSteps.length - 1)) * 100}%`
+                }}
               />
             </div>
-            <div className="relative flex justify-between">
+            <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between' }}>
               {statusSteps.map((step, index) => {
                 const Icon = step.icon;
                 const isCompleted = index <= currentStep;
                 const isCurrent = index === currentStep;
-                
+
                 return (
-                  <div key={step.key} className="text-center">
-                    <div 
-                      className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 transition-all ${
-                        isCompleted ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
-                      } ${isCurrent ? 'ring-4 ring-green-200 scale-110' : ''}`}
+                  <div key={step.key} style={{ textAlign: 'center' }}>
+                    <div
+                      style={{
+                        width: 40, height: 40, borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '0 auto 8px',
+                        background: isCompleted ? C.accent : C.surf,
+                        color: isCompleted ? C.bg : C.muted,
+                        boxShadow: isCurrent ? `0 0 0 4px rgba(200,226,53,0.25)` : 'none',
+                        transform: isCurrent ? 'scale(1.1)' : 'scale(1)',
+                        transition: 'all 0.3s',
+                      }}
                     >
                       <Icon size={20} />
                     </div>
-                    <p className={`text-sm ${isCompleted ? 'text-green-600 font-medium' : 'text-gray-400'}`}>
+                    <p style={{ fontSize: 12, color: isCompleted ? C.accent : C.muted, fontWeight: isCompleted ? 500 : 400 }}>
                       {step.label}
                     </p>
                   </div>
@@ -249,18 +288,18 @@ const TrackOrder: React.FC = () => {
 
         {/* Delivery Info */}
         {order.deliveryAddress && (
-          <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-            <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <IoLocation className="text-green-500" />
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoLocation style={{ color: C.accent }} />
               عنوان التوصيل
             </h2>
-            <p className="text-gray-700">{order.deliveryAddress}</p>
+            <p style={{ color: C.text }}>{order.deliveryAddress}</p>
             {order.deliveryLat && order.deliveryLng && (
-              <a 
+              <a
                 href={`https://www.google.com/maps?q=${order.deliveryLat},${order.deliveryLng}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 mt-3 text-green-600 text-sm hover:underline"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 12, color: C.accent, fontSize: 14, textDecoration: 'none' }}
               >
                 <IoMap size={16} />
                 فتح في خرائط جوجل
@@ -271,24 +310,24 @@ const TrackOrder: React.FC = () => {
 
         {/* Driver Info */}
         {order.assignedDriver && (order.status === 'processing' || order.status === 'shipped') && (
-          <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-            <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <IoCar className="text-green-500" />
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
+            <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoCar style={{ color: C.accent }} />
               معلومات المندوب
             </h2>
-            <div className="space-y-2">
-              <p><span className="text-gray-500">الاسم:</span> {order.assignedDriver.name}</p>
-              <p className="flex items-center gap-2">
-                <span className="text-gray-500">الهاتف:</span>
-                <a href={`tel:${order.assignedDriver.phone}`} className="text-green-600 hover:underline">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ color: C.text }}><span style={{ color: C.muted }}>الاسم:</span> {order.assignedDriver.name}</p>
+              <p style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
+                <span style={{ color: C.muted }}>الهاتف:</span>
+                <a href={`tel:${order.assignedDriver.phone}`} style={{ color: C.accent, textDecoration: 'none' }}>
                   {order.assignedDriver.phone}
                 </a>
-                <IoCall size={14} className="text-gray-400" />
+                <IoCall size={14} style={{ color: C.muted }} />
               </p>
               {driverLocation && (
-                <div className="mt-3 p-3 bg-blue-50 rounded-xl">
-                  <p className="text-sm text-blue-800 flex items-center gap-2">
-                    <IoRefresh className="animate-spin" size={14} />
+                <div style={{ marginTop: 12, padding: 12, background: 'rgba(96,165,250,0.1)', borderRadius: 12 }}>
+                  <p style={{ fontSize: 14, color: C.blue, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IoRefresh style={{ animation: 'spin 1s linear infinite' }} size={14} />
                     موقع المندوب يتم تحديثه تلقائياً
                   </p>
                 </div>
@@ -298,59 +337,59 @@ const TrackOrder: React.FC = () => {
         )}
 
         {/* Order Items */}
-        <div className="bg-white rounded-2xl shadow-md p-6 mb-6">
-          <h2 className="font-bold text-lg mb-4">المنتجات المطلوبة</h2>
-          <div className="space-y-3">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
+          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16 }}>المنتجات المطلوبة</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {order.orderItems.map((item) => {
               const product = item.product || item.menuItem;
               return (
-                <div key={item.id} className="flex gap-3 py-3 border-b last:border-0">
+                <div key={item.id} style={{ display: 'flex', gap: 12, paddingBottom: 12, borderBottom: `1px solid ${C.border}` }}>
                   {product?.image && (
-                    <img 
+                    <img
                       src={getImageUrl(product.image)}
                       alt={product.name}
-                      className="w-16 h-16 object-cover rounded-lg"
+                      style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 8 }}
                     />
                   )}
-                  <div className="flex-1">
-                    <p className="font-medium">{product?.name || 'منتج'}</p>
-                    <p className="text-sm text-gray-500">الكمية: {item.quantity}</p>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ color: C.text, fontWeight: 500 }}>{product?.name || 'منتج'}</p>
+                    <p style={{ color: C.muted, fontSize: 14 }}>الكمية: {item.quantity}</p>
                   </div>
-                  <p className="font-bold text-green-600">{item.price * item.quantity} ر.س</p>
+                  <p style={{ color: C.accent, fontWeight: 700 }}>{item.price * item.quantity} ر.س</p>
                 </div>
               );
             })}
           </div>
-          <div className="mt-4 pt-3 border-t flex justify-between">
-            <span className="font-bold">الإجمالي</span>
-            <span className="font-bold text-green-600 text-lg">{order.total} ر.س</span>
+          <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: C.text, fontWeight: 700 }}>الإجمالي</span>
+            <span style={{ color: C.accent, fontWeight: 700, fontSize: 18 }}>{order.total} ر.س</span>
           </div>
         </div>
 
         {/* Dates */}
-        <div className="bg-white rounded-2xl shadow-md p-6">
-          <h2 className="font-bold text-lg mb-4">معلومات إضافية</h2>
-          <div className="space-y-2 text-sm">
-            <p><span className="text-gray-500">تاريخ الطلب:</span> {new Date(order.createdAt).toLocaleString('ar')}</p>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16 }}>معلومات إضافية</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
+            <p style={{ color: C.text }}><span style={{ color: C.muted }}>تاريخ الطلب:</span> {new Date(order.createdAt).toLocaleString('ar')}</p>
             {order.estimatedDeliveryTime && (
-              <p><span className="text-gray-500">الوقت المتوقع:</span> {new Date(order.estimatedDeliveryTime).toLocaleString('ar')}</p>
+              <p style={{ color: C.text }}><span style={{ color: C.muted }}>الوقت المتوقع:</span> {new Date(order.estimatedDeliveryTime).toLocaleString('ar')}</p>
             )}
             {order.actualDeliveryTime && (
-              <p><span className="text-gray-500">وقت التوصيل:</span> {new Date(order.actualDeliveryTime).toLocaleString('ar')}</p>
+              <p style={{ color: C.text }}><span style={{ color: C.muted }}>وقت التوصيل:</span> {new Date(order.actualDeliveryTime).toLocaleString('ar')}</p>
             )}
-            <p className="flex items-center gap-2">
-              <span className="text-gray-500">طريقة الدفع:</span>
+            <p style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
+              <span style={{ color: C.muted }}>طريقة الدفع:</span>
               {order.paymentMethod === 'cash' ? 'كاش' : order.paymentMethod === 'card' ? 'بطاقة' : 'أونلاين'}
             </p>
-            <p className="flex items-center gap-2">
-              <span className="text-gray-500">حالة الدفع:</span>
+            <p style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
+              <span style={{ color: C.muted }}>حالة الدفع:</span>
               {order.isPaid ? (
-                <span className="text-green-600">مدفوع</span>
+                <span style={{ color: C.accent }}>مدفوع</span>
               ) : (
-                <span className="text-yellow-600">غير مدفوع</span>
+                <span style={{ color: '#FBBF24' }}>غير مدفوع</span>
               )}
               {!order.isPaid && order.paymentMethod === 'cash' && (
-                <span className="text-xs text-gray-400">(سيتم الدفع عند الاستلام)</span>
+                <span style={{ fontSize: 12, color: C.muted }}>(سيتم الدفع عند الاستلام)</span>
               )}
             </p>
           </div>
@@ -359,7 +398,12 @@ const TrackOrder: React.FC = () => {
         {/* Refresh Button */}
         <button
           onClick={fetchOrder}
-          className="w-full mt-6 py-3 bg-gray-100 rounded-xl text-gray-600 hover:bg-gray-200 transition flex items-center justify-center gap-2"
+          style={{
+            width: '100%', marginTop: 24, padding: '12px 0',
+            background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12,
+            color: C.muted, fontFamily: 'Cairo, sans-serif', fontSize: 16,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}
         >
           <IoRefresh size={18} />
           تحديث البيانات
