@@ -19,6 +19,23 @@ import {
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 interface StatsData {
   totalOrders: number;
   totalSales: number;
@@ -27,12 +44,12 @@ interface StatsData {
   topItems: Array<{ name: string; count: number; total: number }>;
 }
 
+const CHART_COLORS = [C.accent, C.blue, C.yellow, C.red, C.purple];
+
 const AnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'today' | 'week' | 'month'>('week');
   const [stats, setStats] = useState<StatsData | null>(null);
-
-  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
   useEffect(() => {
     fetchStats();
@@ -52,139 +69,130 @@ const AnalyticsPage: React.FC = () => {
 
   const getPeriodTitle = () => {
     switch (period) {
-      case 'today':
-        return 'اليوم';
-      case 'week':
-        return 'آخر 7 أيام';
-      case 'month':
-        return 'آخر 30 يوماً';
-      default:
-        return '';
+      case 'today': return 'اليوم';
+      case 'week':  return 'آخر 7 أيام';
+      case 'month': return 'آخر 30 يوماً';
+      default:      return '';
     }
+  };
+
+  const periodBtnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '8px 20px',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: active ? 700 : 500,
+    background: active ? C.accent : C.surf,
+    color: active ? C.bg : C.text,
+    border: `1px solid ${active ? C.accent : C.border}`,
+    cursor: 'pointer',
+  });
+
+  const customTooltipStyle = {
+    background: C.card,
+    border: `1px solid ${C.border}`,
+    borderRadius: 8,
+    color: C.text,
+    fontSize: 13,
   };
 
   if (loading || !stats) return <Loader fullScreen />;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">الإحصائيات والتقارير</h1>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setPeriod('today')}
-            className={`px-4 py-2 rounded-lg ${
-              period === 'today'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'
-            }`}
-          >
-            اليوم
-          </button>
-          <button
-            onClick={() => setPeriod('week')}
-            className={`px-4 py-2 rounded-lg ${
-              period === 'week'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'
-            }`}
-          >
-            أسبوع
-          </button>
-          <button
-            onClick={() => setPeriod('month')}
-            className={`px-4 py-2 rounded-lg ${
-              period === 'month'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300'
-            }`}
-          >
-            شهر
-          </button>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>الإحصائيات والتقارير</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setPeriod('today')} style={periodBtnStyle(period === 'today')}>اليوم</button>
+          <button onClick={() => setPeriod('week')}  style={periodBtnStyle(period === 'week')}>أسبوع</button>
+          <button onClick={() => setPeriod('month')} style={periodBtnStyle(period === 'month')}>شهر</button>
         </div>
       </div>
 
-      {/* بطاقات الإحصائيات الرئيسية */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-gray-500 text-sm mb-2">إجمالي الطلبات</h3>
-          <p className="text-3xl font-bold text-blue-600">{stats.totalOrders}</p>
-          <p className="text-sm text-gray-400 mt-2">خلال {getPeriodTitle()}</p>
+      {/* Stats Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 28 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h3 style={{ fontSize: 13, color: C.muted, margin: '0 0 8px', fontWeight: 500 }}>إجمالي الطلبات</h3>
+          <p style={{ fontSize: 36, fontWeight: 700, color: C.blue, margin: '0 0 8px' }}>{stats.totalOrders}</p>
+          <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>خلال {getPeriodTitle()}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-gray-500 text-sm mb-2">إجمالي المبيعات</h3>
-          <p className="text-3xl font-bold text-green-600">
-            {stats.totalSales.toFixed(2)} ر.س
-          </p>
-          <p className="text-sm text-gray-400 mt-2">خلال {getPeriodTitle()}</p>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h3 style={{ fontSize: 13, color: C.muted, margin: '0 0 8px', fontWeight: 500 }}>إجمالي المبيعات</h3>
+          <p style={{ fontSize: 36, fontWeight: 700, color: C.accent, margin: '0 0 8px' }}>{stats.totalSales.toFixed(2)} ر.س</p>
+          <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>خلال {getPeriodTitle()}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-gray-500 text-sm mb-2">متوسط قيمة الطلب</h3>
-          <p className="text-3xl font-bold text-purple-600">
-            {stats.averageOrder.toFixed(2)} ر.س
-          </p>
-          <p className="text-sm text-gray-400 mt-2">خلال {getPeriodTitle()}</p>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h3 style={{ fontSize: 13, color: C.muted, margin: '0 0 8px', fontWeight: 500 }}>متوسط قيمة الطلب</h3>
+          <p style={{ fontSize: 36, fontWeight: 700, color: C.purple, margin: '0 0 8px' }}>{stats.averageOrder.toFixed(2)} ر.س</p>
+          <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>خلال {getPeriodTitle()}</p>
         </div>
       </div>
 
-      {/* الرسم البياني للطلبات */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h2 className="text-lg font-semibold mb-4">الطلبات اليومية</h2>
-        <div className="h-80">
+      {/* Daily Orders Chart */}
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 28 }}>
+        <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: '0 0 20px' }}>الطلبات اليومية</h2>
+        <div style={{ height: 320 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={stats.dailyStats}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis
+                dataKey="date"
                 tickFormatter={(date) => format(new Date(date), 'dd/MM')}
+                stroke={C.muted}
+                tick={{ fill: C.muted, fontSize: 12 }}
               />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip 
+              <YAxis yAxisId="left" stroke={C.muted} tick={{ fill: C.muted, fontSize: 12 }} />
+              <YAxis yAxisId="right" orientation="right" stroke={C.muted} tick={{ fill: C.muted, fontSize: 12 }} />
+              <Tooltip
                 labelFormatter={(date) => format(new Date(date), 'dd/MM/yyyy')}
                 formatter={(value: any) => [value, '']}
+                contentStyle={customTooltipStyle}
+                labelStyle={{ color: C.muted }}
               />
-              <Legend />
+              <Legend wrapperStyle={{ color: C.muted, fontSize: 13 }} />
               <Line
                 yAxisId="left"
                 type="monotone"
                 dataKey="orders"
-                stroke="#3B82F6"
+                stroke={C.blue}
                 name="عدد الطلبات"
                 strokeWidth={2}
+                dot={{ fill: C.blue, r: 3 }}
               />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="sales"
-                stroke="#10B981"
+                stroke={C.accent}
                 name="المبيعات (ر.س)"
                 strokeWidth={2}
+                dot={{ fill: C.accent, r: 3 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      {/* الرسم البياني للمنتجات الأكثر مبيعاً */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">المنتجات الأكثر مبيعاً</h2>
-          <div className="h-80">
+      {/* Top Items Charts */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 28 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: '0 0 20px' }}>المنتجات الأكثر مبيعاً</h2>
+          <div style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.topItems}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#3B82F6" name="عدد الطلبات" />
+                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                <XAxis dataKey="name" stroke={C.muted} tick={{ fill: C.muted, fontSize: 12 }} />
+                <YAxis stroke={C.muted} tick={{ fill: C.muted, fontSize: 12 }} />
+                <Tooltip contentStyle={customTooltipStyle} labelStyle={{ color: C.muted }} />
+                <Bar dataKey="count" fill={C.accent} name="عدد الطلبات" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">توزيع المبيعات</h2>
-          <div className="h-80">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: '0 0 20px' }}>توزيع المبيعات</h2>
+          <div style={{ height: 320 }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -193,56 +201,56 @@ const AnalyticsPage: React.FC = () => {
                   cy="50%"
                   labelLine={false}
                   label={(entry) => entry.name}
-                  outerRadius={80}
-                  fill="#8884d8"
+                  outerRadius={100}
+                  fill={C.accent}
                   dataKey="count"
                 >
                   {stats.topItems.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={customTooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* جدول المنتجات الأكثر مبيعاً */}
-      <div className="mt-8 bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">تفاصيل المنتجات الأكثر مبيعاً</h2>
+      {/* Top Items Table */}
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: 0 }}>تفاصيل المنتجات الأكثر مبيعاً</h2>
         </div>
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: C.surf }}>
+              <th style={{ padding: '12px 24px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: C.muted, textTransform: 'uppercase' }}>
                 المنتج
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+              <th style={{ padding: '12px 24px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: C.muted, textTransform: 'uppercase' }}>
                 عدد الطلبات
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+              <th style={{ padding: '12px 24px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: C.muted, textTransform: 'uppercase' }}>
                 إجمالي المبيعات
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody>
             {stats.topItems.map((item, index) => (
-              <tr key={index}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div
-                      className="w-3 h-3 rounded-full ml-2"
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    {item.name}
+              <tr
+                key={index}
+                style={{ borderTop: `1px solid ${C.border}` }}
+                onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(200,226,53,0.04)'}
+                onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
+              >
+                <td style={{ padding: '14px 24px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', background: CHART_COLORS[index % CHART_COLORS.length], flexShrink: 0 }} />
+                    <span style={{ color: C.text }}>{item.name}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {item.count}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td style={{ padding: '14px 24px', whiteSpace: 'nowrap', color: C.text }}>{item.count}</td>
+                <td style={{ padding: '14px 24px', whiteSpace: 'nowrap', color: C.accent, fontWeight: 600 }}>
                   {item.total.toFixed(2)} ر.س
                 </td>
               </tr>

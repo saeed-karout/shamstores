@@ -9,6 +9,34 @@ import { IoRefresh, IoFilter, IoWallet } from 'react-icons/io5';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 12px',
+  background: C.surf,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  color: C.text,
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
 const OrdersPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -67,10 +95,10 @@ const OrdersPage: React.FC = () => {
       await api.patch(`/orders/${orderId}/payment`, { isPaid, paymentMethod });
       await fetchOrders();
       if (selectedOrder?.id === orderId) {
-        setSelectedOrder({ 
-          ...selectedOrder, 
-          isPaid, 
-          paymentMethod: paymentMethod || selectedOrder.paymentMethod 
+        setSelectedOrder({
+          ...selectedOrder,
+          isPaid,
+          paymentMethod: paymentMethod || selectedOrder.paymentMethod,
         });
       }
     } catch (error) {
@@ -80,191 +108,176 @@ const OrdersPage: React.FC = () => {
 
   const getFilteredOrders = () => {
     let filtered = orders;
-    
-    // تصفية حسب الحالة
     if (filter !== 'all') {
       filtered = filtered.filter(o => o.status === filter);
     }
-    
-    // تصفية حسب الدفع
     if (paymentFilter === 'paid') {
       filtered = filtered.filter(o => o.isPaid);
     } else if (paymentFilter === 'unpaid') {
       filtered = filtered.filter(o => !o.isPaid);
     }
-    
     return filtered;
   };
 
-  const getStatusColor = (status: OrderStatus) => {
+  const getStatusStyle = (status: OrderStatus): React.CSSProperties => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'preparing': return 'bg-blue-100 text-blue-800';
-      case 'ready': return 'bg-green-100 text-green-800';
-      case 'served': return 'bg-gray-100 text-gray-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending':   return { background: 'rgba(245,158,11,0.15)', color: C.yellow };
+      case 'preparing': return { background: 'rgba(96,165,250,0.15)', color: C.blue };
+      case 'ready':     return { background: 'rgba(200,226,53,0.15)', color: C.accent };
+      case 'served':    return { background: 'rgba(157,196,172,0.15)', color: C.muted };
+      case 'cancelled': return { background: 'rgba(255,107,107,0.15)', color: C.red };
+      default:          return { background: 'rgba(157,196,172,0.15)', color: C.muted };
     }
   };
 
   const getStatusText = (status: OrderStatus) => {
     switch (status) {
-      case 'pending': return 'قيد الانتظار';
+      case 'pending':   return 'قيد الانتظار';
       case 'preparing': return 'قيد التحضير';
-      case 'ready': return 'جاهز';
-      case 'served': return 'مكتمل';
+      case 'ready':     return 'جاهز';
+      case 'served':    return 'مكتمل';
       case 'cancelled': return 'ملغي';
-      default: return status;
+      default:          return status;
     }
   };
 
-  const getPaymentBadge = (isPaid: boolean) => {
-    return isPaid ? (
-      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center gap-1">
-        <IoWallet size={12} />
-        مدفوع
-      </span>
-    ) : (
-      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full flex items-center gap-1">
-        <IoWallet size={12} />
-        غير مدفوع
-      </span>
-    );
-  };
+  const getPaymentBadge = (isPaid: boolean) => (
+    <span style={{
+      fontSize: 12,
+      background: isPaid ? 'rgba(200,226,53,0.15)' : 'rgba(245,158,11,0.15)',
+      color: isPaid ? C.accent : C.yellow,
+      padding: '2px 8px',
+      borderRadius: 20,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 4,
+    }}>
+      <IoWallet size={12} />
+      {isPaid ? 'مدفوع' : 'غير مدفوع'}
+    </span>
+  );
+
+  const filterBtnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 14px',
+    borderRadius: 20,
+    fontSize: 13,
+    fontWeight: active ? 700 : 400,
+    background: active ? C.accent : C.surf,
+    color: active ? C.bg : C.text,
+    border: `1px solid ${active ? C.accent : C.border}`,
+    cursor: 'pointer',
+  });
 
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">إدارة الطلبات</h1>
-        <div className="flex space-x-2">
-          <Button
-            variant="outline"
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>إدارة الطلبات</h1>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
             onClick={() => setShowFilters(!showFilters)}
+            style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
           >
-            <IoFilter className="inline ml-1" />
+            <IoFilter size={16} />
             تصفية
-          </Button>
-          <Button
-            variant="outline"
+          </button>
+          <button
             onClick={fetchOrders}
+            style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
           >
-            <IoRefresh className="inline ml-1" />
+            <IoRefresh size={16} />
             تحديث
-          </Button>
+          </button>
         </div>
       </div>
 
-      {/* فلاتر الحالة والدفع */}
+      {/* Filters Panel */}
       {showFilters && (
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <h3 className="font-semibold mb-2">حالة الطلب</h3>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                filter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'
-              }`}
-            >
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 24 }}>
+          <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 12, marginTop: 0 }}>حالة الطلب</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            <button onClick={() => setFilter('all')} style={filterBtnStyle(filter === 'all')}>
               الكل ({orders.length})
             </button>
             {(['pending', 'preparing', 'ready', 'served', 'cancelled'] as OrderStatus[]).map(status => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  filter === status ? 'bg-blue-500 text-white' : 'bg-gray-200'
-                }`}
-              >
+              <button key={status} onClick={() => setFilter(status)} style={filterBtnStyle(filter === status)}>
                 {getStatusText(status)} ({orders.filter(o => o.status === status).length})
               </button>
             ))}
           </div>
 
-          <h3 className="font-semibold mb-2">حالة الدفع</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setPaymentFilter('all')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                paymentFilter === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'
-              }`}
-            >
-              الكل
-            </button>
-            <button
-              onClick={() => setPaymentFilter('paid')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                paymentFilter === 'paid' ? 'bg-blue-500 text-white' : 'bg-gray-200'
-              }`}
-            >
+          <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 12, marginTop: 0 }}>حالة الدفع</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <button onClick={() => setPaymentFilter('all')} style={filterBtnStyle(paymentFilter === 'all')}>الكل</button>
+            <button onClick={() => setPaymentFilter('paid')} style={filterBtnStyle(paymentFilter === 'paid')}>
               مدفوع ({orders.filter(o => o.isPaid).length})
             </button>
-            <button
-              onClick={() => setPaymentFilter('unpaid')}
-              className={`px-3 py-1 rounded-full text-sm ${
-                paymentFilter === 'unpaid' ? 'bg-blue-500 text-white' : 'bg-gray-200'
-              }`}
-            >
+            <button onClick={() => setPaymentFilter('unpaid')} style={filterBtnStyle(paymentFilter === 'unpaid')}>
               غير مدفوع ({orders.filter(o => !o.isPaid).length})
             </button>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* قائمة الطلبات */}
-        <div className="lg:col-span-1 bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold">الطلبات</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
+        {/* Orders List */}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}` }}>
+            <h2 style={{ fontWeight: 600, color: C.text, margin: 0, fontSize: 16 }}>الطلبات</h2>
           </div>
-          <div className="divide-y max-h-[600px] overflow-y-auto">
+          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
             {getFilteredOrders().map(order => (
               <div
                 key={order.id}
                 onClick={() => setSelectedOrder(order)}
-                className={`p-4 cursor-pointer hover:bg-gray-50 ${
-                  selectedOrder?.id === order.id ? 'bg-blue-50' : ''
-                }`}
+                style={{
+                  padding: '14px 20px',
+                  cursor: 'pointer',
+                  borderBottom: `1px solid ${C.border}`,
+                  background: selectedOrder?.id === order.id ? 'rgba(200,226,53,0.07)' : 'transparent',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => { if (selectedOrder?.id !== order.id) (e.currentTarget as HTMLDivElement).style.background = 'rgba(200,226,53,0.04)'; }}
+                onMouseLeave={e => { if (selectedOrder?.id !== order.id) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
               >
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-semibold">{order.orderNumber}</span>
-                  <div className="flex items-center gap-2">
-                    {getPaymentBadge(order.isPaid)}
-                  </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontWeight: 700, color: C.text }}>{order.orderNumber}</span>
+                  {getPaymentBadge(order.isPaid)}
                 </div>
-                <div className="flex justify-between items-start mb-2">
-                  <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
+                <div style={{ marginBottom: 6 }}>
+                  <span style={{ ...getStatusStyle(order.status), padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
                     {getStatusText(order.status)}
                   </span>
                 </div>
-                <div className="text-sm text-gray-600 mb-2">
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>
                   {order.table?.name && `طاولة ${order.table.name} • `}
                   {order.customerName || 'زبون'}
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-500">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
+                  <span style={{ color: C.muted }}>
                     {format(new Date(order.createdAt), 'hh:mm a', { locale: ar })}
                   </span>
-                  <span className="font-bold">{Number(order.total).toFixed(2)} ل.س</span>
+                  <span style={{ fontWeight: 700, color: C.accent }}>{Number(order.total).toFixed(2)} ل.س</span>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* تفاصيل الطلب */}
-        <div className="lg:col-span-2">
+        {/* Order Details */}
+        <div>
           {selectedOrder ? (
             <OrderDetails
               order={selectedOrder}
               onUpdateStatus={(status) => updateOrderStatus(selectedOrder.id, status)}
-              onUpdatePayment={(isPaid, paymentMethod) => 
+              onUpdatePayment={(isPaid, paymentMethod) =>
                 updateOrderPayment(selectedOrder.id, isPaid, paymentMethod)
               }
             />
           ) : (
-            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: 'center', color: C.muted }}>
               اختر طلباً لعرض التفاصيل
             </div>
           )}

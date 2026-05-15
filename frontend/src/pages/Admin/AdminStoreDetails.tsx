@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  IoArrowBack, IoSave, IoTrash, IoKey, IoEye, IoEyeOff, 
+import {
+  IoArrowBack, IoSave, IoTrash, IoKey, IoEye, IoEyeOff,
   IoStorefront, IoLocation, IoCall, IoMail, IoLogoWhatsapp,
   IoColorPalette, IoSettings, IoLink, IoWarning, IoRefresh, IoMegaphone
 } from 'react-icons/io5';
@@ -13,6 +13,12 @@ import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { getImageUrl } from '@/utils/imageHelpers';
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
 
 interface StoreOwner {
   id: string;
@@ -102,28 +108,24 @@ const AdminStoreDetails: React.FC = () => {
   const fetchStore = async () => {
     try {
       const response = await api.get(`/admin/stores/${id}`);
-      // ✅ التعامل مع الـ response بشكل صحيح
       const storeData = response.data || response;
-      
+
       console.log('✅ Store data received:', storeData);
-      
+
       setStore(storeData);
-      
-      // معالجة الإعدادات (قد تكون string أو object)
+
       let parsedSettings = {
         enableDelivery: true,
         deliveryFee: 5,
         freeDeliveryAbove: 100,
         estimatedTime: 45
       };
-      
+
       if (storeData.settings) {
         try {
           if (typeof storeData.settings === 'string') {
-            // تنظيف الـ string من الأقواس الزائدة
             let cleanSettings = storeData.settings;
             if (cleanSettings.includes('"0":"{"')) {
-              // استخراج الجزء الصحيح من JSON
               const match = cleanSettings.match(/(\{.*\})/);
               if (match) {
                 cleanSettings = match[1];
@@ -137,7 +139,7 @@ const AdminStoreDetails: React.FC = () => {
           console.error('Error parsing settings:', error);
         }
       }
-      
+
       setFormData({
         name: storeData.name || '',
         slug: storeData.slug || '',
@@ -166,11 +168,10 @@ const AdminStoreDetails: React.FC = () => {
       setSlugAvailable(true);
       return;
     }
-    
+
     setCheckingSlug(true);
     try {
       const response = await api.get(`/admin/check-slug?slug=${slug}&type=store&id=${id}`);
-      // ✅ التعامل مع الـ response
       const data = response.data || response;
       setSlugAvailable(data.available !== false);
       if (!data.available) {
@@ -227,7 +228,7 @@ const AdminStoreDetails: React.FC = () => {
         isActive: formData.isActive,
         settings: formData.settings
       };
-      
+
       await api.put(`/admin/stores/${id}`, updateData);
       toast.success('تم تحديث بيانات المتجر بنجاح');
       setEditing(false);
@@ -282,69 +283,97 @@ const AdminStoreDetails: React.FC = () => {
     }
   };
 
-  const getStatusBadge = () => {
-    if (!store) return null;
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs ${store.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-        {store.isActive ? 'نشط' : 'غير نشط'}
-      </span>
-    );
+  if (loading) return <Loader fullScreen />;
+  if (!store) return <div style={{ color: C.text, padding: 24, textAlign: 'center' }}>المتجر غير موجود</div>;
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 12px',
+    background: C.surf,
+    border: '1px solid ' + C.border,
+    borderRadius: 10,
+    color: C.text,
+    fontFamily: 'Cairo, sans-serif',
+    outline: 'none',
+    boxSizing: 'border-box',
   };
 
-  if (loading) return <Loader fullScreen />;
-  if (!store) return <div className="p-6 text-center">المتجر غير موجود</div>;
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: 13, fontWeight: 600, color: C.muted, marginBottom: 6
+  };
 
   return (
-    <div className="p-6" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <button
           onClick={() => navigate('/admin/stores')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
         >
           <IoArrowBack size={20} />
           العودة
         </button>
-        <div className="flex items-center gap-3">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {store.logo ? (
-            <img 
-              src={getImageUrl(store.logo)} 
+            <img
+              src={getImageUrl(store.logo)}
               alt={store.name}
-              className="w-12 h-12 rounded-xl object-cover"
+              style={{ width: 48, height: 48, borderRadius: 12, objectFit: 'cover' }}
             />
           ) : (
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <IoStorefront className="text-white text-xl" />
+            <div style={{
+              width: 48, height: 48,
+              background: 'linear-gradient(135deg, #A78BFA, #7C3AED)',
+              borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <IoStorefront style={{ color: '#fff', fontSize: 20 }} />
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold">{store.name}</h1>
-            <p className="text-sm text-gray-500">متجر رقمي • {store.slug}</p>
+            <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>{store.name}</h1>
+            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>متجر رقمي • {store.slug}</p>
           </div>
         </div>
-        {getStatusBadge()}
-        <div className="flex-1"></div>
-        <div className="flex gap-2">
+        <span style={{
+          padding: '2px 12px', borderRadius: 999, fontSize: 12,
+          background: store.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)',
+          color: store.isActive ? C.accent : C.red,
+        }}>
+          {store.isActive ? 'نشط' : 'غير نشط'}
+        </span>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={() => navigate(`/admin/business/store/${id}/marketing`)}
-            className="bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg text-sm hover:bg-indigo-200 flex items-center gap-1"
+            style={{
+              background: 'rgba(96,165,250,0.12)', color: C.blue,
+              padding: '6px 14px', borderRadius: 10, fontSize: 13,
+              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: 'Cairo, sans-serif'
+            }}
           >
             <IoMegaphone size={16} />
             الإعلانات
           </button>
           <button
             onClick={handleToggleStatus}
-            className={`px-3 py-1.5 rounded-lg text-sm ${
-              store.isActive 
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
+            style={{
+              padding: '6px 14px', borderRadius: 10, fontSize: 13, border: 'none', cursor: 'pointer',
+              fontFamily: 'Cairo, sans-serif',
+              background: store.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(200,226,53,0.12)',
+              color: store.isActive ? C.muted : C.accent,
+            }}
           >
             {store.isActive ? 'تعطيل' : 'تفعيل'}
           </button>
           <button
             onClick={handleDelete}
-            className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600 flex items-center gap-1"
+            style={{
+              background: C.red, color: '#fff',
+              padding: '6px 14px', borderRadius: 10, fontSize: 13,
+              border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: 'Cairo, sans-serif'
+            }}
           >
             <IoTrash size={16} />
             حذف
@@ -353,68 +382,78 @@ const AdminStoreDetails: React.FC = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">المنتجات</p>
-          <p className="text-2xl font-bold text-purple-600">{store.stats?.productsCount || 0}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>المنتجات</p>
+          <p style={{ color: C.purple, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{store.stats?.productsCount || 0}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">الطلبات</p>
-          <p className="text-2xl font-bold text-blue-600">{store.stats?.ordersCount || 0}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>الطلبات</p>
+          <p style={{ color: C.blue, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{store.stats?.ordersCount || 0}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">إجمالي المبيعات</p>
-          <p className="text-2xl font-bold text-green-600">{store.stats?.totalSales || 0} ل.س</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>إجمالي المبيعات</p>
+          <p style={{ color: C.accent, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{store.stats?.totalSales || 0} ل.س</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b pb-2">
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '1px solid ' + C.border, paddingBottom: 8 }}>
         <button
           onClick={() => setActiveTab('info')}
-          className={`px-4 py-2 rounded-lg transition-all ${
-            activeTab === 'info' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 hover:bg-gray-200'
-          }`}
+          style={{
+            padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            fontFamily: 'Cairo, sans-serif', fontSize: 14,
+            background: activeTab === 'info' ? C.accent : C.surf,
+            color: activeTab === 'info' ? C.bg : C.muted,
+            fontWeight: activeTab === 'info' ? 700 : 400,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
         >
-          <IoStorefront className="inline ml-1" size={16} />
+          <IoStorefront style={{ display: 'inline', marginLeft: 4 }} size={16} />
           معلومات المتجر
         </button>
         <button
           onClick={() => setActiveTab('settings')}
-          className={`px-4 py-2 rounded-lg transition-all ${
-            activeTab === 'settings' ? 'bg-purple-500 text-white shadow-md' : 'bg-gray-100 hover:bg-gray-200'
-          }`}
+          style={{
+            padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer',
+            fontFamily: 'Cairo, sans-serif', fontSize: 14,
+            background: activeTab === 'settings' ? C.accent : C.surf,
+            color: activeTab === 'settings' ? C.bg : C.muted,
+            fontWeight: activeTab === 'settings' ? 700 : 400,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
         >
-          <IoSettings className="inline ml-1" size={16} />
+          <IoSettings style={{ display: 'inline', marginLeft: 4 }} size={16} />
           الإعدادات
         </button>
       </div>
 
       {/* تبويب معلومات المتجر */}
       {activeTab === 'info' && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">معلومات المتجر</h2>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>معلومات المتجر</h2>
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
-                className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 flex items-center gap-2"
+                style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}
               >
                 <IoSave size={16} />
                 تعديل
               </button>
             ) : (
-              <div className="flex gap-2">
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={handleUpdate}
-                  className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center gap-2"
+                  style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}
                 >
                   <IoSave size={16} />
                   حفظ
                 </button>
                 <button
                   onClick={() => setEditing(false)}
-                  className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600"
+                  style={{ background: C.surf, color: C.muted, padding: '8px 16px', borderRadius: 10, border: '1px solid ' + C.border, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
                 >
                   إلغاء
                 </button>
@@ -422,76 +461,75 @@ const AdminStoreDetails: React.FC = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
             {/* اسم المتجر */}
             <div>
-              <label className="block text-sm font-medium mb-1">اسم المتجر</label>
+              <label style={labelStyle}>اسم المتجر</label>
               {editing ? (
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={inputStyle}
                 />
               ) : (
-                <p className="text-gray-700">{store.name}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.name}</p>
               )}
             </div>
 
-            {/* الرابط */}
-             {/* حقل الرابط (slug) - يظهر فقط للسوبر أدمن */}
-      {isSuperAdmin && (
-        <div>
-          <label className="block text-sm font-medium mb-1 flex items-center gap-2">
-            <IoLink size={16} />
-            الرابط (Slug) - للتعديل من قبل الأدمن فقط
-          </label>
-          {editing ? (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={formData.slug}
-                  onChange={handleSlugChange}
-                  className={`flex-1 p-2 border rounded-lg ${
-                    !slugAvailable && formData.slug !== store.slug
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-300'
-                  }`}
-                  placeholder="my-store"
-                  dir="ltr"
-                />
-                <button
-                  type="button"
-                  onClick={generateSlug}
-                  className="px-3 bg-gray-200 rounded-lg hover:bg-gray-300"
-                  title="توليد رابط تلقائي"
-                >
-                  <IoRefresh size={18} />
-                </button>
+            {/* الرابط - للسوبر أدمن فقط */}
+            {isSuperAdmin && (
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IoLink size={16} />
+                  الرابط (Slug) - للتعديل من قبل الأدمن فقط
+                </label>
+                {editing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        value={formData.slug}
+                        onChange={handleSlugChange}
+                        style={{
+                          ...inputStyle, flex: 1,
+                          border: `1px solid ${!slugAvailable && formData.slug !== store.slug ? C.red : C.border}`,
+                          background: !slugAvailable && formData.slug !== store.slug ? 'rgba(255,107,107,0.08)' : C.surf,
+                        }}
+                        placeholder="my-store"
+                        dir="ltr"
+                      />
+                      <button
+                        type="button"
+                        onClick={generateSlug}
+                        style={{ padding: '0 12px', background: C.surf, border: '1px solid ' + C.border, borderRadius: 10, cursor: 'pointer', color: C.muted }}
+                        title="توليد رابط تلقائي"
+                      >
+                        <IoRefresh size={18} />
+                      </button>
+                    </div>
+                    {checkingSlug && <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>جاري التحقق...</p>}
+                    {!slugAvailable && formData.slug !== store.slug && (
+                      <p style={{ color: C.red, fontSize: 12, margin: 0 }}>⚠ هذا الرابط مستخدم بالفعل</p>
+                    )}
+                    <p style={{ color: C.muted, fontSize: 11, margin: 0 }}>
+                      الرابط: {window.location.origin}/{formData.slug}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p style={{ color: C.accent, fontFamily: 'monospace', margin: 0 }}>{store.slug}</p>
+                    <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
+                      {window.location.origin}/{store.slug}
+                    </p>
+                  </div>
+                )}
               </div>
-              {checkingSlug && <p className="text-sm text-gray-500">جاري التحقق...</p>}
-              {!slugAvailable && formData.slug !== store.slug && (
-                <p className="text-sm text-red-600">⚠ هذا الرابط مستخدم بالفعل</p>
-              )}
-              <p className="text-xs text-gray-500">
-                الرابط: {window.location.origin}/{formData.slug}
-              </p>
-            </div>
-          ) : (
-            <div>
-              <p className="text-gray-700 font-mono">{store.slug}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {window.location.origin}/{store.slug}
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+            )}
 
             {/* البريد الإلكتروني */}
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <IoMail size={14} /> البريد الإلكتروني
               </label>
               {editing ? (
@@ -499,16 +537,16 @@ const AdminStoreDetails: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={inputStyle}
                 />
               ) : (
-                <p className="text-gray-700">{store.email}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.email}</p>
               )}
             </div>
 
             {/* رقم الهاتف */}
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <IoCall size={14} /> رقم الهاتف
               </label>
               {editing ? (
@@ -516,16 +554,16 @@ const AdminStoreDetails: React.FC = () => {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={inputStyle}
                 />
               ) : (
-                <p className="text-gray-700">{store.phone || '-'}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.phone || '-'}</p>
               )}
             </div>
 
-            {/* الواتساب */}
+            {/* واتساب */}
             <div>
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <IoLogoWhatsapp size={14} /> واتساب
               </label>
               {editing ? (
@@ -533,16 +571,16 @@ const AdminStoreDetails: React.FC = () => {
                   type="tel"
                   value={formData.whatsapp}
                   onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={inputStyle}
                 />
               ) : (
-                <p className="text-gray-700">{store.whatsapp || '-'}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.whatsapp || '-'}</p>
               )}
             </div>
 
             {/* العنوان */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <IoLocation size={14} /> العنوان
               </label>
               {editing ? (
@@ -550,136 +588,138 @@ const AdminStoreDetails: React.FC = () => {
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={inputStyle}
                 />
               ) : (
-                <p className="text-gray-700">{store.address || '-'}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.address || '-'}</p>
               )}
             </div>
 
             {/* الوصف */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">الوصف</label>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={labelStyle}>الوصف</label>
               {editing ? (
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={{ ...inputStyle, resize: 'vertical' }}
                   rows={3}
                 />
               ) : (
-                <p className="text-gray-700">{store.description || '-'}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.description || '-'}</p>
               )}
             </div>
 
-            {/* الألوان */}
+            {/* اللون الأساسي */}
             <div>
-              <label className="block text-sm font-medium mb-1">اللون الأساسي</label>
+              <label style={labelStyle}>اللون الأساسي</label>
               {editing ? (
-                <div className="flex items-center gap-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="color"
                     value={formData.primaryColor}
                     onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    className="w-12 h-10 border rounded"
+                    style={{ width: 48, height: 40, border: '1px solid ' + C.border, borderRadius: 8, background: C.surf, cursor: 'pointer' }}
                   />
                   <input
                     type="text"
                     value={formData.primaryColor}
                     onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    className="flex-1 p-2 border rounded-lg"
+                    style={{ ...inputStyle, flex: 1 }}
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded" style={{ backgroundColor: store.primaryColor }} />
-                  <span>{store.primaryColor}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: store.primaryColor, border: '1px solid ' + C.border }} />
+                  <span style={{ color: C.text }}>{store.primaryColor}</span>
                 </div>
               )}
             </div>
 
+            {/* اللون الثانوي */}
             <div>
-              <label className="block text-sm font-medium mb-1">اللون الثانوي</label>
+              <label style={labelStyle}>اللون الثانوي</label>
               {editing ? (
-                <div className="flex items-center gap-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="color"
                     value={formData.secondaryColor}
                     onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                    className="w-12 h-10 border rounded"
+                    style={{ width: 48, height: 40, border: '1px solid ' + C.border, borderRadius: 8, background: C.surf, cursor: 'pointer' }}
                   />
                   <input
                     type="text"
                     value={formData.secondaryColor}
                     onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                    className="flex-1 p-2 border rounded-lg"
+                    style={{ ...inputStyle, flex: 1 }}
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded" style={{ backgroundColor: store.secondaryColor }} />
-                  <span>{store.secondaryColor}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: store.secondaryColor, border: '1px solid ' + C.border }} />
+                  <span style={{ color: C.text }}>{store.secondaryColor}</span>
                 </div>
               )}
             </div>
 
-            {/* الإحداثيات */}
+            {/* خط العرض */}
             <div>
-              <label className="block text-sm font-medium mb-1">خط العرض</label>
+              <label style={labelStyle}>خط العرض</label>
               {editing ? (
                 <input
                   type="text"
                   value={formData.latitude}
                   onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={inputStyle}
                   placeholder="33.5138"
                 />
               ) : (
-                <p className="text-gray-700">{store.latitude || '-'}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.latitude || '-'}</p>
               )}
             </div>
 
+            {/* خط الطول */}
             <div>
-              <label className="block text-sm font-medium mb-1">خط الطول</label>
+              <label style={labelStyle}>خط الطول</label>
               {editing ? (
                 <input
                   type="text"
                   value={formData.longitude}
                   onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                  className="w-full p-2 border rounded-lg"
+                  style={inputStyle}
                   placeholder="36.2765"
-              />
+                />
               ) : (
-                <p className="text-gray-700">{store.longitude || '-'}</p>
+                <p style={{ color: C.text, margin: 0 }}>{store.longitude || '-'}</p>
               )}
             </div>
 
             {/* الخطة */}
             <div>
-              <label className="block text-sm font-medium mb-1">الخطة</label>
-              <p className="text-gray-700">
+              <label style={labelStyle}>الخطة</label>
+              <p style={{ color: C.text, margin: 0 }}>
                 {store.plan?.name || 'مجاني'} - {store.plan?.price || 0} ل.س/شهر
               </p>
-              <p className="text-xs text-gray-500">
+              <p style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>
                 الحد الأقصى للمنتجات: {store.plan?.maxProducts || 0}
               </p>
             </div>
 
             {/* الحالة */}
             <div>
-              <label className="block text-sm font-medium mb-1">الحالة</label>
+              <label style={labelStyle}>الحالة</label>
               {editing ? (
-                <label className="flex items-center gap-2">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={formData.isActive}
                     onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-5 h-5"
+                    style={{ width: 18, height: 18, cursor: 'pointer' }}
                   />
-                  <span>مفعل</span>
+                  <span style={{ color: C.text }}>مفعل</span>
                 </label>
               ) : (
-                <span className={store.isActive ? 'text-green-600' : 'text-red-600'}>
+                <span style={{ color: store.isActive ? C.accent : C.red }}>
                   {store.isActive ? 'نشط' : 'غير نشط'}
                 </span>
               )}
@@ -687,43 +727,37 @@ const AdminStoreDetails: React.FC = () => {
           </div>
 
           {/* معلومات المالك */}
-          <div className="mt-6 p-4 bg-purple-50 rounded-xl">
-            <h3 className="font-bold mb-3 flex items-center gap-2">
-              <IoKey size={18} />
+          <div style={{ marginTop: 24, padding: 16, background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: 12 }}>
+            <h3 style={{ color: C.text, fontWeight: 700, marginBottom: 12, marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoKey size={18} style={{ color: C.purple }} />
               معلومات المالك
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <span className="text-gray-500">الاسم:</span> {store.storeOwner?.name || '-'}
-              </div>
-              <div>
-                <span className="text-gray-500">البريد:</span> {store.storeOwner?.email || '-'}
-              </div>
-              <div>
-                <span className="text-gray-500">الهاتف:</span> {store.storeOwner?.phone || '-'}
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+              <div><span style={{ color: C.muted }}>الاسم:</span> <span style={{ color: C.text }}>{store.storeOwner?.name || '-'}</span></div>
+              <div><span style={{ color: C.muted }}>البريد:</span> <span style={{ color: C.text }}>{store.storeOwner?.email || '-'}</span></div>
+              <div><span style={{ color: C.muted }}>الهاتف:</span> <span style={{ color: C.text }}>{store.storeOwner?.phone || '-'}</span></div>
             </div>
           </div>
 
           {/* إعادة تعيين كلمة المرور */}
-          <div className="mt-6 p-4 bg-yellow-50 rounded-xl">
-            <h3 className="font-bold mb-3 flex items-center gap-2">
-              <IoKey size={18} />
+          <div style={{ marginTop: 24, padding: 16, background: 'rgba(200,226,53,0.06)', border: '1px solid ' + C.border, borderRadius: 12 }}>
+            <h3 style={{ color: C.text, fontWeight: 700, marginBottom: 12, marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoKey size={18} style={{ color: C.accent }} />
               إعادة تعيين كلمة المرور
             </h3>
-            <div className="flex gap-3">
-              <div className="relative flex-1">
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ position: 'relative', flex: 1 }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="كلمة المرور الجديدة"
-                  className="w-full p-2 border rounded-lg pr-10"
+                  style={{ ...inputStyle, paddingLeft: 40 }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: C.muted }}
                 >
                   {showPassword ? <IoEyeOff size={18} /> : <IoEye size={18} />}
                 </button>
@@ -738,15 +772,15 @@ const AdminStoreDetails: React.FC = () => {
 
       {/* تبويب الإعدادات */}
       {activeTab === 'settings' && (
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginTop: 0, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
             <IoSettings size={20} />
             إعدادات المتجر
           </h2>
-          
-          <div className="space-y-4">
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <label className="flex items-center gap-2">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: editing ? 'pointer' : 'default' }}>
                 <input
                   type="checkbox"
                   checked={formData.settings.enableDelivery}
@@ -755,14 +789,14 @@ const AdminStoreDetails: React.FC = () => {
                     settings: { ...formData.settings, enableDelivery: e.target.checked }
                   })}
                   disabled={!editing}
-                  className="w-5 h-5"
+                  style={{ width: 18, height: 18 }}
                 />
-                <span>تفعيل خدمة التوصيل</span>
+                <span style={{ color: C.text }}>تفعيل خدمة التوصيل</span>
               </label>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">سعر التوصيل الأساسي (ل.س)</label>
+              <label style={labelStyle}>سعر التوصيل الأساسي (ل.س)</label>
               <input
                 type="number"
                 value={formData.settings.deliveryFee}
@@ -771,12 +805,12 @@ const AdminStoreDetails: React.FC = () => {
                   settings: { ...formData.settings, deliveryFee: Number(e.target.value) }
                 })}
                 disabled={!editing}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, opacity: editing ? 1 : 0.6 }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">توصيل مجاني للطلبات فوق (ل.س)</label>
+              <label style={labelStyle}>توصيل مجاني للطلبات فوق (ل.س)</label>
               <input
                 type="number"
                 value={formData.settings.freeDeliveryAbove}
@@ -785,12 +819,12 @@ const AdminStoreDetails: React.FC = () => {
                   settings: { ...formData.settings, freeDeliveryAbove: Number(e.target.value) }
                 })}
                 disabled={!editing}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, opacity: editing ? 1 : 0.6 }}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">الوقت التقديري للتوصيل (دقيقة)</label>
+              <label style={labelStyle}>الوقت التقديري للتوصيل (دقيقة)</label>
               <input
                 type="number"
                 value={formData.settings.estimatedTime}
@@ -799,7 +833,7 @@ const AdminStoreDetails: React.FC = () => {
                   settings: { ...formData.settings, estimatedTime: Number(e.target.value) }
                 })}
                 disabled={!editing}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, opacity: editing ? 1 : 0.6 }}
               />
             </div>
 

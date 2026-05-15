@@ -2,9 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  IoArrowBack, IoPerson, IoMail, IoCall, IoCalendar, 
-  IoKey, IoEye, IoEyeOff, IoTrash, IoCheckmarkCircle, 
+import {
+  IoArrowBack, IoPerson, IoMail, IoCall, IoCalendar,
+  IoKey, IoEye, IoEyeOff, IoTrash, IoCheckmarkCircle,
   IoCloseCircle, IoRefresh, IoRestaurant, IoStorefront,
   IoCar, IoWallet, IoSettings, IoShield, IoLockClosed
 } from 'react-icons/io5';
@@ -12,6 +12,21 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
+
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+};
 
 interface UserDetails {
   id: string;
@@ -147,12 +162,12 @@ const AdminUserDetails: React.FC = () => {
   };
 
   const getRoleBadge = (role: string) => {
-    const colors: Record<string, string> = {
-      super_admin: 'bg-purple-100 text-purple-800',
-      owner: 'bg-blue-100 text-blue-800',
-      staff: 'bg-green-100 text-green-800',
-      delivery_driver: 'bg-orange-100 text-orange-800',
-      user: 'bg-gray-100 text-gray-800'
+    const styles: Record<string, React.CSSProperties> = {
+      super_admin: { background: 'rgba(167,139,250,0.15)', color: '#a78bfa' },
+      owner:       { background: 'rgba(96,165,250,0.15)',  color: C.blue },
+      staff:       { background: 'rgba(200,226,53,0.15)',  color: C.accent },
+      delivery_driver: { background: 'rgba(251,146,60,0.15)', color: '#fb923c' },
+      user:        { background: 'rgba(157,196,172,0.15)', color: C.muted },
     };
     const labels: Record<string, string> = {
       super_admin: 'مدير المنصة',
@@ -162,7 +177,7 @@ const AdminUserDetails: React.FC = () => {
       user: 'مستخدم عادي'
     };
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${colors[role] || 'bg-gray-100'}`}>
+      <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 12, fontFamily: 'Cairo, sans-serif', ...(styles[role] || styles.user) }}>
         {labels[role] || role}
       </span>
     );
@@ -170,176 +185,174 @@ const AdminUserDetails: React.FC = () => {
 
   const getStatusBadge = (isActive: boolean) => {
     return isActive ? (
-      <span className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-        <IoCheckmarkCircle size={14} />
-        نشط
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'rgba(200,226,53,0.15)', color: C.accent }}>
+        <IoCheckmarkCircle size={14} /> نشط
       </span>
     ) : (
-      <span className="flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm">
-        <IoCloseCircle size={14} />
-        غير نشط
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'rgba(255,107,107,0.15)', color: C.red }}>
+        <IoCloseCircle size={14} /> غير نشط
       </span>
     );
   };
 
   const getOrderStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      preparing: 'bg-blue-100 text-blue-800',
-      ready: 'bg-green-100 text-green-800',
-      delivering: 'bg-purple-100 text-purple-800',
-      delivered: 'bg-gray-100 text-gray-800',
-      cancelled: 'bg-red-100 text-red-800'
+    const styles: Record<string, React.CSSProperties> = {
+      pending:   { background: 'rgba(251,191,36,0.15)',  color: '#fbbf24' },
+      preparing: { background: 'rgba(96,165,250,0.15)',  color: C.blue },
+      ready:     { background: 'rgba(200,226,53,0.15)',  color: C.accent },
+      delivering:{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa' },
+      delivered: { background: 'rgba(157,196,172,0.15)', color: C.muted },
+      cancelled: { background: 'rgba(255,107,107,0.15)', color: C.red },
     };
     const labels: Record<string, string> = {
-      pending: 'قيد الانتظار',
-      preparing: 'قيد التحضير',
-      ready: 'جاهز',
-      delivering: 'قيد التوصيل',
-      delivered: 'مكتمل',
-      cancelled: 'ملغي'
+      pending: 'قيد الانتظار', preparing: 'قيد التحضير', ready: 'جاهز',
+      delivering: 'قيد التوصيل', delivered: 'مكتمل', cancelled: 'ملغي'
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs ${colors[status] || 'bg-gray-100'}`}>
+      <span style={{ padding: '3px 8px', borderRadius: 20, fontSize: 11, ...(styles[status] || styles.delivered) }}>
         {labels[status] || status}
       </span>
     );
   };
 
   if (loading) return <Loader fullScreen />;
-  if (!user) return <div className="text-center py-20">المستخدم غير موجود</div>;
+  if (!user) return (
+    <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontFamily: 'Cairo, sans-serif' }}>
+      المستخدم غير موجود
+    </div>
+  );
+
+  const inputStyle: React.CSSProperties = {
+    background: C.surf,
+    border: '1px solid ' + C.border,
+    borderRadius: 10,
+    color: C.text,
+    padding: '10px 14px',
+    fontFamily: 'Cairo, sans-serif',
+    width: '100%',
+    boxSizing: 'border-box',
+  };
+
+  const cardStyle: React.CSSProperties = {
+    background: C.card,
+    border: '1px solid ' + C.border,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 0,
+  };
+
+  const labelStyle: React.CSSProperties = { color: C.muted, fontSize: 12, display: 'block', marginBottom: 4 };
+  const valueStyle: React.CSSProperties = { color: C.text, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 };
 
   return (
-    <div className="p-6">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
         <button
           onClick={() => navigate('/admin/users')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.muted, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
         >
-          <IoArrowBack size={20} />
-          العودة
+          <IoArrowBack size={18} /> ← العودة
         </button>
-        <div className="flex items-center gap-3">
-          <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-            <IoPerson className="text-white text-2xl" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 52, height: 52, background: C.surfL, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid ' + C.border }}>
+            <IoPerson style={{ color: C.accent, fontSize: 24 }} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">{user.name}</h1>
-            <p className="text-sm text-gray-500">{user.email}</p>
+            <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700, margin: 0 }}>{user.name}</h1>
+            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>{user.email}</p>
           </div>
         </div>
         {getRoleBadge(user.role)}
         {getStatusBadge(user.isActive)}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* العمود الأيسر - المعلومات الأساسية */}
-        <div className="lg:col-span-2 space-y-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+        {/* Left column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, gridColumn: 'span 2' }}>
           {/* معلومات الحساب */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <IoPerson className="text-blue-600" />
-              معلومات الحساب
+          <div style={cardStyle}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoPerson style={{ color: C.accent }} /> معلومات الحساب
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
               <div>
-                <label className="block text-sm text-gray-500">الاسم الكامل</label>
-                <p className="font-medium text-lg">{user.name}</p>
+                <label style={labelStyle}>الاسم الكامل</label>
+                <p style={valueStyle}>{user.name}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-500">البريد الإلكتروني</label>
-                <p className="font-medium flex items-center gap-2">
-                  <IoMail className="text-gray-400" size={16} />
-                  {user.email}
-                </p>
+                <label style={labelStyle}>البريد الإلكتروني</label>
+                <p style={valueStyle}><IoMail size={14} style={{ color: C.muted }} />{user.email}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-500">رقم الهاتف</label>
-                <p className="font-medium flex items-center gap-2">
-                  <IoCall className="text-gray-400" size={16} />
-                  {user.phone || '-'}
-                </p>
+                <label style={labelStyle}>رقم الهاتف</label>
+                <p style={valueStyle}><IoCall size={14} style={{ color: C.muted }} />{user.phone || '-'}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-500">آخر تسجيل دخول</label>
-                <p className="font-medium flex items-center gap-2">
-                  <IoCalendar className="text-gray-400" size={16} />
-                  {user.lastLogin ? new Date(user.lastLogin).toLocaleString('ar-SA') : '-'}
-                </p>
+                <label style={labelStyle}>آخر تسجيل دخول</label>
+                <p style={valueStyle}><IoCalendar size={14} style={{ color: C.muted }} />{user.lastLogin ? new Date(user.lastLogin).toLocaleString('ar-SA') : '-'}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-500">تاريخ التسجيل</label>
-                <p className="font-medium flex items-center gap-2">
-                  <IoCalendar className="text-gray-400" size={16} />
-                  {new Date(user.createdAt).toLocaleDateString('ar-SA')}
-                </p>
+                <label style={labelStyle}>تاريخ التسجيل</label>
+                <p style={valueStyle}><IoCalendar size={14} style={{ color: C.muted }} />{new Date(user.createdAt).toLocaleDateString('ar-SA')}</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-500">آخر تحديث</label>
-                <p className="font-medium flex items-center gap-2">
-                  <IoRefresh className="text-gray-400" size={16} />
-                  {new Date(user.updatedAt).toLocaleDateString('ar-SA')}
-                </p>
+                <label style={labelStyle}>آخر تحديث</label>
+                <p style={valueStyle}><IoRefresh size={14} style={{ color: C.muted }} />{new Date(user.updatedAt).toLocaleDateString('ar-SA')}</p>
               </div>
             </div>
           </div>
 
-          {/* إحصائيات الطلبات */}
+          {/* إحصائيات */}
           {user.stats && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <IoWallet className="text-green-600" />
-                إحصائيات الطلبات
+            <div style={cardStyle}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoWallet style={{ color: C.accent }} /> إحصائيات الطلبات
               </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-xl">
-                  <div className="text-2xl font-bold text-blue-600">{user.stats.totalOrders}</div>
-                  <div className="text-sm text-gray-600">إجمالي الطلبات</div>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-xl">
-                  <div className="text-2xl font-bold text-green-600">{user.stats.completedOrders}</div>
-                  <div className="text-sm text-gray-600">مكتملة</div>
-                </div>
-                <div className="text-center p-4 bg-yellow-50 rounded-xl">
-                  <div className="text-2xl font-bold text-yellow-600">{user.stats.cancelledOrders}</div>
-                  <div className="text-sm text-gray-600">ملغية</div>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-xl">
-                  <div className="text-2xl font-bold text-purple-600">{user.stats.totalSpent} ل.س</div>
-                  <div className="text-sm text-gray-600">إجمالي المشتريات</div>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12 }}>
+                {[
+                  { val: user.stats.totalOrders, label: 'إجمالي الطلبات', color: C.blue },
+                  { val: user.stats.completedOrders, label: 'مكتملة', color: C.accent },
+                  { val: user.stats.cancelledOrders, label: 'ملغية', color: C.red },
+                  { val: `${user.stats.totalSpent} ل.س`, label: 'إجمالي المشتريات', color: '#a78bfa' },
+                ].map((stat, i) => (
+                  <div key={i} style={{ textAlign: 'center', padding: 16, background: C.surf, borderRadius: 12, border: '1px solid ' + C.border }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: stat.color }}>{stat.val}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>{stat.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* طلبات المستخدم */}
+          {/* آخر الطلبات */}
           {user.orders && user.orders.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <IoCar className="text-orange-600" />
-                آخر الطلبات
+            <div style={cardStyle}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoCar style={{ color: C.accent }} /> آخر الطلبات
               </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
                     <tr>
-                      <th className="px-4 py-2 text-right">رقم الطلب</th>
-                      <th className="px-4 py-2 text-right">المبلغ</th>
-                      <th className="px-4 py-2 text-right">الحالة</th>
-                      <th className="px-4 py-2 text-right">التاريخ</th>
+                      {['رقم الطلب', 'المبلغ', 'الحالة', 'التاريخ'].map(h => (
+                        <th key={h} style={{ background: C.surf, color: C.muted, fontSize: 12, padding: '12px 16px', textAlign: 'right', fontWeight: 600 }}>{h}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {user.orders.slice(0, 5).map((order) => (
-                      <tr key={order.id} className="border-t hover:bg-gray-50 cursor-pointer"
-                        onClick={() => navigate(`/admin/orders/${order.id}`)}>
-                        <td className="px-4 py-2 font-mono text-sm">{order.orderNumber}</td>
-                        <td className="px-4 py-2 font-bold text-green-600">{order.total} ل.س</td>
-                        <td className="px-4 py-2">{getOrderStatusBadge(order.status)}</td>
-                        <td className="px-4 py-2 text-sm">
-                          {new Date(order.createdAt).toLocaleDateString('ar-SA')}
-                        </td>
+                      <tr
+                        key={order.id}
+                        onClick={() => navigate(`/admin/orders/${order.id}`)}
+                        style={{ cursor: 'pointer', borderBottom: '1px solid ' + C.border }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <td style={{ padding: '12px 16px', color: C.text, fontFamily: 'monospace', fontSize: 13 }}>{order.orderNumber}</td>
+                        <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 700 }}>{order.total} ل.س</td>
+                        <td style={{ padding: '12px 16px' }}>{getOrderStatusBadge(order.status)}</td>
+                        <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>{new Date(order.createdAt).toLocaleDateString('ar-SA')}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -349,95 +362,72 @@ const AdminUserDetails: React.FC = () => {
           )}
         </div>
 
-        {/* العمود الأيمن - الإجراءات */}
-        <div className="space-y-6">
-          {/* معلومات المطعم/المتجر */}
+        {/* Right column - actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* معلومات المطعم */}
           {user.restaurant && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <IoRestaurant className="text-blue-600" />
-                المطعم
+            <div style={cardStyle}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoRestaurant style={{ color: C.accent }} /> المطعم
               </h2>
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  { label: 'اسم المطعم', val: user.restaurant.name, link: `/admin/restaurants/${user.restaurant.id}` },
+                  { label: 'البريد الإلكتروني', val: user.restaurant.email },
+                  { label: 'رقم الهاتف', val: user.restaurant.phone || '-' },
+                  { label: 'العنوان', val: user.restaurant.address || '-' },
+                  { label: 'الخطة', val: `${user.restaurant.plan?.name || 'free'} - ${user.restaurant.plan?.price || 0} ل.س/شهر` },
+                ].map((row, i) => (
+                  <div key={i}>
+                    <label style={labelStyle}>{row.label}</label>
+                    {row.link ? (
+                      <p style={{ ...valueStyle, color: C.accent, cursor: 'pointer' }} onClick={() => navigate(row.link!)}>{row.val}</p>
+                    ) : (
+                      <p style={valueStyle}>{row.val}</p>
+                    )}
+                  </div>
+                ))}
                 <div>
-                  <label className="block text-sm text-gray-500">اسم المطعم</label>
-                  <p 
-                    className="font-medium text-blue-600 cursor-pointer hover:underline"
-                    onClick={() => navigate(`/admin/restaurants/${user.restaurant?.id}`)}
-                  >
-                    {user.restaurant.name}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">البريد الإلكتروني</label>
-                  <p>{user.restaurant.email}</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">رقم الهاتف</label>
-                  <p>{user.restaurant.phone || '-'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">العنوان</label>
-                  <p>{user.restaurant.address || '-'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">الخطة</label>
-                  <p>{user.restaurant.plan?.name || 'free'} - {user.restaurant.plan?.price || 0} ل.س/شهر</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">الحالة</label>
+                  <label style={labelStyle}>الحالة</label>
                   {getStatusBadge(user.restaurant.isActive)}
                 </div>
-                <button
-                  onClick={() => navigate(`/admin/restaurants/${user.restaurant?.id}`)}
-                  className="w-full mt-2 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-all"
-                >
+                <button onClick={() => navigate(`/admin/restaurants/${user.restaurant?.id}`)}
+                  style={{ width: '100%', marginTop: 8, background: C.accent, color: C.bg, border: 'none', borderRadius: 10, padding: '10px 0', fontFamily: 'Cairo, sans-serif', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
                   إدارة المطعم
                 </button>
               </div>
             </div>
           )}
 
+          {/* معلومات المتجر */}
           {user.store && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <IoStorefront className="text-green-600" />
-                المتجر
+            <div style={cardStyle}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoStorefront style={{ color: C.accent }} /> المتجر
               </h2>
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[
+                  { label: 'اسم المتجر', val: user.store.name, link: `/admin/stores/${user.store.id}` },
+                  { label: 'البريد الإلكتروني', val: user.store.email },
+                  { label: 'رقم الهاتف', val: user.store.phone || '-' },
+                  { label: 'العنوان', val: user.store.address || '-' },
+                  { label: 'الخطة', val: `${user.store.plan?.name || 'free'} - ${user.store.plan?.price || 0} ل.س/شهر` },
+                ].map((row, i) => (
+                  <div key={i}>
+                    <label style={labelStyle}>{row.label}</label>
+                    {row.link ? (
+                      <p style={{ ...valueStyle, color: C.accent, cursor: 'pointer' }} onClick={() => navigate(row.link!)}>{row.val}</p>
+                    ) : (
+                      <p style={valueStyle}>{row.val}</p>
+                    )}
+                  </div>
+                ))}
                 <div>
-                  <label className="block text-sm text-gray-500">اسم المتجر</label>
-                  <p 
-                    className="font-medium text-green-600 cursor-pointer hover:underline"
-                    onClick={() => navigate(`/admin/stores/${user.store?.id}`)}
-                  >
-                    {user.store.name}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">البريد الإلكتروني</label>
-                  <p>{user.store.email}</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">رقم الهاتف</label>
-                  <p>{user.store.phone || '-'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">العنوان</label>
-                  <p>{user.store.address || '-'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">الخطة</label>
-                  <p>{user.store.plan?.name || 'free'} - {user.store.plan?.price || 0} ل.س/شهر</p>
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-500">الحالة</label>
+                  <label style={labelStyle}>الحالة</label>
                   {getStatusBadge(user.store.isActive)}
                 </div>
-                <button
-                  onClick={() => navigate(`/admin/stores/${user.store?.id}`)}
-                  className="w-full mt-2 bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition-all"
-                >
+                <button onClick={() => navigate(`/admin/stores/${user.store?.id}`)}
+                  style={{ width: '100%', marginTop: 8, background: C.accent, color: C.bg, border: 'none', borderRadius: 10, padding: '10px 0', fontFamily: 'Cairo, sans-serif', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
                   إدارة المتجر
                 </button>
               </div>
@@ -446,80 +436,72 @@ const AdminUserDetails: React.FC = () => {
 
           {/* تغيير الدور */}
           {user.role !== 'super_admin' && (
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <IoShield className="text-purple-600" />
-                تغيير الدور
+            <div style={cardStyle}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoShield style={{ color: C.accent }} /> تغيير الدور
               </h2>
-              <div className="space-y-3">
-                <select
-                  value={user.role}
-                  onChange={(e) => handleUpdateRole(e.target.value)}
-                  disabled={changingRole}
-                  className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-purple-500"
-                >
-                  <option value="user">مستخدم عادي</option>
-                  <option value="owner">مالك مطعم</option>
-                  <option value="staff">موظف</option>
-                  <option value="delivery_driver">مندوب توصيل</option>
-                </select>
-                {changingRole && <p className="text-sm text-gray-500">جاري التحديث...</p>}
-              </div>
+              <select
+                value={user.role}
+                onChange={(e) => handleUpdateRole(e.target.value)}
+                disabled={changingRole}
+                style={{ ...inputStyle }}
+              >
+                <option value="user">مستخدم عادي</option>
+                <option value="owner">مالك مطعم</option>
+                <option value="staff">موظف</option>
+                <option value="delivery_driver">مندوب توصيل</option>
+              </select>
+              {changingRole && <p style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>جاري التحديث...</p>}
             </div>
           )}
 
           {/* إعادة تعيين كلمة المرور */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <IoKey className="text-yellow-600" />
-              إعادة تعيين كلمة المرور
+          <div style={cardStyle}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoKey style={{ color: C.accent }} /> إعادة تعيين كلمة المرور
             </h2>
-            <div className="space-y-3">
-              <div className="relative">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="كلمة المرور الجديدة"
-                  className="w-full p-3 border rounded-lg pr-10 focus:ring-2 focus:ring-yellow-500"
+                  style={{ ...inputStyle, paddingLeft: 40 }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.muted, cursor: 'pointer' }}
                 >
                   {showPassword ? <IoEyeOff size={18} /> : <IoEye size={18} />}
                 </button>
               </div>
-              <Button
-                variant="primary"
-                onClick={handleResetPassword}
-                loading={updatingPassword}
-                fullWidth
-              >
+              <Button variant="primary" onClick={handleResetPassword} loading={updatingPassword} fullWidth>
                 إعادة تعيين كلمة المرور
               </Button>
             </div>
           </div>
 
           {/* حالة الحساب */}
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-              <IoSettings className="text-gray-600" />
-              حالة الحساب
+          <div style={cardStyle}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoSettings style={{ color: C.accent }} /> حالة الحساب
             </h2>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span>الحالة الحالية:</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: C.muted, fontSize: 14 }}>الحالة الحالية:</span>
                 {getStatusBadge(user.isActive)}
               </div>
               <button
                 onClick={handleToggleStatus}
-                className={`w-full py-2 rounded-lg text-white transition-all ${
-                  user.isActive 
-                    ? 'bg-red-500 hover:bg-red-600' 
-                    : 'bg-green-500 hover:bg-green-600'
-                }`}
+                style={{
+                  width: '100%', padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14,
+                  ...(user.isActive
+                    ? { background: 'rgba(255,107,107,0.15)', color: C.red, border: '1px solid rgba(255,107,107,0.3)' }
+                    : { background: C.accent, color: C.bg })
+                }}
               >
                 {user.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
               </button>
@@ -528,17 +510,16 @@ const AdminUserDetails: React.FC = () => {
 
           {/* حذف الحساب */}
           {user.role !== 'super_admin' && (
-            <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-red-200">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2 text-red-600">
-                <IoTrash className="text-red-600" />
-                منطقة الخطر
+            <div style={{ ...cardStyle, borderColor: 'rgba(255,107,107,0.3)' }}>
+              <h2 style={{ color: C.red, fontSize: 16, fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoTrash style={{ color: C.red }} /> منطقة الخطر
               </h2>
-              <p className="text-sm text-gray-500 mb-4">
+              <p style={{ color: C.muted, fontSize: 13, marginBottom: 14 }}>
                 حذف هذا الحساب سيؤدي إلى حذف جميع البيانات المرتبطة به بشكل دائم.
               </p>
               <button
                 onClick={handleDeleteUser}
-                className="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition-all"
+                style={{ width: '100%', padding: '10px 0', borderRadius: 10, background: 'rgba(255,107,107,0.15)', color: C.red, border: '1px solid rgba(255,107,107,0.3)', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14 }}
               >
                 حذف الحساب
               </button>

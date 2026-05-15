@@ -4,13 +4,19 @@ import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
-import { 
-  IoSettings, IoGlobe, IoShield, IoCard, IoCar, 
+import {
+  IoSettings, IoGlobe, IoShield, IoCard, IoCar,
   IoMail, IoChatbubble, IoCloud, IoBusiness, IoTime,
   IoLockClosed, IoImage, IoLink, IoStatsChart,
   IoCheckmark, IoClose, IoRefresh
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
 
 interface Setting {
   id: string;
@@ -49,7 +55,7 @@ const AdminPlatformSettings: React.FC = () => {
   const updateSetting = (group: string, key: string, value: any) => {
     setSettings(prev => ({
       ...prev,
-      [group]: prev[group].map(s => 
+      [group]: prev[group].map(s =>
         s.key_name === key ? { ...s, value } : s
       )
     }));
@@ -64,7 +70,7 @@ const AdminPlatformSettings: React.FC = () => {
           allSettings[setting.key_name] = setting.value;
         });
       });
-      
+
       await api.put('/platform-settings', { settings: allSettings });
       toast.success('تم حفظ الإعدادات بنجاح');
     } catch (error) {
@@ -89,22 +95,38 @@ const AdminPlatformSettings: React.FC = () => {
     { id: 'analytics', name: 'التحليلات', icon: <IoStatsChart />, description: 'إعدادات التتبع والتحليلات' }
   ];
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 12px',
+    background: C.surf,
+    border: '1px solid ' + C.border,
+    borderRadius: 10,
+    color: C.text,
+    fontFamily: 'Cairo, sans-serif',
+    outline: 'none',
+  };
+
   const renderSettingInput = (setting: Setting) => {
-    const commonClass = "w-full p-2 border rounded-lg focus:ring-2 focus:ring-purple-500";
-    
-    // ✅ التحقق من وجود value
     const currentValue = setting.value !== undefined && setting.value !== null ? setting.value : '';
-    
+
     switch (setting.type) {
       case 'boolean':
         return (
           <button
             onClick={() => updateSetting(activeGroup, setting.key_name, !currentValue)}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
-              currentValue ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}
+            style={{
+              padding: '4px 12px',
+              borderRadius: 8,
+              fontSize: 14,
+              border: 'none',
+              cursor: 'pointer',
+              background: currentValue ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)',
+              color: currentValue ? C.accent : C.red,
+            }}
           >
-            {currentValue ? <IoCheckmark className="inline ml-1" /> : <IoClose className="inline ml-1" />}
+            {currentValue
+              ? <IoCheckmark style={{ display: 'inline', marginLeft: 4 }} />
+              : <IoClose style={{ display: 'inline', marginLeft: 4 }} />}
             {currentValue ? 'مفعل' : 'معطل'}
           </button>
         );
@@ -114,11 +136,10 @@ const AdminPlatformSettings: React.FC = () => {
             type="number"
             value={currentValue}
             onChange={(e) => updateSetting(activeGroup, setting.key_name, parseFloat(e.target.value))}
-            className={commonClass}
+            style={inputStyle}
           />
         );
-      case 'array':
-        // ✅ معالجة الآراي بأمان
+      case 'array': {
         let arrayDisplay = '';
         if (Array.isArray(currentValue)) {
           arrayDisplay = JSON.stringify(currentValue);
@@ -138,12 +159,12 @@ const AdminPlatformSettings: React.FC = () => {
                 updateSetting(activeGroup, setting.key_name, e.target.value);
               }
             }}
-            className={`${commonClass} font-mono text-sm`}
+            style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 13 }}
             rows={3}
           />
         );
-      case 'json':
-        // ✅ معالجة JSON بأمان
+      }
+      case 'json': {
         let jsonDisplay = '';
         if (typeof currentValue === 'object') {
           jsonDisplay = JSON.stringify(currentValue, null, 2);
@@ -163,17 +184,18 @@ const AdminPlatformSettings: React.FC = () => {
                 updateSetting(activeGroup, setting.key_name, e.target.value);
               }
             }}
-            className={`${commonClass} font-mono text-sm`}
+            style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 13 }}
             rows={4}
           />
         );
+      }
       default:
         return (
           <input
             type="text"
             value={currentValue}
             onChange={(e) => updateSetting(activeGroup, setting.key_name, e.target.value)}
-            className={commonClass}
+            style={inputStyle}
           />
         );
     }
@@ -184,15 +206,15 @@ const AdminPlatformSettings: React.FC = () => {
   const currentGroupSettings = settings[activeGroup] || [];
 
   return (
-    <div className="p-6" dir="rtl">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold">⚙️ إعدادات المنصة المتقدمة</h1>
-          <p className="text-sm text-gray-500 mt-1">إدارة إعدادات المنصة العامة</p>
+          <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>⚙️ إعدادات المنصة المتقدمة</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة إعدادات المنصة العامة</p>
         </div>
-        <div className="flex gap-2">
+        <div style={{ display: 'flex', gap: 8 }}>
           <Button variant="outline" onClick={fetchSettings}>
-            <IoRefresh className="inline ml-1" />
+            <IoRefresh style={{ display: 'inline', marginLeft: 4 }} />
             تحديث
           </Button>
           <Button variant="primary" onClick={handleSave} loading={saving}>
@@ -201,56 +223,76 @@ const AdminPlatformSettings: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
         {/* Sidebar */}
-        <div className="lg:w-64 flex-shrink-0">
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden sticky top-6">
-            {groups.map((group) => (
-              <button
-                key={group.id}
-                onClick={() => setActiveGroup(group.id)}
-                className={`w-full text-right px-4 py-3 flex items-center gap-3 transition ${
-                  activeGroup === group.id
-                    ? 'bg-purple-50 text-purple-700 border-r-4 border-purple-500'
-                    : 'hover:bg-gray-50 text-gray-700'
-                }`}
-              >
-                <span className="text-lg">{group.icon}</span>
-                <div className="flex-1">
-                  <p className="font-medium">{group.name}</p>
-                  <p className="text-xs text-gray-400">{group.description}</p>
-                </div>
-              </button>
-            ))}
+        <div style={{ width: 240, flexShrink: 0 }}>
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, overflow: 'hidden', position: 'sticky', top: 24 }}>
+            {groups.map((group) => {
+              const isActive = activeGroup === group.id;
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => setActiveGroup(group.id)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'right',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    background: isActive ? 'rgba(200,226,53,0.06)' : 'transparent',
+                    border: 'none',
+                    borderRight: isActive ? `4px solid ${C.accent}` : '4px solid transparent',
+                    cursor: 'pointer',
+                    color: isActive ? C.accent : C.muted,
+                    fontFamily: 'Cairo, sans-serif',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>{group.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>{group.name}</p>
+                    <p style={{ margin: 0, fontSize: 11, color: C.muted, opacity: 0.8 }}>{group.description}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
+            <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginTop: 0, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               {groups.find(g => g.id === activeGroup)?.icon}
               {groups.find(g => g.id === activeGroup)?.name}
             </h2>
-            <p className="text-gray-500 mb-6">
+            <p style={{ color: C.muted, marginBottom: 24, fontSize: 14 }}>
               {groups.find(g => g.id === activeGroup)?.description}
             </p>
 
             {currentGroupSettings.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div style={{ textAlign: 'center', padding: '32px 0', color: C.muted }}>
                 لا توجد إعدادات في هذه المجموعة
               </div>
             ) : (
-              <div className="space-y-4">
-                {currentGroupSettings.map((setting) => (
-                  <div key={setting.key_name} className="border-b pb-4 last:border-b-0">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {setting.key_name.split('_').map(word => 
+              <div>
+                {currentGroupSettings.map((setting, idx) => (
+                  <div
+                    key={setting.key_name}
+                    style={{
+                      borderBottom: idx < currentGroupSettings.length - 1 ? '1px solid ' + C.border : 'none',
+                      paddingBottom: 16,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                      {setting.key_name.split('_').map(word =>
                         word.charAt(0).toUpperCase() + word.slice(1)
                       ).join(' ')}
                     </label>
                     {setting.description && (
-                      <p className="text-xs text-gray-500 mb-2">{setting.description}</p>
+                      <p style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{setting.description}</p>
                     )}
                     {renderSettingInput(setting)}
                   </div>
@@ -258,7 +300,7 @@ const AdminPlatformSettings: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-6 pt-4 border-t flex justify-end">
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid ' + C.border, display: 'flex', justifyContent: 'flex-end' }}>
               <Button variant="primary" onClick={handleSave} loading={saving}>
                 حفظ جميع الإعدادات
               </Button>

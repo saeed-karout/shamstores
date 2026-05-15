@@ -12,6 +12,23 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 interface Product {
   id: string;
   storeId: string;
@@ -42,6 +59,24 @@ interface Category {
   isActive: boolean;
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 12px',
+  background: C.surf,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  color: C.text,
+  outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 13,
+  fontWeight: 500,
+  marginBottom: 4,
+  color: C.muted,
+};
+
 const StoreProductsPage: React.FC = () => {
   const { store, loading: storeLoading } = useStore();
   const permissions = usePermissions();
@@ -56,8 +91,7 @@ const StoreProductsPage: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  
-  // نموذج الفئة
+
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     nameEn: '',
@@ -66,7 +100,6 @@ const StoreProductsPage: React.FC = () => {
     image: '',
   });
 
-  // نموذج المنتج
   const [productForm, setProductForm] = useState({
     categoryId: '',
     name: '',
@@ -92,14 +125,13 @@ const StoreProductsPage: React.FC = () => {
         api.get('/store/categories'),
         api.get('/store/products')
       ]);
-      
-      // ✅ تحويل الأسعار إلى أرقام
+
       const processedProducts = (productsData || []).map((product: any) => ({
         ...product,
         price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
         discountedPrice: product.discountedPrice ? (typeof product.discountedPrice === 'string' ? parseFloat(product.discountedPrice) : product.discountedPrice) : null,
       }));
-      
+
       setCategories(categoriesData || []);
       setProducts(processedProducts);
     } catch (error) {
@@ -111,88 +143,36 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const resetCategoryForm = () => {
-    setCategoryForm({
-      name: '',
-      nameEn: '',
-      description: '',
-      descriptionEn: '',
-      image: '',
-    });
+    setCategoryForm({ name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
     setSelectedCategory(null);
   };
 
   const resetProductForm = () => {
-    setProductForm({
-      categoryId: '',
-      name: '',
-      nameEn: '',
-      description: '',
-      descriptionEn: '',
-      price: '',
-      discountedPrice: '',
-      imageUrl: '',
-      stock: '',
-      sku: '',
-      isAvailable: true,
-    });
+    setProductForm({ categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', discountedPrice: '', imageUrl: '', stock: '', sku: '', isAvailable: true });
     setSelectedProduct(null);
   };
 
   const handleOpenCategoryModal = (category?: Category) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لإدارة الفئات');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لإدارة الفئات'); return; }
     if (category) {
       setSelectedCategory(category);
-      setCategoryForm({
-        name: category.name,
-        nameEn: category.nameEn || '',
-        description: category.description || '',
-        descriptionEn: category.descriptionEn || '',
-        image: category.image || '',
-      });
-    } else {
-      resetCategoryForm();
-    }
+      setCategoryForm({ name: category.name, nameEn: category.nameEn || '', description: category.description || '', descriptionEn: category.descriptionEn || '', image: category.image || '' });
+    } else { resetCategoryForm(); }
     setShowCategoryModal(true);
   };
 
   const handleOpenProductModal = (product?: Product) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لإدارة المنتجات');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لإدارة المنتجات'); return; }
     if (product) {
       setSelectedProduct(product);
-      setProductForm({
-        categoryId: product.categoryId || '',
-        name: product.name,
-        nameEn: product.nameEn || '',
-        description: product.description || '',
-        descriptionEn: product.descriptionEn || '',
-        price: product.price.toString(),
-        discountedPrice: product.discountedPrice?.toString() || '',
-        imageUrl: product.imageUrl || '',
-        stock: product.stock.toString(),
-        sku: product.sku || '',
-        isAvailable: product.isAvailable,
-      });
-    } else {
-      resetProductForm();
-    }
+      setProductForm({ categoryId: product.categoryId || '', name: product.name, nameEn: product.nameEn || '', description: product.description || '', descriptionEn: product.descriptionEn || '', price: product.price.toString(), discountedPrice: product.discountedPrice?.toString() || '', imageUrl: product.imageUrl || '', stock: product.stock.toString(), sku: product.sku || '', isAvailable: product.isAvailable });
+    } else { resetProductForm(); }
     setShowProductModal(true);
   };
 
   const handleSaveCategory = async () => {
     try {
-      if (!categoryForm.name) {
-        toast.error('اسم الفئة مطلوب');
-        return;
-      }
-
+      if (!categoryForm.name) { toast.error('اسم الفئة مطلوب'); return; }
       if (selectedCategory) {
         await api.put(`/store/categories/${selectedCategory.id}`, categoryForm);
         toast.success('تم تحديث الفئة بنجاح');
@@ -210,29 +190,11 @@ const StoreProductsPage: React.FC = () => {
 
   const handleSaveProduct = async () => {
     try {
-      if (!productForm.name) {
-        toast.error('اسم المنتج مطلوب');
-        return;
-      }
-      
-      if (!productForm.price || parseFloat(productForm.price) <= 0) {
-        toast.error('السعر مطلوب ويجب أن يكون أكبر من 0');
-        return;
-      }
-
+      if (!productForm.name) { toast.error('اسم المنتج مطلوب'); return; }
+      if (!productForm.price || parseFloat(productForm.price) <= 0) { toast.error('السعر مطلوب ويجب أن يكون أكبر من 0'); return; }
       const price = parseFloat(productForm.price);
-      if (isNaN(price) || price <= 0) {
-        toast.error('السعر يجب أن يكون رقماً صحيحاً أكبر من 0');
-        return;
-      }
-
-      const data = {
-        ...productForm,
-        price: price,
-        discountedPrice: productForm.discountedPrice ? parseFloat(productForm.discountedPrice) : null,
-        stock: parseInt(productForm.stock) || 0,
-      };
-
+      if (isNaN(price) || price <= 0) { toast.error('السعر يجب أن يكون رقماً صحيحاً أكبر من 0'); return; }
+      const data = { ...productForm, price, discountedPrice: productForm.discountedPrice ? parseFloat(productForm.discountedPrice) : null, stock: parseInt(productForm.stock) || 0 };
       if (selectedProduct) {
         await api.put(`/store/products/${selectedProduct.id}`, data);
         toast.success('تم تحديث المنتج بنجاح');
@@ -249,17 +211,9 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لحذف الفئات');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لحذف الفئات'); return; }
     const productsInCategory = products.filter(p => p.categoryId === id);
-    if (productsInCategory.length > 0) {
-      toast.error(`لا يمكن حذف الفئة لأنها تحتوي على ${productsInCategory.length} منتج`);
-      return;
-    }
-    
+    if (productsInCategory.length > 0) { toast.error(`لا يمكن حذف الفئة لأنها تحتوي على ${productsInCategory.length} منتج`); return; }
     if (window.confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
       try {
         await api.delete(`/store/categories/${id}`);
@@ -272,11 +226,7 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (isStaff) {
-      toast.error('ليس لديك صلاحية لحذف المنتجات');
-      return;
-    }
-    
+    if (isStaff) { toast.error('ليس لديك صلاحية لحذف المنتجات'); return; }
     if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
       setDeleting(id);
       try {
@@ -297,80 +247,45 @@ const StoreProductsPage: React.FC = () => {
       toast.success(currentStatus ? 'تم إخفاء المنتج' : 'تم إظهار المنتج');
       fetchData();
     } catch (error) {
-      console.error('Error toggling availability:', error);
       toast.error('حدث خطأ');
     }
   };
 
-
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'category' | 'product') => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-
-  // التحقق من نوع الملف
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
-    toast.error('يسمح فقط بصور JPG, PNG, GIF, WEBP');
-    e.target.value = '';
-    return;
-  }
-
-  // التحقق من حجم الملف (10MB)
-  if (file.size > 10 * 1024 * 1024) {
-    toast.error('حجم الصورة يجب أن يكون أقل من 10 ميجابايت');
-    e.target.value = '';
-    return;
-  }
-
-  setUploading(true);
-  const formData = new FormData();
-  formData.append('image', file);
-  
-  // تحديد نوع الصورة
-  if (type === 'category') {
-    formData.append('type', 'categories');
-    if (selectedCategory) {
-      formData.append('id', selectedCategory.id);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'category' | 'product') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) { toast.error('يسمح فقط بصور JPG, PNG, GIF, WEBP'); e.target.value = ''; return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('حجم الصورة يجب أن يكون أقل من 10 ميجابايت'); e.target.value = ''; return; }
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('image', file);
+    if (type === 'category') { formData.append('type', 'categories'); if (selectedCategory) formData.append('id', selectedCategory.id); }
+    else { formData.append('type', 'products'); if (selectedProduct) formData.append('id', selectedProduct.id); }
+    try {
+      const response = await api.upload<{ imageUrl: string }>('/upload', file, type === 'category' ? 'categories' : 'products');
+      if (type === 'category') setCategoryForm({ ...categoryForm, image: response.imageUrl });
+      else setProductForm({ ...productForm, imageUrl: response.imageUrl });
+      toast.success('تم رفع الصورة بنجاح');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'فشل رفع الصورة');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
     }
-  } else {
-    formData.append('type', 'products');
-    if (selectedProduct) {
-      formData.append('id', selectedProduct.id);
-    }
-  }
-
-  try {
-    const response = await api.upload<{ imageUrl: string }>('/upload', file, type === 'category' ? 'categories' : 'products');
-    
-    if (type === 'category') {
-      setCategoryForm({ ...categoryForm, image: response.imageUrl });
-    } else {
-      setProductForm({ ...productForm, imageUrl: response.imageUrl });
-    }
-    toast.success('تم رفع الصورة بنجاح');
-  } catch (error: any) {
-    console.error('Upload error:', error);
-    toast.error(error.response?.data?.error || 'فشل رفع الصورة');
-  } finally {
-    setUploading(false);
-    e.target.value = '';
-  }
-};
+  };
 
   const removeImage = (type: 'category' | 'product') => {
-    if (type === 'category') {
-      setCategoryForm({ ...categoryForm, image: '' });
-    } else {
-      setProductForm({ ...productForm, imageUrl: '' });
-    }
+    if (type === 'category') setCategoryForm({ ...categoryForm, image: '' });
+    else setProductForm({ ...productForm, imageUrl: '' });
     toast.success('تم إزالة الصورة');
   };
 
   const getStockStatus = (stock: number) => {
-    if (stock <= 0) return { text: 'نفد من المخزون', color: 'bg-red-100 text-red-800', icon: '🔴' };
-    if (stock <= 5) return { text: 'مخزون منخفض', color: 'bg-yellow-100 text-yellow-800', icon: '🟡' };
-    if (stock <= 20) return { text: 'مخزون متوسط', color: 'bg-blue-100 text-blue-800', icon: '🔵' };
-    return { text: 'مخزون جيد', color: 'bg-green-100 text-green-800', icon: '🟢' };
+    if (stock <= 0) return { text: 'نفد من المخزون', bg: `rgba(255,107,107,0.15)`, color: C.red };
+    if (stock <= 5) return { text: 'مخزون منخفض', bg: `rgba(245,158,11,0.15)`, color: C.yellow };
+    if (stock <= 20) return { text: 'مخزون متوسط', bg: `rgba(96,165,250,0.15)`, color: C.blue };
+    return { text: 'مخزون جيد', bg: `rgba(200,226,53,0.15)`, color: C.accent };
   };
 
   const getCategoryName = (categoryId: string) => {
@@ -381,115 +296,91 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: '
   if (loading || storeLoading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24 }} dir="rtl">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 className="text-2xl font-bold">📦 إدارة منتجات المتجر</h1>
-          <p className="text-sm text-gray-500 mt-1">إدارة الفئات والمنتجات في متجرك</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>إدارة منتجات المتجر</h1>
+          <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>إدارة الفئات والمنتجات في متجرك</p>
         </div>
         {(isSuperAdmin || isStoreOwner) && (
-          <div className="flex gap-2">
-            <Button
-              variant="primary"
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
               onClick={() => handleOpenCategoryModal()}
-              className="shadow-sm"
+              style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.accent, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
             >
-              <IoAdd className="inline ml-1" size={18} />
-              إضافة فئة
-            </Button>
-            <Button
-              variant="success"
+              <IoAdd size={18} /> إضافة فئة
+            </button>
+            <button
               onClick={() => handleOpenProductModal()}
-              className="shadow-sm"
+              style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none' }}
             >
-              <IoAdd className="inline ml-1" size={18} />
-              إضافة منتج
-            </Button>
+              <IoAdd size={18} /> إضافة منتج
+            </button>
           </div>
         )}
       </div>
 
       {/* إحصائيات سريعة */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm p-4 border-r-4 border-blue-500">
-          <p className="text-gray-500 text-sm">إجمالي الفئات</p>
-          <p className="text-2xl font-bold text-blue-600">{categories.length}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 border-r-4 border-green-500">
-          <p className="text-gray-500 text-sm">إجمالي المنتجات</p>
-          <p className="text-2xl font-bold text-green-600">{products.length}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 border-r-4 border-yellow-500">
-          <p className="text-gray-500 text-sm">منتجات غير متوفرة</p>
-          <p className="text-2xl font-bold text-yellow-600">{products.filter(p => !p.isAvailable).length}</p>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm p-4 border-r-4 border-red-500">
-          <p className="text-gray-500 text-sm">نفد من المخزون</p>
-          <p className="text-2xl font-bold text-red-600">{products.filter(p => p.stock === 0).length}</p>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
+        {[
+          { label: 'إجمالي الفئات', value: categories.length, color: C.blue },
+          { label: 'إجمالي المنتجات', value: products.length, color: C.accent },
+          { label: 'غير متوفرة', value: products.filter(p => !p.isAvailable).length, color: C.yellow },
+          { label: 'نفد من المخزون', value: products.filter(p => p.stock === 0).length, color: C.red },
+        ].map((stat, i) => (
+          <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16 }}>
+            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>{stat.label}</p>
+            <p style={{ color: stat.color, fontSize: 28, fontWeight: 700, margin: '4px 0 0' }}>{stat.value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* عرض الفئات */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <span className="w-1 h-6 bg-blue-500 rounded-full"></span>
+      {/* الفئات */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 4, height: 22, background: C.accent, borderRadius: 4, display: 'inline-block' }}></span>
             الفئات
           </h2>
-          <span className="text-sm text-gray-500">{categories.length} فئة</span>
+          <span style={{ color: C.muted, fontSize: 13 }}>{categories.length} فئة</span>
         </div>
-        
+
         {categories.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-            <IoCube className="text-gray-300 text-5xl mx-auto mb-3" />
-            <p className="text-gray-500">لا توجد فئات. أضف فئة جديدة!</p>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
+            <IoCube style={{ color: C.muted, fontSize: 48, marginBottom: 12 }} />
+            <p style={{ color: C.muted, margin: 0 }}>لا توجد فئات. أضف فئة جديدة!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
             {categories.map(cat => (
-              <div key={cat.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-all duration-200 group">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-800 line-clamp-1">{cat.name}</h3>
-                    {cat.nameEn && <p className="text-xs text-gray-400 line-clamp-1">{cat.nameEn}</p>}
+              <div key={cat.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16, transition: 'border-color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = C.accent)}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontWeight: 600, color: C.text, margin: 0, fontSize: 14 }}>{cat.name}</h3>
+                    {cat.nameEn && <p style={{ color: C.muted, fontSize: 11, margin: '2px 0 0' }}>{cat.nameEn}</p>}
                   </div>
                   {(isSuperAdmin || isStoreOwner) && (
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleOpenCategoryModal(cat)}
-                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition"
-                        title="تعديل"
-                      >
-                        <IoPencil size={16} />
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button onClick={() => handleOpenCategoryModal(cat)} style={{ padding: 6, background: 'transparent', border: 'none', color: C.accent, cursor: 'pointer', borderRadius: 8 }}>
+                        <IoPencil size={15} />
                       </button>
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
-                        title="حذف"
-                      >
-                        <IoTrash size={16} />
+                      <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: 6, background: 'transparent', border: 'none', color: C.red, cursor: 'pointer', borderRadius: 8 }}>
+                        <IoTrash size={15} />
                       </button>
                     </div>
                   )}
                 </div>
                 {cat.image && (
-                  <div className="relative mt-3">
-                    <img 
-                      src={getImageUrl(cat.image)}
-                      alt={cat.name}
-                      className="w-full h-28 object-cover rounded-lg"
-                    />
-                  </div>
+                  <img src={getImageUrl(cat.image)} alt={cat.name} style={{ width: '100%', height: 96, objectFit: 'cover', borderRadius: 10, marginTop: 10 }} />
                 )}
-                {cat.description && (
-                  <p className="text-xs text-gray-500 mt-2 line-clamp-2">{cat.description}</p>
-                )}
-                <div className="mt-3 pt-2 border-t flex justify-between items-center">
-                  <p className="text-xs text-gray-400">
-                    {products.filter(p => p.categoryId === cat.id).length} منتج
-                  </p>
-                  <span className="text-xs text-green-600">🟢 نشط</span>
+                {cat.description && <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>{cat.description}</p>}
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: C.muted, fontSize: 12 }}>{products.filter(p => p.categoryId === cat.id).length} منتج</span>
+                  <span style={{ color: C.accent, fontSize: 12 }}>نشط</span>
                 </div>
               </div>
             ))}
@@ -497,159 +388,93 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: '
         )}
       </div>
 
-      {/* عرض المنتجات */}
+      {/* المنتجات */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <span className="w-1 h-6 bg-green-500 rounded-full"></span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 4, height: 22, background: C.accent, borderRadius: 4, display: 'inline-block' }}></span>
             المنتجات
           </h2>
-          <span className="text-sm text-gray-500">{products.length} منتج</span>
+          <span style={{ color: C.muted, fontSize: 13 }}>{products.length} منتج</span>
         </div>
-        
-        {loading ? (
-          <Loader />
-        ) : products.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl shadow-sm">
-            <IoCube className="text-gray-300 text-5xl mx-auto mb-3" />
-            <p className="text-gray-500">لا توجد منتجات. أضف منتجاً جديداً!</p>
+
+        {loading ? <Loader /> : products.length === 0 ? (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
+            <IoCube style={{ color: C.muted, fontSize: 48, marginBottom: 12 }} />
+            <p style={{ color: C.muted, margin: 0 }}>لا توجد منتجات. أضف منتجاً جديداً!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 20 }}>
             {products.map((product) => {
               const stockStatus = getStockStatus(product.stock);
               const hasDiscount = product.discountedPrice && product.discountedPrice > 0;
               const finalPrice = hasDiscount ? Number(product.discountedPrice) : Number(product.price);
-              
               return (
-                <div 
-                  key={product.id} 
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-200 overflow-hidden group"
+                <div key={product.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = C.accent)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
                 >
                   {/* صورة المنتج */}
-                  <div className="relative h-40 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+                  <div style={{ position: 'relative', height: 140, background: C.surf, overflow: 'hidden' }}>
                     {product.imageUrl ? (
-                      <img 
-                        src={getImageUrl(product.imageUrl)}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                      <img src={getImageUrl(product.imageUrl)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center">
-                        <IoImage className="text-gray-300 text-4xl mb-1" />
-                        <span className="text-xs text-gray-400">لا توجد صورة</span>
+                      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                        <IoImage style={{ color: C.muted, fontSize: 36 }} />
+                        <span style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>لا توجد صورة</span>
                       </div>
                     )}
-                    
-                    {/* حالة التوفر */}
-                    <div className="absolute top-2 right-2">
-                      <button
-                        onClick={() => handleToggleAvailability(product.id, product.isAvailable)}
-                        className={`p-1.5 rounded-full shadow-md transition-all ${
-                          product.isAvailable 
-                            ? 'bg-green-500 text-white hover:bg-green-600' 
-                            : 'bg-gray-500 text-white hover:bg-gray-600'
-                        }`}
-                        title={product.isAvailable ? 'إخفاء المنتج' : 'إظهار المنتج'}
-                      >
-                        {product.isAvailable ? <IoEye size={14} /> : <IoEyeOff size={14} />}
-                      </button>
+                    <button
+                      onClick={() => handleToggleAvailability(product.id, product.isAvailable)}
+                      style={{ position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: '50%', border: 'none', cursor: 'pointer', background: product.isAvailable ? C.accent : C.muted, color: C.bg }}
+                    >
+                      {product.isAvailable ? <IoEye size={13} /> : <IoEyeOff size={13} />}
+                    </button>
+                    <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 4 }}>
+                      {hasDiscount && <span style={{ background: C.red, color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>خصم</span>}
+                      {product.stock === 0 && <span style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>نفد</span>}
                     </div>
-                    
-                    {/* وسوم */}
-                    <div className="absolute bottom-2 right-2 flex gap-1">
-                      {hasDiscount && (
-                        <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-bold">
-                          خصم
-                        </span>
-                      )}
-                      {product.stock === 0 && (
-                        <span className="px-2 py-0.5 bg-gray-700 text-white text-xs rounded-full">
-                          نفد
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* أزرار الإجراءات (تظهر عند المرور) */}
                     {(isSuperAdmin || isStoreOwner) && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleOpenProductModal(product)}
-                          className="p-2 bg-white rounded-full text-blue-500 hover:bg-blue-500 hover:text-white transition-all"
-                          title="تعديل"
-                        >
-                          <IoPencil size={16} />
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: 0, transition: 'opacity 0.2s' }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
+                      >
+                        <button onClick={() => handleOpenProductModal(product)} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: C.prim, cursor: 'pointer' }}>
+                          <IoPencil size={15} />
                         </button>
-                        <button
-                          onClick={() => handleDeleteProduct(product.id)}
-                          disabled={deleting === product.id}
-                          className="p-2 bg-white rounded-full text-red-500 hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
-                          title="حذف"
-                        >
-                          {deleting === product.id ? (
-                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                          ) : (
-                            <IoTrash size={16} />
-                          )}
+                        <button onClick={() => handleDeleteProduct(product.id)} disabled={deleting === product.id} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: C.red, cursor: 'pointer' }}>
+                          {deleting === product.id ? <div style={{ width: 15, height: 15, border: `2px solid ${C.red}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <IoTrash size={15} />}
                         </button>
                       </div>
                     )}
                   </div>
 
                   {/* معلومات المنتج */}
-                  <div className="p-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-800 line-clamp-1 text-sm">
-                        {product.name}
-                      </h3>
-                      {product.nameEn && (
-                        <p className="text-xs text-gray-400 line-clamp-1">{product.nameEn}</p>
-                      )}
-                    </div>
-                    
-                    {/* الفئة */}
-                    <div className="mt-1">
-                      <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                  <div style={{ padding: 12 }}>
+                    <h3 style={{ fontWeight: 600, color: C.text, margin: 0, fontSize: 13 }}>{product.name}</h3>
+                    {product.nameEn && <p style={{ color: C.muted, fontSize: 11, margin: '2px 0 0' }}>{product.nameEn}</p>}
+                    <div style={{ marginTop: 6 }}>
+                      <span style={{ background: C.surf, color: C.muted, fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>
                         {getCategoryName(product.categoryId || '')}
                       </span>
                     </div>
-                    
-                    <p className="text-xs text-gray-500 mt-2 line-clamp-2 min-h-[2.5rem]">
-                      {product.description || 'لا يوجد وصف'}
-                    </p>
-                    
-                    {/* السعر */}
-                    <div className="mt-2">
+                    <p style={{ color: C.muted, fontSize: 12, marginTop: 8, minHeight: 32 }}>{product.description || 'لا يوجد وصف'}</p>
+                    <div style={{ marginTop: 8 }}>
                       {hasDiscount ? (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-lg font-bold text-green-600">
-                            {finalPrice.toFixed(2)} ر.س
-                          </span>
-                          <span className="text-xs text-gray-400 line-through">
-                            {Number(product.price).toFixed(2)} ر.س
-                          </span>
-                          <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded-full">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{ color: C.accent, fontSize: 16, fontWeight: 700 }}>{finalPrice.toFixed(2)} ر.س</span>
+                          <span style={{ color: C.muted, fontSize: 11, textDecoration: 'line-through' }}>{Number(product.price).toFixed(2)} ر.س</span>
+                          <span style={{ background: `rgba(200,226,53,0.15)`, color: C.accent, fontSize: 11, padding: '1px 6px', borderRadius: 10 }}>
                             -{Math.round(((product.price - product.discountedPrice!) / product.price) * 100)}%
                           </span>
                         </div>
                       ) : (
-                        <span className="text-lg font-bold text-green-600">
-                          {Number(product.price).toFixed(2)} ر.س
-                        </span>
+                        <span style={{ color: C.accent, fontSize: 16, fontWeight: 700 }}>{Number(product.price).toFixed(2)} ر.س</span>
                       )}
                     </div>
-                    
-                    {/* المخزون */}
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${stockStatus.color}`}>
-                        <span className="ml-1">{stockStatus.icon}</span>
-                        {stockStatus.text}
-                      </span>
-                      {product.sku && (
-                        <span className="text-xs text-gray-400 font-mono" title={product.sku}>
-                          {product.sku.length > 8 ? product.sku.substring(0, 8) + '…' : product.sku}
-                        </span>
-                      )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                      <span style={{ background: stockStatus.bg, color: stockStatus.color, fontSize: 11, padding: '3px 8px', borderRadius: 12 }}>{stockStatus.text}</span>
+                      {product.sku && <span style={{ color: C.muted, fontSize: 11, fontFamily: 'monospace' }}>{product.sku.length > 8 ? product.sku.substring(0, 8) + '…' : product.sku}</span>}
                     </div>
                   </div>
                 </div>
@@ -659,266 +484,120 @@ const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: '
         )}
       </div>
 
-      {/* مودال إضافة/تعديل فئة */}
-      <Modal
-        isOpen={showCategoryModal}
-        onClose={() => {
-          setShowCategoryModal(false);
-          resetCategoryForm();
-        }}
-        title={selectedCategory ? '✏️ تعديل فئة' : '➕ إضافة فئة جديدة'}
-      >
-        <div className="space-y-4">
+      {/* مودال الفئة */}
+      <Modal isOpen={showCategoryModal} onClose={() => { setShowCategoryModal(false); resetCategoryForm(); }} title={selectedCategory ? 'تعديل فئة' : 'إضافة فئة جديدة'}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium mb-1">اسم الفئة (عربي) <span className="text-red-500">*</span></label>
-            <input
-              type="text"
-              value={categoryForm.name}
-              onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="مثال: إلكترونيات"
-              required
-            />
+            <label style={labelStyle}>اسم الفئة (عربي) <span style={{ color: C.red }}>*</span></label>
+            <input type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} style={inputStyle} placeholder="مثال: إلكترونيات" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">اسم الفئة (إنجليزي)</label>
-            <input
-              type="text"
-              value={categoryForm.nameEn}
-              onChange={(e) => setCategoryForm({ ...categoryForm, nameEn: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              placeholder="Example: Electronics"
-            />
+            <label style={labelStyle}>اسم الفئة (إنجليزي)</label>
+            <input type="text" value={categoryForm.nameEn} onChange={(e) => setCategoryForm({ ...categoryForm, nameEn: e.target.value })} style={inputStyle} placeholder="Example: Electronics" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف</label>
-            <textarea
-              value={categoryForm.description}
-              onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              rows={3}
-              placeholder="وصف الفئة..."
-            />
+            <label style={labelStyle}>الوصف</label>
+            <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="وصف الفئة..." />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">الصورة</label>
-            <div className="flex items-center gap-3">
-              <label className="flex-1 cursor-pointer">
-                <div className="flex items-center justify-center gap-2 p-2 border-2 border-dashed rounded-lg hover:border-green-500 transition-colors">
-                  <IoCloudUpload className="text-gray-400" />
-                  <span className="text-sm text-gray-500">اختر صورة</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, 'category')}
-                    className="hidden"
-                    disabled={uploading}
-                  />
+            <label style={labelStyle}>الصورة</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label style={{ flex: 1, cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', border: `2px dashed ${C.border}`, borderRadius: 10, color: C.muted }}>
+                  <IoCloudUpload />
+                  <span style={{ fontSize: 13 }}>اختر صورة</span>
                 </div>
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'category')} style={{ display: 'none' }} disabled={uploading} />
               </label>
               {categoryForm.image && (
-                <button
-                  onClick={() => removeImage('category')}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
-                  title="إزالة الصورة"
-                >
+                <button onClick={() => removeImage('category')} style={{ padding: 8, background: 'transparent', border: 'none', color: C.red, cursor: 'pointer' }}>
                   <IoTrash size={18} />
                 </button>
               )}
             </div>
-            {uploading && <p className="text-sm text-blue-500 mt-1">جاري رفع الصورة...</p>}
-            {categoryForm.image && (
-              <div className="mt-2">
-                <img 
-                  src={getImageUrl(categoryForm.image)}
-                  alt="معاينة"
-                  className="w-24 h-24 object-cover rounded-lg border"
-                />
-              </div>
-            )}
+            {uploading && <p style={{ color: C.accent, fontSize: 13, marginTop: 4 }}>جاري رفع الصورة...</p>}
+            {categoryForm.image && <img src={getImageUrl(categoryForm.image)} alt="معاينة" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, marginTop: 8, border: `1px solid ${C.border}` }} />}
           </div>
-          <Button variant="primary" onClick={handleSaveCategory} fullWidth loading={uploading}>
+          <button onClick={handleSaveCategory} disabled={uploading} style={{ background: C.accent, color: C.bg, padding: '10px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 14 }}>
             {uploading ? 'جاري الحفظ...' : 'حفظ'}
-          </Button>
+          </button>
         </div>
       </Modal>
 
-      {/* مودال إضافة/تعديل منتج */}
-      <Modal
-        isOpen={showProductModal}
-        onClose={() => {
-          setShowProductModal(false);
-          resetProductForm();
-        }}
-        title={selectedProduct ? '✏️ تعديل منتج' : '➕ إضافة منتج جديد'}
-        size="lg"
-      >
-        <div className="space-y-4 max-h-[70vh] overflow-y-auto p-1">
+      {/* مودال المنتج */}
+      <Modal isOpen={showProductModal} onClose={() => { setShowProductModal(false); resetProductForm(); }} title={selectedProduct ? 'تعديل منتج' : 'إضافة منتج جديد'} size="lg">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '70vh', overflowY: 'auto', padding: 4 }}>
           <div>
-            <label className="block text-sm font-medium mb-1">الفئة</label>
-            <select
-              value={productForm.categoryId}
-              onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-            >
+            <label style={labelStyle}>الفئة</label>
+            <select value={productForm.categoryId} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })} style={{ ...inputStyle }}>
               <option value="">بدون فئة</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
+              {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">اسم المنتج (عربي) <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                value={productForm.name}
-                onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                placeholder="اسم المنتج"
-                required
-              />
+              <label style={labelStyle}>اسم المنتج (عربي) <span style={{ color: C.red }}>*</span></label>
+              <input type="text" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} style={inputStyle} placeholder="اسم المنتج" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">اسم المنتج (إنجليزي)</label>
-              <input
-                type="text"
-                value={productForm.nameEn}
-                onChange={(e) => setProductForm({ ...productForm, nameEn: e.target.value })}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                placeholder="Product name"
-              />
+              <label style={labelStyle}>اسم المنتج (إنجليزي)</label>
+              <input type="text" value={productForm.nameEn} onChange={(e) => setProductForm({ ...productForm, nameEn: e.target.value })} style={inputStyle} placeholder="Product name" />
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">السعر (ر.س) <span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={productForm.price}
-                onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                placeholder="0.00"
-                required
-              />
+              <label style={labelStyle}>السعر (ر.س) <span style={{ color: C.red }}>*</span></label>
+              <input type="number" step="0.01" min="0" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} style={inputStyle} placeholder="0.00" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">السعر بعد الخصم (ر.س)</label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={productForm.discountedPrice}
-                onChange={(e) => setProductForm({ ...productForm, discountedPrice: e.target.value })}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                placeholder="0.00"
-              />
+              <label style={labelStyle}>السعر بعد الخصم (ر.س)</label>
+              <input type="number" step="0.01" min="0" value={productForm.discountedPrice} onChange={(e) => setProductForm({ ...productForm, discountedPrice: e.target.value })} style={inputStyle} placeholder="0.00" />
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">المخزون</label>
-              <input
-                type="number"
-                min="0"
-                value={productForm.stock}
-                onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                placeholder="0"
-              />
+              <label style={labelStyle}>المخزون</label>
+              <input type="number" min="0" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} style={inputStyle} placeholder="0" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">SKU (رمز المنتج)</label>
-              <input
-                type="text"
-                value={productForm.sku}
-                onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-                placeholder="مثال: PRD-001"
-              />
+              <label style={labelStyle}>SKU (رمز المنتج)</label>
+              <input type="text" value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} style={inputStyle} placeholder="PRD-001" />
             </div>
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (عربي)</label>
-            <textarea
-              value={productForm.description}
-              onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-              rows={3}
-              placeholder="وصف المنتج..."
-            />
+            <label style={labelStyle}>الوصف (عربي)</label>
+            <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="وصف المنتج..." />
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (إنجليزي)</label>
-            <textarea
-              value={productForm.descriptionEn}
-              onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
-              rows={3}
-              placeholder="Product description..."
-            />
+            <label style={labelStyle}>الوصف (إنجليزي)</label>
+            <textarea value={productForm.descriptionEn} onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="Product description..." />
           </div>
-          
           <div>
-            <label className="block text-sm font-medium mb-1">صورة المنتج</label>
-            <div className="flex items-center gap-3">
-              <label className="flex-1 cursor-pointer">
-                <div className="flex items-center justify-center gap-2 p-2 border-2 border-dashed rounded-lg hover:border-green-500 transition-colors">
-                  <IoCloudUpload className="text-gray-400" />
-                  <span className="text-sm text-gray-500">اختر صورة</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, 'product')}
-                    className="hidden"
-                    disabled={uploading}
-                  />
+            <label style={labelStyle}>صورة المنتج</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label style={{ flex: 1, cursor: 'pointer' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', border: `2px dashed ${C.border}`, borderRadius: 10, color: C.muted }}>
+                  <IoCloudUpload />
+                  <span style={{ fontSize: 13 }}>اختر صورة</span>
                 </div>
+                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'product')} style={{ display: 'none' }} disabled={uploading} />
               </label>
               {productForm.imageUrl && (
-                <button
-                  onClick={() => removeImage('product')}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
-                  title="إزالة الصورة"
-                >
+                <button onClick={() => removeImage('product')} style={{ padding: 8, background: 'transparent', border: 'none', color: C.red, cursor: 'pointer' }}>
                   <IoTrash size={18} />
                 </button>
               )}
             </div>
-            {uploading && <p className="text-sm text-blue-500 mt-1">جاري رفع الصورة...</p>}
-            {productForm.imageUrl && (
-              <div className="mt-2">
-                <img 
-                  src={getImageUrl(productForm.imageUrl)}
-                  alt="معاينة"
-                  className="w-24 h-24 object-cover rounded-lg border"
-                />
-              </div>
-            )}
+            {uploading && <p style={{ color: C.accent, fontSize: 13, marginTop: 4 }}>جاري رفع الصورة...</p>}
+            {productForm.imageUrl && <img src={getImageUrl(productForm.imageUrl)} alt="معاينة" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, marginTop: 8, border: `1px solid ${C.border}` }} />}
           </div>
-          
-          <div className="flex items-center gap-4 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={productForm.isAvailable}
-                onChange={(e) => setProductForm({ ...productForm, isAvailable: e.target.checked })}
-                className="w-4 h-4 text-green-500 rounded focus:ring-green-500"
-              />
-              <span className="text-sm font-medium">المنتج متاح للبيع</span>
-            </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm({ ...productForm, isAvailable: e.target.checked })} style={{ width: 16, height: 16, accentColor: C.accent }} />
+            <span style={{ color: C.text, fontSize: 14, fontWeight: 500 }}>المنتج متاح للبيع</span>
           </div>
-          
-          <Button variant="primary" onClick={handleSaveProduct} fullWidth loading={uploading}>
+          <button onClick={handleSaveProduct} disabled={uploading} style={{ background: C.accent, color: C.bg, padding: '10px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 14 }}>
             {uploading ? 'جاري الحفظ...' : 'حفظ المنتج'}
-          </Button>
+          </button>
         </div>
       </Modal>
     </div>

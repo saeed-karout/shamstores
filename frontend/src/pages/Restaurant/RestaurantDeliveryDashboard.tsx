@@ -1,16 +1,16 @@
 // components/RestaurantDeliveryDashboard.tsx
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  IoLocation, 
-  IoNavigate, 
-  IoCheckmarkCircle, 
-  IoTime, 
-  IoMap, 
-  IoCar, 
-  IoPerson, 
-  IoCall, 
-  IoRefresh, 
+import {
+  IoLocation,
+  IoNavigate,
+  IoCheckmarkCircle,
+  IoTime,
+  IoMap,
+  IoCar,
+  IoPerson,
+  IoCall,
+  IoRefresh,
   IoClose,
   IoFastFood,
   IoWallet,
@@ -28,6 +28,14 @@ import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { motion } from 'framer-motion';
+
+// ==================== Color Tokens ====================
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+};
 
 // ==================== Types ====================
 
@@ -96,9 +104,9 @@ interface DeliveryOrder {
 
 const getPaymentMethodIcon = (method: string) => {
   switch (method) {
-    case 'cash': return <IoCash className="text-green-600" size={14} />;
-    case 'card': return <IoCard className="text-blue-600" size={14} />;
-    default: return <IoWallet className="text-purple-600" size={14} />;
+    case 'cash': return <IoCash style={{ color: C.accent }} size={14} />;
+    case 'card': return <IoCard style={{ color: C.blue }} size={14} />;
+    default: return <IoWallet style={{ color: C.purple }} size={14} />;
   }
 };
 
@@ -126,27 +134,15 @@ const parseAddons = (addons: any): string[] => {
 };
 
 
-const getStatusColor = (status: string) => {
+const getStatusStyle = (status: string): React.CSSProperties => {
   switch (status) {
-    case 'pending': return 'bg-amber-100 text-amber-800 border-amber-200';
-    case 'preparing': return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'ready': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    case 'delivering': return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'delivered': return 'bg-gray-100 text-gray-800 border-gray-200';
-    case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-    default: return 'bg-gray-100 text-gray-800 border-gray-200';
-  }
-};
-
-const getStatusBadgeColor = (status: string) => {
-  switch (status) {
-    case 'pending': return 'bg-amber-500';
-    case 'preparing': return 'bg-blue-500';
-    case 'ready': return 'bg-emerald-500';
-    case 'delivering': return 'bg-purple-500';
-    case 'delivered': return 'bg-gray-500';
-    case 'cancelled': return 'bg-red-500';
-    default: return 'bg-gray-500';
+    case 'pending': return { background: 'rgba(251,191,36,0.15)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.3)' };
+    case 'preparing': return { background: 'rgba(96,165,250,0.15)', color: C.blue, border: '1px solid rgba(96,165,250,0.3)' };
+    case 'ready': return { background: 'rgba(200,226,53,0.15)', color: C.accent, border: '1px solid rgba(200,226,53,0.3)' };
+    case 'delivering': return { background: 'rgba(167,139,250,0.15)', color: C.purple, border: '1px solid rgba(167,139,250,0.3)' };
+    case 'delivered': return { background: 'rgba(157,196,172,0.15)', color: C.muted, border: '1px solid rgba(157,196,172,0.3)' };
+    case 'cancelled': return { background: 'rgba(255,107,107,0.15)', color: C.red, border: '1px solid rgba(255,107,107,0.3)' };
+    default: return { background: 'rgba(157,196,172,0.15)', color: C.muted, border: '1px solid rgba(157,196,172,0.3)' };
   }
 };
 
@@ -193,7 +189,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -208,7 +204,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
     try {
       const response = await api.get('/delivery/restaurant/orders');
       setOrders(response);
-      
+
       const newStats = {
         total: response.length,
         pending: response.filter((o: DeliveryOrder) => o.status === 'pending').length,
@@ -290,7 +286,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
 
   const filteredOrders = orders.filter(order => {
     if (activeFilter !== 'all' && order.status !== activeFilter) return false;
-    if (searchTerm && !order.orderNumber.includes(searchTerm) && 
+    if (searchTerm && !order.orderNumber.includes(searchTerm) &&
         !order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
@@ -299,53 +295,85 @@ const RestaurantDeliveryDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">جاري تحميل الطلبات...</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 384, background: C.bg }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%',
+            border: `3px solid transparent`,
+            borderTopColor: C.accent,
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto'
+          }} />
+          <p style={{ marginTop: 16, color: C.muted }}>جاري تحميل الطلبات...</p>
         </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white sticky top-0 z-20 shadow-xl">
-        <div className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex flex-wrap justify-between items-center gap-4">
+      <div style={{
+        background: 'linear-gradient(135deg, #082E24, #0A2A1E)',
+        color: C.text,
+        position: 'sticky',
+        top: 0,
+        zIndex: 20,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.4)'
+      }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 24px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  <IoCar className="text-yellow-300" size={28} />
+              <h1 style={{ fontSize: 28, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, margin: 0 }}>
+                <div style={{ background: 'rgba(200,226,53,0.15)', padding: 8, borderRadius: 12 }}>
+                  <IoCar style={{ color: C.accent }} size={28} />
                 </div>
                 <span>طلبات التوصيل</span>
               </h1>
-              <p className="text-white/80 text-sm mt-1">إدارة طلبات التوصيل وتعيين السائقين</p>
+              <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة طلبات التوصيل وتعيين السائقين</p>
             </div>
-            <div className="flex gap-3">
-              <div className="relative">
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ position: 'relative' }}>
                 <input
                   type="text"
                   placeholder="بحث برقم الطلب أو اسم العميل..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="bg-white/20 rounded-xl px-4 py-2 pr-10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                  style={{
+                    background: 'rgba(200,226,53,0.1)',
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 12,
+                    padding: '8px 40px 8px 16px',
+                    color: C.text,
+                    outline: 'none',
+                    fontFamily: 'Cairo, sans-serif',
+                    fontSize: 13,
+                    width: 260
+                  }}
                 />
-                <IoSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" size={18} />
+                <IoSearch style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} size={18} />
               </div>
               <button
                 onClick={() => { setRefreshing(true); fetchDeliveryOrders(); }}
                 disabled={refreshing}
-                className="bg-white/20 p-2 rounded-xl hover:bg-white/30 transition-all"
+                style={{
+                  background: 'rgba(200,226,53,0.1)',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 12,
+                  padding: 8,
+                  color: C.text,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
               >
-                <IoRefresh size={22} className={refreshing ? 'animate-spin' : ''} />
+                <IoRefresh size={22} style={refreshing ? { animation: 'spin 1s linear infinite' } : {}} />
               </button>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 mt-6">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12, marginTop: 24 }}>
             <StatCard title="جميع الطلبات" value={stats.total} color="blue" />
             <StatCard title="قيد الانتظار" value={stats.pending} color="amber" />
             <StatCard title="قيد التحضير" value={stats.preparing} color="blue" />
@@ -356,16 +384,23 @@ const RestaurantDeliveryDashboard: React.FC = () => {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex flex-wrap gap-2 mt-6">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 24 }}>
             {['all', 'pending', 'preparing', 'ready', 'delivering', 'delivered'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  activeFilter === filter
-                    ? 'bg-white text-blue-700 shadow-md'
-                    : 'bg-white/20 text-white hover:bg-white/30'
-                }`}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: 9999,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'Cairo, sans-serif',
+                  transition: 'all 0.2s',
+                  background: activeFilter === filter ? C.accent : 'rgba(200,226,53,0.1)',
+                  color: activeFilter === filter ? C.bg : C.text
+                }}
               >
                 {filter === 'all' ? 'الكل' : getStatusText(filter)}
               </button>
@@ -375,10 +410,10 @@ const RestaurantDeliveryDashboard: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
           {/* Orders List */}
-          <div className="space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', paddingRight: 8 }}>
             {deliveryOrders.length === 0 ? (
               <EmptyState />
             ) : (
@@ -409,7 +444,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
           </div>
 
           {/* Map Section */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden sticky top-28">
+          <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', position: 'sticky', top: 112 }}>
             <MapSection
               selectedOrder={selectedOrder}
               getLat={getLat}
@@ -440,6 +475,8 @@ const RestaurantDeliveryDashboard: React.FC = () => {
         getLng={getLng}
         openInMaps={openInMaps}
       />
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
@@ -447,30 +484,38 @@ const RestaurantDeliveryDashboard: React.FC = () => {
 // ==================== Subcomponents ====================
 
 const StatCard: React.FC<{ title: string; value: number | string; color: string }> = ({ title, value, color }) => {
-  const colorClasses = {
-    blue: 'bg-blue-500/20',
-    amber: 'bg-amber-500/20',
-    emerald: 'bg-emerald-500/20',
-    purple: 'bg-purple-500/20',
-    gray: 'bg-gray-500/20',
-    green: 'bg-green-500/20'
+  const bgMap: Record<string, string> = {
+    blue: 'rgba(96,165,250,0.12)',
+    amber: 'rgba(251,191,36,0.12)',
+    emerald: 'rgba(200,226,53,0.12)',
+    purple: 'rgba(167,139,250,0.12)',
+    gray: 'rgba(157,196,172,0.12)',
+    green: 'rgba(200,226,53,0.12)'
   };
-  
+  const textMap: Record<string, string> = {
+    blue: C.blue,
+    amber: '#FBBF24',
+    emerald: C.accent,
+    purple: C.purple,
+    gray: C.muted,
+    green: C.accent
+  };
+
   return (
-    <div className={`${colorClasses[color]} rounded-xl p-3 text-center backdrop-blur-sm`}>
-      <div className="text-2xl font-bold">{value}</div>
-      <div className="text-xs opacity-90">{title}</div>
+    <div style={{ background: bgMap[color] || 'rgba(200,226,53,0.08)', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color: textMap[color] || C.text }}>{value}</div>
+      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{title}</div>
     </div>
   );
 };
 
 const EmptyState: React.FC = () => (
-  <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
-    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-      <IoCar className="text-4xl text-gray-400" />
+  <div style={{ textAlign: 'center', padding: '64px 24px', background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
+    <div style={{ width: 96, height: 96, background: 'rgba(200,226,53,0.08)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+      <IoCar style={{ color: C.muted, fontSize: 40 }} />
     </div>
-    <p className="text-gray-500 text-lg">لا توجد طلبات توصيل حالياً</p>
-    <p className="text-sm text-gray-400 mt-2">سيظهر هنا الطلبات عندما يطلب العميل التوصيل</p>
+    <p style={{ color: C.muted, fontSize: 17 }}>لا توجد طلبات توصيل حالياً</p>
+    <p style={{ fontSize: 13, color: C.muted, opacity: 0.7, marginTop: 8 }}>سيظهر هنا الطلبات عندما يطلب العميل التوصيل</p>
   </div>
 );
 
@@ -486,56 +531,66 @@ const OrderCard: React.FC<{
   const hasLocation = order.deliveryLat && order.deliveryLng;
   const isReadyForAssign = order.status === 'ready' && !order.assignedDriverId;
   const deliveryFee = Number(order.deliveryFee || 0);
-  
+  const [hovered, setHovered] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-2xl shadow-lg overflow-hidden border-2 transition-all cursor-pointer hover:shadow-xl ${
-        isSelected ? 'border-blue-500 shadow-xl ring-2 ring-blue-200' : 'border-transparent'
-      }`}
+      style={{
+        background: C.card,
+        borderRadius: 16,
+        overflow: 'hidden',
+        border: isSelected ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
+        boxShadow: isSelected ? `0 0 0 2px rgba(200,226,53,0.2)` : 'none',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        backgroundColor: hovered ? 'rgba(200,226,53,0.04)' : C.card
+      }}
       onClick={onSelect}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       {/* Card Header */}
-      <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-white">
-        <div className="flex justify-between items-start">
+      <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, background: C.surf }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono font-bold text-lg text-gray-800">#{order.orderNumber}</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 17, color: C.text }}>#{order.orderNumber}</span>
+              <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 9999, ...getStatusStyle(order.status) }}>
                 {getStatusText(order.status)}
               </span>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <IoTime className="text-gray-400 text-xs" />
-              <span className="text-xs text-gray-500">{formatDate(order.createdAt)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+              <IoTime style={{ color: C.muted, fontSize: 12 }} />
+              <span style={{ fontSize: 11, color: C.muted }}>{formatDate(order.createdAt)}</span>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-emerald-600">{order.total} ل.س</div>
-            <div className="flex items-center gap-1 text-xs text-gray-500">
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 22, fontWeight: 700, color: C.accent }}>{order.total} ل.س</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: C.muted }}>
               {getPaymentMethodIcon(order.paymentMethod)}
               <span>{getPaymentMethodText(order.paymentMethod)}</span>
               {!order.isPaid && order.paymentMethod === 'cash' && (
-                <span className="text-amber-600 mr-1">(غير مدفوع)</span>
+                <span style={{ color: '#FBBF24', marginRight: 4 }}>(غير مدفوع)</span>
               )}
             </div>
             {deliveryFee > 0 && (
-              <div className="text-xs text-gray-400">+{deliveryFee} ل.س توصيل</div>
+              <div style={{ fontSize: 11, color: C.muted }}>+{deliveryFee} ل.س توصيل</div>
             )}
           </div>
         </div>
       </div>
 
       {/* Card Body */}
-      <div className="p-4 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-            <IoPerson className="text-blue-600" size={18} />
+      <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, background: 'rgba(96,165,250,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <IoPerson style={{ color: C.blue }} size={18} />
           </div>
           <div>
-            <p className="font-medium text-gray-800">{order.customerName}</p>
-            <a href={`tel:${order.customerPhone}`} className="text-sm text-blue-500 hover:underline flex items-center gap-1">
+            <p style={{ fontWeight: 500, color: C.text, margin: 0 }}>{order.customerName}</p>
+            <a href={`tel:${order.customerPhone}`} style={{ fontSize: 13, color: C.blue, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
               <IoCall size={12} />
               {order.customerPhone}
             </a>
@@ -543,16 +598,16 @@ const OrderCard: React.FC<{
         </div>
 
         {order.deliveryAddress && (
-          <div className="flex items-start gap-2 text-sm bg-gray-50 p-2 rounded-xl">
-            <IoLocation className="text-gray-400 mt-0.5 flex-shrink-0" size={16} />
-            <span className="text-gray-600 text-sm line-clamp-2">{order.deliveryAddress}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, background: 'rgba(0,0,0,0.2)', padding: 8, borderRadius: 12 }}>
+            <IoLocation style={{ color: C.muted, flexShrink: 0, marginTop: 2 }} size={16} />
+            <span style={{ color: C.muted }}>{order.deliveryAddress}</span>
           </div>
         )}
 
         {order.orderItems && order.orderItems.length > 0 && (
-          <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 p-2 rounded-xl">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: C.muted, background: 'rgba(0,0,0,0.2)', padding: 8, borderRadius: 12 }}>
             <IoFastFood size={14} />
-            <span className="text-sm">
+            <span>
               {order.orderItems.slice(0, 2).map(item => item.menuItem.name).join(', ')}
               {order.orderItems.length > 2 && ` +${order.orderItems.length - 2} أخرى`}
             </span>
@@ -560,65 +615,65 @@ const OrderCard: React.FC<{
         )}
 
         {order.assignedDriver && (
-          <div className="flex items-center gap-2 text-sm bg-purple-50 p-2 rounded-xl">
-            <IoCar className="text-purple-600" size={14} />
-            <span className="text-purple-700">السائق: {order.assignedDriver.name}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: 'rgba(167,139,250,0.1)', padding: 8, borderRadius: 12 }}>
+            <IoCar style={{ color: C.purple }} size={14} />
+            <span style={{ color: C.purple }}>السائق: {order.assignedDriver.name}</span>
           </div>
         )}
 
         {hasLocation && (
-          <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 p-2 rounded-xl">
-            <IoMap size={14} />
-            <span>موقع متوفر على الخريطة</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: 'rgba(200,226,53,0.08)', padding: 8, borderRadius: 12 }}>
+            <IoMap style={{ color: C.accent }} size={14} />
+            <span style={{ color: C.accent }}>موقع متوفر على الخريطة</span>
           </div>
         )}
 
         {order.notes && (
-          <div className="flex items-start gap-2 text-sm bg-amber-50 p-2 rounded-xl">
-            <IoAlertCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={14} />
-            <span className="text-amber-700 text-sm line-clamp-1">{order.notes}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, background: 'rgba(251,191,36,0.08)', padding: 8, borderRadius: 12 }}>
+            <IoAlertCircle style={{ color: '#FBBF24', flexShrink: 0, marginTop: 2 }} size={14} />
+            <span style={{ color: '#FBBF24' }}>{order.notes}</span>
           </div>
         )}
       </div>
 
       {/* Card Actions */}
-      <div className="p-4 border-t bg-gray-50 flex gap-2 flex-wrap">
+      <div style={{ padding: 16, borderTop: `1px solid ${C.border}`, background: C.surf, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {order.status === 'pending' && (
           <ActionButton onClick={() => onStatusUpdate(order.id, 'preparing')} color="blue" icon={IoTime}>
             بدء التحضير
           </ActionButton>
         )}
-        
+
         {order.status === 'preparing' && (
           <ActionButton onClick={() => onStatusUpdate(order.id, 'ready')} color="emerald" icon={IoCheckmarkCircle}>
             جاهز للتوصيل
           </ActionButton>
         )}
-        
+
         {isReadyForAssign && (
           <ActionButton onClick={onAssign} color="purple" icon={IoCar}>
             تعيين سائق
           </ActionButton>
         )}
-        
+
         {order.status === 'ready' && order.assignedDriverId && (
           <ActionButton onClick={() => onStatusUpdate(order.id, 'delivering')} color="orange" icon={IoNavigate}>
             بدء التوصيل
           </ActionButton>
         )}
-        
+
         {order.status === 'delivering' && (
           <ActionButton onClick={() => onStatusUpdate(order.id, 'delivered')} color="green" icon={IoCheckmarkCircle}>
             تم التوصيل
           </ActionButton>
         )}
-        
+
         {hasLocation && (
           <ActionButton onClick={onGetDirections} color="blue" icon={IoNavigate}>
             الاتجاهات
           </ActionButton>
         )}
-        
+
         <ActionButton onClick={onViewDetails} color="gray" icon={IoReceipt}>
           تفاصيل
         </ActionButton>
@@ -633,19 +688,34 @@ const ActionButton: React.FC<{
   icon: React.ElementType;
   children: React.ReactNode;
 }> = ({ onClick, color, icon: Icon, children }) => {
-  const colors = {
-    blue: 'bg-blue-500 hover:bg-blue-600',
-    emerald: 'bg-emerald-500 hover:bg-emerald-600',
-    purple: 'bg-purple-500 hover:bg-purple-600',
-    orange: 'bg-orange-500 hover:bg-orange-600',
-    green: 'bg-green-600 hover:bg-green-700',
-    gray: 'bg-gray-500 hover:bg-gray-600'
+  const bgMap: Record<string, string> = {
+    blue: '#2563EB',
+    emerald: '#059669',
+    purple: '#7C3AED',
+    orange: C.orange,
+    green: '#16A34A',
+    gray: '#4B5563'
   };
-  
+
   return (
     <button
       onClick={(e) => { e.stopPropagation(); onClick(); }}
-      className={`flex-1 ${colors[color]} text-white py-2 rounded-xl text-sm flex items-center justify-center gap-1 transition-all`}
+      style={{
+        flex: 1,
+        background: bgMap[color],
+        color: '#fff',
+        padding: '8px 4px',
+        borderRadius: 12,
+        fontSize: 12,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        border: 'none',
+        cursor: 'pointer',
+        fontFamily: 'Cairo, sans-serif',
+        transition: 'opacity 0.2s'
+      }}
     >
       <Icon size={14} />
       {children}
@@ -663,20 +733,20 @@ const MapSection: React.FC<{
   const lat = selectedOrder ? getLat(selectedOrder) : null;
   const lng = selectedOrder ? getLng(selectedOrder) : null;
   const hasLocation = lat && lng;
-  
+
   return (
     <>
-      <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-white">
-        <h3 className="font-bold text-lg flex items-center gap-2">
-          <IoMap className="text-red-500" />
+      <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, background: C.surf }}>
+        <h3 style={{ fontWeight: 700, fontSize: 17, display: 'flex', alignItems: 'center', gap: 8, margin: 0, color: C.text }}>
+          <IoMap style={{ color: C.red }} />
           موقع التوصيل
-          {selectedOrder && <span className="text-sm text-gray-500">طلب #{selectedOrder.orderNumber}</span>}
+          {selectedOrder && <span style={{ fontSize: 13, color: C.muted }}>طلب #{selectedOrder.orderNumber}</span>}
         </h3>
         {selectedOrder && selectedOrder.deliveryAddress && (
-          <p className="text-sm text-gray-500 mt-1 line-clamp-2">{selectedOrder.deliveryAddress}</p>
+          <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{selectedOrder.deliveryAddress}</p>
         )}
       </div>
-      <div className="h-[500px] relative">
+      <div style={{ height: 500, position: 'relative' }}>
         {hasLocation ? (
           <iframe
             title="Delivery Location"
@@ -688,24 +758,24 @@ const MapSection: React.FC<{
             allowFullScreen
           />
         ) : (
-          <div className="h-full flex items-center justify-center flex-col p-6 bg-gray-50">
-            <IoMap className="text-6xl text-gray-300 mb-4" />
-            <p className="text-gray-500 text-center">اختر طلباً من القائمة لعرض موقع التوصيل على الخريطة</p>
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 24, background: C.bg }}>
+            <IoMap style={{ fontSize: 64, color: C.muted, opacity: 0.4, marginBottom: 16 }} />
+            <p style={{ color: C.muted, textAlign: 'center' }}>اختر طلباً من القائمة لعرض موقع التوصيل على الخريطة</p>
           </div>
         )}
       </div>
       {hasLocation && (
-        <div className="p-4 border-t bg-gray-50 flex gap-2">
+        <div style={{ padding: 16, borderTop: `1px solid ${C.border}`, background: C.surf, display: 'flex', gap: 8 }}>
           <button
             onClick={() => openInMaps(lat!, lng!)}
-            className="flex-1 bg-blue-500 text-white py-2 rounded-xl hover:bg-blue-600 flex items-center justify-center gap-2 transition-all"
+            style={{ flex: 1, background: '#2563EB', color: '#fff', padding: '8px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}
           >
             <IoNavigate size={18} />
             فتح في خرائط جوجل
           </button>
           <button
             onClick={() => getDirections(lat!, lng!)}
-            className="flex-1 bg-emerald-500 text-white py-2 rounded-xl hover:bg-emerald-600 flex items-center justify-center gap-2 transition-all"
+            style={{ flex: 1, background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'Cairo, sans-serif', fontSize: 13, fontWeight: 600 }}
           >
             <IoNavigate size={18} />
             الاتجاهات
@@ -724,52 +794,73 @@ const AssignDriverModal: React.FC<{
   onClose: () => void;
 }> = ({ isOpen, selectedOrder, drivers, onAssign, onClose }) => {
   if (!isOpen || !selectedOrder) return null;
-  
+
   const activeDrivers = drivers.filter(d => d.isActive);
-  
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }} onClick={onClose}>
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-hidden"
+        style={{ background: C.card, borderRadius: 16, maxWidth: 480, width: '100%', maxHeight: '80vh', overflow: 'hidden', border: `1px solid ${C.border}` }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-4 border-b bg-gradient-to-r from-purple-600 to-purple-700 text-white">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold">تعيين سائق للطلب #{selectedOrder.orderNumber}</h3>
-            <button onClick={onClose} className="text-white hover:text-gray-200">
+        <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, background: 'linear-gradient(135deg, #2D1B69, #1E1145)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0 }}>تعيين سائق للطلب #{selectedOrder.orderNumber}</h3>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.text, cursor: 'pointer', padding: 4 }}>
               <IoClose size={24} />
             </button>
           </div>
         </div>
-        <div className="p-4 overflow-y-auto max-h-96">
+        <div style={{ padding: 16, overflowY: 'auto', maxHeight: 384 }}>
           {activeDrivers.length === 0 ? (
-            <div className="text-center py-8">
-              <IoCar className="text-4xl text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500">لا يوجد سائقين نشطين</p>
-              <p className="text-sm text-gray-400 mt-1">قم بإضافة سائقين من صفحة إدارة السائقين</p>
+            <div style={{ textAlign: 'center', padding: '32px 0' }}>
+              <IoCar style={{ fontSize: 40, color: C.muted, opacity: 0.4, display: 'block', margin: '0 auto 8px' }} />
+              <p style={{ color: C.muted }}>لا يوجد سائقين نشطين</p>
+              <p style={{ fontSize: 13, color: C.muted, opacity: 0.7, marginTop: 4 }}>قم بإضافة سائقين من صفحة إدارة السائقين</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {activeDrivers.map(driver => (
-                <button
-                  key={driver.id}
-                  onClick={() => onAssign(selectedOrder.id, driver.id)}
-                  className="w-full p-4 border rounded-xl text-right hover:bg-gray-50 transition-all flex justify-between items-center"
-                >
-                  <div>
-                    <div className="font-bold">{driver.name}</div>
-                    <div className="text-sm text-gray-500">{driver.email}</div>
-                  </div>
-                  <div className="text-sm text-gray-500">{driver.phone}</div>
-                </button>
+                <DriverButton key={driver.id} driver={driver} onAssign={() => onAssign(selectedOrder.id, driver.id)} />
               ))}
             </div>
           )}
         </div>
       </motion.div>
     </div>
+  );
+};
+
+const DriverButton: React.FC<{ driver: Driver; onAssign: () => void }> = ({ driver, onAssign }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onAssign}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: '100%',
+        padding: 16,
+        border: hovered ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+        borderRadius: 12,
+        textAlign: 'right',
+        background: hovered ? 'rgba(200,226,53,0.06)' : C.surf,
+        cursor: 'pointer',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        transition: 'all 0.2s',
+        fontFamily: 'Cairo, sans-serif'
+      }}
+    >
+      <div>
+        <div style={{ fontWeight: 700, color: C.text }}>{driver.name}</div>
+        <div style={{ fontSize: 13, color: C.muted }}>{driver.email}</div>
+      </div>
+      <div style={{ fontSize: 13, color: C.muted }}>{driver.phone}</div>
+    </button>
   );
 };
 
@@ -784,12 +875,11 @@ const OrderDetailsModal: React.FC<{
   openInMaps: (lat: number, lng: number) => void;
 }> = ({ isOpen, order, onClose, getDirections, getLat, getLng, openInMaps }) => {
   if (!isOpen || !order) return null;
-  
+
   const lat = getLat(order);
   const lng = getLng(order);
   const deliveryFee = Number(order.deliveryFee || 0);
-  
-  // دالة لمعالجة الإضافات
+
   const parseAddons = (addons: any): string[] => {
     if (!addons) return [];
     if (Array.isArray(addons)) return addons;
@@ -803,86 +893,88 @@ const OrderDetailsModal: React.FC<{
     }
     return [];
   };
-  
+
+  const statusSt = getStatusStyle(order.status);
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }} onClick={onClose}>
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden"
+        style={{ background: C.card, borderRadius: 16, maxWidth: 768, width: '100%', maxHeight: '90vh', overflow: 'hidden', border: `1px solid ${C.border}` }}
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className={`p-5 ${getStatusColor(order.status)} border-b`}>
-          <div className="flex justify-between items-center">
+        <div style={{ padding: 20, borderBottom: `1px solid ${C.border}`, background: statusSt.background }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold">طلب #{order.orderNumber}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: C.text }}>طلب #{order.orderNumber}</span>
+                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 9999, ...statusSt }}>
                   {getStatusText(order.status)}
                 </span>
               </div>
-              <p className="text-sm opacity-80 mt-1">
-                <IoCalendar className="inline ml-1" size={14} />
+              <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>
+                <IoCalendar style={{ display: 'inline', marginLeft: 4 }} size={14} />
                 {formatDate(order.createdAt)}
               </p>
             </div>
-            <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition-all">
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: C.text, cursor: 'pointer', padding: 8, borderRadius: '50%' }}>
               <IoClose size={24} />
             </button>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)] space-y-6">
+        <div style={{ padding: 24, overflowY: 'auto', maxHeight: 'calc(90vh - 80px)', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Customer Info */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
-            <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-blue-800">
+          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(96,165,250,0.2)` }}>
+            <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.blue, margin: '0 0 12px' }}>
               <IoPerson size={20} />
               معلومات العميل
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 w-20">الاسم:</span>
-                <span className="font-medium">{order.customerName}</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: C.muted, width: 80 }}>الاسم:</span>
+                <span style={{ fontWeight: 500, color: C.text }}>{order.customerName}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-600 w-20">الهاتف:</span>
-                <a href={`tel:${order.customerPhone}`} className="text-blue-500 hover:underline flex items-center gap-1">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: C.muted, width: 80 }}>الهاتف:</span>
+                <a href={`tel:${order.customerPhone}`} style={{ color: C.blue, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <IoCall size={14} />
                   {order.customerPhone}
                 </a>
               </div>
               {order.deliveryAddress && (
-                <div className="md:col-span-2 flex items-start gap-2">
-                  <span className="text-gray-600 w-20">العنوان:</span>
-                  <span className="flex-1">{order.deliveryAddress}</span>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <span style={{ color: C.muted, width: 80 }}>العنوان:</span>
+                  <span style={{ flex: 1, color: C.text }}>{order.deliveryAddress}</span>
                 </div>
               )}
             </div>
           </div>
 
           {/* Order Items */}
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4">
-            <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-amber-800">
+          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(251,191,36,0.2)` }}>
+            <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: '#FBBF24', margin: '0 0 12px' }}>
               <IoFastFood size={20} />
               تفاصيل الطلب
             </h4>
-            <div className="space-y-2">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {order.orderItems?.map((item, idx) => {
                 const addonsList = parseAddons(item.addons);
                 return (
-                  <div key={idx} className="flex justify-between items-center py-2 border-b border-amber-100 last:border-0">
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8, borderBottom: `1px solid rgba(251,191,36,0.1)` }}>
                     <div>
-                      <span className="font-medium">{item.menuItem?.name || 'منتج'}</span>
-                      <span className="text-gray-500 mr-2">x{item.quantity}</span>
-                      {item.size && <span className="text-xs text-gray-400 block">المقاس: {item.size}</span>}
+                      <span style={{ fontWeight: 500, color: C.text }}>{item.menuItem?.name || 'منتج'}</span>
+                      <span style={{ color: C.muted, marginRight: 8 }}>x{item.quantity}</span>
+                      {item.size && <span style={{ fontSize: 12, color: C.muted, display: 'block' }}>المقاس: {item.size}</span>}
                       {addonsList.length > 0 && (
-                        <span className="text-xs text-gray-400 block">إضافات: {addonsList.join(', ')}</span>
+                        <span style={{ fontSize: 12, color: C.muted, display: 'block' }}>إضافات: {addonsList.join(', ')}</span>
                       )}
-                      {item.notes && <span className="text-xs text-amber-600 block">ملاحظة: {item.notes}</span>}
+                      {item.notes && <span style={{ fontSize: 12, color: '#FBBF24', display: 'block' }}>ملاحظة: {item.notes}</span>}
                     </div>
-                    <span className="font-bold">{item.price * item.quantity} ل.س</span>
+                    <span style={{ fontWeight: 700, color: C.text }}>{item.price * item.quantity} ل.س</span>
                   </div>
                 );
               })}
@@ -890,48 +982,48 @@ const OrderDetailsModal: React.FC<{
           </div>
 
           {/* Payment Details */}
-          <div className="bg-gradient-to-r from-emerald-50 to-green-50 rounded-xl p-4">
-            <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-emerald-800">
+          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(200,226,53,0.2)` }}>
+            <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.accent, margin: '0 0 12px' }}>
               <IoWallet size={20} />
               تفاصيل الدفع
             </h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">المجموع الفرعي:</span>
-                <span>{order.subtotal} ل.س</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: C.muted }}>المجموع الفرعي:</span>
+                <span style={{ color: C.text }}>{order.subtotal} ل.س</span>
               </div>
               {order.discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-600">
-                  <span>الخصم:</span>
-                  <span>- {order.discountAmount} ل.س</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.muted }}>الخصم:</span>
+                  <span style={{ color: C.accent }}>- {order.discountAmount} ل.س</span>
                 </div>
               )}
               {deliveryFee > 0 && (
-                <div className="flex justify-between">
-                  <span>سعر التوصيل:</span>
-                  <span>{deliveryFee} ل.س</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.muted }}>سعر التوصيل:</span>
+                  <span style={{ color: C.text }}>{deliveryFee} ل.س</span>
                 </div>
               )}
               {order.deliveryDistance && order.deliveryDistance > 0 && (
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>المسافة:</span>
-                  <span>{order.deliveryDistance} كم</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span style={{ color: C.muted }}>المسافة:</span>
+                  <span style={{ color: C.muted }}>{order.deliveryDistance} كم</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-lg pt-2 border-t">
-                <span>الإجمالي:</span>
-                <span className="text-emerald-600">{order.total} ل.س</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 17, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                <span style={{ color: C.text }}>الإجمالي:</span>
+                <span style={{ color: C.accent }}>{order.total} ل.س</span>
               </div>
-              <div className="flex justify-between">
-                <span>طريقة الدفع:</span>
-                <span className="flex items-center gap-1">
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: C.muted }}>طريقة الدفع:</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.text }}>
                   {getPaymentMethodIcon(order.paymentMethod)}
                   {getPaymentMethodText(order.paymentMethod)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span>حالة الدفع:</span>
-                <span className={order.isPaid ? 'text-emerald-600' : 'text-amber-600'}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: C.muted }}>حالة الدفع:</span>
+                <span style={{ color: order.isPaid ? C.accent : '#FBBF24' }}>
                   {order.isPaid ? 'مدفوع' : 'غير مدفوع'}
                 </span>
               </div>
@@ -940,28 +1032,28 @@ const OrderDetailsModal: React.FC<{
 
           {/* Delivery Info */}
           {(order.estimatedDeliveryTime || order.actualDeliveryTime || order.driverAcceptedAt) && (
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
-              <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-purple-800">
+            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(167,139,250,0.2)` }}>
+              <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.purple, margin: '0 0 12px' }}>
                 <IoTime size={20} />
                 معلومات التوصيل
               </h4>
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {order.estimatedDeliveryTime && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">الوقت المتوقع:</span>
-                    <span>{formatDate(order.estimatedDeliveryTime)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: C.muted }}>الوقت المتوقع:</span>
+                    <span style={{ color: C.text }}>{formatDate(order.estimatedDeliveryTime)}</span>
                   </div>
                 )}
                 {order.driverAcceptedAt && (
-                  <div className="flex justify-between text-emerald-600">
-                    <span>وقت قبول السائق:</span>
-                    <span>{formatDate(order.driverAcceptedAt)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: C.muted }}>وقت قبول السائق:</span>
+                    <span style={{ color: C.accent }}>{formatDate(order.driverAcceptedAt)}</span>
                   </div>
                 )}
                 {order.actualDeliveryTime && (
-                  <div className="flex justify-between text-emerald-600">
-                    <span>وقت التوصيل:</span>
-                    <span>{formatDate(order.actualDeliveryTime)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: C.muted }}>وقت التوصيل:</span>
+                    <span style={{ color: C.accent }}>{formatDate(order.actualDeliveryTime)}</span>
                   </div>
                 )}
               </div>
@@ -970,19 +1062,19 @@ const OrderDetailsModal: React.FC<{
 
           {/* Driver Info */}
           {order.assignedDriver && (
-            <div className="bg-gradient-to-r from-cyan-50 to-sky-50 rounded-xl p-4">
-              <h4 className="font-bold text-lg mb-3 flex items-center gap-2 text-cyan-800">
+            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(96,165,250,0.2)` }}>
+              <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.blue, margin: '0 0 12px' }}>
                 <IoCar size={20} />
                 معلومات السائق
               </h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">الاسم:</span>
-                  <span className="font-medium">{order.assignedDriver.name}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.muted }}>الاسم:</span>
+                  <span style={{ fontWeight: 500, color: C.text }}>{order.assignedDriver.name}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">الهاتف:</span>
-                  <a href={`tel:${order.assignedDriver.phone}`} className="text-blue-500 hover:underline">
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.muted }}>الهاتف:</span>
+                  <a href={`tel:${order.assignedDriver.phone}`} style={{ color: C.blue, textDecoration: 'none' }}>
                     {order.assignedDriver.phone}
                   </a>
                 </div>
@@ -992,28 +1084,28 @@ const OrderDetailsModal: React.FC<{
 
           {/* Notes */}
           {order.notes && (
-            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl p-4">
-              <h4 className="font-bold text-lg mb-2 flex items-center gap-2 text-yellow-800">
+            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(251,191,36,0.2)` }}>
+              <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8, color: '#FBBF24', margin: '0 0 8px' }}>
                 <IoClipboard size={20} />
                 ملاحظات
               </h4>
-              <p className="text-gray-700">{order.notes}</p>
+              <p style={{ color: C.text, margin: 0 }}>{order.notes}</p>
             </div>
           )}
 
           {/* Action Buttons */}
           {(lat && lng) && (
-            <div className="flex gap-3 pt-2">
+            <div style={{ display: 'flex', gap: 12, paddingTop: 8 }}>
               <button
                 onClick={() => openInMaps(lat, lng)}
-                className="flex-1 bg-blue-500 text-white py-3 rounded-xl hover:bg-blue-600 flex items-center justify-center gap-2 transition-all"
+                style={{ flex: 1, background: '#2563EB', color: '#fff', padding: '12px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
               >
                 <IoNavigate size={18} />
                 فتح في خرائط جوجل
               </button>
               <button
                 onClick={() => getDirections(lat, lng)}
-                className="flex-1 bg-emerald-500 text-white py-3 rounded-xl hover:bg-emerald-600 flex items-center justify-center gap-2 transition-all"
+                style={{ flex: 1, background: C.accent, color: C.bg, padding: '12px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 600 }}
               >
                 <IoNavigate size={18} />
                 الاتجاهات

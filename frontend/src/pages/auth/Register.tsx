@@ -5,28 +5,45 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import Button from '../../components/common/Button';
-import { 
-  IoRestaurant, 
-  IoMail, 
-  IoLockClosed, 
-  IoPerson, 
-  IoCall, 
+import {
+  IoRestaurant,
+  IoMail,
+  IoLockClosed,
+  IoPerson,
+  IoCall,
   IoStorefront,
   IoWarning
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 const Register: React.FC = () => {
   const navigate = useNavigate();
   const { register, loading } = useAuth();
-  const { 
-    isRegistrationAllowed, 
-    requireEmailVerification, 
+  const {
+    isRegistrationAllowed,
+    requireEmailVerification,
     platformName,
-    isMaintenanceMode 
+    isMaintenanceMode
   } = useSettingsContext();
-  
+
   const [accountType, setAccountType] = useState<'restaurant' | 'store'>('restaurant');
   const [formData, setFormData] = useState({
     name: '',
@@ -42,14 +59,14 @@ const Register: React.FC = () => {
   // التحقق من وضع الصيانة
   if (isMaintenanceMode) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center max-w-md">
-          <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <IoWarning className="text-yellow-500 text-2xl" />
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} dir="rtl">
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '2rem', textAlign: 'center', maxWidth: 400, width: '100%' }}>
+          <div style={{ width: 64, height: 64, background: 'rgba(245,158,11,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+            <IoWarning style={{ color: C.yellow, fontSize: 28 }} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">🔧 وضع الصيانة</h1>
-          <p className="text-gray-600">التسجيل مغلق حالياً بسبب أعمال الصيانة.</p>
-          <Link to="/" className="mt-4 inline-block text-blue-500 hover:underline">
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: C.text, marginBottom: '0.5rem' }}>🔧 وضع الصيانة</h1>
+          <p style={{ color: C.muted }}>التسجيل مغلق حالياً بسبب أعمال الصيانة.</p>
+          <Link to="/" style={{ marginTop: '1rem', display: 'inline-block', color: C.accent, textDecoration: 'none', fontWeight: 600 }}>
             العودة للرئيسية
           </Link>
         </div>
@@ -60,14 +77,14 @@ const Register: React.FC = () => {
   // التحقق من أن التسجيل مسموح
   if (!isRegistrationAllowed) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-8 text-center max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <IoWarning className="text-red-500 text-2xl" />
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} dir="rtl">
+        <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: '2rem', textAlign: 'center', maxWidth: 400, width: '100%' }}>
+          <div style={{ width: 64, height: 64, background: 'rgba(255,107,107,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+            <IoWarning style={{ color: C.red, fontSize: 28 }} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">🔒 التسجيل مغلق</h1>
-          <p className="text-gray-600">عذراً، التسجيل في المنصة مغلق حالياً.</p>
-          <Link to="/login" className="mt-4 inline-block text-blue-500 hover:underline">
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: C.text, marginBottom: '0.5rem' }}>🔒 التسجيل مغلق</h1>
+          <p style={{ color: C.muted }}>عذراً، التسجيل في المنصة مغلق حالياً.</p>
+          <Link to="/login" style={{ marginTop: '1rem', display: 'inline-block', color: C.accent, textDecoration: 'none', fontWeight: 600 }}>
             تسجيل الدخول
           </Link>
         </div>
@@ -85,7 +102,7 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       setError('كلمة المرور غير متطابقة');
       return;
@@ -113,8 +130,8 @@ const Register: React.FC = () => {
           phone: formData.phone,
           restaurantName: formData.businessName,
         });
-        
-        const message = requireEmailVerification 
+
+        const message = requireEmailVerification
           ? 'تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني'
           : 'تم إنشاء حساب المطعم بنجاح';
         toast.success(message);
@@ -126,12 +143,12 @@ const Register: React.FC = () => {
           phone: formData.phone,
           storeName: formData.businessName,
         });
-        
+
         if (response.token) {
           localStorage.setItem('token', response.token);
           localStorage.setItem('user', JSON.stringify(response.user));
-          
-          const message = requireEmailVerification 
+
+          const message = requireEmailVerification
             ? 'تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني'
             : 'تم إنشاء حساب المتجر بنجاح';
           toast.success(message);
@@ -146,84 +163,141 @@ const Register: React.FC = () => {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    display: 'block',
+    width: '100%',
+    paddingRight: '2.5rem',
+    paddingLeft: '0.75rem',
+    paddingTop: '0.625rem',
+    paddingBottom: '0.625rem',
+    background: C.surf,
+    border: `1px solid ${C.border}`,
+    borderRadius: 10,
+    color: C.text,
+    fontSize: '0.875rem',
+    outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    color: C.muted,
+    marginBottom: '0.375rem',
+  };
+
+  const iconWrapStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    paddingRight: '0.75rem',
+    display: 'flex',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          {accountType === 'restaurant' ? (
-            <IoRestaurant className="h-12 w-12 text-blue-500" />
-          ) : (
-            <IoStorefront className="h-12 w-12 text-green-500" />
-          )}
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '3rem 1rem' }} dir="rtl">
+      {/* Header */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+          <div style={{ width: 72, height: 72, background: 'rgba(200,226,53,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}` }}>
+            {accountType === 'restaurant' ? (
+              <IoRestaurant style={{ fontSize: 32, color: C.accent }} />
+            ) : (
+              <IoStorefront style={{ fontSize: 32, color: C.accent }} />
+            )}
+          </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 style={{ fontSize: '1.875rem', fontWeight: 800, color: C.text, marginBottom: '0.5rem' }}>
           إنشاء حساب {accountType === 'restaurant' ? 'مطعم' : 'متجر'}
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p style={{ fontSize: '0.875rem', color: C.muted }}>
           منصة {platformName}
         </p>
         {requireEmailVerification && (
-          <p className="mt-1 text-center text-xs text-blue-600">
+          <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: C.accent }}>
             ⚡ سيتم إرسال رابط تفعيل إلى بريدك الإلكتروني
           </p>
         )}
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      {/* Card */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '2rem 1.5rem' }}>
+
           {/* اختيار نوع الحساب */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              نوع الحساب
-            </label>
-            <div className="grid grid-cols-2 gap-3">
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={labelStyle}>نوع الحساب</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <button
                 type="button"
                 onClick={() => setAccountType('restaurant')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                  accountType === 'restaurant'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem',
+                  borderRadius: 10,
+                  border: accountType === 'restaurant' ? `2px solid ${C.accent}` : `2px solid ${C.border}`,
+                  background: accountType === 'restaurant' ? 'rgba(200,226,53,0.1)' : C.surf,
+                  color: accountType === 'restaurant' ? C.accent : C.muted,
+                  fontWeight: accountType === 'restaurant' ? 700 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '0.9rem',
+                }}
               >
-                <IoRestaurant className={`text-xl ${accountType === 'restaurant' ? 'text-blue-500' : 'text-gray-400'}`} />
+                <IoRestaurant style={{ fontSize: 20 }} />
                 <span>مطعم</span>
               </button>
               <button
                 type="button"
                 onClick={() => setAccountType('store')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${
-                  accountType === 'store'
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem',
+                  borderRadius: 10,
+                  border: accountType === 'store' ? `2px solid ${C.accent}` : `2px solid ${C.border}`,
+                  background: accountType === 'store' ? 'rgba(200,226,53,0.1)' : C.surf,
+                  color: accountType === 'store' ? C.accent : C.muted,
+                  fontWeight: accountType === 'store' ? 700 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontSize: '0.9rem',
+                }}
               >
-                <IoStorefront className={`text-xl ${accountType === 'store' ? 'text-green-500' : 'text-gray-400'}`} />
+                <IoStorefront style={{ fontSize: 20 }} />
                 <span>متجر</span>
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {accountType === 'restaurant' 
-                ? 'يمكنك إدارة قائمة الطعام، الطاولات، وطلبات التوصيل' 
+            <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: '0.5rem' }}>
+              {accountType === 'restaurant'
+                ? 'يمكنك إدارة قائمة الطعام، الطاولات، وطلبات التوصيل'
                 : 'يمكنك إدارة المنتجات، المخزون، وطلبات التوصيل'}
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }} onSubmit={handleSubmit}>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg flex items-start gap-2">
-                <IoWarning className="mt-0.5 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
+              <div style={{ background: 'rgba(255,107,107,0.1)', border: `1px solid rgba(255,107,107,0.3)`, color: C.red, padding: '0.75rem 1rem', borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                <IoWarning style={{ marginTop: 2, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.875rem' }}>{error}</span>
               </div>
             )}
 
+            {/* الاسم الكامل */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                الاسم الكامل
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoPerson className="h-5 w-5 text-gray-400" />
+              <label htmlFor="name" style={labelStyle}>الاسم الكامل</label>
+              <div style={{ position: 'relative' }}>
+                <div style={iconWrapStyle}>
+                  <IoPerson style={{ color: C.muted, fontSize: 18 }} />
                 </div>
                 <input
                   id="name"
@@ -232,19 +306,18 @@ const Register: React.FC = () => {
                   required
                   value={formData.name}
                   onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  style={inputStyle}
                   placeholder="محمد أحمد"
                 />
               </div>
             </div>
 
+            {/* البريد الإلكتروني */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                البريد الإلكتروني
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoMail className="h-5 w-5 text-gray-400" />
+              <label htmlFor="email" style={labelStyle}>البريد الإلكتروني</label>
+              <div style={{ position: 'relative' }}>
+                <div style={iconWrapStyle}>
+                  <IoMail style={{ color: C.muted, fontSize: 18 }} />
                 </div>
                 <input
                   id="email"
@@ -254,19 +327,18 @@ const Register: React.FC = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  style={inputStyle}
                   placeholder="your@email.com"
                 />
               </div>
             </div>
 
+            {/* رقم الهاتف */}
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                رقم الهاتف
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoCall className="h-5 w-5 text-gray-400" />
+              <label htmlFor="phone" style={labelStyle}>رقم الهاتف</label>
+              <div style={{ position: 'relative' }}>
+                <div style={iconWrapStyle}>
+                  <IoCall style={{ color: C.muted, fontSize: 18 }} />
                 </div>
                 <input
                   id="phone"
@@ -275,22 +347,23 @@ const Register: React.FC = () => {
                   required
                   value={formData.phone}
                   onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  style={inputStyle}
                   placeholder="05xxxxxxxx"
                 />
               </div>
             </div>
 
+            {/* اسم النشاط التجاري */}
             <div>
-              <label htmlFor="businessName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="businessName" style={labelStyle}>
                 {accountType === 'restaurant' ? 'اسم المطعم' : 'اسم المتجر'}
               </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <div style={{ position: 'relative' }}>
+                <div style={iconWrapStyle}>
                   {accountType === 'restaurant' ? (
-                    <IoRestaurant className="h-5 w-5 text-gray-400" />
+                    <IoRestaurant style={{ color: C.muted, fontSize: 18 }} />
                   ) : (
-                    <IoStorefront className="h-5 w-5 text-gray-400" />
+                    <IoStorefront style={{ color: C.muted, fontSize: 18 }} />
                   )}
                 </div>
                 <input
@@ -300,19 +373,18 @@ const Register: React.FC = () => {
                   required
                   value={formData.businessName}
                   onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder={accountType === 'restaurant' ? "مطعمي المفضل" : "متجري الإلكتروني"}
+                  style={inputStyle}
+                  placeholder={accountType === 'restaurant' ? 'مطعمي المفضل' : 'متجري الإلكتروني'}
                 />
               </div>
             </div>
 
+            {/* كلمة المرور */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                كلمة المرور
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoLockClosed className="h-5 w-5 text-gray-400" />
+              <label htmlFor="password" style={labelStyle}>كلمة المرور</label>
+              <div style={{ position: 'relative' }}>
+                <div style={iconWrapStyle}>
+                  <IoLockClosed style={{ color: C.muted, fontSize: 18 }} />
                 </div>
                 <input
                   id="password"
@@ -321,20 +393,19 @@ const Register: React.FC = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  style={inputStyle}
                   placeholder="********"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">كلمة المرور يجب أن تكون 6 أحرف على الأقل</p>
+              <p style={{ fontSize: '0.75rem', color: C.muted, marginTop: '0.25rem' }}>كلمة المرور يجب أن تكون 6 أحرف على الأقل</p>
             </div>
 
+            {/* تأكيد كلمة المرور */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                تأكيد كلمة المرور
-              </label>
-              <div className="mt-1 relative">
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                  <IoLockClosed className="h-5 w-5 text-gray-400" />
+              <label htmlFor="confirmPassword" style={labelStyle}>تأكيد كلمة المرور</label>
+              <div style={{ position: 'relative' }}>
+                <div style={iconWrapStyle}>
+                  <IoLockClosed style={{ color: C.muted, fontSize: 18 }} />
                 </div>
                 <input
                   id="confirmPassword"
@@ -343,47 +414,85 @@ const Register: React.FC = () => {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="appearance-none block w-full pr-10 px-3 py-2 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  style={inputStyle}
                   placeholder="********"
                 />
               </div>
             </div>
 
-            <div className="pt-2">
-              <Button
+            {/* زر التسجيل */}
+            <div style={{ paddingTop: '0.5rem' }}>
+              <button
                 type="submit"
-                variant="primary"
-                fullWidth
-                loading={registering || loading}
+                disabled={registering || loading}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1.5rem',
+                  background: registering || loading ? C.acDk : C.accent,
+                  color: C.bg,
+                  fontWeight: 700,
+                  borderRadius: 10,
+                  border: 'none',
+                  cursor: registering || loading ? 'not-allowed' : 'pointer',
+                  fontSize: '1rem',
+                  transition: 'background 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                }}
               >
+                {(registering || loading) && (
+                  <span style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    border: `2px solid rgba(8,46,36,0.3)`,
+                    borderTop: `2px solid ${C.bg}`,
+                    display: 'inline-block',
+                    animation: 'spin 0.8s linear infinite',
+                  }} />
+                )}
                 إنشاء حساب {accountType === 'restaurant' ? 'مطعم' : 'متجر'}
-              </Button>
+              </button>
             </div>
           </form>
 
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  لديك حساب بالفعل؟
-                </span>
-              </div>
+          {/* رابط تسجيل الدخول */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1rem' }}>
+              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: C.border }} />
+              <span style={{ position: 'relative', background: C.card, padding: '0 0.75rem', fontSize: '0.875rem', color: C.muted }}>
+                لديك حساب بالفعل؟
+              </span>
             </div>
-
-            <div className="mt-6">
-              <Link
-                to="/login"
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                تسجيل الدخول
-              </Link>
-            </div>
+            <Link
+              to="/login"
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '0.625rem 1rem',
+                border: `1px solid ${C.border}`,
+                borderRadius: 10,
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: C.text,
+                background: C.surf,
+                textDecoration: 'none',
+                transition: 'background 0.2s',
+              }}
+            >
+              تسجيل الدخول
+            </Link>
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input::placeholder { color: ${C.muted}; opacity: 0.7; }
+        input:focus { outline: none; border-color: ${C.accent} !important; box-shadow: 0 0 0 3px rgba(200,226,53,0.1); }
+      `}</style>
     </div>
   );
 };

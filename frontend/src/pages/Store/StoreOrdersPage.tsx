@@ -11,6 +11,23 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 interface StoreOrder {
   id: string;
   orderNumber: string;
@@ -27,11 +44,7 @@ interface StoreOrder {
     productId: string;
     quantity: number;
     price: number;
-    product?: {
-      id: string;
-      name: string;
-      image?: string;
-    };
+    product?: { id: string; name: string; image?: string; };
   }>;
 }
 
@@ -51,21 +64,18 @@ const StoreOrdersPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (id) {
-      fetchOrderById(id);
-    }
+    if (id) fetchOrderById(id);
   }, [id]);
 
   const fetchOrders = async () => {
     try {
       const response = await api.get('/store/orders');
-      // التحقق من أن البيانات هي مصفوفة
       const ordersData = Array.isArray(response) ? response : [];
       setOrders(ordersData);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast.error('حدث خطأ في جلب الطلبات');
-      setOrders([]); // تعيين مصفوفة فارغة في حالة الخطأ
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -85,9 +95,7 @@ const StoreOrdersPage: React.FC = () => {
       await api.patch(`/store/orders/${orderId}/status`, { status });
       toast.success('تم تحديث حالة الطلب بنجاح');
       await fetchOrders();
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: status as any });
-      }
+      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status: status as any });
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('حدث خطأ في تحديث حالة الطلب');
@@ -95,70 +103,41 @@ const StoreOrdersPage: React.FC = () => {
   };
 
   const getFilteredOrders = (): StoreOrder[] => {
-    // التأكد من أن orders هي مصفوفة
     let filtered = Array.isArray(orders) ? [...orders] : [];
-    
-    if (filter !== 'all') {
-      filtered = filtered.filter(o => o.status === filter);
-    }
-    
-    if (paymentFilter === 'paid') {
-      filtered = filtered.filter(o => o.isPaid);
-    } else if (paymentFilter === 'unpaid') {
-      filtered = filtered.filter(o => !o.isPaid);
-    }
-    
+    if (filter !== 'all') filtered = filtered.filter(o => o.status === filter);
+    if (paymentFilter === 'paid') filtered = filtered.filter(o => o.isPaid);
+    else if (paymentFilter === 'unpaid') filtered = filtered.filter(o => !o.isPaid);
     return filtered;
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'processing': return 'bg-blue-100 text-blue-800';
-      case 'shipped': return 'bg-purple-100 text-purple-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const getStatusStyle = (status: string): React.CSSProperties => {
+    const map: Record<string, { bg: string; color: string }> = {
+      pending:    { bg: `rgba(245,158,11,0.15)`,  color: C.yellow },
+      processing: { bg: `rgba(96,165,250,0.15)`,   color: C.blue },
+      shipped:    { bg: `rgba(167,139,250,0.15)`,  color: C.purple },
+      delivered:  { bg: `rgba(200,226,53,0.15)`,   color: C.accent },
+      cancelled:  { bg: `rgba(255,107,107,0.15)`,  color: C.red },
+    };
+    const s = map[status] || { bg: `rgba(157,196,172,0.15)`, color: C.muted };
+    return { background: s.bg, color: s.color, padding: '3px 10px', borderRadius: 12, fontSize: 12 };
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'قيد الانتظار';
-      case 'processing': return 'قيد التجهيز';
-      case 'shipped': return 'تم الشحن';
-      case 'delivered': return 'تم التوصيل';
-      case 'cancelled': return 'ملغي';
-      default: return status;
-    }
+    const map: Record<string, string> = { pending: 'قيد الانتظار', processing: 'قيد التجهيز', shipped: 'تم الشحن', delivered: 'تم التوصيل', cancelled: 'ملغي' };
+    return map[status] || status;
   };
 
-  const getPaymentBadge = (isPaid: boolean) => {
-    return isPaid ? (
-      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center gap-1">
-        <IoWallet size={12} />
-        مدفوع
-      </span>
-    ) : (
-      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full flex items-center gap-1">
-        <IoWallet size={12} />
-        غير مدفوع
-      </span>
-    );
-  };
-
-  // حساب الإحصائيات بأمان
   const getStats = () => {
-    const ordersList = Array.isArray(orders) ? orders : [];
+    const list = Array.isArray(orders) ? orders : [];
     return {
-      total: ordersList.length,
-      pending: ordersList.filter(o => o.status === 'pending').length,
-      processing: ordersList.filter(o => o.status === 'processing').length,
-      shipped: ordersList.filter(o => o.status === 'shipped').length,
-      delivered: ordersList.filter(o => o.status === 'delivered').length,
-      cancelled: ordersList.filter(o => o.status === 'cancelled').length,
-      paid: ordersList.filter(o => o.isPaid).length,
-      unpaid: ordersList.filter(o => !o.isPaid).length,
+      total: list.length,
+      pending: list.filter(o => o.status === 'pending').length,
+      processing: list.filter(o => o.status === 'processing').length,
+      shipped: list.filter(o => o.status === 'shipped').length,
+      delivered: list.filter(o => o.status === 'delivered').length,
+      cancelled: list.filter(o => o.status === 'cancelled').length,
+      paid: list.filter(o => o.isPaid).length,
+      unpaid: list.filter(o => !o.isPaid).length,
     };
   };
 
@@ -167,155 +146,115 @@ const StoreOrdersPage: React.FC = () => {
   const filteredOrders = getFilteredOrders();
   const stats = getStats();
 
+  const filterBtnStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 14px',
+    borderRadius: 20,
+    fontSize: 13,
+    border: 'none',
+    cursor: 'pointer',
+    background: active ? C.accent : C.surf,
+    color: active ? C.bg : C.muted,
+    fontWeight: active ? 700 : 400,
+    transition: 'all 0.2s',
+  });
+
   return (
-    <div className="p-6" dir="rtl">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24 }} dir="rtl">
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold">🛒 إدارة طلبات المتجر</h1>
-          <p className="text-sm text-gray-500 mt-1">متابعة وإدارة جميع طلبات الشراء</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>إدارة طلبات المتجر</h1>
+          <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>متابعة وإدارة جميع طلبات الشراء</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
-            <IoFilter className="inline ml-1" />
-            تصفية
-          </Button>
-          <Button variant="outline" onClick={fetchOrders}>
-            <IoRefresh className="inline ml-1" />
-            تحديث
-          </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.muted, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <IoFilter size={16} /> تصفية
+          </button>
+          <button
+            onClick={fetchOrders}
+            style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.muted, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <IoRefresh size={16} /> تحديث
+          </button>
         </div>
       </div>
 
-      {/* فلاتر الحالة والدفع */}
+      {/* فلاتر */}
       {showFilters && (
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-          <h3 className="font-semibold mb-2">📋 حالة الطلب</h3>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                filter === 'all' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              الكل ({stats.total})
-            </button>
-            <button
-              onClick={() => setFilter('pending')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                filter === 'pending' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              قيد الانتظار ({stats.pending})
-            </button>
-            <button
-              onClick={() => setFilter('processing')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                filter === 'processing' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              قيد التجهيز ({stats.processing})
-            </button>
-            <button
-              onClick={() => setFilter('shipped')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                filter === 'shipped' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              تم الشحن ({stats.shipped})
-            </button>
-            <button
-              onClick={() => setFilter('delivered')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                filter === 'delivered' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              تم التوصيل ({stats.delivered})
-            </button>
-            <button
-              onClick={() => setFilter('cancelled')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                filter === 'cancelled' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              ملغي ({stats.cancelled})
-            </button>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 24 }}>
+          <h3 style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: '0 0 12px' }}>حالة الطلب</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {[
+              { key: 'all', label: `الكل (${stats.total})` },
+              { key: 'pending', label: `قيد الانتظار (${stats.pending})` },
+              { key: 'processing', label: `قيد التجهيز (${stats.processing})` },
+              { key: 'shipped', label: `تم الشحن (${stats.shipped})` },
+              { key: 'delivered', label: `تم التوصيل (${stats.delivered})` },
+              { key: 'cancelled', label: `ملغي (${stats.cancelled})` },
+            ].map(f => (
+              <button key={f.key} onClick={() => setFilter(f.key)} style={filterBtnStyle(filter === f.key)}>{f.label}</button>
+            ))}
           </div>
-
-          <h3 className="font-semibold mb-2">💰 حالة الدفع</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setPaymentFilter('all')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                paymentFilter === 'all' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              الكل
-            </button>
-            <button
-              onClick={() => setPaymentFilter('paid')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                paymentFilter === 'paid' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              مدفوع ({stats.paid})
-            </button>
-            <button
-              onClick={() => setPaymentFilter('unpaid')}
-              className={`px-3 py-1 rounded-full text-sm transition ${
-                paymentFilter === 'unpaid' ? 'bg-green-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-              }`}
-            >
-              غير مدفوع ({stats.unpaid})
-            </button>
+          <h3 style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: '0 0 12px' }}>حالة الدفع</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {[
+              { key: 'all', label: 'الكل' },
+              { key: 'paid', label: `مدفوع (${stats.paid})` },
+              { key: 'unpaid', label: `غير مدفوع (${stats.unpaid})` },
+            ].map(f => (
+              <button key={f.key} onClick={() => setPaymentFilter(f.key as any)} style={filterBtnStyle(paymentFilter === f.key)}>{f.label}</button>
+            ))}
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
         {/* قائمة الطلبات */}
-        <div className="lg:col-span-1 bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b bg-gray-50">
-            <h2 className="font-semibold">📋 قائمة الطلبات</h2>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, background: C.surf }}>
+            <h2 style={{ color: C.text, fontSize: 14, fontWeight: 600, margin: 0 }}>قائمة الطلبات</h2>
           </div>
-          <div className="divide-y max-h-[600px] overflow-y-auto">
+          <div style={{ maxHeight: 600, overflowY: 'auto' }}>
             {filteredOrders.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <IoCube className="text-4xl mx-auto mb-2 opacity-50" />
-                <p>لا توجد طلبات</p>
+              <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                <IoCube style={{ color: C.muted, fontSize: 40, marginBottom: 8 }} />
+                <p style={{ color: C.muted, margin: 0 }}>لا توجد طلبات</p>
               </div>
             ) : (
               filteredOrders.map(order => (
                 <div
                   key={order.id}
                   onClick={() => setSelectedOrder(order)}
-                  className={`p-4 cursor-pointer hover:bg-gray-50 transition ${
-                    selectedOrder?.id === order.id ? 'bg-green-50 border-r-4 border-green-500' : ''
-                  }`}
+                  style={{
+                    padding: '14px 16px',
+                    cursor: 'pointer',
+                    borderBottom: `1px solid ${C.border}`,
+                    borderRight: selectedOrder?.id === order.id ? `3px solid ${C.accent}` : '3px solid transparent',
+                    background: selectedOrder?.id === order.id ? C.surfL : 'transparent',
+                    transition: 'background 0.15s',
+                  }}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold text-blue-600">#{order.orderNumber}</span>
-                    {getPaymentBadge(order.isPaid)}
-                  </div>
-                  <div className="flex justify-between items-start mb-2">
-                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
-                      {getStatusText(order.status)}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {order.orderItems?.length || 0} منتج
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontWeight: 600, color: C.accent, fontSize: 13 }}>#{order.orderNumber}</span>
+                    <span style={{ background: order.isPaid ? `rgba(200,226,53,0.15)` : `rgba(245,158,11,0.15)`, color: order.isPaid ? C.accent : C.yellow, fontSize: 11, padding: '2px 8px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <IoWallet size={11} /> {order.isPaid ? 'مدفوع' : 'غير مدفوع'}
                     </span>
                   </div>
-                  <div className="text-sm text-gray-600 mb-2">
-                    <p className="font-medium">{order.customerName || 'عميل'}</p>
-                    {order.customerPhone && (
-                      <p className="text-xs text-gray-400">{order.customerPhone}</p>
-                    )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={getStatusStyle(order.status)}>{getStatusText(order.status)}</span>
+                    <span style={{ color: C.muted, fontSize: 12 }}>{order.orderItems?.length || 0} منتج</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400 flex items-center gap-1">
+                  <p style={{ color: C.text, fontSize: 13, fontWeight: 500, margin: '0 0 2px' }}>{order.customerName || 'عميل'}</p>
+                  {order.customerPhone && <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>{order.customerPhone}</p>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                    <span style={{ color: C.muted, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <IoTime size={12} />
                       {format(new Date(order.createdAt), 'hh:mm a', { locale: ar })}
                     </span>
-                    <span className="font-bold text-green-600">{Number(order.total).toFixed(2)} ر.س</span>
+                    <span style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{Number(order.total).toFixed(2)} ر.س</span>
                   </div>
                 </div>
               ))
@@ -324,17 +263,17 @@ const StoreOrdersPage: React.FC = () => {
         </div>
 
         {/* تفاصيل الطلب */}
-        <div className="lg:col-span-2">
+        <div>
           {selectedOrder ? (
             <StoreOrderDetails
               order={selectedOrder}
               onUpdateStatus={(status) => updateOrderStatus(selectedOrder.id, status)}
             />
           ) : (
-            <div className="bg-white rounded-xl shadow-sm p-12 text-center text-gray-500">
-              <IoCube className="text-6xl mx-auto mb-4 opacity-30" />
-              <p className="text-lg">اختر طلباً لعرض التفاصيل</p>
-              <p className="text-sm mt-1">اضغط على أي طلب من القائمة لعرض معلوماته الكاملة</p>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '80px 24px', textAlign: 'center' }}>
+              <IoCube style={{ color: C.muted, fontSize: 56, marginBottom: 16, opacity: 0.4 }} />
+              <p style={{ color: C.text, fontSize: 16, margin: '0 0 8px' }}>اختر طلباً لعرض التفاصيل</p>
+              <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>اضغط على أي طلب من القائمة لعرض معلوماته الكاملة</p>
             </div>
           )}
         </div>

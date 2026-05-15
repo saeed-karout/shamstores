@@ -1,212 +1,90 @@
-// pages/Admin/AdminQRCodesPage.tsx
-
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import QRGenerator from '../../components/qr/QRGenerator';
-import { 
-  IoQrCode, IoSearch, IoRefresh, IoStorefront, 
-  IoRestaurant, IoArrowBack, IoLink, IoCopy 
-} from 'react-icons/io5';
+import { IoQrCode, IoSearch, IoRefresh, IoStorefront, IoRestaurant, IoArrowBack, IoLink, IoCopy } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 
-interface Restaurant {
-  id: string;
-  name: string;
-  slug: string;
-  logo?: string;
-  isActive: boolean;
-}
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA',
+};
 
-interface Store {
-  id: string;
-  name: string;
-  slug: string;
-  logo?: string;
-  isActive: boolean;
-}
+interface Entity { id: string; name: string; slug: string; logo?: string; isActive: boolean; }
 
 const AdminQRCodesPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'restaurants' | 'stores'>('restaurants');
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
+  const [restaurants, setRestaurants] = useState<Entity[]>([]);
+  const [stores, setStores] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEntity, setSelectedEntity] = useState<{ type: 'restaurant' | 'store'; data: any } | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<{ type: 'restaurant' | 'store'; data: Entity } | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+  useEffect(() => { fetchData(); }, [activeTab]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'restaurants') {
-        const data = await api.get('/admin/restaurants');
-        setRestaurants(data?.restaurants || data || []);
-      } else {
-        const data = await api.get('/admin/stores');
-        setStores(data?.stores || data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('حدث خطأ في جلب البيانات');
-    } finally {
-      setLoading(false);
-    }
+      if (activeTab === 'restaurants') { const d = await api.get('/admin/restaurants'); setRestaurants(d?.restaurants || d || []); }
+      else { const d = await api.get('/admin/stores'); setStores(d?.stores || d || []); }
+    } catch { toast.error('حدث خطأ في جلب البيانات'); }
+    finally { setLoading(false); }
   };
 
   const getFilteredData = () => {
-    if (activeTab === 'restaurants') {
-      return restaurants.filter(r => 
-        r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        r.slug.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    } else {
-      return stores.filter(s => 
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.slug.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+    const list = activeTab === 'restaurants' ? restaurants : stores;
+    return list.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.slug.toLowerCase().includes(searchTerm.toLowerCase()));
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('تم نسخ الرابط');
-  };
+  const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); toast.success('تم نسخ الرابط'); };
+
+  const LinkRow = ({ label, path }: { label: string; path: string }) => (
+    <div style={{ background: C.surf, borderRadius: 12, padding: '12px 16px', marginBottom: 10 }}>
+      <div style={{ color: C.muted, fontSize: 12, marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <code style={{ flex: 1, background: C.bg, color: C.accent, padding: '6px 10px', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{window.location.origin}{path}</code>
+        <button onClick={() => copyToClipboard(`${window.location.origin}${path}`)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', padding: 4, display: 'flex' }}><IoCopy size={16} /></button>
+      </div>
+    </div>
+  );
 
   if (selectedEntity) {
+    const { type, data } = selectedEntity;
     return (
-      <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-        <button
-          onClick={() => setSelectedEntity(null)}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-6"
-        >
-          <IoArrowBack size={20} />
-          العودة إلى القائمة
+      <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+        <button onClick={() => setSelectedEntity(null)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, marginBottom: 24, fontFamily: 'Cairo, sans-serif' }}>
+          <IoArrowBack size={18} /> العودة إلى القائمة
         </button>
 
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex items-center gap-3 mb-6">
-            {selectedEntity.type === 'restaurant' ? (
-              <IoRestaurant className="text-blue-500 text-3xl" />
-            ) : (
-              <IoStorefront className="text-green-500 text-3xl" />
-            )}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+            <div style={{ width: 48, height: 48, background: type === 'restaurant' ? 'rgba(96,165,250,0.15)' : 'rgba(200,226,53,0.12)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {type === 'restaurant' ? <IoRestaurant size={24} style={{ color: C.blue }} /> : <IoStorefront size={24} style={{ color: C.accent }} />}
+            </div>
             <div>
-              <h1 className="text-2xl font-bold">{selectedEntity.data.name}</h1>
-              <p className="text-gray-500">
-                {selectedEntity.type === 'restaurant' ? 'مطعم' : 'متجر'} • {selectedEntity.data.slug}
-              </p>
+              <h1 style={{ color: C.text, fontSize: 20, fontWeight: 800 }}>{data.name}</h1>
+              <p style={{ color: C.muted, fontSize: 13 }}>{type === 'restaurant' ? 'مطعم' : 'متجر'} • <code style={{ fontFamily: 'monospace', color: C.accent, fontSize: 12 }}>{data.slug}</code></p>
             </div>
           </div>
 
-          {/* QR الرئيسي */}
-          <div className="border rounded-xl p-6 mb-6">
-            <h2 className="text-lg font-semibold mb-4">📱 QR الرئيسي</h2>
-            <div className="flex flex-col md:flex-row gap-6 items-center">
-              <QRGenerator
-                type={selectedEntity.type === 'restaurant' ? 'restaurant' : 'store'}
-                slug={selectedEntity.data.slug}
-                storeName={selectedEntity.data.name}
-                storeLogo={selectedEntity.data.logo}
-                buttonText={
-                  <div className="flex items-center gap-2">
-                   
-                    <span>إنشاء QR رئيسي</span>
-                  </div>
-                }
-                variant="primary"
-              />
-              <div className="flex-1">
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-sm text-gray-500 mb-1">رابط {selectedEntity.type === 'restaurant' ? 'المطعم' : 'المتجر'}</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-sm bg-white p-2 rounded border font-mono">
-                      {window.location.origin}/{selectedEntity.data.slug}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(`${window.location.origin}/${selectedEntity.data.slug}`)}
-                      className="p-2 text-gray-500 hover:text-blue-500 transition"
-                      title="نسخ الرابط"
-                    >
-                      <IoCopy size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
+            <h2 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 16 }}>QR الرئيسي</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+              <QRGenerator type={type === 'restaurant' ? 'restaurant' : 'store'} slug={data.slug} storeName={data.name} storeLogo={data.logo} buttonText={<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IoQrCode size={14} /><span>إنشاء QR رئيسي</span></div>} variant="primary" />
+              <LinkRow label={`رابط ${type === 'restaurant' ? 'المطعم' : 'المتجر'}`} path={`/${data.slug}`} />
             </div>
           </div>
 
-          {/* روابط إضافية */}
-          <div className="border rounded-xl p-6">
-            <h2 className="text-lg font-semibold mb-4">🔗 روابط مفيدة</h2>
-            <div className="space-y-3">
-              {selectedEntity.type === 'restaurant' && (
-                <>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-500 mb-1">قائمة المطعم</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm bg-white p-2 rounded border font-mono">
-                        {window.location.origin}/{selectedEntity.data.slug}/menu
-                      </code>
-                      <button
-                        onClick={() => copyToClipboard(`${window.location.origin}/${selectedEntity.data.slug}/menu`)}
-                        className="p-2 text-gray-500 hover:text-blue-500 transition"
-                      >
-                        <IoCopy size={18} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-500 mb-1">لوحة تحكم المطعم</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm bg-white p-2 rounded border font-mono">
-                        {window.location.origin}/dashboard
-                      </code>
-                      <button
-                        onClick={() => copyToClipboard(`${window.location.origin}/dashboard`)}
-                        className="p-2 text-gray-500 hover:text-blue-500 transition"
-                      >
-                        <IoCopy size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-              {selectedEntity.type === 'store' && (
-                <>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-500 mb-1">منتجات المتجر</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm bg-white p-2 rounded border font-mono">
-                        {window.location.origin}/{selectedEntity.data.slug}/products
-                      </code>
-                      <button
-                        onClick={() => copyToClipboard(`${window.location.origin}/${selectedEntity.data.slug}/products`)}
-                        className="p-2 text-gray-500 hover:text-blue-500 transition"
-                      >
-                        <IoCopy size={18} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-500 mb-1">لوحة تحكم المتجر</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-sm bg-white p-2 rounded border font-mono">
-                        {window.location.origin}/dashboard
-                      </code>
-                      <button
-                        onClick={() => copyToClipboard(`${window.location.origin}/dashboard`)}
-                        className="p-2 text-gray-500 hover:text-blue-500 transition"
-                      >
-                        <IoCopy size={18} />
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
+            <h2 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <IoLink size={16} style={{ color: C.accent }} /> روابط مفيدة
+            </h2>
+            {type === 'restaurant' ? (
+              <><LinkRow label="قائمة المطعم" path={`/${data.slug}/menu`} /><LinkRow label="لوحة التحكم" path="/dashboard" /></>
+            ) : (
+              <><LinkRow label="منتجات المتجر" path={`/${data.slug}/products`} /><LinkRow label="لوحة التحكم" path="/dashboard" /></>
+            )}
           </div>
         </div>
       </div>
@@ -216,106 +94,57 @@ const AdminQRCodesPage: React.FC = () => {
   const filteredData = getFilteredData();
 
   return (
-    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">🎯 إدارة رموز QR</h1>
-        <p className="text-gray-500">إنشاء رموز QR للمطاعم والمتاجر وروابطها</p>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ color: C.text, fontSize: 22, fontWeight: 800, marginBottom: 4 }}>إدارة رموز QR</h1>
+        <p style={{ color: C.muted, fontSize: 14 }}>إنشاء رموز QR للمطاعم والمتاجر وروابطها</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b pb-2">
-        <button
-          onClick={() => setActiveTab('restaurants')}
-          className={`px-6 py-2 rounded-lg transition-all ${
-            activeTab === 'restaurants'
-              ? 'bg-blue-500 text-white shadow-md'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-        >
-          <IoRestaurant className="inline ml-2" />
-          المطاعم
-        </button>
-        <button
-          onClick={() => setActiveTab('stores')}
-          className={`px-6 py-2 rounded-lg transition-all ${
-            activeTab === 'stores'
-              ? 'bg-green-500 text-white shadow-md'
-              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-          }`}
-        >
-          <IoStorefront className="inline ml-2" />
-          المتاجر
-        </button>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: `1px solid ${C.border}`, paddingBottom: 12 }}>
+        {([['restaurants', 'المطاعم', IoRestaurant], ['stores', 'المتاجر', IoStorefront]] as const).map(([tab, label, Icon]) => (
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 10, border: 'none', background: activeTab === tab ? C.accent : C.surf, color: activeTab === tab ? C.bg : C.muted, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s' }}>
+            <Icon size={16} /> {label}
+          </button>
+        ))}
+        <button onClick={fetchData} style={{ marginRight: 'auto', background: 'none', border: 'none', color: C.muted, cursor: 'pointer', padding: 8, display: 'flex' }}><IoRefresh size={18} /></button>
       </div>
 
       {/* Search */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div className="relative">
-          <IoSearch className="absolute right-3 top-3 text-gray-400" />
-          <input
-            type="text"
-            placeholder={`بحث عن ${activeTab === 'restaurants' ? 'مطعم' : 'متجر'}...`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pr-10 p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
-          />
-        </div>
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14, marginBottom: 20, position: 'relative' }}>
+        <IoSearch size={15} style={{ position: 'absolute', right: 26, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
+        <input type="text" placeholder={`بحث عن ${activeTab === 'restaurants' ? 'مطعم' : 'متجر'}...`} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ width: '100%', paddingRight: 36, paddingLeft: 12, paddingTop: 8, paddingBottom: 8, background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
       </div>
 
-      {/* List */}
-      {loading ? (
-        <Loader />
-      ) : filteredData.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <IoLink className="text-gray-300 text-6xl mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد {activeTab === 'restaurants' ? 'مطاعم' : 'متاجر'}</h3>
-          <p className="text-gray-500">لم يتم العثور على {activeTab === 'restaurants' ? 'مطاعم' : 'متاجر'}</p>
+      {loading ? <Loader /> : filteredData.length === 0 ? (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 48, textAlign: 'center' }}>
+          <IoLink size={48} style={{ color: C.border, marginBottom: 12 }} />
+          <h3 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 6 }}>لا توجد {activeTab === 'restaurants' ? 'مطاعم' : 'متاجر'}</h3>
+          <p style={{ color: C.muted, fontSize: 13 }}>لم يتم العثور على نتائج</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredData.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-all cursor-pointer"
-              onClick={() => setSelectedEntity({ type: activeTab === 'restaurants' ? 'restaurant' : 'store', data: item })}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    activeTab === 'restaurants' ? 'bg-blue-100' : 'bg-green-100'
-                  }`}>
-                    {activeTab === 'restaurants' ? (
-                      <IoRestaurant className={activeTab === 'restaurants' ? 'text-blue-600' : 'text-green-600'} size={20} />
-                    ) : (
-                      <IoStorefront className={activeTab === 'restaurants' ? 'text-blue-600' : 'text-green-600'} size={20} />
-                    )}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+          {filteredData.map(item => (
+            <div key={item.id} onClick={() => setSelectedEntity({ type: activeTab === 'restaurants' ? 'restaurant' : 'store', data: item })} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18, cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = C.accent; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border; }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 40, height: 40, background: activeTab === 'restaurants' ? 'rgba(96,165,250,0.12)' : 'rgba(200,226,53,0.12)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {activeTab === 'restaurants' ? <IoRestaurant size={20} style={{ color: C.blue }} /> : <IoStorefront size={20} style={{ color: C.accent }} />}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-800">{item.name}</h3>
-                    <p className="text-xs text-gray-500 font-mono">{item.slug}</p>
+                    <div style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{item.name}</div>
+                    <code style={{ color: C.muted, fontSize: 11, fontFamily: 'monospace' }}>{item.slug}</code>
                   </div>
                 </div>
-                <div className={`w-2 h-2 rounded-full ${item.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.isActive ? C.accent : C.red, marginTop: 4 }} />
               </div>
-              
-              <div className="mt-3 pt-3 border-t">
-                <p className="text-xs text-gray-400 flex items-center gap-1">
-                  <IoLink size={12} />
-                  الرابط: {window.location.origin}/{item.slug}
-                </p>
-              </div>
-
-              <div className="mt-3 flex justify-end">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEntity({ type: activeTab === 'restaurants' ? 'restaurant' : 'store', data: item });
-                  }}
-                  className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1"
-                >
-                  <IoQrCode size={14} />
-                  إنشاء QR
-                </button>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: C.muted, fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoLink size={11} /> {window.location.origin}/{item.slug}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.accent, fontSize: 12, fontWeight: 700 }}>
+                  <IoQrCode size={13} /> إنشاء QR
+                </span>
               </div>
             </div>
           ))}

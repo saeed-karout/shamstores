@@ -7,6 +7,23 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
 interface User {
   id: string;
   name: string;
@@ -78,24 +95,6 @@ const AdminUsers: React.FC = () => {
     navigate(`/admin/users/${id}`);
   };
 
-  const getRoleBadge = (role: string) => {
-    const colors: Record<string, string> = {
-      super_admin: 'bg-purple-100 text-purple-800',
-      owner: 'bg-blue-100 text-blue-800',
-      staff: 'bg-green-100 text-green-800',
-      delivery_driver: 'bg-orange-100 text-orange-800',
-      user: 'bg-gray-100 text-gray-800'
-    };
-    const labels: Record<string, string> = {
-      super_admin: 'مدير المنصة',
-      owner: 'مالك مطعم',
-      staff: 'موظف',
-      delivery_driver: 'مندوب توصيل',
-      user: 'مستخدم'
-    };
-    return <span className={`px-2 py-1 rounded-full text-xs ${colors[role] || 'bg-gray-100'}`}>{labels[role] || role}</span>;
-  };
-
   const filteredUsers = users.filter(user => {
     if (searchTerm && !user.name.toLowerCase().includes(searchTerm.toLowerCase()) && !user.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (filterRole !== 'all' && user.role !== filterRole) return false;
@@ -104,25 +103,77 @@ const AdminUsers: React.FC = () => {
 
   if (loading) return <Loader fullScreen />;
 
+  const thStyle: React.CSSProperties = {
+    padding: '12px 16px',
+    textAlign: 'right',
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: 600,
+    background: C.surf,
+    whiteSpace: 'nowrap',
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: '12px 16px',
+    color: C.text,
+    fontSize: 13,
+    borderBottom: `1px solid ${C.border}`,
+    verticalAlign: 'middle',
+  };
+
+  const roleColors: Record<string, { bg: string; color: string }> = {
+    super_admin:      { bg: `${C.purple}20`, color: C.purple },
+    owner:            { bg: `${C.blue}20`,   color: C.blue   },
+    staff:            { bg: `${C.accent}20`, color: C.accent },
+    delivery_driver:  { bg: `${C.yellow}20`, color: C.yellow },
+    user:             { bg: `${C.muted}20`,  color: C.muted  },
+  };
+
+  const roleLabels: Record<string, string> = {
+    super_admin:     'مدير المنصة',
+    owner:           'مالك مطعم',
+    staff:           'موظف',
+    delivery_driver: 'مندوب توصيل',
+    user:            'مستخدم',
+  };
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">إدارة المستخدمين</h1>
-        <div className="flex gap-3">
-          <div className="relative">
+    <div style={{ padding: 24, background: C.bg, minHeight: '100vh', color: C.text }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text }}>إدارة المستخدمين</h1>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative' }}>
             <input
               type="text"
               placeholder="بحث..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              style={{
+                background: C.surf,
+                border: `1px solid ${C.border}`,
+                borderRadius: 10,
+                color: C.text,
+                padding: '8px 40px 8px 14px',
+                fontSize: 14,
+                outline: 'none',
+                width: 220,
+              }}
             />
-            <IoSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <IoSearch style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
           </div>
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-            className="p-2 border rounded-lg"
+            style={{
+              background: C.surf,
+              border: `1px solid ${C.border}`,
+              borderRadius: 10,
+              color: C.text,
+              padding: '8px 14px',
+              fontSize: 14,
+              outline: 'none',
+              cursor: 'pointer',
+            }}
           >
             <option value="all">جميع الأدوار</option>
             <option value="owner">مالك مطعم</option>
@@ -133,81 +184,105 @@ const AdminUsers: React.FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-gray-50">
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
+            <thead>
               <tr>
-                <th className="py-3 px-4 text-right">الاسم</th>
-                <th className="py-3 px-4 text-right">البريد الإلكتروني</th>
-                <th className="py-3 px-4 text-right">رقم الهاتف</th>
-                <th className="py-3 px-4 text-right">الدور</th>
-                <th className="py-3 px-4 text-right">مرتبط بـ</th>
-                <th className="py-3 px-4 text-right">الحالة</th>
-                <th className="py-3 px-4 text-right">تاريخ التسجيل</th>
-                <th className="py-3 px-4 text-right">إجراءات</th>
+                <th style={thStyle}>الاسم</th>
+                <th style={thStyle}>البريد الإلكتروني</th>
+                <th style={thStyle}>رقم الهاتف</th>
+                <th style={thStyle}>الدور</th>
+                <th style={thStyle}>مرتبط بـ</th>
+                <th style={thStyle}>الحالة</th>
+                <th style={thStyle}>تاريخ التسجيل</th>
+                <th style={thStyle}>إجراءات</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="border-t hover:bg-gray-50">
-                  <td 
-                    className="py-3 px-4 font-medium text-blue-600 cursor-pointer hover:underline"
+                <tr
+                  key={user.id}
+                  style={{ transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <td
+                    style={{ ...tdStyle, color: C.accent, cursor: 'pointer', fontWeight: 600 }}
                     onClick={() => handleViewDetails(user.id)}
                   >
                     {user.name}
                   </td>
-                  <td className="py-3 px-4">{user.email}</td>
-                  <td className="py-3 px-4">{user.phone || '-'}</td>
-                 <td className="py-3 px-4">
-  <select
-    value={user.role}
-    onChange={(e) => updateRole(user.id, e.target.value)}
-    className="text-sm border rounded px-2 py-1"
-  >
-    <option value="user">👤 مستخدم عادي</option>
-    <option value="owner">🏢 مالك (مطعم/متجر)</option>
-    <option value="staff">👨‍💼 موظف</option>
-    <option value="delivery_driver">🚚 مندوب توصيل</option>
-  </select>
-  {/* عرض نوع الملكية إذا كان مالك */}
-  {user.role === 'owner' && (
-    <div className="text-xs text-gray-500 mt-1">
-      {user.restaurant ? '📱 مطعم' : user.store ? '🛍️ متجر' : '⚠️ لا يوجد مطعم أو متجر'}
-    </div>
-  )}
-</td>
-                  <td className="py-3 px-4 text-sm">
+                  <td style={tdStyle}>{user.email}</td>
+                  <td style={tdStyle}>{user.phone || '-'}</td>
+                  <td style={tdStyle}>
+                    <select
+                      value={user.role}
+                      onChange={(e) => updateRole(user.id, e.target.value)}
+                      style={{
+                        background: C.surf,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: 8,
+                        color: C.text,
+                        padding: '4px 10px',
+                        fontSize: 12,
+                        outline: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <option value="user">👤 مستخدم عادي</option>
+                      <option value="owner">🏢 مالك (مطعم/متجر)</option>
+                      <option value="staff">👨‍💼 موظف</option>
+                      <option value="delivery_driver">🚚 مندوب توصيل</option>
+                    </select>
+                    {user.role === 'owner' && (
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
+                        {user.restaurant ? '📱 مطعم' : user.store ? '🛍️ متجر' : '⚠️ لا يوجد مطعم أو متجر'}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
                     {user.restaurant?.name || user.store?.name || '-'}
                   </td>
-                  <td className="py-3 px-4">
+                  <td style={tdStyle}>
                     <button
                       onClick={() => toggleStatus(user.id, user.isActive)}
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}
+                      style={{
+                        padding: '3px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                        border: 'none', cursor: 'pointer',
+                        background: user.isActive ? `${C.accent}20` : `${C.red}20`,
+                        color: user.isActive ? C.accent : C.red,
+                      }}
                     >
                       {user.isActive ? 'نشط' : 'غير نشط'}
                     </button>
                   </td>
-                  <td className="py-3 px-4 text-sm">
+                  <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
                     {new Date(user.createdAt).toLocaleDateString('ar-SA')}
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex gap-2">
+                  <td style={tdStyle}>
+                    <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         onClick={() => handleViewDetails(user.id)}
-                        className="p-1 text-blue-500 hover:text-blue-700"
                         title="عرض التفاصيل"
+                        style={{
+                          padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                          background: `${C.accent}15`, color: C.accent,
+                          display: 'flex', alignItems: 'center',
+                        }}
                       >
-                        <IoEye size={18} />
+                        <IoEye size={16} />
                       </button>
                       <button
                         onClick={() => deleteUser(user.id, user.name)}
-                        className="p-1 text-red-500 hover:text-red-700"
                         title="حذف"
+                        style={{
+                          padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                          background: `${C.red}15`, color: C.red,
+                          display: 'flex', alignItems: 'center',
+                        }}
                       >
-                        <IoTrash size={18} />
+                        <IoTrash size={16} />
                       </button>
                     </div>
                   </td>
@@ -217,6 +292,12 @@ const AdminUsers: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {filteredUsers.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted, fontSize: 14 }}>
+          لا يوجد مستخدمون
+        </div>
+      )}
     </div>
   );
 };

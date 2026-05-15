@@ -1,44 +1,58 @@
+// TopBar — sits above the main content area in the new design
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { IoMenu, IoNotifications } from 'react-icons/io5';
 import { useAuth } from '../../hooks/useAuth';
-import { IoLogOut, IoPerson, IoRestaurant } from 'react-icons/io5';
 
-const Navbar: React.FC = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+interface NavbarProps {
+  onMenuOpen?: () => void;
+  title?: string;
+}
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+const Navbar: React.FC<NavbarProps> = ({ onMenuOpen, title }) => {
+  const { user } = useAuth();
 
   return (
-    <nav className="bg-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link to="/dashboard" className="flex items-center space-x-2">
-              <IoRestaurant className="h-8 w-8 text-blue-500" />
-              <span className="text-xl font-bold text-gray-800">Digital Menu</span>
-            </Link>
-          </div>
+    <header
+      style={{
+        height: 60,
+        background: '#082E24',
+        borderBottom: '1px solid rgba(200,226,53,0.15)',
+        display: 'flex',
+        alignItems: 'center',
+        paddingInline: '20px 24px',
+        gap: 16,
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+      }}
+    >
+      {/* Mobile menu toggle */}
+      <button
+        onClick={onMenuOpen}
+        className="lg:hidden"
+        style={{ background: 'none', border: 'none', color: '#9DC4AC', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex' }}
+      >
+        <IoMenu size={20} />
+      </button>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <IoPerson className="h-5 w-5 text-gray-500" />
-              <span className="text-gray-700">{user?.name}</span>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-            >
-              <IoLogOut className="h-5 w-5" />
-              <span>تسجيل خروج</span>
-            </button>
-          </div>
-        </div>
+      {title && (
+        <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, color: '#E8F5E9', margin: 0 }}>
+          {title}
+        </h1>
+      )}
+      {!title && <div style={{ flex: 1 }} />}
+
+      {/* Status indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 7, height: 7, background: '#C8E235', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
+        <span style={{ color: '#9DC4AC', fontSize: 12 }}>متصل</span>
       </div>
-    </nav>
+
+      {/* User avatar */}
+      <div style={{ width: 32, height: 32, background: 'rgba(200,226,53,0.15)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C8E235', fontWeight: 700, fontSize: 14 }}>
+        {(user?.name || 'U')[0]}
+      </div>
+    </header>
   );
 };
 

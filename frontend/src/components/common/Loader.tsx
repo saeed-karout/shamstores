@@ -5,30 +5,46 @@ interface LoaderProps {
   fullScreen?: boolean;
 }
 
-const Loader: React.FC<LoaderProps> = ({ size = 'md', fullScreen = false }) => {
-  const sizeClasses = {
-    sm: 'w-6 h-6',
-    md: 'w-10 h-10',
-    lg: 'w-16 h-16',
-  };
+const sizes = { sm: 24, md: 40, lg: 60 };
 
-  const loader = (
-    <div className="flex justify-center items-center">
+const Loader: React.FC<LoaderProps> = ({ size = 'md', fullScreen = false }) => {
+  const s = sizes[size];
+
+  const spinner = (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
       <div
-        className={`${sizeClasses[size]} border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin`}
+        style={{
+          width: s, height: s,
+          border: '3px solid rgba(200,226,53,0.2)',
+          borderTopColor: '#C8E235',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }}
       />
+      {fullScreen && (
+        <p style={{ color: '#9DC4AC', fontFamily: 'Cairo, sans-serif', fontSize: 13 }}>جاري التحميل...</p>
+      )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
   if (fullScreen) {
     return (
-      <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
-        {loader}
+      <div
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(8,46,36,0.85)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999,
+        }}
+      >
+        {spinner}
       </div>
     );
   }
 
-  return loader;
+  return spinner;
 };
 
 export default Loader;

@@ -13,6 +13,12 @@ import { format } from 'date-fns';
 import { arSA } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+};
+
 interface Driver {
   id: string;
   name: string;
@@ -54,11 +60,11 @@ interface Stats {
 }
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: 'قيد الانتظار', color: 'text-yellow-700', bg: 'bg-yellow-100' },
-  processing: { label: 'قيد المعالجة', color: 'text-blue-700', bg: 'bg-blue-100' },
-  shipped: { label: 'تم الشحن', color: 'text-purple-700', bg: 'bg-purple-100' },
-  delivered: { label: 'تم التوصيل', color: 'text-green-700', bg: 'bg-green-100' },
-  cancelled: { label: 'ملغي', color: 'text-red-700', bg: 'bg-red-100' },
+  pending: { label: 'قيد الانتظار', color: '#FBBF24', bg: 'rgba(251,191,36,0.12)' },
+  processing: { label: 'قيد المعالجة', color: '#60A5FA', bg: 'rgba(96,165,250,0.12)' },
+  shipped: { label: 'تم الشحن', color: '#A78BFA', bg: 'rgba(167,139,250,0.12)' },
+  delivered: { label: 'تم التوصيل', color: '#C8E235', bg: 'rgba(200,226,53,0.12)' },
+  cancelled: { label: 'ملغي', color: '#FF6B6B', bg: 'rgba(255,107,107,0.12)' },
 };
 
 const nextStatus: Record<string, string> = {
@@ -158,29 +164,38 @@ const StoreDeliveryDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">جاري تحميل طلبات التوصيل...</p>
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64, border: `4px solid ${C.accent}`,
+            borderTopColor: 'transparent', borderRadius: '50%',
+            animation: 'spin 1s linear infinite', margin: '0 auto 16px'
+          }} />
+          <p style={{ color: C.muted }}>جاري تحميل طلبات التوصيل...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif', padding: '24px' }} dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <IoCar className="text-green-600" />
+          <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <IoCar style={{ color: C.accent }} />
             لوحة التوصيل
           </h1>
-          <p className="text-gray-500 text-sm mt-1">إدارة طلبات التوصيل للمتجر</p>
+          <p style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>إدارة طلبات التوصيل للمتجر</p>
         </div>
         <button
           onClick={fetchData}
-          className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 16px', background: C.accent, color: C.bg,
+            border: 'none', borderRadius: 12, fontWeight: 600,
+            fontFamily: 'Cairo, sans-serif', cursor: 'pointer'
+          }}
         >
           <IoRefresh />
           تحديث
@@ -189,44 +204,53 @@ const StoreDeliveryDashboard: React.FC = () => {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 24 }}>
           {[
-            { label: 'إجمالي الطلبات', value: stats.totalOrders, icon: IoReceipt, color: 'blue' },
-            { label: 'طلبات اليوم', value: stats.todayOrders, icon: IoCalendar, color: 'purple' },
-            { label: 'قيد الانتظار', value: stats.pendingOrders, icon: IoTime, color: 'yellow' },
-            { label: 'مبيعات اليوم', value: `${stats.todaySales?.toLocaleString()} ل.س`, icon: IoCash, color: 'green' },
-            { label: 'إجمالي المبيعات', value: `${stats.totalSales?.toLocaleString()} ل.س`, icon: IoWallet, color: 'emerald' },
-          ].map((card, i) => (
-            <div key={i} className="bg-white rounded-2xl shadow p-4">
-              <p className="text-gray-500 text-xs mb-1">{card.label}</p>
-              <p className={`text-xl font-bold text-${card.color}-600`}>{card.value}</p>
-            </div>
-          ))}
+            { label: 'إجمالي الطلبات', value: stats.totalOrders, icon: IoReceipt, color: C.blue },
+            { label: 'طلبات اليوم', value: stats.todayOrders, icon: IoCalendar, color: C.purple },
+            { label: 'قيد الانتظار', value: stats.pendingOrders, icon: IoTime, color: '#FBBF24' },
+            { label: 'مبيعات اليوم', value: `${stats.todaySales?.toLocaleString()} ل.س`, icon: IoCash, color: C.accent },
+            { label: 'إجمالي المبيعات', value: `${stats.totalSales?.toLocaleString()} ل.س`, icon: IoWallet, color: C.accent },
+          ].map((card, i) => {
+            const Icon = card.icon;
+            return (
+              <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16 }}>
+                <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>{card.label}</p>
+                <p style={{ color: card.color, fontSize: 20, fontWeight: 700 }}>{card.value}</p>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl shadow p-4 mb-6 flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <IoSearch className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16, marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+          <IoSearch style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
           <input
             type="text"
             placeholder="بحث بالاسم أو رقم الطلب..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pr-9 pl-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-300"
+            style={{
+              width: '100%', paddingRight: 36, paddingLeft: 16, paddingTop: 8, paddingBottom: 8,
+              background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12,
+              color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 14, outline: 'none',
+              boxSizing: 'border-box'
+            }}
           />
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {['all', 'pending', 'processing', 'shipped'].map(s => (
             <button
               key={s}
               onClick={() => setFilterStatus(s)}
-              className={`px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                filterStatus === s
-                  ? 'bg-green-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              style={{
+                padding: '8px 12px', borderRadius: 12, fontSize: 14, fontWeight: 500,
+                fontFamily: 'Cairo, sans-serif', cursor: 'pointer', border: 'none',
+                background: filterStatus === s ? C.accent : C.surf,
+                color: filterStatus === s ? C.bg : C.muted,
+              }}
             >
               {s === 'all' ? 'الكل' : statusConfig[s]?.label}
             </button>
@@ -236,63 +260,69 @@ const StoreDeliveryDashboard: React.FC = () => {
 
       {/* Orders Grid */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <IoCar className="text-6xl mx-auto mb-4 opacity-30" />
-          <p className="text-lg">لا توجد طلبات توصيل نشطة</p>
+        <div style={{ textAlign: 'center', padding: '64px 0', color: C.muted }}>
+          <IoCar style={{ fontSize: 64, display: 'block', margin: '0 auto 16px', opacity: 0.3 }} />
+          <p style={{ fontSize: 18 }}>لا توجد طلبات توصيل نشطة</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {filtered.map(order => (
             <motion.div
               key={order.id}
               layout
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow hover:shadow-md transition-shadow cursor-pointer"
+              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, cursor: 'pointer' }}
               onClick={() => setSelectedOrder(order)}
             >
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-bold text-gray-800">#{order.orderNumber}</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusConfig[order.status]?.bg} ${statusConfig[order.status]?.color}`}>
+              <div style={{ padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span style={{ color: C.text, fontWeight: 700 }}>#{order.orderNumber}</span>
+                  <span style={{
+                    padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                    background: statusConfig[order.status]?.bg,
+                    color: statusConfig[order.status]?.color,
+                  }}>
                     {statusConfig[order.status]?.label}
                   </span>
                 </div>
 
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <IoPerson className="text-green-500 flex-shrink-0" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted }}>
+                    <IoPerson style={{ color: C.accent, flexShrink: 0 }} />
                     <span>{order.customerName}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <IoCall className="text-blue-500 flex-shrink-0" />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted }}>
+                    <IoCall style={{ color: C.blue, flexShrink: 0 }} />
                     <span dir="ltr">{order.customerPhone}</span>
                   </div>
                   {order.deliveryAddress && (
-                    <div className="flex items-start gap-2 text-gray-600">
-                      <IoLocation className="text-red-500 flex-shrink-0 mt-0.5" />
-                      <span className="line-clamp-1">{order.deliveryAddress}</span>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: C.muted }}>
+                      <IoLocation style={{ color: C.red, flexShrink: 0, marginTop: 2 }} />
+                      <span style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                        {order.deliveryAddress}
+                      </span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                  <div className="flex items-center gap-1">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     {order.paymentMethod === 'cash' ? (
-                      <IoCash className="text-green-500" />
+                      <IoCash style={{ color: C.accent }} />
                     ) : (
-                      <IoCard className="text-blue-500" />
+                      <IoCard style={{ color: C.blue }} />
                     )}
-                    <span className="font-bold text-green-600">{order.total?.toLocaleString()} ل.س</span>
+                    <span style={{ color: C.accent, fontWeight: 700 }}>{order.total?.toLocaleString()} ل.س</span>
                   </div>
-                  <span className="text-xs text-gray-400">
+                  <span style={{ color: C.muted, fontSize: 12 }}>
                     {format(new Date(order.createdAt), 'HH:mm', { locale: arSA })}
                   </span>
                 </div>
 
                 {order.assignedDriver && (
-                  <div className="mt-2 pt-2 border-t flex items-center gap-2 text-xs text-gray-500">
-                    <IoCar className="text-purple-500" />
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: C.muted }}>
+                    <IoCar style={{ color: C.purple }} />
                     <span>{order.assignedDriver.name}</span>
                   </div>
                 )}
@@ -304,7 +334,13 @@ const StoreDeliveryDashboard: React.FC = () => {
                       e.stopPropagation();
                       updateOrderStatus(order.id, nextStatus[order.status]);
                     }}
-                    className="mt-3 w-full py-2 bg-green-500 text-white rounded-xl text-sm font-medium hover:bg-green-600 disabled:opacity-60 transition-colors"
+                    style={{
+                      marginTop: 12, width: '100%', padding: '8px 0',
+                      background: C.accent, color: C.bg, border: 'none',
+                      borderRadius: 12, fontSize: 14, fontWeight: 600,
+                      fontFamily: 'Cairo, sans-serif', cursor: 'pointer',
+                      opacity: updatingStatus === order.id ? 0.6 : 1,
+                    }}
                   >
                     {updatingStatus === order.id ? '...' : `→ ${statusConfig[nextStatus[order.status]]?.label}`}
                   </button>
@@ -317,71 +353,82 @@ const StoreDeliveryDashboard: React.FC = () => {
 
       {/* Order Details Modal */}
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            style={{
+              background: C.card, border: `1px solid ${C.border}`, borderRadius: 20,
+              maxWidth: 520, width: '100%', maxHeight: '90vh', overflowY: 'auto'
+            }}
           >
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold">تفاصيل الطلب #{selectedOrder.orderNumber}</h2>
+            <div style={{ padding: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h2 style={{ color: C.text, fontSize: 18, fontWeight: 700 }}>تفاصيل الطلب #{selectedOrder.orderNumber}</h2>
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="p-2 hover:bg-gray-100 rounded-xl"
+                  style={{ padding: 8, background: C.surf, border: 'none', borderRadius: 12, cursor: 'pointer', color: C.muted }}
                 >
                   <IoClose />
                 </button>
               </div>
 
-              <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium mb-4 ${statusConfig[selectedOrder.status]?.bg} ${statusConfig[selectedOrder.status]?.color}`}>
+              <div style={{
+                display: 'inline-flex', padding: '4px 12px', borderRadius: 20, fontSize: 14, fontWeight: 500, marginBottom: 16,
+                background: statusConfig[selectedOrder.status]?.bg,
+                color: statusConfig[selectedOrder.status]?.color,
+              }}>
                 {statusConfig[selectedOrder.status]?.label}
               </div>
 
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <IoPerson className="text-green-500" />
-                  <span className="font-medium">{selectedOrder.customerName}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
+                  <IoPerson style={{ color: C.accent }} />
+                  <span style={{ fontWeight: 500 }}>{selectedOrder.customerName}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <IoCall className="text-blue-500" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
+                  <IoCall style={{ color: C.blue }} />
                   <span dir="ltr">{selectedOrder.customerPhone}</span>
                 </div>
                 {selectedOrder.deliveryAddress && (
-                  <div className="flex items-start gap-2">
-                    <IoLocation className="text-red-500 mt-0.5" />
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: C.text }}>
+                    <IoLocation style={{ color: C.red, marginTop: 2 }} />
                     <span>{selectedOrder.deliveryAddress}</span>
                   </div>
                 )}
               </div>
 
-              <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <h3 className="font-medium mb-2">المنتجات</h3>
+              <div style={{ background: C.surf, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <h3 style={{ color: C.text, fontWeight: 500, marginBottom: 8 }}>المنتجات</h3>
                 {selectedOrder.orderItems?.map(item => (
-                  <div key={item.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <span className="text-sm">{item.product?.name || 'منتج'}</span>
-                    <div className="flex gap-3 text-sm text-gray-600">
+                  <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}` }}>
+                    <span style={{ color: C.text, fontSize: 14 }}>{item.product?.name || 'منتج'}</span>
+                    <div style={{ display: 'flex', gap: 12, fontSize: 14, color: C.muted }}>
                       <span>×{item.quantity}</span>
-                      <span className="font-medium">{(item.price * item.quantity).toLocaleString()} ل.س</span>
+                      <span style={{ color: C.text, fontWeight: 500 }}>{(item.price * item.quantity).toLocaleString()} ل.س</span>
                     </div>
                   </div>
                 ))}
-                <div className="flex justify-between mt-2 pt-2 font-bold">
-                  <span>الإجمالي</span>
-                  <span className="text-green-600">{selectedOrder.total?.toLocaleString()} ل.س</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, paddingTop: 8, fontWeight: 700 }}>
+                  <span style={{ color: C.text }}>الإجمالي</span>
+                  <span style={{ color: C.accent }}>{selectedOrder.total?.toLocaleString()} ل.س</span>
                 </div>
               </div>
 
               {/* Assign Driver */}
               {!selectedOrder.assignedDriver && drivers.length > 0 && selectedOrder.status !== 'delivered' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">تعيين سائق</label>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: C.muted, marginBottom: 8 }}>تعيين سائق</label>
                   <select
                     onChange={e => {
                       if (e.target.value) assignDriver(selectedOrder.id, e.target.value);
                     }}
                     disabled={assigningDriver}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
+                    style={{
+                      width: '100%', background: C.surf, border: `1px solid ${C.border}`,
+                      borderRadius: 12, padding: '8px 12px', color: C.text,
+                      fontFamily: 'Cairo, sans-serif', fontSize: 14, outline: 'none'
+                    }}
                   >
                     <option value="">اختر سائقاً...</option>
                     {drivers.filter(d => d.isActive).map(d => (
@@ -392,11 +439,11 @@ const StoreDeliveryDashboard: React.FC = () => {
               )}
 
               {selectedOrder.assignedDriver && (
-                <div className="flex items-center gap-2 mb-4 p-3 bg-purple-50 rounded-xl">
-                  <IoCar className="text-purple-500" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: 12, background: 'rgba(167,139,250,0.1)', borderRadius: 12 }}>
+                  <IoCar style={{ color: C.purple }} />
                   <div>
-                    <p className="font-medium text-sm">{selectedOrder.assignedDriver.name}</p>
-                    <p className="text-xs text-gray-500" dir="ltr">{selectedOrder.assignedDriver.phone}</p>
+                    <p style={{ color: C.text, fontWeight: 500, fontSize: 14 }}>{selectedOrder.assignedDriver.name}</p>
+                    <p style={{ color: C.muted, fontSize: 12 }} dir="ltr">{selectedOrder.assignedDriver.phone}</p>
                   </div>
                 </div>
               )}
@@ -405,7 +452,12 @@ const StoreDeliveryDashboard: React.FC = () => {
                 <button
                   disabled={updatingStatus === selectedOrder.id}
                   onClick={() => updateOrderStatus(selectedOrder.id, nextStatus[selectedOrder.status])}
-                  className="w-full py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 disabled:opacity-60 transition-colors"
+                  style={{
+                    width: '100%', padding: '12px 0', background: C.accent, color: C.bg,
+                    border: 'none', borderRadius: 12, fontWeight: 600,
+                    fontFamily: 'Cairo, sans-serif', fontSize: 16, cursor: 'pointer',
+                    opacity: updatingStatus === selectedOrder.id ? 0.6 : 1,
+                  }}
                 >
                   {updatingStatus === selectedOrder.id
                     ? 'جاري التحديث...'

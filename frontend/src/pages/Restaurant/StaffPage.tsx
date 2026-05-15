@@ -7,6 +7,42 @@ import Button from '../../components/common/Button';
 import { IoAdd, IoPencil, IoTrash, IoKey } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  prim:   '#0D4A3A',
+  surf:   '#0F3D31',
+  surfL:  '#164D3E',
+  accent: '#C8E235',
+  acDk:   '#A8C220',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+  red:    '#FF6B6B',
+  blue:   '#60A5FA',
+  yellow: '#F59E0B',
+  purple: '#A78BFA',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 12px',
+  background: C.surf,
+  border: `1px solid ${C.border}`,
+  borderRadius: 8,
+  color: C.text,
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: 13,
+  fontWeight: 500,
+  marginBottom: 4,
+  color: C.muted,
+};
+
 const StaffPage: React.FC = () => {
   const [staff, setStaff] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,12 +80,7 @@ const StaffPage: React.FC = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      phone: '',
-    });
+    setFormData({ name: '', email: '', password: '', phone: '' });
     setSelectedStaff(null);
   };
 
@@ -64,28 +95,26 @@ const StaffPage: React.FC = () => {
     });
   };
 
-  const handleOpenModal = (staff?: User) => {
-    if (staff) {
-      setSelectedStaff(staff);
+  const handleOpenModal = (staffMember?: User) => {
+    if (staffMember) {
+      setSelectedStaff(staffMember);
       setFormData({
-        name: staff.name,
-        email: staff.email,
+        name: staffMember.name,
+        email: staffMember.email,
         password: '',
-        phone: staff.phone || '',
+        phone: staffMember.phone || '',
       });
-      
-      // تحميل الصلاحيات
-      if (staff.permissions) {
-        setPermissions(staff.permissions as any);
+      if (staffMember.permissions) {
+        setPermissions(staffMember.permissions as any);
       }
     }
     setShowModal(true);
   };
 
-  const handleOpenPermissionsModal = (staff: User) => {
-    setSelectedStaff(staff);
-    if (staff.permissions) {
-      setPermissions(staff.permissions as any);
+  const handleOpenPermissionsModal = (staffMember: User) => {
+    setSelectedStaff(staffMember);
+    if (staffMember.permissions) {
+      setPermissions(staffMember.permissions as any);
     } else {
       resetPermissions();
     }
@@ -111,11 +140,8 @@ const StaffPage: React.FC = () => {
 
   const handleUpdatePermissions = async () => {
     if (!selectedStaff) return;
-
     try {
-      await api.put(`/restaurants/staff/${selectedStaff.id}`, {
-        permissions,
-      });
+      await api.put(`/restaurants/staff/${selectedStaff.id}`, { permissions });
       toast.success('تم تحديث الصلاحيات');
       setShowPermissionsModal(false);
       setSelectedStaff(null);
@@ -128,7 +154,6 @@ const StaffPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا الموظف؟')) return;
-
     try {
       await api.delete(`/restaurants/staff/${id}`);
       toast.success('تم حذف الموظف');
@@ -138,110 +163,121 @@ const StaffPage: React.FC = () => {
     }
   };
 
-  const handleToggleActive = async (staff: User) => {
+  const handleToggleActive = async (staffMember: User) => {
     try {
-      await api.put(`/restaurants/staff/${staff.id}`, {
-        isActive: !staff.isActive,
-      });
-      toast.success(`تم ${staff.isActive ? 'تعطيل' : 'تفعيل'} الموظف`);
+      await api.put(`/restaurants/staff/${staffMember.id}`, { isActive: !staffMember.isActive });
+      toast.success(`تم ${staffMember.isActive ? 'تعطيل' : 'تفعيل'} الموظف`);
       await fetchStaff();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'حدث خطأ');
     }
   };
 
+  const PermCheckbox = ({
+    label,
+    checked,
+    onChange,
+  }: { label: string; checked: boolean; onChange: (v: boolean) => void }) => (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ accentColor: C.accent, width: 16, height: 16 }}
+      />
+      <span style={{ color: C.text, fontSize: 14 }}>{label}</span>
+    </label>
+  );
+
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">إدارة الموظفين</h1>
-        <Button
-          variant="primary"
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>إدارة الموظفين</h1>
+        <button
           onClick={() => handleOpenModal()}
+          style={{ background: C.accent, color: C.bg, padding: '8px 20px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none', fontSize: 14 }}
         >
-          <IoAdd className="inline ml-1" />
+          <IoAdd size={16} />
           إضافة موظف
-        </Button>
+        </button>
       </div>
 
-      {/* قائمة الموظفين */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                الاسم
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                البريد الإلكتروني
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                الهاتف
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                الحالة
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                آخر دخول
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                الإجراءات
-              </th>
+      {/* Staff Table */}
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: C.surf }}>
+              {['الاسم', 'البريد الإلكتروني', 'الهاتف', 'الحالة', 'آخر دخول', 'الإجراءات'].map(h => (
+                <th key={h} style={{ padding: '12px 20px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: C.muted, textTransform: 'uppercase', borderBottom: `1px solid ${C.border}` }}>
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody>
             {staff.map(member => (
-              <tr key={member.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
+              <tr
+                key={member.id}
+                style={{ borderTop: `1px solid ${C.border}` }}
+                onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(200,226,53,0.04)'}
+                onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
+              >
+                <td style={{ padding: '14px 20px', whiteSpace: 'nowrap', color: C.text, fontWeight: 500 }}>
                   {member.name}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td style={{ padding: '14px 20px', whiteSpace: 'nowrap', color: C.muted, fontSize: 13 }}>
                   {member.email}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td style={{ padding: '14px 20px', whiteSpace: 'nowrap', color: C.muted, fontSize: 13 }}>
                   {member.phone || '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
                   <button
                     onClick={() => handleToggleActive(member)}
-                    className={`px-2 py-1 text-xs rounded-full ${
-                      member.isActive
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
+                    style={{
+                      padding: '3px 12px',
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: member.isActive ? 'rgba(200,226,53,0.15)' : 'rgba(255,107,107,0.15)',
+                      color: member.isActive ? C.accent : C.red,
+                    }}
                   >
                     {member.isActive ? 'نشط' : 'غير نشط'}
                   </button>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td style={{ padding: '14px 20px', whiteSpace: 'nowrap', fontSize: 13, color: C.muted }}>
                   {member.lastLogin
                     ? new Date(member.lastLogin).toLocaleDateString('ar-SA')
-                    : '-'
-                  }
+                    : '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex space-x-2">
+                <td style={{ padding: '14px 20px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', gap: 10 }}>
                     <button
                       onClick={() => handleOpenPermissionsModal(member)}
-                      className="text-purple-500 hover:text-purple-700"
+                      style={{ background: 'none', border: 'none', color: C.purple, cursor: 'pointer', padding: 4 }}
                       title="الصلاحيات"
                     >
-                      <IoKey size={18} />
+                      <IoKey size={17} />
                     </button>
                     <button
                       onClick={() => handleOpenModal(member)}
-                      className="text-blue-500 hover:text-blue-700"
+                      style={{ background: 'none', border: 'none', color: C.blue, cursor: 'pointer', padding: 4 }}
                       title="تعديل"
                     >
-                      <IoPencil size={18} />
+                      <IoPencil size={17} />
                     </button>
                     <button
                       onClick={() => handleDelete(member.id)}
-                      className="text-red-500 hover:text-red-700"
+                      style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', padding: 4 }}
                       title="حذف"
                     >
-                      <IoTrash size={18} />
+                      <IoTrash size={17} />
                     </button>
                   </div>
                 </td>
@@ -251,157 +287,127 @@ const StaffPage: React.FC = () => {
         </table>
       </div>
 
-      {/* مودال إضافة/تعديل موظف */}
+      {/* Add/Edit Staff Modal */}
       <Modal
         isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          resetForm();
-        }}
+        onClose={() => { setShowModal(false); resetForm(); }}
         title={selectedStaff ? 'تعديل بيانات موظف' : 'إضافة موظف جديد'}
       >
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium mb-1">الاسم</label>
+            <label style={labelStyle}>الاسم</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full p-2 border rounded"
+              style={inputStyle}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">البريد الإلكتروني</label>
+            <label style={labelStyle}>البريد الإلكتروني</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full p-2 border rounded"
+              style={inputStyle}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label style={labelStyle}>
               {selectedStaff ? 'كلمة المرور (اتركها فارغة لعدم التغيير)' : 'كلمة المرور'}
             </label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full p-2 border rounded"
+              style={inputStyle}
               required={!selectedStaff}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">رقم الهاتف</label>
+            <label style={labelStyle}>رقم الهاتف</label>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full p-2 border rounded"
+              style={inputStyle}
             />
           </div>
-          <Button
-            variant="primary"
+          <button
             onClick={handleSave}
-            fullWidth
+            style={{ background: C.accent, color: C.bg, padding: '10px 0', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 15 }}
           >
             حفظ
-          </Button>
+          </button>
         </div>
       </Modal>
 
-      {/* مودال الصلاحيات */}
+      {/* Permissions Modal */}
       <Modal
         isOpen={showPermissionsModal}
-        onClose={() => {
-          setShowPermissionsModal(false);
-          setSelectedStaff(null);
-          resetPermissions();
-        }}
+        onClose={() => { setShowPermissionsModal(false); setSelectedStaff(null); resetPermissions(); }}
         title={`صلاحيات ${selectedStaff?.name}`}
       >
-        <div className="space-y-4">
-          <div className="border-b pb-4">
-            <h3 className="font-semibold mb-2">الطلبات</h3>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={permissions.viewOrders}
-                  onChange={(e) => setPermissions({ ...permissions, viewOrders: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>عرض الطلبات</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={permissions.updateOrderStatus}
-                  onChange={(e) => setPermissions({ ...permissions, updateOrderStatus: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>تحديث حالة الطلب</span>
-              </label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Orders */}
+          <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 16 }}>
+            <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 12, marginTop: 0, fontSize: 15 }}>الطلبات</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <PermCheckbox
+                label="عرض الطلبات"
+                checked={permissions.viewOrders}
+                onChange={(v) => setPermissions({ ...permissions, viewOrders: v })}
+              />
+              <PermCheckbox
+                label="تحديث حالة الطلب"
+                checked={permissions.updateOrderStatus}
+                onChange={(v) => setPermissions({ ...permissions, updateOrderStatus: v })}
+              />
             </div>
           </div>
 
-          <div className="border-b pb-4">
-            <h3 className="font-semibold mb-2">القائمة</h3>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={permissions.viewMenu}
-                  onChange={(e) => setPermissions({ ...permissions, viewMenu: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>عرض القائمة</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={permissions.updateMenu}
-                  onChange={(e) => setPermissions({ ...permissions, updateMenu: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>تعديل القائمة</span>
-              </label>
+          {/* Menu */}
+          <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 16 }}>
+            <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 12, marginTop: 0, fontSize: 15 }}>القائمة</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <PermCheckbox
+                label="عرض القائمة"
+                checked={permissions.viewMenu}
+                onChange={(v) => setPermissions({ ...permissions, viewMenu: v })}
+              />
+              <PermCheckbox
+                label="تعديل القائمة"
+                checked={permissions.updateMenu}
+                onChange={(v) => setPermissions({ ...permissions, updateMenu: v })}
+              />
             </div>
           </div>
 
-          <div className="border-b pb-4">
-            <h3 className="font-semibold mb-2">الطاولات</h3>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={permissions.viewTables}
-                  onChange={(e) => setPermissions({ ...permissions, viewTables: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>عرض الطاولات</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={permissions.updateTables}
-                  onChange={(e) => setPermissions({ ...permissions, updateTables: e.target.checked })}
-                  className="ml-2"
-                />
-                <span>تعديل الطاولات</span>
-              </label>
+          {/* Tables */}
+          <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: 16 }}>
+            <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 12, marginTop: 0, fontSize: 15 }}>الطاولات</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <PermCheckbox
+                label="عرض الطاولات"
+                checked={permissions.viewTables}
+                onChange={(v) => setPermissions({ ...permissions, viewTables: v })}
+              />
+              <PermCheckbox
+                label="تعديل الطاولات"
+                checked={permissions.updateTables}
+                onChange={(v) => setPermissions({ ...permissions, updateTables: v })}
+              />
             </div>
           </div>
 
-          <Button
-            variant="primary"
+          <button
             onClick={handleUpdatePermissions}
-            fullWidth
+            style={{ background: C.accent, color: C.bg, padding: '10px 0', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 15 }}
           >
             حفظ الصلاحيات
-          </Button>
+          </button>
         </div>
       </Modal>
     </div>

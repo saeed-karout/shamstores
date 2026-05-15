@@ -39,20 +39,26 @@ import {
 import MarketingSectionList from '../../components/marketing/MarketingSectionList';
 import MarketingSectionForm from '../../components/marketing/MarketingSectionForm';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
+
 const sectionTypeNames: Record<MarketingSectionType, { title: string; icon: JSX.Element; description: string }> = {
-  announcement: { 
-    title: 'الإعلانات', 
-    icon: <IoMegaphone className="w-5 h-5" />,
+  announcement: {
+    title: 'الإعلانات',
+    icon: <IoMegaphone style={{ width: 20, height: 20 }} />,
     description: 'إعلانات عامة من المنصة - يضيفها المدير فقط'
   },
-  banner: { 
-    title: 'البانرات', 
-    icon: <IoImage className="w-5 h-5" />,
+  banner: {
+    title: 'البانرات',
+    icon: <IoImage style={{ width: 20, height: 20 }} />,
     description: 'بانرات ترويجية للمتجر/المطعم'
   },
-  offer: { 
-    title: 'العروض', 
-    icon: <IoPricetag className="w-5 h-5" />,
+  offer: {
+    title: 'العروض',
+    icon: <IoPricetag style={{ width: 20, height: 20 }} />,
     description: 'عروض خاصة وخصومات'
   }
 };
@@ -81,7 +87,7 @@ const AdminBusinessMarketing: React.FC = () => {
       setLoading(true);
       const data = await marketingService.getSettings(type!, id!);
       console.log('Fetched marketing data:', data);
-      
+
       setSettings(data);
       if (data?.sectionOrder && Array.isArray(data.sectionOrder) && data.sectionOrder.length > 0) {
         setSectionOrder(data.sectionOrder);
@@ -188,10 +194,14 @@ const AdminBusinessMarketing: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري تحميل بيانات التسويق...</p>
+      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: 64, height: 64, border: `4px solid ${C.accent}`,
+            borderTopColor: 'transparent', borderRadius: '50%',
+            animation: 'spin 1s linear infinite', margin: '0 auto 16px'
+          }} />
+          <p style={{ color: C.muted }}>جاري تحميل بيانات التسويق...</p>
         </div>
       </div>
     );
@@ -200,35 +210,45 @@ const AdminBusinessMarketing: React.FC = () => {
   const sections = settings?.sections || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>
                 إدارة التسويق | {type === 'restaurant' ? 'مطعم' : 'متجر'} #{id?.slice(0, 8)}
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p style={{ color: C.muted, marginTop: 4, fontSize: 14 }}>
                 أضف بانرات وعروض للترويج لنشاطك التجاري
               </p>
             </div>
             <button
               onClick={() => navigate(`/admin/${type}s/${id}`)}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 16px', color: C.muted,
+                background: C.surf, border: '1px solid ' + C.border,
+                borderRadius: 10, cursor: 'pointer', fontFamily: 'Cairo, sans-serif'
+              }}
             >
-              <IoArrowBack className="w-4 h-4" />
+              <IoArrowBack style={{ width: 16, height: 16 }} />
               العودة للتفاصيل
             </button>
           </div>
         </div>
 
         {/* Admin Info Banner */}
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
-          <IoMegaphone className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">📢 الإعلانات - حصرية للمدير العام</p>
-            <p className="text-blue-700">
+        <div style={{
+          marginBottom: 24, padding: 16,
+          background: 'rgba(96,165,250,0.08)',
+          border: '1px solid rgba(96,165,250,0.2)',
+          borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 12
+        }}>
+          <IoMegaphone style={{ width: 20, height: 20, color: C.blue, flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: 13, color: C.blue }}>
+            <p style={{ fontWeight: 700, marginBottom: 4, marginTop: 0 }}>📢 الإعلانات - حصرية للمدير العام</p>
+            <p style={{ color: C.muted, margin: 0 }}>
               الإعلانات يتم إضافتها بواسطة المدير العام فقط وتظهر لجميع العملاء.
               البانرات والعروض يمكنك إضافتها بنفسك لترويج متجرك/مطعمك.
             </p>
@@ -236,11 +256,11 @@ const AdminBusinessMarketing: React.FC = () => {
         </div>
 
         {/* Section Order Drag and Drop */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
-            <IoSwapVertical className="w-5 h-5 text-gray-500" />
-            <h2 className="text-lg font-bold text-gray-800">ترتيب الأقسام</h2>
-            <p className="text-sm text-gray-500">اسحب الأقسام لإعادة ترتيب ظهورها للعملاء</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24, marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid ' + C.border }}>
+            <IoSwapVertical style={{ width: 20, height: 20, color: C.muted }} />
+            <h2 style={{ color: C.text, fontWeight: 700, fontSize: 16, margin: 0 }}>ترتيب الأقسام</h2>
+            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>اسحب الأقسام لإعادة ترتيب ظهورها للعملاء</p>
           </div>
 
           <DragDropContext onDragEnd={onDragEnd}>
@@ -249,7 +269,7 @@ const AdminBusinessMarketing: React.FC = () => {
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
-                  className="flex flex-wrap gap-3"
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}
                 >
                   {sectionOrder.map((sectionType, index) => {
                     const info = sectionTypeNames[sectionType];
@@ -261,18 +281,26 @@ const AdminBusinessMarketing: React.FC = () => {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 cursor-move transition-all ${
-                              snapshot.isDragging
-                                ? 'bg-blue-50 border-blue-400 shadow-lg'
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 16px', borderRadius: 10, cursor: 'move',
+                              border: `2px solid ${snapshot.isDragging ? C.accent : (isAdminOnly ? C.purple : C.border)}`,
+                              background: snapshot.isDragging
+                                ? 'rgba(200,226,53,0.08)'
                                 : isAdminOnly
-                                ? 'bg-purple-50 border-purple-200'
-                                : 'bg-gray-50 border-gray-200 hover:border-blue-300'
-                            }`}
+                                ? 'rgba(167,139,250,0.08)'
+                                : C.surf,
+                              color: C.text,
+                              ...provided.draggableProps.style,
+                            }}
                           >
                             {info.icon}
-                            <span className="font-medium">{info.title}</span>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>{info.title}</span>
                             {isAdminOnly && (
-                              <span className="text-xs bg-purple-200 text-purple-700 px-1.5 py-0.5 rounded-full">
+                              <span style={{
+                                fontSize: 11, background: 'rgba(167,139,250,0.2)',
+                                color: C.purple, padding: '2px 8px', borderRadius: 999
+                              }}>
                                 للمدير فقط
                               </span>
                             )}
@@ -289,12 +317,12 @@ const AdminBusinessMarketing: React.FC = () => {
         </div>
 
         {/* Marketing Sections Lists */}
-        <div className="space-y-8">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
           {sectionOrder.map((sectionType) => {
             const info = sectionTypeNames[sectionType];
             const filteredSections = sections.filter(s => s.sectionType === sectionType);
             const isAdminOnly = ADMIN_ONLY_SECTIONS.includes(sectionType);
-            
+
             return (
               <div key={sectionType}>
                 <MarketingSectionList

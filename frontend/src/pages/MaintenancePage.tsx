@@ -1,50 +1,50 @@
-// pages/MaintenancePage.tsx
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { IoWarning, IoRefresh, IoHome } from 'react-icons/io5';
 
+const C = {
+  bg:     '#082E24',
+  card:   '#112E23',
+  surf:   '#0F3D31',
+  accent: '#C8E235',
+  text:   '#E8F5E9',
+  muted:  '#9DC4AC',
+  border: 'rgba(200,226,53,0.15)',
+};
+
 const MaintenancePage: React.FC = () => {
-  const handleRefresh = () => {
-    window.location.reload();
-  };
+  const handleRefresh = () => { window.location.reload(); };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
-      <div className="max-w-md w-full text-center">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl">
-          <div className="w-24 h-24 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <IoWarning className="text-yellow-500 text-5xl" />
+    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ width: '100%', maxWidth: 440, textAlign: 'center' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 24, padding: 40, boxShadow: '0 12px 48px rgba(0,0,0,0.4)' }}>
+          <div style={{ width: 88, height: 88, background: 'rgba(200,226,53,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <IoWarning size={40} style={{ color: C.accent }} />
           </div>
-          
-          <h1 className="text-3xl font-bold text-white mb-2">🔧 وضع الصيانة</h1>
-          <p className="text-gray-300 mb-6">
+
+          <h1 style={{ color: C.text, fontSize: 26, fontWeight: 800, marginBottom: 12 }}>وضع الصيانة</h1>
+          <p style={{ color: C.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 28 }}>
             المنصة تحت الصيانة حالياً. نعمل على تحسين الخدمة لتقديم أفضل تجربة.
-            <br />
-            يرجى المحاولة لاحقاً.
+            <br />يرجى المحاولة لاحقاً.
           </p>
-          
-          <div className="space-y-3">
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
               onClick={handleRefresh}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl transition-all"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', background: C.accent, color: C.bg, border: 'none', borderRadius: 12, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
             >
-              <IoRefresh size={20} />
-              تحديث الصفحة
+              <IoRefresh size={18} /> تحديث الصفحة
             </button>
-            
             <Link
               to="/"
-              className="w-full flex items-center justify-center gap-2 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-all"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', background: C.surf, color: C.text, border: `1px solid ${C.border}`, borderRadius: 12, fontFamily: 'Cairo, sans-serif', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}
             >
-              <IoHome size={20} />
-              العودة للرئيسية
+              <IoHome size={18} /> العودة للرئيسية
             </Link>
           </div>
-          
-          <p className="text-gray-400 text-sm mt-6">
-            توقع عودة الخدمة قريباً. شكراً لتفهمك.
-          </p>
+
+          <p style={{ color: C.muted, fontSize: 12, marginTop: 24 }}>توقع عودة الخدمة قريباً. شكراً لتفهمك.</p>
         </div>
       </div>
     </div>
