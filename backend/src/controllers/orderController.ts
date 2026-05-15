@@ -126,7 +126,7 @@ const findBestDriver = async (
         const activeOrdersCount = await Order.count({
           where: {
             assignedDriverId: driver.id,
-            status: { [Op.in]: ['pending', 'processing', 'shipped', 'ready', 'delivering'] }
+            status: { [Op.in]: ['pending', 'preparing', 'ready', 'delivering'] }
           }
         });
         return { driver, activeOrdersCount };
@@ -453,7 +453,7 @@ export const createOrder = async (
       
       if (bestDriver) {
         orderData.assignedDriverId = bestDriver.id;
-        orderData.status = 'processing';
+        orderData.status = 'preparing';
         orderData.estimatedDeliveryTime = new Date(Date.now() + 60 * 60000);
         console.log(`✅ Auto-assigned driver: ${bestDriver.name} (${bestDriver.id})`);
       } else {

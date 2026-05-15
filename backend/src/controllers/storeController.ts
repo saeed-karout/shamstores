@@ -1434,7 +1434,7 @@ export const updateStoreOrderStatus = async (
     }
     
     // التحقق من صحة الحالة
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'preparing', 'ready', 'delivering', 'delivered', 'served', 'cancelled'];
     if (!validStatuses.includes(status)) {
       res.status(400).json({ success: false, error: 'حالة غير صالحة' });
       return;
