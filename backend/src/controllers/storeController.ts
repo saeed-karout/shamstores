@@ -1415,6 +1415,11 @@ export const updateStoreOrderStatus = async (
     const storeId = await getStoreId(req);
     const { id } = req.params;
     const { status } = req.body;
+    const legacyStatusMap: Record<string, string> = {
+      processing: 'preparing',
+      shipped: 'ready'
+    };
+    const normalizedStatus = legacyStatusMap[status] || status;
     
     if (!storeId) {
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
@@ -1435,12 +1440,12 @@ export const updateStoreOrderStatus = async (
     
     // التحقق من صحة الحالة
     const validStatuses = ['pending', 'preparing', 'ready', 'delivering', 'delivered', 'served', 'cancelled'];
-    if (!validStatuses.includes(status)) {
+    if (!validStatuses.includes(normalizedStatus)) {
       res.status(400).json({ success: false, error: 'حالة غير صالحة' });
       return;
     }
     
-    await order.update({ status });
+    await order.update({ status: normalizedStatus });
     
     res.json({
       success: true,
