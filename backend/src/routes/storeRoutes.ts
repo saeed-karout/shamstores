@@ -42,6 +42,7 @@ import {
   getDnsSettings,
   verifyCustomDomain,
   removeCustomDomain,
+  updateSubdomain,
   // ✅ دوال الموظفين
   getStoreStaff,
   getStoreStaffDetails,
@@ -134,10 +135,11 @@ router.put('/settings/social', updateSocialSettings);
 router.put('/settings/payment', updatePaymentSettings);
 router.put('/settings/notifications', updateNotificationSettings);
 
-// مسارات الدومين المخصص
+// مسارات الدومين المخصص والـ subdomain
 router.get('/settings/domain/dns', getDnsSettings);
 router.post('/settings/domain/verify', verifyCustomDomain);
 router.delete('/settings/domain', removeCustomDomain);
+router.put('/settings/subdomain', updateSubdomain);
 
 // دعم المسارات التي تحتوي على storeId في URL (للتطوير أو السوبر أدمن)
 router.get('/settings/:storeId', getStoreSettings);
@@ -150,5 +152,6 @@ router.put('/settings/:storeId/notifications', updateNotificationSettings);
 router.get('/settings/:storeId/domain/dns', getDnsSettings);
 router.post('/settings/:storeId/domain/verify', verifyCustomDomain);
 router.delete('/settings/:storeId/domain', removeCustomDomain);
+router.put('/settings/:storeId/subdomain', updateSubdomain);
 
 export default router;

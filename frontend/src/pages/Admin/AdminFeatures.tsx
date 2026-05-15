@@ -5,8 +5,8 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
-import { 
-  IoAdd, IoPencil, IoTrash, IoSearch, IoRefresh, 
+import {
+  IoAdd, IoPencil, IoTrash, IoSearch, IoRefresh,
   IoCheckmark, IoClose, IoWarning, IoInformation,
   IoRestaurant, IoStorefront, IoGlobe, IoCard,
   IoMegaphone, IoStatsChart, IoCar, IoCloud,
@@ -14,6 +14,12 @@ import {
   IoCart, IoCube, IoPricetag, IoRocket
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
 
 interface Feature {
   id: string;
@@ -107,9 +113,9 @@ const AdminFeatures: React.FC = () => {
       toast.error('لا يمكن حذف ميزة أساسية');
       return;
     }
-    
+
     if (!window.confirm(`هل أنت متأكد من حذف ميزة "${feature.name}"؟`)) return;
-    
+
     try {
       await api.delete(`/features/${feature.code}`);
       toast.success('تم حذف الميزة بنجاح');
@@ -162,57 +168,54 @@ const AdminFeatures: React.FC = () => {
 
   const getFilteredFeatures = () => {
     let filtered = [...features];
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(f => 
+      filtered = filtered.filter(f =>
         f.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         f.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (f.nameEn && f.nameEn.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-    
+
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(f => f.category === selectedCategory);
     }
-    
+
     if (selectedGroup !== 'all') {
       filtered = filtered.filter(f => f.group === selectedGroup);
     }
-    
+
     return filtered;
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'restaurant': return <IoRestaurant className="text-blue-500" />;
-      case 'store': return <IoStorefront className="text-green-500" />;
-      default: return <IoGlobe className="text-purple-500" />;
+      case 'restaurant': return <IoRestaurant style={{ color: C.blue }} />;
+      case 'store': return <IoStorefront style={{ color: C.accent }} />;
+      default: return <IoGlobe style={{ color: C.purple }} />;
     }
   };
 
   const getGroupBadge = (group: string) => {
-    const styles: Record<string, string> = {
-      basic: 'bg-gray-100 text-gray-700',
-      marketing: 'bg-pink-100 text-pink-700',
-      advanced: 'bg-purple-100 text-purple-700',
-      payment: 'bg-green-100 text-green-700',
-      delivery: 'bg-orange-100 text-orange-700',
-      analytics: 'bg-blue-100 text-blue-700',
-      integration: 'bg-indigo-100 text-indigo-700'
+    const colors: Record<string, { bg: string; color: string }> = {
+      basic:       { bg: 'rgba(156,163,175,0.12)', color: '#9CA3AF' },
+      marketing:   { bg: 'rgba(244,114,182,0.12)', color: '#F472B6' },
+      advanced:    { bg: 'rgba(167,139,250,0.12)', color: '#A78BFA' },
+      payment:     { bg: 'rgba(200,226,53,0.12)',  color: '#C8E235' },
+      delivery:    { bg: 'rgba(251,146,60,0.12)',  color: '#FB923C' },
+      analytics:   { bg: 'rgba(96,165,250,0.12)',  color: '#60A5FA' },
+      integration: { bg: 'rgba(99,102,241,0.12)',  color: '#6366F1' },
     };
-    
+
     const names: Record<string, string> = {
-      basic: 'أساسية',
-      marketing: 'تسويق',
-      advanced: 'متقدمة',
-      payment: 'دفع',
-      delivery: 'توصيل',
-      analytics: 'تحليلات',
-      integration: 'تكامل'
+      basic: 'أساسية', marketing: 'تسويق', advanced: 'متقدمة',
+      payment: 'دفع', delivery: 'توصيل', analytics: 'تحليلات', integration: 'تكامل'
     };
-    
+
+    const style = colors[group] || { bg: 'rgba(156,163,175,0.12)', color: '#9CA3AF' };
+
     return (
-      <span className={`px-2 py-0.5 text-xs rounded-full ${styles[group] || 'bg-gray-100'}`}>
+      <span style={{ padding: '2px 10px', fontSize: 12, borderRadius: 999, background: style.bg, color: style.color }}>
         {names[group] || group}
       </span>
     );
@@ -222,37 +225,47 @@ const AdminFeatures: React.FC = () => {
 
   const filteredFeatures = getFilteredFeatures();
 
+  const inputStyle: React.CSSProperties = {
+    padding: '8px 12px',
+    background: C.surf,
+    border: '1px solid ' + C.border,
+    borderRadius: 10,
+    color: C.text,
+    fontFamily: 'Cairo, sans-serif',
+    outline: 'none',
+  };
+
   return (
-    <div className="p-6" dir="rtl">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
-          <h1 className="text-2xl font-bold">⚙️ إدارة ميزات المنصة</h1>
-          <p className="text-sm text-gray-500 mt-1">إنشاء وتعديل الميزات المتاحة للمطاعم والمتاجر</p>
+          <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>⚙️ إدارة ميزات المنصة</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إنشاء وتعديل الميزات المتاحة للمطاعم والمتاجر</p>
         </div>
         <Button variant="primary" onClick={() => handleOpenModal()}>
-          <IoAdd className="inline ml-1" />
+          <IoAdd style={{ display: 'inline', marginLeft: 4 }} />
           إضافة ميزة جديدة
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <IoSearch className="absolute right-3 top-3 text-gray-400" />
+      <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
+            <IoSearch style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
             <input
               type="text"
               placeholder="بحث عن ميزة..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pr-10 p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+              style={{ ...inputStyle, width: '100%', paddingRight: 36, boxSizing: 'border-box' }}
             />
           </div>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+            style={inputStyle}
           >
             <option value="all">جميع الفئات</option>
             <option value="restaurant">مطاعم</option>
@@ -262,7 +275,7 @@ const AdminFeatures: React.FC = () => {
           <select
             value={selectedGroup}
             onChange={(e) => setSelectedGroup(e.target.value)}
-            className="p-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+            style={inputStyle}
           >
             <option value="all">جميع المجموعات</option>
             <option value="basic">أساسية</option>
@@ -274,121 +287,124 @@ const AdminFeatures: React.FC = () => {
             <option value="integration">تكامل</option>
           </select>
           <Button variant="outline" onClick={fetchFeatures}>
-            <IoRefresh className="inline" />
+            <IoRefresh style={{ display: 'inline' }} />
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">إجمالي الميزات</p>
-          <p className="text-2xl font-bold text-purple-600">{features.length}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>إجمالي الميزات</p>
+          <p style={{ color: C.purple, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{features.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">ميزات نشطة</p>
-          <p className="text-2xl font-bold text-green-600">{features.filter(f => f.isActive).length}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>ميزات نشطة</p>
+          <p style={{ color: C.accent, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{features.filter(f => f.isActive).length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">ميزات أساسية</p>
-          <p className="text-2xl font-bold text-blue-600">{features.filter(f => f.isCore).length}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>ميزات أساسية</p>
+          <p style={{ color: C.blue, fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{features.filter(f => f.isCore).length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-4">
-          <p className="text-gray-500 text-sm">ميزات مدفوعة</p>
-          <p className="text-2xl font-bold text-orange-600">{features.filter(f => f.price > 0).length}</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
+          <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>ميزات مدفوعة</p>
+          <p style={{ color: '#FB923C', fontSize: 26, fontWeight: 700, margin: '4px 0 0' }}>{features.filter(f => f.price > 0).length}</p>
         </div>
       </div>
 
       {/* Features Table */}
       {filteredFeatures.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <IoInformation className="text-gray-300 text-6xl mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-700 mb-2">لا توجد ميزات</h3>
-          <p className="text-gray-500">قم بإضافة ميزة جديدة</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
+          <IoInformation style={{ color: C.muted, fontSize: 48, marginBottom: 16 }} />
+          <h3 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 8 }}>لا توجد ميزات</h3>
+          <p style={{ color: C.muted }}>قم بإضافة ميزة جديدة</p>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الكود</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الاسم</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الفئة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">المجموعة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">السعر</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">أساسية</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: C.surf }}>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الكود</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الاسم</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الفئة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>المجموعة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>السعر</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الحالة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>أساسية</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الإجراءات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {filteredFeatures.map((feature) => (
-                  <tr key={feature.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4">
-                      <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                  <tr
+                    key={feature.id}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    style={{ borderBottom: '1px solid ' + C.border }}
+                  >
+                    <td style={{ padding: '12px 16px' }}>
+                      <code style={{ fontFamily: 'monospace', color: C.accent, background: C.bg, padding: '2px 8px', borderRadius: 6, fontSize: 12 }}>
                         {feature.code}
                       </code>
                     </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium text-gray-800">{feature.name}</p>
-                        {feature.nameEn && (
-                          <p className="text-xs text-gray-500">{feature.nameEn}</p>
-                        )}
-                      </div>
+                    <td style={{ padding: '12px 16px' }}>
+                      <p style={{ color: C.text, fontWeight: 600, margin: 0 }}>{feature.name}</p>
+                      {feature.nameEn && (
+                        <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>{feature.nameEn}</p>
+                      )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1">
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         {getCategoryIcon(feature.category)}
-                        <span className="text-sm">
-                          {feature.category === 'restaurant' ? 'مطعم' : 
+                        <span style={{ color: C.text, fontSize: 13 }}>
+                          {feature.category === 'restaurant' ? 'مطعم' :
                            feature.category === 'store' ? 'متجر' : 'مشترك'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {getGroupBadge(feature.group)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {feature.price > 0 ? (
                         <div>
-                          <span className="font-bold text-green-600">{feature.price} ر.س</span>
+                          <span style={{ color: C.accent, fontWeight: 700 }}>{feature.price} ر.س</span>
                           {feature.isOneTime && (
-                            <p className="text-xs text-gray-500">لمرة واحدة</p>
+                            <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>لمرة واحدة</p>
                           )}
                         </div>
                       ) : (
-                        <span className="text-green-600">مجانية</span>
+                        <span style={{ color: C.accent }}>مجانية</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {feature.isActive ? (
-                        <span className="flex items-center gap-1 text-green-600">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.accent }}>
                           <IoCheckmark /> مفعلة
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-red-600">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.red }}>
                           <IoClose /> معطلة
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td style={{ padding: '12px 16px' }}>
                       {feature.isCore ? (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                        <span style={{ padding: '2px 10px', background: 'rgba(96,165,250,0.12)', color: C.blue, borderRadius: 999, fontSize: 12 }}>
                           أساسية
                         </span>
                       ) : (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-500 rounded-full text-xs">
+                        <span style={{ padding: '2px 10px', background: 'rgba(156,163,175,0.12)', color: C.muted, borderRadius: 999, fontSize: 12 }}>
                           إضافية
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
                         <button
                           onClick={() => handleOpenModal(feature)}
-                          className="text-blue-500 hover:text-blue-700 transition"
+                          style={{ color: C.blue, background: 'none', border: 'none', cursor: 'pointer' }}
                           title="تعديل"
                         >
                           <IoPencil size={18} />
@@ -396,7 +412,7 @@ const AdminFeatures: React.FC = () => {
                         {!feature.isCore && (
                           <button
                             onClick={() => handleDelete(feature)}
-                            className="text-red-500 hover:text-red-700 transition"
+                            style={{ color: C.red, background: 'none', border: 'none', cursor: 'pointer' }}
                             title="حذف"
                           >
                             <IoTrash size={18} />
@@ -422,49 +438,49 @@ const AdminFeatures: React.FC = () => {
         title={editingFeature ? '✏️ تعديل ميزة' : '➕ إضافة ميزة جديدة'}
         size="lg"
       >
-        <div className="space-y-4 max-h-96 overflow-y-auto p-2">
-          <div className="grid grid-cols-2 gap-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 384, overflowY: 'auto', padding: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">الكود (Code) *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>الكود (Code) *</label>
               <input
                 type="text"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toLowerCase().replace(/[^a-z_]/g, '_') })}
-                className="w-full p-2 border rounded-lg font-mono"
+                style={{ ...inputStyle, width: '100%', fontFamily: 'monospace', boxSizing: 'border-box' }}
                 placeholder="whatsapp_button"
                 disabled={!!editingFeature}
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">يستخدم للتحقق في الكود</p>
+              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>يستخدم للتحقق في الكود</p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">الاسم (عربي) *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>الاسم (عربي) *</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">الاسم (إنجليزي)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>الاسم (إنجليزي)</label>
               <input
                 type="text"
                 value={formData.nameEn}
                 onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">الفئة</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>الفئة</label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
               >
                 <option value="restaurant">مطعم</option>
                 <option value="store">متجر</option>
@@ -473,13 +489,13 @@ const AdminFeatures: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <label className="block text-sm font-medium mb-1">المجموعة</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>المجموعة</label>
               <select
                 value={formData.group}
                 onChange={(e) => setFormData({ ...formData, group: e.target.value as any })}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
               >
                 <option value="basic">أساسية</option>
                 <option value="marketing">تسويق</option>
@@ -491,65 +507,65 @@ const AdminFeatures: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">السعر (ر.س)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>السعر (ر.س)</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full p-2 border rounded-lg"
+                style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }}
                 placeholder="0.00"
               />
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
+          <div style={{ display: 'flex', gap: 20 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: C.text }}>
               <input
                 type="checkbox"
                 checked={formData.isCore}
                 onChange={(e) => setFormData({ ...formData, isCore: e.target.checked })}
-                className="w-4 h-4"
+                style={{ width: 16, height: 16 }}
               />
-              <span>ميزة أساسية</span>
+              ميزة أساسية
             </label>
-            <label className="flex items-center gap-2">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: C.text }}>
               <input
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-4 h-4"
+                style={{ width: 16, height: 16 }}
               />
-              <span>مفعلة</span>
+              مفعلة
             </label>
-            <label className="flex items-center gap-2">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: C.text }}>
               <input
                 type="checkbox"
                 checked={formData.isOneTime}
                 onChange={(e) => setFormData({ ...formData, isOneTime: e.target.checked })}
-                className="w-4 h-4"
+                style={{ width: 16, height: 16 }}
               />
-              <span>دفع لمرة واحدة</span>
+              دفع لمرة واحدة
             </label>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (عربي)</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>الوصف (عربي)</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full p-2 border rounded-lg"
+              style={{ ...inputStyle, width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
               rows={2}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">الوصف (إنجليزي)</label>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>الوصف (إنجليزي)</label>
             <textarea
               value={formData.descriptionEn}
               onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
-              className="w-full p-2 border rounded-lg"
+              style={{ ...inputStyle, width: '100%', resize: 'vertical', boxSizing: 'border-box' }}
               rows={2}
             />
           </div>

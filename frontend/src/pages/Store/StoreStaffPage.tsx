@@ -8,6 +8,12 @@ import Button from '../../components/common/Button';
 import { IoAdd, IoPencil, IoTrash, IoKey, IoStorefront } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 
+const C = {
+  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
+  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+};
+
 interface StaffMember {
   id: string;
   name: string;
@@ -64,12 +70,7 @@ const StoreStaffPage: React.FC = () => {
   };
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      phone: '',
-    });
+    setFormData({ name: '', email: '', password: '', phone: '' });
     setSelectedStaff(null);
   };
 
@@ -87,16 +88,8 @@ const StoreStaffPage: React.FC = () => {
   const handleOpenModal = (staff?: StaffMember) => {
     if (staff) {
       setSelectedStaff(staff);
-      setFormData({
-        name: staff.name,
-        email: staff.email,
-        password: '',
-        phone: staff.phone || '',
-      });
-      
-      if (staff.permissions) {
-        setPermissions(staff.permissions);
-      }
+      setFormData({ name: staff.name, email: staff.email, password: '', phone: staff.phone || '' });
+      if (staff.permissions) setPermissions(staff.permissions);
     }
     setShowModal(true);
   };
@@ -139,7 +132,6 @@ const StoreStaffPage: React.FC = () => {
 
   const handleUpdatePermissions = async () => {
     if (!selectedStaff) return;
-
     try {
       await api.put(`/store/staff/${selectedStaff.id}/permissions`, { permissions });
       toast.success('تم تحديث الصلاحيات');
@@ -154,7 +146,6 @@ const StoreStaffPage: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا الموظف؟')) return;
-
     try {
       await api.delete(`/store/staff/${id}`);
       toast.success('تم حذف الموظف');
@@ -166,9 +157,7 @@ const StoreStaffPage: React.FC = () => {
 
   const handleToggleActive = async (staffMember: StaffMember) => {
     try {
-      await api.patch(`/store/staff/${staffMember.id}/toggle`, {
-        isActive: !staffMember.isActive,
-      });
+      await api.patch(`/store/staff/${staffMember.id}/toggle`, { isActive: !staffMember.isActive });
       toast.success(`تم ${staffMember.isActive ? 'تعطيل' : 'تفعيل'} الموظف`);
       await fetchStaff();
     } catch (error: any) {
@@ -176,102 +165,112 @@ const StoreStaffPage: React.FC = () => {
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 12px', background: C.surf, border: '1px solid ' + C.border,
+    borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box',
+  };
+
   if (loading) return <Loader fullScreen />;
 
   return (
-    <div className="p-6" dir="rtl">
-      <div className="flex justify-between items-center mb-6">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold">👥 إدارة موظفي المتجر</h1>
-          <p className="text-sm text-gray-500 mt-1">إدارة صلاحيات وبيانات موظفي المتجر</p>
+          <h1 style={{ color: C.text, fontSize: 22, fontWeight: 800 }}>👥 إدارة موظفي المتجر</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة صلاحيات وبيانات موظفي المتجر</p>
         </div>
         <Button variant="primary" onClick={() => handleOpenModal()}>
-          <IoAdd className="inline ml-1" />
+          <IoAdd style={{ display: 'inline', marginLeft: 4 }} />
           إضافة موظف
         </Button>
       </div>
 
       {/* قائمة الموظفين */}
       {staff.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <IoStorefront className="text-gray-300 text-6xl mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-700 mb-2">لا يوجد موظفين</h3>
-          <p className="text-gray-500 mb-4">قم بإضافة موظفين لمساعدتك في إدارة المتجر</p>
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 48, textAlign: 'center' }}>
+          <IoStorefront style={{ color: C.muted, fontSize: 56, display: 'block', margin: '0 auto 16px', opacity: 0.4 }} />
+          <h3 style={{ color: C.text, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>لا يوجد موظفين</h3>
+          <p style={{ color: C.muted, marginBottom: 16 }}>قم بإضافة موظفين لمساعدتك في إدارة المتجر</p>
           <Button variant="primary" onClick={() => handleOpenModal()}>
-            <IoAdd className="inline ml-1" />
+            <IoAdd style={{ display: 'inline', marginLeft: 4 }} />
             إضافة موظف
           </Button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+        <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ background: C.surf }}>
                 <tr>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الاسم</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">البريد الإلكتروني</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الهاتف</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الحالة</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">آخر دخول</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">الإجراءات</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الاسم</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>البريد الإلكتروني</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الهاتف</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الحالة</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>آخر دخول</th>
+                  <th style={{ padding: '12px 16px', color: C.muted, fontSize: 12, textAlign: 'right' }}>الإجراءات</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {staff.map(member => (
-                  <tr key={member.id} className="hover:bg-gray-50 transition">
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">
+                  <tr
+                    key={member.id}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    style={{ borderBottom: '1px solid ' + C.border }}
+                  >
+                    <td style={{ padding: '12px 16px', color: C.text, fontWeight: 500, whiteSpace: 'nowrap' }}>
                       {member.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                    <td style={{ padding: '12px 16px', color: C.muted, whiteSpace: 'nowrap' }}>
                       {member.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                    <td style={{ padding: '12px 16px', color: C.muted, whiteSpace: 'nowrap' }}>
                       {member.phone || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                       <button
                         onClick={() => handleToggleActive(member)}
-                        className={`px-2 py-1 text-xs rounded-full transition ${
-                          member.isActive
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                        }`}
+                        style={{
+                          padding: '4px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 600,
+                          ...(member.isActive
+                            ? { background: 'rgba(200,226,53,0.12)', color: C.accent }
+                            : { background: 'rgba(255,107,107,0.12)', color: C.red })
+                        }}
                       >
                         {member.isActive ? 'نشط' : 'غير نشط'}
                       </button>
-                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </td>
+                    <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13, whiteSpace: 'nowrap' }}>
                       {member.lastLogin
                         ? new Date(member.lastLogin).toLocaleDateString('ar-SA')
-                        : '-'
-                      }
-                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex gap-2">
+                        : '-'}
+                    </td>
+                    <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
                         <button
                           onClick={() => handleOpenPermissionsModal(member)}
-                          className="text-purple-500 hover:text-purple-700 transition"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.purple }}
                           title="الصلاحيات"
                         >
                           <IoKey size={18} />
                         </button>
                         <button
                           onClick={() => handleOpenModal(member)}
-                          className="text-blue-500 hover:text-blue-700 transition"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.blue }}
                           title="تعديل"
                         >
                           <IoPencil size={18} />
                         </button>
                         <button
                           onClick={() => handleDelete(member.id)}
-                          className="text-red-500 hover:text-red-700 transition"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.red }}
                           title="حذف"
                         >
                           <IoTrash size={18} />
                         </button>
                       </div>
-                     </td>
-                   </tr>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -282,52 +281,49 @@ const StoreStaffPage: React.FC = () => {
       {/* مودال إضافة/تعديل موظف */}
       <Modal
         isOpen={showModal}
-        onClose={() => {
-          setShowModal(false);
-          resetForm();
-        }}
+        onClose={() => { setShowModal(false); resetForm(); }}
         title={selectedStaff ? '✏️ تعديل بيانات موظف' : '➕ إضافة موظف جديد'}
       >
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="block text-sm font-medium mb-1">الاسم *</label>
+            <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>الاسم *</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              style={inputStyle}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">البريد الإلكتروني *</label>
+            <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>البريد الإلكتروني *</label>
             <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              style={inputStyle}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
               {selectedStaff ? 'كلمة المرور (اتركها فارغة لعدم التغيير)' : 'كلمة المرور *'}
             </label>
             <input
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              style={inputStyle}
               required={!selectedStaff}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">رقم الهاتف</label>
+            <label style={{ display: 'block', color: C.muted, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>رقم الهاتف</label>
             <input
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+              style={inputStyle}
             />
           </div>
           <Button variant="primary" onClick={handleSave} fullWidth>
@@ -339,63 +335,59 @@ const StoreStaffPage: React.FC = () => {
       {/* مودال الصلاحيات */}
       <Modal
         isOpen={showPermissionsModal}
-        onClose={() => {
-          setShowPermissionsModal(false);
-          setSelectedStaff(null);
-          resetPermissions();
-        }}
+        onClose={() => { setShowPermissionsModal(false); setSelectedStaff(null); resetPermissions(); }}
         title={`🔑 صلاحيات ${selectedStaff?.name}`}
         size="lg"
       >
-        <div className="space-y-4">
-          <div className="border-b pb-4">
-            <h3 className="font-semibold mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ borderBottom: '1px solid ' + C.border, paddingBottom: 16 }}>
+            <h3 style={{ color: C.text, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 8, height: 8, background: C.blue, borderRadius: '50%', display: 'inline-block' }}></span>
               الطلبات
             </h3>
-            <div className="space-y-2 pr-4">
-              <label className="flex items-center cursor-pointer">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: C.text, gap: 8 }}>
                 <input
                   type="checkbox"
                   checked={permissions.viewOrders}
                   onChange={(e) => setPermissions({ ...permissions, viewOrders: e.target.checked })}
-                  className="ml-2 w-4 h-4 text-green-500 rounded focus:ring-green-500"
+                  style={{ width: 16, height: 16, accentColor: C.accent }}
                 />
                 <span>عرض الطلبات</span>
               </label>
-              <label className="flex items-center cursor-pointer">
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: C.text, gap: 8 }}>
                 <input
                   type="checkbox"
                   checked={permissions.updateOrderStatus}
                   onChange={(e) => setPermissions({ ...permissions, updateOrderStatus: e.target.checked })}
-                  className="ml-2 w-4 h-4 text-green-500 rounded focus:ring-green-500"
+                  style={{ width: 16, height: 16, accentColor: C.accent }}
                 />
                 <span>تحديث حالة الطلب</span>
               </label>
             </div>
           </div>
 
-          <div className="border-b pb-4">
-            <h3 className="font-semibold mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+          <div style={{ borderBottom: '1px solid ' + C.border, paddingBottom: 16 }}>
+            <h3 style={{ color: C.text, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 8, height: 8, background: C.accent, borderRadius: '50%', display: 'inline-block' }}></span>
               المنتجات
             </h3>
-            <div className="space-y-2 pr-4">
-              <label className="flex items-center cursor-pointer">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: C.text, gap: 8 }}>
                 <input
                   type="checkbox"
                   checked={permissions.viewProducts}
                   onChange={(e) => setPermissions({ ...permissions, viewProducts: e.target.checked })}
-                  className="ml-2 w-4 h-4 text-green-500 rounded focus:ring-green-500"
+                  style={{ width: 16, height: 16, accentColor: C.accent }}
                 />
                 <span>عرض المنتجات</span>
               </label>
-              <label className="flex items-center cursor-pointer">
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: C.text, gap: 8 }}>
                 <input
                   type="checkbox"
                   checked={permissions.updateProducts}
                   onChange={(e) => setPermissions({ ...permissions, updateProducts: e.target.checked })}
-                  className="ml-2 w-4 h-4 text-green-500 rounded focus:ring-green-500"
+                  style={{ width: 16, height: 16, accentColor: C.accent }}
                 />
                 <span>إضافة/تعديل/حذف المنتجات</span>
               </label>
@@ -403,26 +395,26 @@ const StoreStaffPage: React.FC = () => {
           </div>
 
           <div>
-            <h3 className="font-semibold mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
+            <h3 style={{ color: C.text, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ width: 8, height: 8, background: '#FBB91F', borderRadius: '50%', display: 'inline-block' }}></span>
               المخزون
             </h3>
-            <div className="space-y-2 pr-4">
-              <label className="flex items-center cursor-pointer">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: C.text, gap: 8 }}>
                 <input
                   type="checkbox"
                   checked={permissions.viewInventory}
                   onChange={(e) => setPermissions({ ...permissions, viewInventory: e.target.checked })}
-                  className="ml-2 w-4 h-4 text-green-500 rounded focus:ring-green-500"
+                  style={{ width: 16, height: 16, accentColor: C.accent }}
                 />
                 <span>عرض المخزون</span>
               </label>
-              <label className="flex items-center cursor-pointer">
+              <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: C.text, gap: 8 }}>
                 <input
                   type="checkbox"
                   checked={permissions.updateInventory}
                   onChange={(e) => setPermissions({ ...permissions, updateInventory: e.target.checked })}
-                  className="ml-2 w-4 h-4 text-green-500 rounded focus:ring-green-500"
+                  style={{ width: 16, height: 16, accentColor: C.accent }}
                 />
                 <span>تحديث المخزون</span>
               </label>

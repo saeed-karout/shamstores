@@ -1,6 +1,7 @@
 // backend/src/middleware/subdomain.ts
 
 import { Request, Response, NextFunction } from 'express';
+import { Op } from 'sequelize';
 import Restaurant from '../models/Restaurant';
 import Store from '../models/Store';
 
@@ -32,7 +33,7 @@ export const extractSubdomain = async (
       const host = req.headers.host || '';
       const hostWithoutPort = host.split(':')[0];
       const parts = hostWithoutPort.split('.');
-      
+
       if (hostWithoutPort.includes('localhost') || hostWithoutPort.includes('127.0.0.1')) {
         if (parts.length >= 2 && parts[0] !== 'localhost' && parts[0] !== 'www') {
           subdomain = parts[0];
@@ -53,11 +54,14 @@ export const extractSubdomain = async (
     req.subdomain = subdomain;
     console.log('🌐 Extracted subdomain:', subdomain);
 
-    // ✅ تغيير الأولوية: البحث في المتاجر أولاً
-    let store = await Store.findOne({ 
-      where: { subdomain, isActive: true }
+    // البحث في المتاجر أولاً (بالـ subdomain أو slug كـ fallback)
+    let store = await Store.findOne({
+      where: {
+        [Op.or]: [{ subdomain }, { slug: subdomain }],
+        isActive: true
+      }
     });
-    
+
     if (store) {
       req.business = {
         type: 'store',
@@ -68,11 +72,14 @@ export const extractSubdomain = async (
       return next();
     }
 
-    // ثم البحث في المطاعم
-    let restaurant = await Restaurant.findOne({ 
-      where: { subdomain, isActive: true }
+    // ثم البحث في المطاعم (بالـ subdomain أو slug كـ fallback)
+    let restaurant = await Restaurant.findOne({
+      where: {
+        [Op.or]: [{ subdomain }, { slug: subdomain }],
+        isActive: true
+      }
     });
-    
+
     if (restaurant) {
       req.business = {
         type: 'restaurant',
