@@ -419,7 +419,7 @@ export const createOrder = async (
     const finalDeliveryFee = providedDeliveryFee || 0;
     const finalDeliveryDistance = providedDeliveryDistance || 0;
 
-    const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 99).toString().padStart(2, '0')}`;
 
     const orderData: any = {
       orderNumber,
