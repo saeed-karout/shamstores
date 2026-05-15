@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { Order, OrderStatus, PaymentMethod } from '../../services/types';
@@ -8,6 +8,8 @@ import OrderDetails from '../../components/orders/OrderDetails';
 import { IoRefresh, IoFilter, IoWallet } from 'react-icons/io5';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import toast from 'react-hot-toast';
+import { useSocket } from '../../hooks/useSocket';
 
 const C = {
   bg:     '#082E24',
@@ -46,19 +48,9 @@ const OrdersPage: React.FC = () => {
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    if (id) {
-      fetchOrderById(id);
-    }
-  }, [id]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       const data = await api.get<Order[]>('/orders');
       setOrders(data);
@@ -67,7 +59,34 @@ const OrdersPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // اشتراك Socket.IO لاستقبال الطلبات الجديدة فوراً
+  useSocket({
+    token,
+    enabled: !!token,
+    onNotification: (data) => {
+      if (data.type === 'order') {
+        fetchOrders();
+        if (data.event === 'order.created') {
+          toast.success(`طلب جديد ${data.orderNumber}`, { duration: 5000 });
+        }
+      }
+    },
+    onOrderUpdated: () => {
+      fetchOrders();
+    },
+  });
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 30000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
+  useEffect(() => {
+    if (id) fetchOrderById(id);
+  }, [id]);
 
   const fetchOrderById = async (orderId: string) => {
     try {

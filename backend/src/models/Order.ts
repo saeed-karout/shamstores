@@ -135,7 +135,7 @@ Order.init(
       type: DataTypes.STRING(20),
       allowNull: false,
       unique: true,
-      defaultValue: () => 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      defaultValue: () => `ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 99).toString().padStart(2, '0')}`,
       field: 'order_number'
     },
     customerName: {
