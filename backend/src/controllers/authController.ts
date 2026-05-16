@@ -374,6 +374,7 @@ export const login = async (
       restaurantId: user.restaurantId,
       storeId: user.storeId,
       phone: user.phone,
+      isOnline: user.isOnline,
       isEmailVerified: user.isEmailVerified,
       restaurant: restaurant,
       store: store
@@ -440,6 +441,7 @@ export const getMe = async (
     if (user.role === 'delivery_driver') {
       additionalData = {
         isDriver: true,
+        isOnline: user.isOnline,
         lastLocation: user.lastLocationLat && user.lastLocationLng ? {
           lat: user.lastLocationLat,
           lng: user.lastLocationLng,
@@ -529,6 +531,7 @@ export const registerDriver = async (
       role: 'delivery_driver',
       restaurantId: targetRestaurantId,
       isActive: true,
+      isOnline: false,
       isEmailVerified: true,
       loginAttempts: 0,
       lockedUntil: null
@@ -551,6 +554,7 @@ export const registerDriver = async (
       role: driver.role,
       restaurantId: driver.restaurantId,
       isActive: driver.isActive,
+      isOnline: driver.isOnline,
       isEmailVerified: driver.isEmailVerified,
       createdAt: driver.createdAt,
       updatedAt: driver.updatedAt

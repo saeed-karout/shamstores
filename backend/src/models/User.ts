@@ -16,6 +16,7 @@ export interface UserAttributes {
   role: UserRole;
   permissions?: object;
   isActive: boolean;
+  isOnline: boolean;
   lastLogin?: Date;
   createdAt?: Date;
   updatedAt?: Date;
@@ -32,7 +33,7 @@ export interface UserAttributes {
 }
 
 export interface UserCreationAttributes extends Optional<UserAttributes, 
-  'id' | 'isActive' | 'permissions' | 'lastLogin' | 
+  'id' | 'isActive' | 'isOnline' | 'permissions' | 'lastLogin' | 
   'lastLocationLat' | 'lastLocationLng' | 'lastLocationUpdate' | 'storeId' |
   'isEmailVerified' | 'loginAttempts' | 'lockedUntil'
 > {}
@@ -48,6 +49,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public role!: UserRole;
   public permissions!: object;
   public isActive!: boolean;
+  public isOnline!: boolean;
   public lastLogin!: Date;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -127,6 +129,11 @@ User.init(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
       field: 'is_active'
+    },
+    isOnline: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'is_online'
     },
     lastLogin: {
       type: DataTypes.DATE,

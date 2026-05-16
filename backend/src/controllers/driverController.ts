@@ -44,7 +44,7 @@ export const getDrivers = async (
     const drivers = await User.findAll({
       where,
       attributes: [
-        'id', 'name', 'email', 'phone', 'isActive', 'role',
+        'id', 'name', 'email', 'phone', 'isActive', 'isOnline', 'role',
         'lastLogin', 'lastLocationLat', 'lastLocationLng', 'lastLocationUpdate',
         'restaurantId', 'createdAt'
       ],
@@ -145,7 +145,8 @@ export const createDriver = async (
       phone,
       role: 'delivery_driver',
       restaurantId: targetRestaurantId,
-      isActive: true
+      isActive: true,
+      isOnline: false
     } as any);
 
     console.log('✅ Driver created with restaurantId:', driver.restaurantId);
@@ -162,6 +163,7 @@ export const createDriver = async (
       role: driver.role,
       restaurantId: driver.restaurantId,
       isActive: driver.isActive,
+      isOnline: driver.isOnline,
       createdAt: driver.createdAt
     };
 

@@ -89,7 +89,8 @@ const findBestDriver = async (
       where: {
         storeId,
         role: 'delivery_driver',
-        isActive: true
+        isActive: true,
+        isOnline: true
       },
       attributes: ['id', 'name', 'phone', 'lastLocationLat', 'lastLocationLng', 'lastLocationUpdate']
     });

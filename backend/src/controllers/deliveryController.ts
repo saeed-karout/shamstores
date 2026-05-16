@@ -404,6 +404,15 @@ export const assignDeliveryDriver = async (
       return;
     }
 
+    if (!driver.isActive || !driver.isOnline) {
+      await transaction.rollback();
+      res.status(403).json({
+        success: false,
+        error: 'المندوب غير متاح حالياً'
+      });
+      return;
+    }
+
     // تحديث الطلب
     const estimatedDeliveryTime = new Date();
     estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + estimatedMinutes);
@@ -600,6 +609,105 @@ export const getMyDriverLocation = async (
       success: false,
       error: 'حدث خطأ في جلب موقع المندوب'
     });
+  }
+};
+
+export const getDriverAvailability = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const driver = await User.findOne({
+      where: {
+        id: driverId,
+        role: 'delivery_driver'
+      },
+      attributes: ['id', 'name', 'isActive', 'isOnline', 'lastLogin', 'lastLocationUpdate']
+    });
+
+    if (!driver) {
+      res.status(404).json({ success: false, error: 'مندوب التوصيل غير موجود' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        driverId: driver.id,
+        name: driver.name,
+        isActive: driver.isActive,
+        isOnline: driver.isOnline,
+        lastLogin: driver.lastLogin,
+        lastLocationUpdate: driver.lastLocationUpdate
+      }
+    });
+  } catch (error) {
+    console.error('Error getting driver availability:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب حالة التواجد' });
+  }
+};
+
+export const updateDriverAvailability = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const { isOnline, online } = req.body;
+    const nextOnline = typeof isOnline === 'boolean' ? isOnline : typeof online === 'boolean' ? online : undefined;
+
+    if (nextOnline === undefined) {
+      res.status(400).json({ success: false, error: 'يجب إرسال isOnline أو online كقيمة منطقية' });
+      return;
+    }
+
+    const driver = await User.findOne({
+      where: {
+        id: driverId,
+        role: 'delivery_driver'
+      }
+    });
+
+    if (!driver) {
+      res.status(404).json({ success: false, error: 'مندوب التوصيل غير موجود' });
+      return;
+    }
+
+    if (!driver.isActive && nextOnline) {
+      res.status(403).json({ success: false, error: 'الحساب غير مفعل' });
+      return;
+    }
+
+    await driver.update({
+      isOnline: nextOnline,
+      lastLogin: nextOnline ? new Date() : driver.lastLogin
+    });
+
+    res.json({
+      success: true,
+      message: nextOnline ? 'تم تفعيل وضع الأونلاين' : 'تم إيقاف وضع الأونلاين',
+      data: {
+        driverId: driver.id,
+        isActive: driver.isActive,
+        isOnline: driver.isOnline
+      }
+    });
+  } catch (error) {
+    console.error('Error updating driver availability:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث حالة التواجد' });
   }
 };
 
