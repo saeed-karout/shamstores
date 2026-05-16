@@ -963,12 +963,14 @@ export const getDeliveryOrders = async (
             { 
               model: MenuItem,
               as: 'menuItem',
-              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price']
+              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price'],
+              required: false
             },
             { 
               model: Product,
               as: 'product',
-              attributes: ['id', 'name', 'description', 'images', 'price']
+              attributes: ['id', 'name', 'description', 'imageUrl', 'price'],  // ✅ imageUrl
+              required: false
             }
           ],
           required: false
@@ -984,8 +986,7 @@ export const getDeliveryOrders = async (
         plainOrder.orderItems = plainOrder.orderItems.map((item: any) => ({
           ...item,
           itemName: item.menuItem?.name || item.product?.name || 'منتج غير معروف',
-          itemImage: item.menuItem?.image || (item.product?.images ? (Array.isArray(item.product.images) ? item.product.images[0] : item.product.images) : null),
-          itemPrice: item.price
+          itemImage: item.menuItem?.image || item.product?.imageUrl || null  // ✅ imageUrl
         }));
       }
       return plainOrder;
@@ -1032,12 +1033,14 @@ export const getDriverOrders = async (
         { 
           model: Restaurant, 
           as: 'restaurant', 
-          attributes: ['name', 'address', 'phone', 'latitude', 'longitude']
+          attributes: ['id', 'name', 'address', 'phone', 'latitude', 'longitude'],
+          required: false
         },
         { 
           model: Store,
           as: 'store',
-          attributes: ['name', 'address', 'phone', 'latitude', 'longitude']
+          attributes: ['id', 'name', 'address', 'phone', 'latitude', 'longitude'],
+          required: false
         },
         { 
           model: OrderItem,
@@ -1046,12 +1049,14 @@ export const getDriverOrders = async (
             { 
               model: MenuItem,
               as: 'menuItem',
-              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price']
+              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price'],
+              required: false
             },
             { 
               model: Product,
               as: 'product',
-              attributes: ['id', 'name', 'description', 'images', 'price']
+              attributes: ['id', 'name', 'description', 'imageUrl', 'price'],  // ✅ imageUrl
+              required: false
             }
           ],
           required: false
@@ -1060,14 +1065,14 @@ export const getDriverOrders = async (
       order: [['estimatedDeliveryTime', 'ASC']]
     });
 
-    // معالجة البيانات
+    // معالجة البيانات لإضافة أسماء العناصر بشكل موحد
     const processedOrders = orders.map(order => {
       const plainOrder = order.toJSON();
       if (plainOrder.orderItems) {
         plainOrder.orderItems = plainOrder.orderItems.map((item: any) => ({
           ...item,
           itemName: item.menuItem?.name || item.product?.name || 'منتج غير معروف',
-          itemImage: item.menuItem?.image || (item.product?.images ? (Array.isArray(item.product.images) ? item.product.images[0] : item.product.images) : null)
+          itemImage: item.menuItem?.image || item.product?.imageUrl || null  // ✅ imageUrl
         }));
       }
       return plainOrder;
@@ -1207,13 +1212,18 @@ export const getOrderWithLocation = async (
           attributes: ['id', 'name', 'phone', 'lastLocationLat', 'lastLocationLng']
         },
         { 
-          model: OrderItem,  // ✅ أضف هذا لجلب عناصر الطلب
+          model: OrderItem,
           as: 'orderItems',
           include: [
             { 
-              model: MenuItem,  // ✅ أضف هذا لجلب تفاصيل المنتج
+              model: MenuItem,
               as: 'menuItem',
               attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price']
+            },
+            { 
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'description', 'imageUrl', 'price']  // ✅ imageUrl
             }
           ],
           required: false
