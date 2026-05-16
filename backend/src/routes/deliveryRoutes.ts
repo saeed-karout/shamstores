@@ -34,7 +34,14 @@ router.get('/restaurant/orders',
 // إحصائيات التوصيل
 router.get('/restaurant/stats', 
   authenticate, 
-  authorize(['owner', 'super_admin']), 
+  authorize(['owner', 'super_admin', 'delivery_driver']), 
+  getDeliveryStats
+);
+
+// Alias لتوافق تطبيقات الموبايل/الواجهة التي تطلب /api/delivery/stats
+router.get('/stats', 
+  authenticate, 
+  authorize(['owner', 'super_admin', 'delivery_driver']), 
   getDeliveryStats
 );
 
