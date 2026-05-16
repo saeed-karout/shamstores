@@ -7,6 +7,7 @@ import {
   getDriverOrders,
   updateDriverLocation,
   getDriverLocation,
+  getMyDriverLocation,
   updateDeliveryStatus,
   getOrderWithLocation,
   getDeliveryStats,
@@ -92,6 +93,26 @@ router.post('/driver/location',
   authenticate, 
   authorize(['delivery_driver']), 
   updateDriverLocation
+);
+
+// توافق مع تطبيقات الموبايل التي تستخدم PATCH/PUT
+router.patch('/driver/location', 
+  authenticate, 
+  authorize(['delivery_driver']), 
+  updateDriverLocation
+);
+
+router.put('/driver/location', 
+  authenticate, 
+  authorize(['delivery_driver']), 
+  updateDriverLocation
+);
+
+// جلب موقع السائق الحالي
+router.get('/driver/location', 
+  authenticate, 
+  authorize(['delivery_driver']), 
+  getMyDriverLocation
 );
 
 // جلب موقع سائق معين

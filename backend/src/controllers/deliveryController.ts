@@ -8,6 +8,7 @@ import Restaurant from '../models/Restaurant';
 import { Op } from 'sequelize';
 import sequelize from '../config/database';
 import { MenuItem, OrderItem } from '../models';
+import { emitOrderRealtimeEvent } from '../realtime/socket';
 
 // دالة مساعدة للحصول على restaurantId
 const getRestaurantId = async (req: AuthRequest): Promise<string | null> => {
@@ -75,6 +76,31 @@ export const acceptOrder = async (
     }, { transaction });
 
     await transaction.commit();
+
+    // Emit realtime event to notify driver/restaurant/store
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.status.updated',
+        title: 'تم قبول الطلب',
+        message: `تم قبول الطلب ${order.orderNumber} من قبل المندوب`,
+        actorId: driverId || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: order.assignedDriverId || null
+        },
+        extraData: { previousStatus: 'ready' }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event on acceptOrder:', err);
+    }
 
     res.json({
       success: true,
@@ -390,6 +416,30 @@ export const assignDeliveryDriver = async (
 
     await transaction.commit();
 
+    // Emit realtime event to notify assigned driver and store/restaurant
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.assigned',
+        title: 'تم تعيين مندوب',
+        message: `تم تعيين المندوب ${driver.name} للطلب ${order.orderNumber}`,
+        actorId: req.user?.id || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: driverId || null
+        }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event on assignDeliveryDriver:', err);
+    }
+
     res.json({
       success: true,
       message: 'تم تعيين مندوب التوصيل بنجاح',
@@ -504,6 +554,55 @@ export const getDriverLocation = async (
   }
 };
 
+// ==================== الحصول على موقع السائق الحالي ====================
+
+export const getMyDriverLocation = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const driver = await User.findOne({
+      where: {
+        id: driverId,
+        role: 'delivery_driver'
+      },
+      attributes: ['id', 'name', 'lastLocationLat', 'lastLocationLng', 'lastLocationUpdate']
+    });
+
+    if (!driver) {
+      res.status(404).json({
+        success: false,
+        error: 'مندوب التوصيل غير موجود'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        driverId: driver.id,
+        name: driver.name,
+        lat: driver.lastLocationLat,
+        lng: driver.lastLocationLng,
+        lastUpdate: driver.lastLocationUpdate
+      }
+    });
+  } catch (error) {
+    console.error('Error getting current driver location:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في جلب موقع المندوب'
+    });
+  }
+};
+
 // ==================== تحديث حالة طلب التوصيل ====================
 
 export const updateDeliveryStatus = async (
@@ -546,6 +645,30 @@ export const updateDeliveryStatus = async (
     await order.update(updateData, { transaction });
 
     await transaction.commit();
+
+    // Emit realtime event after delivery status update
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.status.updated',
+        title: 'تحديث حالة التوصيل',
+        message: `تم تحديث حالة التوصيل للطلب ${order.orderNumber} إلى ${order.status}`,
+        actorId: req.user?.id || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: order.assignedDriverId || null
+        }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event on updateDeliveryStatus:', err);
+    }
 
     res.json({
       success: true,
