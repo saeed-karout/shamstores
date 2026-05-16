@@ -26,7 +26,11 @@ export interface UserAttributes {
   lastLocationLng?: number;
   lastLocationUpdate?: Date;
 
-  // ✅ حقول جديدة للأمان
+  // ✅ حقول تقييم السائق
+  driverRating?: number;      // متوسط تقييم السائق (1-5)
+  driverRatingCount?: number; // عدد التقييمات التي حصل عليها
+  
+  // ✅ حقول الأمان
   isEmailVerified: boolean;
   loginAttempts: number;
   lockedUntil?: Date | null;
@@ -35,7 +39,7 @@ export interface UserAttributes {
 export interface UserCreationAttributes extends Optional<UserAttributes, 
   'id' | 'isActive' | 'isOnline' | 'permissions' | 'lastLogin' | 
   'lastLocationLat' | 'lastLocationLng' | 'lastLocationUpdate' | 'storeId' |
-  'isEmailVerified' | 'loginAttempts' | 'lockedUntil'
+  'isEmailVerified' | 'loginAttempts' | 'lockedUntil' | 'driverRating' | 'driverRatingCount'
 > {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -59,7 +63,11 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public lastLocationLng!: number;
   public lastLocationUpdate!: Date;
 
-  // ✅ حقول جديدة للأمان
+  // ✅ حقول تقييم السائق
+  public driverRating!: number;
+  public driverRatingCount!: number;
+
+  // حقول الأمان
   public isEmailVerified!: boolean;
   public loginAttempts!: number;
   public lockedUntil!: Date | null;
@@ -67,6 +75,17 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   // مقارنة كلمة المرور
   public async comparePassword(candidatePassword: string): Promise<boolean> {
     return bcrypt.compare(candidatePassword, this.password);
+  }
+  
+  // ✅ دالة مساعدة لتحديث متوسط تقييم السائق
+  public async updateDriverRating(newRating: number): Promise<void> {
+    const currentTotal = (this.driverRating || 0) * (this.driverRatingCount || 0);
+    const newCount = (this.driverRatingCount || 0) + 1;
+    const newAverage = (currentTotal + newRating) / newCount;
+    
+    this.driverRating = Math.round(newAverage * 10) / 10; // تقريب لرقم واحد بعد الفاصلة
+    this.driverRatingCount = newCount;
+    await this.save();
   }
 }
 
@@ -155,7 +174,21 @@ User.init(
       allowNull: true,
       field: 'last_location_update'
     },
-    // ✅ حقول جديدة للأمان
+    // ✅ حقول تقييم السائق
+    driverRating: {
+      type: DataTypes.DECIMAL(2, 1),
+      allowNull: true,
+      defaultValue: 0,
+      validate: { min: 0, max: 5 },
+      field: 'driver_rating'
+    },
+    driverRatingCount: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      field: 'driver_rating_count'
+    },
+    // حقول الأمان
     isEmailVerified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -185,9 +218,11 @@ User.init(
           user.password = await bcrypt.hash(user.password, salt);
           console.log('🔐 Password hashed with bcrypt');
         }
-        // ✅ تعيين القيم الافتراضية
+        // القيم الافتراضية
         if (user.isEmailVerified === undefined) user.isEmailVerified = false;
         if (user.loginAttempts === undefined) user.loginAttempts = 0;
+        if (user.driverRating === undefined) user.driverRating = 0;
+        if (user.driverRatingCount === undefined) user.driverRatingCount = 0;
         console.log('📝 Creating user with role:', user.role);
       },
       beforeUpdate: async (user: User) => {

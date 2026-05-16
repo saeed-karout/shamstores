@@ -16,6 +16,8 @@ import {
   acceptOrder,
   rateOrder,
   driverReachedRestaurant,
+  confirmPayment,
+  completeOrder,
  
 } from '../controllers/deliveryController';
 
@@ -148,6 +150,18 @@ router.put('/driver/location',
   authenticate, 
   authorize(['delivery_driver']), 
   updateDriverLocation
+);
+
+router.post('/orders/:orderId/confirm-payment', 
+  authenticate, 
+  authorize(['delivery_driver', 'owner', 'super_admin']), 
+  confirmPayment
+);
+
+router.post('/orders/:orderId/complete', 
+  authenticate, 
+  authorize(['delivery_driver', 'owner', 'super_admin']), 
+  completeOrder
 );
 
 // جلب موقع السائق الحالي

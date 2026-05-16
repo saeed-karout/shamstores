@@ -46,6 +46,8 @@ export interface OrderAttributes {
   
   // مصدر الطلب
   orderSource: 'restaurant' | 'store';
+
+  orderItems?: any[]; 
 }
 
 export interface OrderCreationAttributes extends Optional<OrderAttributes, 
