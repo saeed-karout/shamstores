@@ -38,6 +38,7 @@ const httpServer = http.createServer(app);
 // ✅ إعدادات CORS المتقدمة
 const allowedOrigins = [
   'https://shamstores.com',
+  'https://www.shamstores.com',
   'http://localhost:3000',
   'http://localhost:5173',
   'https://shamstores-app-mixd9.ondigitalocean.app'
