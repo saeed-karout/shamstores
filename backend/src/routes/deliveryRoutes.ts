@@ -7,12 +7,17 @@ import {
   getDriverOrders,
   updateDriverLocation,
   getDriverLocation,
+  getMyDriverLocation,
+  getDriverAvailability,
+  updateDriverAvailability,
   updateDeliveryStatus,
   getOrderWithLocation,
   getDeliveryStats,
   acceptOrder,
   rateOrder,
   driverReachedRestaurant,
+  confirmPayment,
+  completeOrder,
  
 } from '../controllers/deliveryController';
 
@@ -33,7 +38,14 @@ router.get('/restaurant/orders',
 // إحصائيات التوصيل
 router.get('/restaurant/stats', 
   authenticate, 
-  authorize(['owner', 'super_admin']), 
+  authorize(['owner', 'super_admin', 'delivery_driver']), 
+  getDeliveryStats
+);
+
+// Alias لتوافق تطبيقات الموبايل/الواجهة التي تطلب /api/delivery/stats
+router.get('/stats', 
+  authenticate, 
+  authorize(['owner', 'super_admin', 'delivery_driver']), 
   getDeliveryStats
 );
 
@@ -87,11 +99,76 @@ router.get('/driver/orders',
   getDriverOrders
 );
 
+// جلب حالة التواجد الحالية للمندوب
+router.get('/driver/availability',
+  authenticate,
+  authorize(['delivery_driver']),
+  getDriverAvailability
+);
+
+// تحديث حالة التواجد الحالية للمندوب
+router.patch('/driver/availability',
+  authenticate,
+  authorize(['delivery_driver']),
+  updateDriverAvailability
+);
+
+// Aliases للموبايل
+router.post('/driver/online',
+  authenticate,
+  authorize(['delivery_driver']),
+  (req, res) => {
+    req.body.isOnline = true;
+    return updateDriverAvailability(req as any, res);
+  }
+);
+
+router.post('/driver/offline',
+  authenticate,
+  authorize(['delivery_driver']),
+  (req, res) => {
+    req.body.isOnline = false;
+    return updateDriverAvailability(req as any, res);
+  }
+);
+
 // تحديث موقع السائق
 router.post('/driver/location', 
   authenticate, 
   authorize(['delivery_driver']), 
   updateDriverLocation
+);
+
+// توافق مع تطبيقات الموبايل التي تستخدم PATCH/PUT
+router.patch('/driver/location', 
+  authenticate, 
+  authorize(['delivery_driver']), 
+  updateDriverLocation
+);
+
+router.put('/driver/location', 
+  authenticate, 
+  authorize(['delivery_driver']), 
+  updateDriverLocation
+);
+
+router.post('/orders/:orderId/confirm-payment', 
+  authenticate, 
+  authorize(['delivery_driver', 'owner', 'super_admin']), 
+  confirmPayment
+);
+
+router.post('/orders/:orderId/complete', 
+  authenticate, 
+  authorize(['delivery_driver', 'owner', 'super_admin']), 
+  completeOrder
+);
+
+// جلب موقع السائق الحالي
+router.get('/driver/location', 
+  authenticate, 
+  authorize(['delivery_driver']), 
+  getMyDriverLocation
 );
 
 // جلب موقع سائق معين

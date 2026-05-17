@@ -35,13 +35,46 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const httpServer = http.createServer(app);
 
+// ✅ إعدادات CORS المتقدمة
+const allowedOrigins = [
+  'https://shamstores.com',
+  'https://www.shamstores.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://shamstores-app-mixd9.ondigitalocean.app'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    // ✅ في وضع التطوير، قبول أي localhost أو 127.0.0.1 (بما فيها الـ subdomains)
+    if (process.env.NODE_ENV !== 'production') {
+      const isLocalhost = /^https?:\/\/(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      if (isLocalhost) {
+        console.log('✅ CORS allowed for development:', origin);
+        return callback(null, true);
+      }
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS allowed for origin:', origin);
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked for origin:', origin);
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 204
+}));
+
+app.options('*', cors());
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // المجلدات الثابتة
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -101,12 +134,18 @@ const startServer = async () => {
     await testConnection();
     console.log('✅ Database connection established.');
 
-    // ✅ إنشاء الجداول إذا لم تكن موجودة
-    await sequelize.sync();
-    console.log('✅ Database tables synced successfully.');
-
-    console.log('✅ Database schema is managed manually via migrations.');
-    console.log('⚠️ Auto-sync is disabled to prevent foreign key issues.');
+    // ✅ تعطيل sync تماماً في الإنتاج
+    // في الإنتاج، يجب إدارة الجداول يدوياً عبر الـ Migrations
+    if (process.env.NODE_ENV === 'production') {
+      console.log('⚠️ Production mode: Auto-sync DISABLED.');
+      console.log('✅ Database schema must be managed via migrations.');
+      console.log('📋 To run migrations: npx sequelize-cli db:migrate');
+    } else {
+      // فقط في بيئة التطوير، وليس في الإنتاج
+      // استخدم alter: false لمنع التعديلات الخطيرة
+      await sequelize.sync({ alter: false });
+      console.log('✅ Database tables synced (development mode).');
+    }
 
     // إدراج البيانات الأساسية إذا لم تكن موجودة
     const Plan = (await import('./models/Plan')).default;
@@ -258,7 +297,11 @@ const startServer = async () => {
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
-    process.exit(1);
+    // لا تخرج من العملية فوراً في الإنتاج، أعط فرصة لإعادة المحاولة
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   }
 };
+
 startServer();

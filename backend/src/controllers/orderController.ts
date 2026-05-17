@@ -89,7 +89,8 @@ const findBestDriver = async (
       where: {
         storeId,
         role: 'delivery_driver',
-        isActive: true
+        isActive: true,
+        isOnline: true
       },
       attributes: ['id', 'name', 'phone', 'lastLocationLat', 'lastLocationLng', 'lastLocationUpdate']
     });
@@ -126,7 +127,7 @@ const findBestDriver = async (
         const activeOrdersCount = await Order.count({
           where: {
             assignedDriverId: driver.id,
-            status: { [Op.in]: ['pending', 'processing', 'shipped', 'ready', 'delivering'] }
+            status: { [Op.in]: ['pending', 'preparing', 'ready', 'delivering'] }
           }
         });
         return { driver, activeOrdersCount };
@@ -143,6 +144,85 @@ const findBestDriver = async (
 };
 
 // ==================== جلب الطلبات ====================
+export const rateOrderAdvanced = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { orderId } = req.params;
+    const {
+      overallRating,
+      foodQuality,
+      deliverySpeed,
+      driverBehavior,
+      packaging,
+      comment,
+      recommend
+    } = req.body;
+    const userId = req.user?.id;
+
+    const order = await Order.findOne({
+      where: {
+        id: orderId,
+        createdBy: userId,
+        status: 'delivered'
+      },
+      include: [
+        { model: User, as: 'assignedDriver' }
+      ]
+    });
+
+    if (!order) {
+      res.status(404).json({ 
+        success: false,
+        error: 'الطلب غير موجود أو لم يتم تسليمه بعد' 
+      });
+      return;
+    }
+
+    // تحديث تقييم الطلب
+    await order.update({
+      rating: overallRating,
+      ratingComment: comment,
+      ratedAt: new Date()
+    });
+
+    // إذا كان هناك سائق مخصص، قم بتحديث تقييمه
+    if (order.assignedDriverId) {
+      const driver = await User.findByPk(order.assignedDriverId);
+      if (driver) {
+        // حساب متوسط تقييم السائق الجديد
+        const newDriverRating = (driver.driverRating || 0 + deliverySpeed) / 2;
+        await driver.update({
+          driverRating: newDriverRating,
+          driverRatingCount: (driver.driverRatingCount || 0) + 1
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'شكراً لتقييمك',
+      data: {
+        orderId,
+        overallRating,
+        foodQuality,
+        deliverySpeed,
+        driverBehavior,
+        packaging,
+        comment,
+        recommend
+      }
+    });
+  } catch (error) {
+    console.error('Error in advanced rating:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'حدث خطأ في إرسال التقييم' 
+    });
+  }
+};
+
 
 export const getOrders = async (
   req: AuthRequest,
@@ -419,7 +499,7 @@ export const createOrder = async (
     const finalDeliveryFee = providedDeliveryFee || 0;
     const finalDeliveryDistance = providedDeliveryDistance || 0;
 
-    const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 99).toString().padStart(2, '0')}`;
 
     const orderData: any = {
       orderNumber,
@@ -453,7 +533,7 @@ export const createOrder = async (
       
       if (bestDriver) {
         orderData.assignedDriverId = bestDriver.id;
-        orderData.status = 'processing';
+        orderData.status = 'preparing';
         orderData.estimatedDeliveryTime = new Date(Date.now() + 60 * 60000);
         console.log(`✅ Auto-assigned driver: ${bestDriver.name} (${bestDriver.id})`);
       } else {

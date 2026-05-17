@@ -7,7 +7,8 @@ import User from '../models/User';
 import Restaurant from '../models/Restaurant';
 import { Op } from 'sequelize';
 import sequelize from '../config/database';
-import { MenuItem, OrderItem } from '../models';
+import { MenuItem, OrderItem, Product, Store } from '../models';
+import { emitOrderRealtimeEvent } from '../realtime/socket';
 
 // دالة مساعدة للحصول على restaurantId
 const getRestaurantId = async (req: AuthRequest): Promise<string | null> => {
@@ -76,6 +77,31 @@ export const acceptOrder = async (
 
     await transaction.commit();
 
+    // Emit realtime event to notify driver/restaurant/store
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.status.updated',
+        title: 'تم قبول الطلب',
+        message: `تم قبول الطلب ${order.orderNumber} من قبل المندوب`,
+        actorId: driverId || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: order.assignedDriverId || null
+        },
+        extraData: { previousStatus: 'ready' }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event on acceptOrder:', err);
+    }
+
     res.json({
       success: true,
       message: 'تم قبول الطلب بنجاح',
@@ -137,65 +163,7 @@ export const confirmPayment = async (
 
 
 
-// إنهاء الطلب (بعد التوصيل والدفع)
-export const completeOrder = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  const transaction = await sequelize.transaction();
-  
-  try {
-    const { orderId } = req.params;
-    const driverId = req.user?.id;
 
-    const order = await Order.findOne({
-      where: {
-        id: orderId,
-        assignedDriverId: driverId,
-        status: 'delivering'
-      },
-      transaction
-    });
-
-    if (!order) {
-      await transaction.rollback();
-      res.status(404).json({ 
-        success: false,
-        error: 'الطلب غير موجود' 
-      });
-      return;
-    }
-
-    if (!order.isPaid) {
-      await transaction.rollback();
-      res.status(400).json({ 
-        success: false,
-        error: 'يجب تأكيد الدفع أولاً' 
-      });
-      return;
-    }
-
-    await order.update({ 
-      status: 'delivered',
-      actualDeliveryTime: new Date()
-    }, { transaction });
-
-    await transaction.commit();
-
-    res.json({
-      success: true,
-      message: 'تم إكمال الطلب بنجاح',
-      data: { status: 'delivered' }
-    });
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error completing order:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'حدث خطأ في إكمال الطلب' 
-    });
-  }
-};
 
 // حساب سعر التوصيل
 export const calculateDeliveryFee = async (
@@ -278,35 +246,69 @@ export const rateOrder = async (
 ): Promise<void> => {
   try {
     const { orderId } = req.params;
-    const { stars, comment } = req.body;
+    const { stars, rating, comment } = req.body;
     const driverId = req.user?.id;
+    const userRole = req.user?.role;
+    const isOwner = userRole === 'owner' || userRole === 'super_admin';
+
+    // قبول stars أو rating
+    const finalRating = stars || rating;
+
+    if (!finalRating || finalRating < 1 || finalRating > 5) {
+      res.status(400).json({ 
+        success: false,
+        error: 'يرجى إدخال تقييم بين 1 و 5 نجوم' 
+      });
+      return;
+    }
+
+    // البحث عن الطلب - المالك أو السائق المخصص يمكنه التقييم
+    const whereCondition: any = { 
+      id: orderId,
+      status: 'delivered'
+    };
+    
+    if (!isOwner) {
+      whereCondition.assignedDriverId = driverId;
+    }
 
     const order = await Order.findOne({
-      where: {
-        id: orderId,
-        assignedDriverId: driverId,
-        status: 'delivered'
-      }
+      where: whereCondition
     });
 
     if (!order) {
       res.status(404).json({ 
         success: false,
-        error: 'الطلب غير موجود أو غير مكتمل' 
+        error: 'الطلب غير موجود أو لم يتم تسليمه بعد' 
       });
       return;
     }
 
-    // تخزين التقييم (يمكنك إنشاء جدول منفصل للتقييمات)
+    // تحديث التقييم
     await order.update({ 
-      rating: stars,
-      ratingComment: comment,
+      rating: finalRating,
+      ratingComment: comment || null,
       ratedAt: new Date()
     } as any);
 
+    // إذا كان السائق هو من يقيم، يمكن تحديث تقييم المطعم/المتجر أيضاً
+    if (!isOwner && driverId) {
+      // تحديث تقييم السائق (إذا كان هناك حقل لتقييم السائق)
+      const driver = await User.findByPk(driverId);
+      if (driver) {
+        // يمكن إضافة منطق لتحديث متوسط تقييم السائق
+        console.log(`Driver ${driver.name} rated order ${order.orderNumber} with ${finalRating} stars`);
+      }
+    }
+
     res.json({
       success: true,
-      message: 'تم إرسال التقييم بنجاح'
+      message: 'شكراً لتقييمك',
+      data: { 
+        orderId: order.id,
+        rating: finalRating,
+        comment: comment || null
+      }
     });
   } catch (error) {
     console.error('Error rating order:', error);
@@ -378,6 +380,15 @@ export const assignDeliveryDriver = async (
       return;
     }
 
+    if (!driver.isActive || !driver.isOnline) {
+      await transaction.rollback();
+      res.status(403).json({
+        success: false,
+        error: 'المندوب غير متاح حالياً'
+      });
+      return;
+    }
+
     // تحديث الطلب
     const estimatedDeliveryTime = new Date();
     estimatedDeliveryTime.setMinutes(estimatedDeliveryTime.getMinutes() + estimatedMinutes);
@@ -389,6 +400,30 @@ export const assignDeliveryDriver = async (
     }, { transaction });
 
     await transaction.commit();
+
+    // Emit realtime event to notify assigned driver and store/restaurant
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.assigned',
+        title: 'تم تعيين مندوب',
+        message: `تم تعيين المندوب ${driver.name} للطلب ${order.orderNumber}`,
+        actorId: req.user?.id || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: driverId || null
+        }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event on assignDeliveryDriver:', err);
+    }
 
     res.json({
       success: true,
@@ -504,6 +539,154 @@ export const getDriverLocation = async (
   }
 };
 
+// ==================== الحصول على موقع السائق الحالي ====================
+
+export const getMyDriverLocation = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const driver = await User.findOne({
+      where: {
+        id: driverId,
+        role: 'delivery_driver'
+      },
+      attributes: ['id', 'name', 'lastLocationLat', 'lastLocationLng', 'lastLocationUpdate']
+    });
+
+    if (!driver) {
+      res.status(404).json({
+        success: false,
+        error: 'مندوب التوصيل غير موجود'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        driverId: driver.id,
+        name: driver.name,
+        lat: driver.lastLocationLat,
+        lng: driver.lastLocationLng,
+        lastUpdate: driver.lastLocationUpdate
+      }
+    });
+  } catch (error) {
+    console.error('Error getting current driver location:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في جلب موقع المندوب'
+    });
+  }
+};
+
+export const getDriverAvailability = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const driver = await User.findOne({
+      where: {
+        id: driverId,
+        role: 'delivery_driver'
+      },
+      attributes: ['id', 'name', 'isActive', 'isOnline', 'lastLogin', 'lastLocationUpdate']
+    });
+
+    if (!driver) {
+      res.status(404).json({ success: false, error: 'مندوب التوصيل غير موجود' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        driverId: driver.id,
+        name: driver.name,
+        isActive: driver.isActive,
+        isOnline: driver.isOnline,
+        lastLogin: driver.lastLogin,
+        lastLocationUpdate: driver.lastLocationUpdate
+      }
+    });
+  } catch (error) {
+    console.error('Error getting driver availability:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب حالة التواجد' });
+  }
+};
+
+export const updateDriverAvailability = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const driverId = req.user?.id;
+
+    if (!driverId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const { isOnline, online } = req.body;
+    const nextOnline = typeof isOnline === 'boolean' ? isOnline : typeof online === 'boolean' ? online : undefined;
+
+    if (nextOnline === undefined) {
+      res.status(400).json({ success: false, error: 'يجب إرسال isOnline أو online كقيمة منطقية' });
+      return;
+    }
+
+    const driver = await User.findOne({
+      where: {
+        id: driverId,
+        role: 'delivery_driver'
+      }
+    });
+
+    if (!driver) {
+      res.status(404).json({ success: false, error: 'مندوب التوصيل غير موجود' });
+      return;
+    }
+
+    if (!driver.isActive && nextOnline) {
+      res.status(403).json({ success: false, error: 'الحساب غير مفعل' });
+      return;
+    }
+
+    await driver.update({
+      isOnline: nextOnline,
+      lastLogin: nextOnline ? new Date() : driver.lastLogin
+    });
+
+    res.json({
+      success: true,
+      message: nextOnline ? 'تم تفعيل وضع الأونلاين' : 'تم إيقاف وضع الأونلاين',
+      data: {
+        driverId: driver.id,
+        isActive: driver.isActive,
+        isOnline: driver.isOnline
+      }
+    });
+  } catch (error) {
+    console.error('Error updating driver availability:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث حالة التواجد' });
+  }
+};
+
 // ==================== تحديث حالة طلب التوصيل ====================
 
 export const updateDeliveryStatus = async (
@@ -546,6 +729,30 @@ export const updateDeliveryStatus = async (
     await order.update(updateData, { transaction });
 
     await transaction.commit();
+
+    // Emit realtime event after delivery status update
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.status.updated',
+        title: 'تحديث حالة التوصيل',
+        message: `تم تحديث حالة التوصيل للطلب ${order.orderNumber} إلى ${order.status}`,
+        actorId: req.user?.id || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: order.assignedDriverId || null
+        }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event on updateDeliveryStatus:', err);
+    }
 
     res.json({
       success: true,
@@ -750,13 +957,20 @@ export const getDeliveryOrders = async (
           required: false
         },
         { 
-          model: OrderItem,  // ✅ أضف هذا لجلب عناصر الطلب
+          model: OrderItem,
           as: 'orderItems',
           include: [
             { 
-              model: MenuItem,  // ✅ أضف هذا لجلب تفاصيل المنتج
+              model: MenuItem,
               as: 'menuItem',
-              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price']
+              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price'],
+              required: false
+            },
+            { 
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'description', 'imageUrl', 'price'],  // ✅ imageUrl
+              required: false
             }
           ],
           required: false
@@ -765,9 +979,22 @@ export const getDeliveryOrders = async (
       order: [['createdAt', 'DESC']]
     });
 
+    // معالجة البيانات لإضافة أسماء العناصر بشكل موحد
+    const processedOrders = orders.map(order => {
+      const plainOrder = order.toJSON();
+      if (plainOrder.orderItems) {
+        plainOrder.orderItems = plainOrder.orderItems.map((item: any) => ({
+          ...item,
+          itemName: item.menuItem?.name || item.product?.name || 'منتج غير معروف',
+          itemImage: item.menuItem?.image || item.product?.imageUrl || null  // ✅ imageUrl
+        }));
+      }
+      return plainOrder;
+    });
+
     res.json({
       success: true,
-      data: orders
+      data: processedOrders
     });
   } catch (error) {
     console.error('Error fetching delivery orders:', error);
@@ -806,16 +1033,30 @@ export const getDriverOrders = async (
         { 
           model: Restaurant, 
           as: 'restaurant', 
-          attributes: ['name', 'address', 'phone', 'latitude', 'longitude']
+          attributes: ['id', 'name', 'address', 'phone', 'latitude', 'longitude'],
+          required: false
         },
         { 
-          model: OrderItem,  // ✅ أضف هذا لجلب عناصر الطلب
+          model: Store,
+          as: 'store',
+          attributes: ['id', 'name', 'address', 'phone', 'latitude', 'longitude'],
+          required: false
+        },
+        { 
+          model: OrderItem,
           as: 'orderItems',
           include: [
             { 
-              model: MenuItem,  // ✅ أضف هذا لجلب تفاصيل المنتج
+              model: MenuItem,
               as: 'menuItem',
-              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price']
+              attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price'],
+              required: false
+            },
+            { 
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'description', 'imageUrl', 'price'],  // ✅ imageUrl
+              required: false
             }
           ],
           required: false
@@ -824,9 +1065,22 @@ export const getDriverOrders = async (
       order: [['estimatedDeliveryTime', 'ASC']]
     });
 
+    // معالجة البيانات لإضافة أسماء العناصر بشكل موحد
+    const processedOrders = orders.map(order => {
+      const plainOrder = order.toJSON();
+      if (plainOrder.orderItems) {
+        plainOrder.orderItems = plainOrder.orderItems.map((item: any) => ({
+          ...item,
+          itemName: item.menuItem?.name || item.product?.name || 'منتج غير معروف',
+          itemImage: item.menuItem?.image || item.product?.imageUrl || null  // ✅ imageUrl
+        }));
+      }
+      return plainOrder;
+    });
+
     res.json({
       success: true,
-      data: orders
+      data: processedOrders
     });
   } catch (error) {
     console.error('Error fetching driver orders:', error);
@@ -837,6 +1091,101 @@ export const getDriverOrders = async (
   }
 };
 
+
+// إكمال الطلب (بعد التوصيل والدفع)
+export const completeOrder = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { orderId } = req.params;
+    const driverId = req.user?.id;
+    const userRole = req.user?.role;
+    const isOwner = userRole === 'owner' || userRole === 'super_admin';
+
+    // بناء شرط البحث
+    const where: any = { 
+      id: orderId,
+      status: 'delivering'  // فقط الطلبات قيد التوصيل
+    };
+    
+    // إذا لم يكن مالكاً، تحقق أن السائق هو المخصص للطلب
+    if (!isOwner) {
+      where.assignedDriverId = driverId;
+    }
+
+    const order = await Order.findOne({ where, transaction });
+
+    if (!order) {
+      await transaction.rollback();
+      res.status(404).json({ 
+        success: false,
+        error: 'الطلب غير موجود أو ليس قيد التوصيل' 
+      });
+      return;
+    }
+
+    // ✅ التحقق من الدفع (الأهم!)
+    if (!order.isPaid && order.paymentMethod === 'cash') {
+      await transaction.rollback();
+      res.status(400).json({ 
+        success: false,
+        error: 'يجب تحصيل الدفع أولاً قبل إكمال الطلب' 
+      });
+      return;
+    }
+
+    // تحديث حالة الطلب
+    await order.update({ 
+      status: 'delivered',
+      actualDeliveryTime: new Date()
+    }, { transaction });
+
+    await transaction.commit();
+
+    // إشعار realtime
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.completed',
+        title: 'تم إكمال الطلب',
+        message: `تم إكمال الطلب ${order.orderNumber} بنجاح`,
+        actorId: req.user?.id || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: 'delivered',
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: order.assignedDriverId || null
+        }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event:', err);
+    }
+
+    res.json({
+      success: true,
+      message: 'تم إكمال الطلب بنجاح',
+      data: { 
+        status: 'delivered',
+        actualDeliveryTime: order.actualDeliveryTime
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error completing order:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'حدث خطأ في إكمال الطلب' 
+    });
+  }
+};
 // ==================== الحصول على طلب مع موقع التوصيل ====================
 
 export const getOrderWithLocation = async (
@@ -863,13 +1212,18 @@ export const getOrderWithLocation = async (
           attributes: ['id', 'name', 'phone', 'lastLocationLat', 'lastLocationLng']
         },
         { 
-          model: OrderItem,  // ✅ أضف هذا لجلب عناصر الطلب
+          model: OrderItem,
           as: 'orderItems',
           include: [
             { 
-              model: MenuItem,  // ✅ أضف هذا لجلب تفاصيل المنتج
+              model: MenuItem,
               as: 'menuItem',
               attributes: ['id', 'name', 'nameEn', 'description', 'image', 'price']
+            },
+            { 
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'description', 'imageUrl', 'price']  // ✅ imageUrl
             }
           ],
           required: false

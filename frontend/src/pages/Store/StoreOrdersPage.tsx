@@ -32,7 +32,7 @@ const C = {
 interface StoreOrder {
   id: string;
   orderNumber: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'served' | 'cancelled';
   total: number;
   isPaid: boolean;
   paymentMethod: string;
@@ -60,10 +60,31 @@ const StoreOrdersPage: React.FC = () => {
 
   const token = localStorage.getItem('token');
 
+  const normalizeStatus = (status: string): StoreOrder['status'] => {
+    const statusMap: Record<string, StoreOrder['status']> = {
+      processing: 'preparing',
+      shipped: 'ready',
+      pending: 'pending',
+      preparing: 'preparing',
+      ready: 'ready',
+      delivering: 'delivering',
+      delivered: 'delivered',
+      served: 'served',
+      cancelled: 'cancelled'
+    };
+
+    return statusMap[status] || 'pending';
+  };
+
   const fetchOrders = useCallback(async () => {
     try {
       const response = await api.get('/store/orders');
-      const ordersData = Array.isArray(response) ? response : [];
+      const ordersData = Array.isArray(response)
+        ? response.map((order: any) => ({
+            ...order,
+            status: normalizeStatus(order.status)
+          }))
+        : [];
       setOrders(ordersData);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -104,7 +125,7 @@ const StoreOrdersPage: React.FC = () => {
   const fetchOrderById = async (orderId: string) => {
     try {
       const data = await api.get<StoreOrder>(`/store/orders/${orderId}`);
-      setSelectedOrder(data);
+      setSelectedOrder({ ...data, status: normalizeStatus(data.status) });
     } catch (error) {
       console.error('Error fetching order:', error);
     }
@@ -112,10 +133,13 @@ const StoreOrdersPage: React.FC = () => {
 
   const updateOrderStatus = async (orderId: string, status: string) => {
     try {
-      await api.patch(`/store/orders/${orderId}/status`, { status });
+      const normalizedStatus = normalizeStatus(status);
+      await api.patch(`/store/orders/${orderId}/status`, { status: normalizedStatus });
       toast.success('تم تحديث حالة الطلب بنجاح');
       await fetchOrders();
-      if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status: status as any });
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, status: normalizedStatus });
+      }
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('حدث خطأ في تحديث حالة الطلب');
@@ -133,9 +157,11 @@ const StoreOrdersPage: React.FC = () => {
   const getStatusStyle = (status: string): React.CSSProperties => {
     const map: Record<string, { bg: string; color: string }> = {
       pending:    { bg: `rgba(245,158,11,0.15)`,  color: C.yellow },
-      processing: { bg: `rgba(96,165,250,0.15)`,   color: C.blue },
-      shipped:    { bg: `rgba(167,139,250,0.15)`,  color: C.purple },
+      preparing:  { bg: `rgba(96,165,250,0.15)`,  color: C.blue },
+      ready:      { bg: `rgba(167,139,250,0.15)`, color: C.purple },
+      delivering: { bg: `rgba(96,165,250,0.25)`,  color: '#1D4ED8' },
       delivered:  { bg: `rgba(200,226,53,0.15)`,   color: C.accent },
+      served:     { bg: `rgba(200,226,53,0.25)`,   color: C.acDk },
       cancelled:  { bg: `rgba(255,107,107,0.15)`,  color: C.red },
     };
     const s = map[status] || { bg: `rgba(157,196,172,0.15)`, color: C.muted };
@@ -143,7 +169,15 @@ const StoreOrdersPage: React.FC = () => {
   };
 
   const getStatusText = (status: string) => {
-    const map: Record<string, string> = { pending: 'قيد الانتظار', processing: 'قيد التجهيز', shipped: 'تم الشحن', delivered: 'تم التوصيل', cancelled: 'ملغي' };
+    const map: Record<string, string> = {
+      pending: 'قيد الانتظار',
+      preparing: 'قيد التجهيز',
+      ready: 'جاهز للتوصيل',
+      delivering: 'قيد التوصيل',
+      delivered: 'تم التوصيل',
+      served: 'تم التسليم',
+      cancelled: 'ملغي'
+    };
     return map[status] || status;
   };
 
@@ -152,16 +186,16 @@ const StoreOrdersPage: React.FC = () => {
     return {
       total: list.length,
       pending: list.filter(o => o.status === 'pending').length,
-      processing: list.filter(o => o.status === 'processing').length,
-      shipped: list.filter(o => o.status === 'shipped').length,
+      preparing: list.filter(o => o.status === 'preparing').length,
+      ready: list.filter(o => o.status === 'ready').length,
+      delivering: list.filter(o => o.status === 'delivering').length,
       delivered: list.filter(o => o.status === 'delivered').length,
+      served: list.filter(o => o.status === 'served').length,
       cancelled: list.filter(o => o.status === 'cancelled').length,
       paid: list.filter(o => o.isPaid).length,
       unpaid: list.filter(o => !o.isPaid).length,
     };
   };
-
-  if (loading) return <Loader fullScreen />;
 
   const filteredOrders = getFilteredOrders();
   const stats = getStats();
@@ -210,9 +244,11 @@ const StoreOrdersPage: React.FC = () => {
             {[
               { key: 'all', label: `الكل (${stats.total})` },
               { key: 'pending', label: `قيد الانتظار (${stats.pending})` },
-              { key: 'processing', label: `قيد التجهيز (${stats.processing})` },
-              { key: 'shipped', label: `تم الشحن (${stats.shipped})` },
+              { key: 'preparing', label: `قيد التجهيز (${stats.preparing})` },
+              { key: 'ready', label: `جاهز للتوصيل (${stats.ready})` },
+              { key: 'delivering', label: `قيد التوصيل (${stats.delivering})` },
               { key: 'delivered', label: `تم التوصيل (${stats.delivered})` },
+              { key: 'served', label: `تم التسليم (${stats.served})` },
               { key: 'cancelled', label: `ملغي (${stats.cancelled})` },
             ].map(f => (
               <button key={f.key} onClick={() => setFilter(f.key)} style={filterBtnStyle(filter === f.key)}>{f.label}</button>

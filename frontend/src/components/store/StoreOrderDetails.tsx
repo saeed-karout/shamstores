@@ -9,7 +9,7 @@ import { getImageUrl } from '@/utils/imageHelpers';
 interface StoreOrder {
   id: string;
   orderNumber: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'served' | 'cancelled';
   total: number | string;
   isPaid: boolean;
   paymentMethod: string;
@@ -49,9 +49,11 @@ const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateSt
   const getStatusOptions = () => {
     const options = [
       { value: 'pending', label: 'قيد الانتظار', color: 'yellow' },
-      { value: 'processing', label: 'قيد التجهيز', color: 'blue' },
-      { value: 'shipped', label: 'تم الشحن', color: 'purple' },
+      { value: 'preparing', label: 'قيد التجهيز', color: 'blue' },
+      { value: 'ready', label: 'جاهز للتوصيل', color: 'purple' },
+      { value: 'delivering', label: 'قيد التوصيل', color: 'indigo' },
       { value: 'delivered', label: 'تم التوصيل', color: 'green' },
+      { value: 'served', label: 'تم التسليم', color: 'emerald' },
       { value: 'cancelled', label: 'ملغي', color: 'red' },
     ];
     
@@ -61,9 +63,11 @@ const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateSt
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'processing': return 'bg-blue-100 text-blue-800';
-      case 'shipped': return 'bg-purple-100 text-purple-800';
+      case 'preparing': return 'bg-blue-100 text-blue-800';
+      case 'ready': return 'bg-purple-100 text-purple-800';
+      case 'delivering': return 'bg-indigo-100 text-indigo-800';
       case 'delivered': return 'bg-green-100 text-green-800';
+      case 'served': return 'bg-emerald-100 text-emerald-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -72,9 +76,11 @@ const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateSt
   const getStatusText = (status: string) => {
     switch (status) {
       case 'pending': return 'قيد الانتظار';
-      case 'processing': return 'قيد التجهيز';
-      case 'shipped': return 'تم الشحن';
+      case 'preparing': return 'قيد التجهيز';
+      case 'ready': return 'جاهز للتوصيل';
+      case 'delivering': return 'قيد التوصيل';
       case 'delivered': return 'تم التوصيل';
+      case 'served': return 'تم التسليم';
       case 'cancelled': return 'ملغي';
       default: return status;
     }

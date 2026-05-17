@@ -18,6 +18,7 @@ import { ProductCategory, sequelize } from '../models';
 import cloudflareImagesService from '../services/cloudflareImagesService';
 import fs from 'fs';
 import path from 'path';
+import { emitOrderRealtimeEvent } from '../realtime/socket';
 
 const deleteLegacyLocalImage = (imagePath?: string): void => {
   if (!imagePath || /^https?:\/\//i.test(imagePath)) {
@@ -1415,6 +1416,11 @@ export const updateStoreOrderStatus = async (
     const storeId = await getStoreId(req);
     const { id } = req.params;
     const { status } = req.body;
+    const legacyStatusMap: Record<string, string> = {
+      processing: 'preparing',
+      shipped: 'ready'
+    };
+    const normalizedStatus = legacyStatusMap[status] || status;
     
     if (!storeId) {
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
@@ -1434,14 +1440,39 @@ export const updateStoreOrderStatus = async (
     }
     
     // التحقق من صحة الحالة
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
+    const validStatuses = ['pending', 'preparing', 'ready', 'delivering', 'delivered', 'served', 'cancelled'];
+    if (!validStatuses.includes(normalizedStatus)) {
       res.status(400).json({ success: false, error: 'حالة غير صالحة' });
       return;
     }
-    
-    await order.update({ status });
-    
+    const previousStatus = order.status;
+    await order.update({ status: normalizedStatus });
+
+    // Emit realtime event so drivers/clients subscribed to this order/store get notified
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.status.updated',
+        title: 'تحديث حالة الطلب',
+        message: `تم تحديث حالة الطلب ${order.orderNumber} إلى ${order.status}`,
+        actorId: req.user?.id || null,
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          isPaid: order.isPaid,
+          total: Number(order.total),
+          orderType: order.orderType,
+          restaurantId: order.restaurantId || null,
+          storeId: order.storeId || null,
+          createdBy: order.createdBy || null,
+          assignedDriverId: order.assignedDriverId || null
+        },
+        extraData: { previousStatus }
+      });
+    } catch (err) {
+      console.error('Error emitting realtime event for store order status update:', err);
+    }
+
     res.json({
       success: true,
       message: 'تم تحديث حالة الطلب بنجاح',

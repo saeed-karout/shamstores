@@ -1,2 +1,8 @@
-# Cloudflare Pages configuration
-# The build output is automatically deployed from the dist folder
+# Cloudflare static assets deployment for the Vite frontend.
+# This makes `npx wrangler deploy` work with the built `dist` folder.
+
+name = "shamstores"
+compatibility_date = "2026-05-17"
+
+[assets]
+directory = "./dist"
