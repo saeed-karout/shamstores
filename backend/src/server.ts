@@ -57,7 +57,9 @@ app.use(cors({
       }
     }
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    const isShamstoresSubdomain = /^https:\/\/([a-z0-9-]+\.)+shamstores\.com$/.test(origin);
+
+    if (allowedOrigins.indexOf(origin) !== -1 || isShamstoresSubdomain) {
       console.log('✅ CORS allowed for origin:', origin);
       callback(null, true);
     } else {
