@@ -34,12 +34,16 @@ export interface UserAttributes {
   isEmailVerified: boolean;
   loginAttempts: number;
   lockedUntil?: Date | null;
+  
+  // ✅ ✅ ✅ حقل FCM Token للإشعارات (مهم جداً)
+  fcmToken?: string;          // Firebase Cloud Messaging Token
 }
 
 export interface UserCreationAttributes extends Optional<UserAttributes, 
   'id' | 'isActive' | 'isOnline' | 'permissions' | 'lastLogin' | 
   'lastLocationLat' | 'lastLocationLng' | 'lastLocationUpdate' | 'storeId' |
-  'isEmailVerified' | 'loginAttempts' | 'lockedUntil' | 'driverRating' | 'driverRatingCount'
+  'isEmailVerified' | 'loginAttempts' | 'lockedUntil' | 'driverRating' | 
+  'driverRatingCount' | 'fcmToken'
 > {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
@@ -63,7 +67,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public lastLocationLng!: number;
   public lastLocationUpdate!: Date;
 
-  // ✅ حقول تقييم السائق
+  // حقول تقييم السائق
   public driverRating!: number;
   public driverRatingCount!: number;
 
@@ -71,21 +75,35 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public isEmailVerified!: boolean;
   public loginAttempts!: number;
   public lockedUntil!: Date | null;
+  
+  // ✅ ✅ ✅ FCM Token
+  public fcmToken!: string;
 
   // مقارنة كلمة المرور
   public async comparePassword(candidatePassword: string): Promise<boolean> {
     return bcrypt.compare(candidatePassword, this.password);
   }
   
-  // ✅ دالة مساعدة لتحديث متوسط تقييم السائق
+  // دالة مساعدة لتحديث متوسط تقييم السائق
   public async updateDriverRating(newRating: number): Promise<void> {
     const currentTotal = (this.driverRating || 0) * (this.driverRatingCount || 0);
     const newCount = (this.driverRatingCount || 0) + 1;
     const newAverage = (currentTotal + newRating) / newCount;
     
-    this.driverRating = Math.round(newAverage * 10) / 10; // تقريب لرقم واحد بعد الفاصلة
+    this.driverRating = Math.round(newAverage * 10) / 10;
     this.driverRatingCount = newCount;
     await this.save();
+  }
+  
+  // ✅ دالة لتحديث FCM Token
+  public async updateFcmToken(token: string | null): Promise<void> {
+    this.fcmToken = token;
+    await this.save();
+  }
+  
+  // ✅ التحقق من وجود FCM Token
+  public hasFcmToken(): boolean {
+    return !!this.fcmToken && this.fcmToken.length > 0;
   }
 }
 
@@ -174,7 +192,6 @@ User.init(
       allowNull: true,
       field: 'last_location_update'
     },
-    // ✅ حقول تقييم السائق
     driverRating: {
       type: DataTypes.DECIMAL(2, 1),
       allowNull: true,
@@ -188,7 +205,6 @@ User.init(
       defaultValue: 0,
       field: 'driver_rating_count'
     },
-    // حقول الأمان
     isEmailVerified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
@@ -203,6 +219,12 @@ User.init(
       type: DataTypes.DATE,
       allowNull: true,
       field: 'locked_until'
+    },
+    // ✅ ✅ ✅ FCM Token
+    fcmToken: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      field: 'fcm_token'
     }
   },
   {
@@ -218,7 +240,6 @@ User.init(
           user.password = await bcrypt.hash(user.password, salt);
           console.log('🔐 Password hashed with bcrypt');
         }
-        // القيم الافتراضية
         if (user.isEmailVerified === undefined) user.isEmailVerified = false;
         if (user.loginAttempts === undefined) user.loginAttempts = 0;
         if (user.driverRating === undefined) user.driverRating = 0;
