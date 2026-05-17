@@ -47,7 +47,18 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
+    
+    // ✅ في وضع التطوير، قبول أي localhost أو 127.0.0.1 (بما فيها الـ subdomains)
+    if (process.env.NODE_ENV !== 'production') {
+      const isLocalhost = /^https?:\/\/(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      if (isLocalhost) {
+        console.log('✅ CORS allowed for development:', origin);
+        return callback(null, true);
+      }
+    }
+    
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS allowed for origin:', origin);
       callback(null, true);
     } else {
       console.log('❌ CORS blocked for origin:', origin);
