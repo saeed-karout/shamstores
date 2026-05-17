@@ -35,56 +35,67 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const httpServer = http.createServer(app);
 
-// ✅ إعدادات CORS المتقدمة
-const allowedOrigins = [
-  'https://shamstores.com',
-  'https://www.shamstores.com',
-  'http://localhost:3000',
-  'http://localhost:5173',
-  'https://shamstores-app-mixd9.ondigitalocean.app'
-];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    
-    // ✅ في وضع التطوير، قبول أي localhost أو 127.0.0.1 (بما فيها الـ subdomains)
-    if (process.env.NODE_ENV !== 'production') {
-      const isLocalhost = /^https?:\/\/(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-      if (isLocalhost) {
-        console.log('✅ CORS allowed for development:', origin);
-        return callback(null, true);
-      }
+// ==============================================
+// ✅ إعدادات CORS المتقدمة (النسخة المحسّنة)
+// ==============================================
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // 1. السماح للطلبات من نفس الخادم (مثل Postman، الأدوات، أو الطلبات بدون origin)
+    if (!origin) {
+      return callback(null, true);
     }
-    
-    const isShamstoresSubdomain = /^https:\/\/([a-z0-9-]+\.)+shamstores\.com$/.test(origin);
 
-    if (allowedOrigins.indexOf(origin) !== -1 || isShamstoresSubdomain) {
-      console.log('✅ CORS allowed for origin:', origin);
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked for origin:', origin);
-      callback(null, false);
+    // 2. قائمة النطاقات المسموح بها صراحةً (للمراقبة والتسجيل)
+    const allowedOrigins = [
+      'https://shamstores.com',
+      'https://www.shamstores.com',
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://shamstores-app-mixd9.ondigitalocean.app'
+    ];
+
+    // 3. ✅ السماح لأي نطاق فرعي لـ shamstores.com (مهم جداً للمتاجر)
+    //    يدعم: karout.shamstores.com, a.b.c.shamstores.com, إلخ.
+    const isShamstoresSubdomain = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.shamstores\.com$/.test(origin);
+
+    // 4. السماح لأي localhost أو 127.0.0.1 في بيئة التطوير
+    const isLocalhost = /^https?:\/\/(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+    // 5. القرار النهائي
+    if (allowedOrigins.includes(origin) || isShamstoresSubdomain || isLocalhost) {
+      console.log(`✅ CORS allowed for origin: ${origin}`);
+      return callback(null, true);
     }
+
+    // 6. رفض الباقي
+    console.log(`❌ CORS blocked for origin: ${origin}`);
+    return callback(null, false); // يمكن تغييرها إلى callback(new Error('CORS blocked')) إذا أردت إرجاع خطأ
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Subdomain'],
   optionsSuccessStatus: 204
-}));
+};
 
-app.options('*', cors());
+// تطبيق CORS على جميع المسارات
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
+// ==============================================
+// باقي إعدادات السيرفر (مثل JSON, الملفات الثابتة)
+// ==============================================
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // المجلدات الثابتة
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// ✅ تفعيل middleware استخراج الـ subdomain لجميع الطلبات
+// تفعيل middleware استخراج الـ subdomain لجميع الطلبات
 app.use(extractSubdomain);
 
-// استخدام المسارات
+// ==============================================
+// المسارات (Routes)
+// ==============================================
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/menu', menuRoutes);
@@ -103,7 +114,7 @@ app.use('/api/platform-settings', platformSettingsRoutes);
 app.use('/api/marketing', marketingRoutes);
 app.use('/api', publicRoutes);
 
-// الصفحة الرئيسية
+// الصفحة الرئيسية (للتأكد أن السيرفر يعمل)
 app.get('/', (req, res) => {
   res.json({
     message: 'مرحباً بك في Digital Menu SaaS API',
@@ -123,33 +134,32 @@ app.get('/', (req, res) => {
   });
 });
 
-// معالجة الأخطاء
+// معالجة الأخطاء العامة (يجب أن تكون آخر middleware)
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
+  console.error('❌ Server error:', err.stack);
   res.status(500).json({ error: 'حدث خطأ في الخادم' });
 });
 
-// دالة بدء الخادم
+// ==============================================
+// بدء تشغيل السيرفر
+// ==============================================
 const startServer = async () => {
   try {
     // اختبار الاتصال بقاعدة البيانات
     await testConnection();
     console.log('✅ Database connection established.');
 
-    // ✅ تعطيل sync تماماً في الإنتاج
-    // في الإنتاج، يجب إدارة الجداول يدوياً عبر الـ Migrations
+    // مزامنة قاعدة البيانات (فقط في بيئة التطوير)
     if (process.env.NODE_ENV === 'production') {
       console.log('⚠️ Production mode: Auto-sync DISABLED.');
       console.log('✅ Database schema must be managed via migrations.');
       console.log('📋 To run migrations: npx sequelize-cli db:migrate');
     } else {
-      // فقط في بيئة التطوير، وليس في الإنتاج
-      // استخدم alter: false لمنع التعديلات الخطيرة
       await sequelize.sync({ alter: false });
       console.log('✅ Database tables synced (development mode).');
     }
 
-    // إدراج البيانات الأساسية إذا لم تكن موجودة
+    // إدراج البيانات الأساسية (الخطط) إذا لم تكن موجودة
     const Plan = (await import('./models/Plan')).default;
     const plansCount = await Plan.count();
 
@@ -290,16 +300,18 @@ const startServer = async () => {
       console.log('✅ تم إدراج الخطط بنجاح');
     }
 
+    // تشغيل Socket.IO
     initializeSocket(httpServer);
 
+    // بدء الاستماع على المنفذ
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`📝 API: http://localhost:${PORT}`);
       console.log(`🔔 Socket.IO: ws://localhost:${PORT}`);
+      console.log(`🌐 CORS: Enabled for shamstores.com and all subdomains`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
-    // لا تخرج من العملية فوراً في الإنتاج، أعط فرصة لإعادة المحاولة
     if (process.env.NODE_ENV !== 'production') {
       process.exit(1);
     }
