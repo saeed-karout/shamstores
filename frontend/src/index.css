@@ -1,0 +1,207 @@
+/* frontend/src/index.css */
+
+/* Import fonts */
+@import './styles/fonts.css';
+
+/* Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== CSS DESIGN TOKENS ===== */
+:root {
+  --sham-bg:           #082E24;
+  --sham-primary:      #0D4A3A;
+  --sham-secondary:    #1A6B55;
+  --sham-surface:      #0F3D31;
+  --sham-surface-light:#164D3E;
+  --sham-card:         #112E23;
+  --sham-accent:       #C8E235;
+  --sham-accent-dark:  #A8C220;
+  --sham-text:         #E8F5E9;
+  --sham-muted:        #9DC4AC;
+  --sham-border:       rgba(200,226,53,0.15);
+  --sham-border-hover: rgba(200,226,53,0.35);
+  
+  /* Font family */
+  --font-primary: 'Al-Jazeera-Arabic';
+}
+
+/* ===== GLOBAL STYLES ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-primary);
+  background-color: var(--sham-bg);
+  color: var(--sham-text);
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== TYPOGRAPHY ===== */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-primary);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+p, span, a, button, input, textarea, select {
+  font-family: var(--font-primary);
+}
+
+/* ===== CUSTOM SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sham-surface);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sham-accent);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sham-accent-dark);
+}
+
+/* ===== SELECTION ===== */
+::selection {
+  background: var(--sham-accent);
+  color: var(--sham-bg);
+}
+
+::-moz-selection {
+  background: var(--sham-accent);
+  color: var(--sham-bg);
+}
+
+/* ===== FORM ELEMENTS ===== */
+input, textarea, select {
+  font-family: var(--font-primary);
+  background-color: var(--sham-surface);
+  border: 1px solid var(--sham-border);
+  color: var(--sham-text);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: all 0.2s;
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--sham-accent);
+  box-shadow: 0 0 0 3px rgba(200,226,53,0.15);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--sham-muted);
+}
+
+/* ===== BUTTONS ===== */
+.btn-primary {
+  background: var(--sham-accent);
+  color: var(--sham-bg);
+  font-family: var(--font-primary);
+  font-weight: 700;
+  border: none;
+  border-radius: 0.625rem;
+  padding: 0.625rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.btn-primary:hover {
+  background: var(--sham-accent-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(200,226,53,0.3);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--sham-accent);
+  border: 1.5px solid var(--sham-accent);
+  font-family: var(--font-primary);
+  font-weight: 700;
+  border-radius: 0.625rem;
+  padding: 0.563rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.btn-outline:hover {
+  background: rgba(200,226,53,0.1);
+  transform: translateY(-1px);
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--sham-card);
+  border: 1px solid var(--sham-border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  transition: all 0.3s;
+}
+
+.card:hover {
+  border-color: var(--sham-border-hover);
+  transform: translateY(-2px);
+}
+
+/* ===== BADGES ===== */
+.badge {
+  background: rgba(200,226,53,0.15);
+  color: var(--sham-accent);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+.animate-slide-in { animation: slideIn 0.3s ease forwards; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: flex !important; }
+}
+
+@media (min-width: 769px) {
+  .show-mobile { display: none !important; }
+}

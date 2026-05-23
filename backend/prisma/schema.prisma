@@ -1,0 +1,803 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum UserRole {
+  super_admin
+  owner
+  staff
+  user
+  delivery_driver
+}
+
+enum OrderStatus {
+  pending
+  preparing
+  ready
+  delivering
+  delivered
+  served
+  cancelled
+}
+
+enum PaymentMethod {
+  cash
+  card
+  online
+}
+
+enum OrderType {
+  dine_in
+  delivery
+  takeaway
+}
+
+enum DiscountType {
+  percentage
+  fixed
+}
+
+enum BusinessType {
+  restaurant
+  store
+}
+
+enum SettingType {
+  string
+  number
+  boolean
+  json
+  array
+}
+
+enum SettingGroup {
+  general
+  auth
+  business
+  subscription
+  payment
+  domain
+  storage
+  delivery
+  notification
+  security
+  analytics
+  seo
+}
+
+// ==================== MODELS ====================
+
+model User {
+  id                   String    @id @default(cuid())
+  restaurantId         String?
+  storeId              String?
+  name                 String
+  email                String    @unique
+  password             String
+  phone                String?
+  role                 UserRole
+  permissions          Json?
+  isActive             Boolean   @default(true)
+  isOnline             Boolean   @default(false)
+  lastLogin            DateTime?
+  lastLocationLat      Float?
+  lastLocationLng      Float?
+  lastLocationUpdate   DateTime?
+  driverRating         Float?    @default(0)
+  driverRatingCount    Int?      @default(0)
+  isEmailVerified      Boolean   @default(false)
+  loginAttempts        Int       @default(0)
+  lockedUntil          DateTime?
+  fcmToken             String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Relations
+  ownedStore   Store?    @relation("StoreOwner")
+  stores       Store[]   @relation("StoreUsers")
+  drivers      Driver[]
+  tickets      Ticket[]
+  orders       Order[]   @relation("CreatedOrders")
+
+  @@index([email])
+  @@index([restaurantId])
+  @@index([storeId])
+  @@index([role])
+}
+
+model Plan {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  slug           String   @unique
+  description    String?
+  price          Float
+  billingCycle   String?
+  maxRestaurants Int      @default(1)
+  maxStores      Int      @default(1)
+  maxUsers       Int      @default(5)
+  maxMenuItems   Int      @default(100)
+  maxProducts    Int      @default(100)
+  maxOrders      Int      @default(1000)
+  features       Json?
+  isActive       Boolean  @default(true)
+  position       Int      @default(0)
+  isPopular      Boolean  @default(false)
+  
+  hasWhatsapp      Boolean  @default(false)
+  hasOnlineOrders  Boolean  @default(false)
+  hasCustomDomain  Boolean  @default(false)
+  hasAnalytics     Boolean  @default(false)
+  hasTableQr       Boolean  @default(false)
+  hasMultiLanguage Boolean  @default(false)
+  hasPromotions    Boolean  @default(false)
+  hasCoupons       Boolean  @default(false)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  restaurants Restaurant[]
+  stores      Store[]
+
+  @@index([slug])
+}
+
+model Restaurant {
+  id             String   @id @default(cuid())
+  planId         String
+  name           String
+  slug           String   @unique
+  email          String?
+  phone          String?
+  userId         String?
+  whatsapp       String?
+  address        String?
+  description    String?
+  logo           String?
+  coverImage     String?
+  instagram      String?
+  facebook       String?
+  tiktok         String?
+  latitude       Float?
+  longitude      Float?
+  primaryColor   String   @default("#3B82F6")
+  secondaryColor String   @default("#10B981")
+  subdomain      String?  @unique
+  customDomain              String?   @unique
+  customDomainVerified      Boolean?  @default(false)
+  customDomainVerifiedAt    DateTime?
+  customDomainVerificationCode String?  @unique
+  isActive       Boolean  @default(true)
+  deliverySettings Json?
+  subscriptionStart DateTime?
+  subscriptionEnd   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  plan        Plan        @relation(fields: [planId], references: [id])
+  categories  Category[]
+  menuItems   MenuItem[]
+  tables      Table[]
+  orders      Order[]
+  coupons     Coupon[]
+  tickets     Ticket[]
+
+  @@index([planId])
+  @@index([slug])
+}
+
+model Store {
+  id          String   @id @default(cuid())
+  planId      String
+  name        String
+  slug        String   @unique
+  email       String?
+  phone       String?
+  userId      String?  @unique   // ✅ أضف @unique هنا
+  address     String?
+  description String?
+  logo        String?
+  coverImage  String?
+  latitude    Float?
+  longitude   Float?
+  primaryColor   String   @default("#3B82F6")
+  secondaryColor String   @default("#10B981")
+  backgroundColor String  @default("#FFFFFF")
+  textColor       String  @default("#000000")
+  fontFamily      String  @default("Cairo")
+  timezone        String  @default("Asia/Riyadh")
+  currency        String  @default("SAR")
+  language        String  @default("ar")
+  
+  whatsapp   String?
+  instagram  String?
+  facebook   String?
+  tiktok     String?
+  
+  deliverySettings     Json?
+  paymentSettings      Json?
+  notificationSettings Json?
+  
+  subdomain       String   @unique
+  customDomain    String?  @unique
+  customDomainVerified   Boolean? @default(false)
+  customDomainVerifiedAt DateTime?
+  customDomainVerificationCode String? @unique
+  
+  isActive        Boolean  @default(true)
+  subscriptionStart DateTime?
+  subscriptionEnd   DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // ✅ العلاقات - تم إصلاحها
+  plan        Plan        @relation(fields: [planId], references: [id])
+  owner       User?       @relation("StoreOwner", fields: [userId], references: [id])
+  users       User[]      @relation("StoreUsers")
+  categories  Category[]
+  products    Product[]
+  orders      Order[]
+  coupons     Coupon[]
+  drivers     Driver[]
+  tickets     Ticket[]
+
+  @@index([planId])
+  @@index([slug])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  storeId     String?
+  restaurantId String?
+  name        String
+  nameEn      String?
+  description String?
+  image       String?
+  position    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  store      Store?      @relation(fields: [storeId], references: [id])
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
+  products   Product[]
+  menuItems  MenuItem[]
+}
+
+model MenuItem {
+  id           String    @id @default(cuid())
+  restaurantId String
+  categoryId   String?
+  name         String
+  description  String?
+  price        Float
+  originalPrice Float?
+  image        String?
+  isAvailable  Boolean   @default(true)
+  position     Int       @default(0)
+  ordersCount  Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  category   Category?  @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+
+  @@index([restaurantId])
+  @@index([categoryId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  storeId     String
+  name        String
+  nameEn      String?
+  sku         String    @unique
+  description String?
+  price       Float
+  cost        Float?
+  stock       Int       @default(0)
+  reservedStock Int     @default(0)
+  minStockLevel Int     @default(5)
+  maxStockLevel Int?
+  imageUrl    String?
+  categoryId  String?
+  isAvailable Boolean   @default(true)
+  unit        String    @default("piece")
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  store     Store       @relation(fields: [storeId], references: [id])
+  category  Category?   @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+  movements InventoryMovement[]
+}
+
+model InventoryMovement {
+  id          String   @id @default(cuid())
+  productId   String
+  quantity    Int
+  type        String
+  reason      String?
+  referenceId String?
+  referenceType String?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  product Product @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id                     String        @id @default(cuid())
+  restaurantId           String?
+  storeId                String?
+  tableId                String?
+  orderNumber            String        @unique
+  customerName           String?
+  customerPhone          String?
+  status                 OrderStatus   @default(pending)
+  total                  Float
+  subtotal               Float?        @default(0)
+  discountAmount         Float?        @default(0)
+  couponCode             String?
+  notes                  String?
+  paymentMethod          PaymentMethod @default(cash)
+  isPaid                 Boolean       @default(false)
+  createdBy              String?
+  orderType              OrderType     @default(dine_in)
+  deliveryAddress        String?
+  deliveryLat            Float?
+  deliveryLng            Float?
+  assignedDriverId       String?
+  estimatedDeliveryTime  Int?
+  actualDeliveryTime     Int?
+  deliveryFee            Float?        @default(0)
+  deliveryDistance       Float?
+  driverAcceptedAt       DateTime?
+  driverReachedAt        DateTime?
+  paymentCollectedAt     DateTime?
+  rating                 Int?          @default(0)
+  ratingComment          String?
+  ratedAt                DateTime?
+  orderSource            String        @default("restaurant")
+  deliveryProofImage     String?
+  deliveryProofSignature String?
+  deliveryProofType      String?
+  proofTakenAt           DateTime?
+  driverRating           Int?
+  driverRatingComment    String?
+  driverRatedAt          DateTime?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  // Relations
+  restaurant   Restaurant?   @relation(fields: [restaurantId], references: [id])
+  store        Store?        @relation(fields: [storeId], references: [id])
+  driver       Driver?       @relation(fields: [assignedDriverId], references: [id])
+  creator      User?         @relation("CreatedOrders", fields: [createdBy], references: [id])
+  coupon       Coupon?       @relation(fields: [couponCode], references: [code])
+  items        OrderItem[]
+  driverEarning DriverEarning?
+  deliveries   DriverDelivery[]
+
+  @@index([restaurantId])
+  @@index([storeId])
+  @@index([assignedDriverId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id          String    @id @default(cuid())
+  orderId     String
+  menuItemId  String?
+  productId   String?
+  quantity    Int       @default(1)
+  price       Float
+  size        String?
+  addons      Json?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  order     Order     @relation(fields: [orderId], references: [id])
+  menuItem  MenuItem? @relation(fields: [menuItemId], references: [id])
+  product   Product?  @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([menuItemId])
+  @@index([productId])
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  storeId     String?
+  restaurantId String?
+  code        String   @unique
+  discountType String
+  discountValue Float
+  minOrderAmount Float?
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  usageLimit  Int?
+  usageCount  Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  store      Store?      @relation(fields: [storeId], references: [id])
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
+  orders     Order[]     @relation
+}
+
+model Table {
+  id           String    @id @default(cuid())
+  restaurantId String
+  name         String
+  nameEn       String?
+  seats        Int       @default(2)
+  qrCode       String?
+  sortOrder    Int       @default(0)
+  qrSvg        String?
+  notes        String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@index([restaurantId])
+}
+
+model Ticket {
+  id           String   @id @default(cuid())
+  userId       String
+  restaurantId String?
+  storeId      String?
+  subject      String
+  description  String?
+  status       String   @default("open")
+  priority     String   @default("medium")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  user       User       @relation(fields: [userId], references: [id])
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
+  store      Store?     @relation(fields: [storeId], references: [id])
+
+  @@index([userId])
+  @@index([restaurantId])
+  @@index([storeId])
+}
+
+model Driver {
+  id          String   @id @default(cuid())
+  userId      String
+  storeId     String?
+  vehicleType String?
+  vehiclePlate String?
+  licenseNumber String?
+  hourlyRate  Float    @default(0)
+  baseSalary  Float    @default(0)
+  isActive    Boolean  @default(true)
+  isOnline    Boolean  @default(false)
+  currentLat  Float?
+  currentLng  Float?
+  lastLocationUpdate DateTime?
+  lastActiveAt DateTime?
+  totalDeliveries Int   @default(0)
+  rating      Float    @default(5.0)
+  totalEarnings Float  @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user       User          @relation(fields: [userId], references: [id])
+  store      Store?        @relation(fields: [storeId], references: [id])
+  orders     Order[]       @relation
+  earnings   DriverEarning[]
+  shifts     DriverShift[]
+  deliveries DriverDelivery[]
+}
+
+model DriverDelivery {
+  id             String    @id @default(cuid())
+  driverId       String
+  orderId        String
+  status         String    @default("assigned")
+  acceptedAt     DateTime?
+  pickedUpAt     DateTime?
+  deliveredAt    DateTime?
+  cancelledAt    DateTime?
+  earnings       Float?    @default(0)
+  proofImage     String?
+  customerRating Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  driver Driver @relation(fields: [driverId], references: [id])
+  order  Order @relation(fields: [orderId], references: [id])
+
+  @@index([driverId])
+  @@index([orderId])
+  @@index([status])
+}
+
+model DriverLocationHistory {
+  id         String    @id @default(cuid())
+  driverId   String
+  latitude   Float
+  longitude  Float
+  recordedAt DateTime  @default(now())
+
+  @@index([driverId])
+  @@index([recordedAt])
+}
+
+model DriverEarning {
+  id          String   @id @default(cuid())
+  driverId    String
+  orderId     String   @unique
+  amount      Float
+  type        String
+  description String?
+  status      String   @default("pending")
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  driver Driver @relation(fields: [driverId], references: [id])
+  order  Order @relation(fields: [orderId], references: [id])
+}
+
+model DriverShift {
+  id          String   @id @default(cuid())
+  driverId    String
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  duration    Int?
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  driver Driver @relation(fields: [driverId], references: [id])
+}
+
+// ==================== باقي النماذج (بدون تغيير) ====================
+
+model Advertisement {
+  id          String   @id @default(cuid())
+  title       String
+  titleEn     String?
+  description String?  @db.Text
+  descriptionEn String? @db.Text
+  imageUrl    String
+  linkUrl     String?
+  position    Int      @default(0)
+  isActive    Boolean  @default(true)
+  startAt     DateTime?
+  endAt       DateTime?
+  price       Float    @default(0)
+  paid        Boolean  @default(false)
+  paymentReference String?
+  clientName  String?
+  clientEmail String?
+  clientPhone String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([startAt, endAt])
+  @@index([position])
+}
+
+model Image {
+  id                String      @id @default(cuid())
+  userId            String?     @map("user_id")
+  businessType      String      @map("business_type")
+  businessId        String?     @map("business_id")
+  uploadType        String?     @map("upload_type")
+  subType           String?     @map("sub_type")
+  provider          String      @default("cloudflare")
+  imageUrl          String      @map("image_url")
+  cloudflareImageId String?     @map("cloudflare_image_id")
+  originalName      String?     @map("original_name")
+  mimeType          String?     @map("mime_type")
+  sizeBytes         Int?        @map("size_bytes")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  @@index([businessType, businessId])
+  @@index([uploadType, subType])
+  @@index([userId])
+  @@map("images")
+}
+
+model Subscription {
+  id               String   @id @default(cuid())
+  businessType     String
+  businessId       String
+  planId           String
+  planName         String
+  months           Int
+  price            Float
+  discount         Float    @default(0)
+  totalPaid        Float
+  startDate        DateTime
+  endDate          DateTime
+  status           String   @default("active")
+  paymentMethod    String
+  paymentReference String?
+  notes            String?
+  reminderSent     Boolean  @default(false)
+  reminderSentAt   DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([businessType, businessId])
+  @@index([status])
+  @@index([endDate])
+}
+
+model MarketingSection {
+  id            String       @id @default(cuid())
+  businessType  BusinessType
+  businessId    String
+  sectionType   String
+  title         String?
+  titleEn       String?
+  description   String?
+  descriptionEn String?
+  imageUrl      String?
+  linkUrl       String?
+  isActive      Boolean      @default(true)
+  sortOrder     Int          @default(0)
+  startAt       DateTime?
+  endAt         DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([businessType, businessId])
+}
+
+model MarketingSettings {
+  id           String       @id @default(cuid())
+  businessType BusinessType
+  businessId   String       @unique
+  sectionOrder Json         @default("[\"announcement\", \"banner\", \"offer\"]")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([businessType, businessId])
+}
+
+model PlatformSetting {
+  id               String       @id @default(cuid())
+  key              String       @unique
+  value            String       @db.Text
+  type             SettingType  @default(string)
+  group            SettingGroup @default(general)
+  description      String?
+  isPublic         Boolean      @default(false)
+  contactPhone     String?
+  contactWhatsapp  String?
+  contactEmail     String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([key])
+  @@index([group])
+}
+
+model ExtendedPlatformSetting {
+  id             String       @id @default(cuid())
+  keyName        String       @unique
+  value          String       @db.Text
+  type           SettingType  @default(string)
+  settingGroup   SettingGroup @default(general)
+  description    String?
+  isPublic       Boolean      @default(false)
+  isEditable     Boolean      @default(true)
+  validation     Json?
+  createdBy      String?
+  updatedBy      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([keyName])
+  @@index([settingGroup])
+}
+
+model UpgradeRequest {
+  id              String    @id @default(cuid())
+  userId          String
+  restaurantId    String?
+  storeId         String?
+  currentPlanId   String
+  requestedPlanId String
+  status          String    @default("pending")
+  reason          String?   @db.Text
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  requestedAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Feature {
+  code          String   @id
+  name          String
+  nameEn        String?
+  description   String?  @db.Text
+  descriptionEn String?  @db.Text
+  category      String   @default("both")
+  group         String   @default("basic")
+  isCore        Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  price         Float    @default(0)
+  isOneTime     Boolean  @default(false)
+  defaultInPlans Json?
+  dependsOn     Json?
+  configSchema  Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([category])
+}
+
+model BusinessFeature {
+  id            String    @id @default(cuid())
+  businessId    String
+  businessType  String
+  featureCode   String
+  isEnabled     Boolean   @default(true)
+  isOverridden  Boolean   @default(false)
+  overrideReason String?  @db.Text
+  overriddenBy  String?
+  expiresAt     DateTime?
+  config        Json?
+  assignedBy    String?
+  assignedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([businessId, businessType, featureCode])
+  @@index([businessId, businessType])
+  @@index([featureCode])
+}
+
+model Setting {
+  id          Int      @id @default(autoincrement())
+  keyName     String   @unique
+  value       String   @db.Text
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([keyName])
+}

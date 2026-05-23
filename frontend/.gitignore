@@ -1,0 +1,86 @@
+# إضافة المحتوى
+@"
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+*.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Secrets and keys (مهم جداً!)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+serviceAccountKey.json
+*.json
+
+# Backend specific
+backend/uploads/
+backend/dist/
+backend/node_modules/
+backend/*.log
+backend/.env
+backend/.env.*
+
+# Frontend specific
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.*
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temp files
+tmp/
+temp/
+*.tmp
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Debug
+debug.log
+
+# Uploads
+uploads/
+temp-uploads/
+
+# Config files with secrets
+**/config/serviceAccountKey.json
+**/config/*.key
+**/config/*.pem
+"@ | Out-File -FilePath .gitignore -Encoding utf8
