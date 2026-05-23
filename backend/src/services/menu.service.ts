@@ -134,10 +134,10 @@ export class MenuService {
         restaurantId,
         isAvailable: true,
         OR: [
-          { name: { contains: searchTerm, mode: 'insensitive' } },
-          { nameEn: { contains: searchTerm, mode: 'insensitive' } },
-          { description: { contains: searchTerm, mode: 'insensitive' } },
-          { descriptionEn: { contains: searchTerm, mode: 'insensitive' } },
+          { name: { contains: searchTerm } },
+          { nameEn: { contains: searchTerm } },
+          { description: { contains: searchTerm } },
+          { descriptionEn: { contains: searchTerm } },
         ]
       },
       include: { category: true },

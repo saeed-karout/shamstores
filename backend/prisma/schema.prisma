@@ -101,6 +101,7 @@ model User {
 
   // Relations
   ownedStore   Store?    @relation("StoreOwner")
+  ownedRestaurants Restaurant[] @relation("RestaurantOwner")
   stores       Store[]   @relation("StoreUsers")
   drivers      Driver[]
   tickets      Ticket[]
@@ -183,6 +184,7 @@ model Restaurant {
 
   // Relations
   plan        Plan        @relation(fields: [planId], references: [id])
+  owner       User?       @relation("RestaurantOwner", fields: [userId], references: [id])
   categories  Category[]
   menuItems   MenuItem[]
   tables      Table[]
@@ -260,6 +262,7 @@ model Category {
   name        String
   nameEn      String?
   description String?
+  descriptionEn String?
   image       String?
   position    Int      @default(0)
   isActive    Boolean  @default(true)
@@ -278,11 +281,15 @@ model MenuItem {
   restaurantId String
   categoryId   String?
   name         String
+  nameEn       String?
   description  String?
+  descriptionEn String?
   price        Float
   originalPrice Float?
   image        String?
   isAvailable  Boolean   @default(true)
+  isPopular    Boolean   @default(false)
+  isNew        Boolean   @default(false)
   position     Int       @default(0)
   ordersCount  Int       @default(0)
   createdAt    DateTime  @default(now())
@@ -385,6 +392,7 @@ model Order {
   // Relations
   restaurant   Restaurant?   @relation(fields: [restaurantId], references: [id])
   store        Store?        @relation(fields: [storeId], references: [id])
+  table        Table?        @relation(fields: [tableId], references: [id])
   driver       Driver?       @relation(fields: [assignedDriverId], references: [id])
   creator      User?         @relation("CreatedOrders", fields: [createdBy], references: [id])
   coupon       Coupon?       @relation(fields: [couponCode], references: [code])
@@ -461,6 +469,7 @@ model Table {
 
   // Relations
   restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  orders     Order[]
 
   @@index([restaurantId])
 }

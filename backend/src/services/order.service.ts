@@ -75,6 +75,21 @@ export class OrderService {
       notes?: string;
     }>;
   }) {
+    let couponCode: string | undefined;
+
+    if (data.couponId) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { id: data.couponId },
+        select: { code: true }
+      });
+
+      if (!coupon) {
+        throw new Error('Coupon not found');
+      }
+
+      couponCode = coupon.code;
+    }
+
     return prisma.order.create({
       data: {
         orderNumber: data.orderNumber,
@@ -82,7 +97,7 @@ export class OrderService {
         storeId: data.storeId,
         tableId: data.tableId,
         createdBy: data.createdBy,
-        couponId: data.couponId,
+        couponCode,
         subtotal: data.subtotal,
         tax: data.tax,
         deliveryFee: data.deliveryFee || 0,

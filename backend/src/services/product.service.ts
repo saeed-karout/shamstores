@@ -167,9 +167,9 @@ export class ProductService {
         storeId,
         isAvailable: true,
         OR: [
-          { name: { contains: searchTerm, mode: 'insensitive' } },
-          { sku: { contains: searchTerm, mode: 'insensitive' } },
-          { description: { contains: searchTerm, mode: 'insensitive' } },
+          { name: { contains: searchTerm } },
+          { sku: { contains: searchTerm } },
+          { description: { contains: searchTerm } },
         ]
       },
       include: { category: true },

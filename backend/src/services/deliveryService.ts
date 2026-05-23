@@ -397,7 +397,7 @@ export class DeliveryService {
     const [completedDeliveries, totalEarnings, averageRating, activeHours] = await Promise.all([
       prisma.order.count({
         where: {
-          driverId: driverId,
+          assignedDriverId: driverId,
           status: 'delivered'
         }
       }),
