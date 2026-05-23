@@ -2,9 +2,7 @@
 
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
-import BusinessFeature from '../models/BusinessFeature';
-import Feature from '../models/Feature';
-import { Op } from 'sequelize';
+import { prisma } from '../server';
 
 /**
  * التحقق من أن العميل لديه ميزة معينة
@@ -30,22 +28,26 @@ export const requireFeature = (featureCode: string) => {
         return;
       }
       
-      const hasFeature = await BusinessFeature.findOne({
+      const now = new Date();
+      
+      const hasFeature = await prisma.businessFeature.findFirst({
         where: {
           businessId,
           businessType,
           featureCode,
           isEnabled: true,
-          [Op.or]: [
-            { expiresAt: { [Op.gte]: new Date() } },
-            { expiresAt: null }
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gte: now } }
           ]
         }
       });
       
       if (!hasFeature) {
         // التحقق من وجود الميزة في الخطة
-        const feature = await Feature.findOne({ where: { code: featureCode } });
+        const feature = await prisma.feature.findUnique({
+          where: { code: featureCode }
+        });
         const featureName = feature?.name || featureCode;
         
         res.status(403).json({ 
@@ -85,15 +87,17 @@ export const requireAnyFeature = (featureCodes: string[]) => {
         return;
       }
       
-      const hasAnyFeature = await BusinessFeature.findOne({
+      const now = new Date();
+      
+      const hasAnyFeature = await prisma.businessFeature.findFirst({
         where: {
           businessId,
           businessType,
-          featureCode: { [Op.in]: featureCodes },
+          featureCode: { in: featureCodes },
           isEnabled: true,
-          [Op.or]: [
-            { expiresAt: { [Op.gte]: new Date() } },
-            { expiresAt: null }
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gte: now } }
           ]
         }
       });
