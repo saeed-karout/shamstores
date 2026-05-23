@@ -31,18 +31,14 @@ export class MenuService {
   static async createCategory(data: {
     restaurantId: string;
     name: string;
-    nameEn?: string;
     description?: string;
-    descriptionEn?: string;
     image?: string;
   }) {
     return prisma.category.create({
       data: {
         restaurantId: data.restaurantId,
         name: data.name,
-        nameEn: data.nameEn,
         description: data.description,
-        descriptionEn: data.descriptionEn,
         image: data.image,
         isActive: true,
         position: 0
@@ -54,34 +50,22 @@ export class MenuService {
     restaurantId: string;
     categoryId?: string;
     name: string;
-    nameEn?: string;
     description?: string;
-    descriptionEn?: string;
     price: number;
     originalPrice?: number;
     image?: string;
     isAvailable?: boolean;
-    preparationTime?: number;
-    calories?: number;
-    isPopular?: boolean;
-    isNew?: boolean;
   }) {
     return prisma.menuItem.create({
       data: {
         restaurantId: data.restaurantId,
         categoryId: data.categoryId,
         name: data.name,
-        nameEn: data.nameEn,
         description: data.description,
-        descriptionEn: data.descriptionEn,
         price: data.price,
         originalPrice: data.originalPrice,
         image: data.image,
         isAvailable: data.isAvailable ?? true,
-        isPopular: data.isPopular ?? false,
-        isNew: data.isNew ?? false,
-        preparationTime: data.preparationTime,
-        calories: data.calories,
         position: 0,
         ordersCount: 0
       },
@@ -92,14 +76,12 @@ export class MenuService {
   static async updateMenuItem(id: string, data: any) {
     const updateData: any = { ...data };
     
-    // إزالة الحقول التي لا يجب تحديثها
     delete updateData.id;
     delete updateData.createdAt;
     delete updateData.updatedAt;
     delete updateData.restaurantId;
     delete updateData.ordersCount;
     
-    // تنظيف القيم
     if (updateData.price !== undefined) {
       updateData.price = typeof updateData.price === 'number' ? updateData.price : Number(updateData.price);
     }
@@ -119,7 +101,6 @@ export class MenuService {
   }
 
   static async deleteCategory(id: string) {
-    // نقل العناصر إلى فئة افتراضية قبل الحذف
     await prisma.menuItem.updateMany({
       where: { categoryId: id },
       data: { categoryId: null }
@@ -135,9 +116,7 @@ export class MenuService {
         isAvailable: true,
         OR: [
           { name: { contains: searchTerm } },
-          { nameEn: { contains: searchTerm } },
           { description: { contains: searchTerm } },
-          { descriptionEn: { contains: searchTerm } },
         ]
       },
       include: { category: true },
@@ -145,7 +124,6 @@ export class MenuService {
     });
   }
 
-  // ✅ دوال إضافية مفيدة
   static async getMenuItemsByCategory(restaurantId: string, categoryId: string) {
     return prisma.menuItem.findMany({
       where: {
@@ -163,22 +141,9 @@ export class MenuService {
       where: {
         restaurantId,
         isAvailable: true,
-        isPopular: true
       },
       take: limit,
       orderBy: { ordersCount: 'desc' }
-    });
-  }
-
-  static async getNewItems(restaurantId: string, limit: number = 10) {
-    return prisma.menuItem.findMany({
-      where: {
-        restaurantId,
-        isAvailable: true,
-        isNew: true
-      },
-      take: limit,
-      orderBy: { createdAt: 'desc' }
     });
   }
 
@@ -200,18 +165,6 @@ export class MenuService {
       })
     );
     await Promise.all(updates);
-  }
-
-  static async getCategoryWithItems(categoryId: string) {
-    return prisma.category.findUnique({
-      where: { id: categoryId },
-      include: {
-        menuItems: {
-          where: { isAvailable: true },
-          orderBy: { position: 'asc' }
-        }
-      }
-    });
   }
 }
 
