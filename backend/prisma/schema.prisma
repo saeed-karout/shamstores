@@ -102,6 +102,7 @@ model User {
   // Relations
   ownedStore   Store?    @relation("StoreOwner")
   ownedRestaurants Restaurant[] @relation("RestaurantOwner")
+  restaurant   Restaurant? @relation("RestaurantUsers", fields: [restaurantId], references: [id])
   stores       Store[]   @relation("StoreUsers")
   drivers      Driver[]
   tickets      Ticket[]
@@ -185,6 +186,7 @@ model Restaurant {
   // Relations
   plan        Plan        @relation(fields: [planId], references: [id])
   owner       User?       @relation("RestaurantOwner", fields: [userId], references: [id])
+  users       User[]      @relation("RestaurantUsers")
   categories  Category[]
   menuItems   MenuItem[]
   tables      Table[]
@@ -290,6 +292,7 @@ model MenuItem {
   isAvailable  Boolean   @default(true)
   isPopular    Boolean   @default(false)
   isNew        Boolean   @default(false)
+  preparationTime Int?    @default(0)
   position     Int       @default(0)
   ordersCount  Int       @default(0)
   createdAt    DateTime  @default(now())
@@ -362,6 +365,7 @@ model Order {
   notes                  String?
   paymentMethod          PaymentMethod @default(cash)
   isPaid                 Boolean       @default(false)
+  tax                    Float         @default(0)
   createdBy              String?
   orderType              OrderType     @default(dine_in)
   deliveryAddress        String?
