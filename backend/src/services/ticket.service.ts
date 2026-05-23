@@ -10,10 +10,7 @@ export class TicketService {
         user: true,
         restaurant: true,
         store: true,
-        messages: {
-          include: { user: true },
-          orderBy: { createdAt: 'desc' }
-        }
+        // ❌ تم إزالة messages (غير موجود)
       }
     });
   }
@@ -21,7 +18,7 @@ export class TicketService {
   static async getUserTickets(userId: string) {
     return prisma.ticket.findMany({
       where: { userId },
-      include: { messages: true },
+      // ❌ تم إزالة include: { messages: true }
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -29,7 +26,7 @@ export class TicketService {
   static async getRestaurantTickets(restaurantId: string) {
     return prisma.ticket.findMany({
       where: { restaurantId },
-      include: { user: true, messages: true },
+      include: { user: true },  // ✅ فقط user
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -37,7 +34,7 @@ export class TicketService {
   static async getStoreTickets(storeId: string) {
     return prisma.ticket.findMany({
       where: { storeId },
-      include: { user: true, messages: true },
+      include: { user: true },  // ✅ فقط user
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -56,25 +53,35 @@ export class TicketService {
     storeId?: string;
     subject: string;
     description?: string;
-    category?: string;
     priority?: string;
-    attachments?: any;
   }) {
     return prisma.ticket.create({
-      data,
-      include: { user: true, messages: true }
+      data: {
+        userId: data.userId,
+        restaurantId: data.restaurantId,
+        storeId: data.storeId,
+        subject: data.subject,
+        description: data.description,
+        priority: data.priority || 'medium',
+        status: 'open'
+      },
+      include: { user: true }
     });
   }
 
-  static async addTicketMessage(ticketId: string, userId: string, message: string, attachments?: any) {
-    return prisma.ticketMessage.create({
-      data: {
-        ticketId,
-        userId,
-        message,
-        attachments,
-      },
-      include: { user: true }
+  // ✅ دالة لإضافة تحديث إلى التذكرة (بدلاً من رسائل منفصلة)
+  static async addTicketUpdate(id: string, updateMessage: string) {
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) throw new Error('Ticket not found');
+    
+    // إضافة التحديث إلى حقل description مع التاريخ
+    const newDescription = ticket.description 
+      ? `${ticket.description}\n\n[${new Date().toISOString()}] ${updateMessage}`
+      : `[${new Date().toISOString()}] ${updateMessage}`;
+    
+    return prisma.ticket.update({
+      where: { id },
+      data: { description: newDescription }
     });
   }
 
@@ -83,7 +90,7 @@ export class TicketService {
       where: { id },
       data: {
         status,
-        ...(status === 'closed' && { closedAt: new Date() })
+        ...(status === 'closed' && { updatedAt: new Date() })
       }
     });
   }
@@ -109,6 +116,60 @@ export class TicketService {
     ]);
 
     return { total, open, inProgress, resolved, closed };
+  }
+
+  // ✅ دوال إضافية مفيدة
+  static async getTicketsByBusiness(businessId: string, businessType: 'restaurant' | 'store') {
+    const where: any = {};
+    if (businessType === 'restaurant') {
+      where.restaurantId = businessId;
+    } else {
+      where.storeId = businessId;
+    }
+    
+    return prisma.ticket.findMany({
+      where,
+      include: { user: true },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  static async assignTicket(id: string, userId: string) {
+    return prisma.ticket.update({
+      where: { id },
+      data: { 
+        userId,
+        status: 'in_progress'
+      }
+    });
+  }
+
+  static async resolveTicket(id: string, resolution?: string) {
+    const updateData: any = { status: 'resolved' };
+    if (resolution) {
+      const ticket = await prisma.ticket.findUnique({ where: { id } });
+      const newDescription = ticket?.description 
+        ? `${ticket.description}\n\n[RESOLVED] ${resolution}`
+        : `[RESOLVED] ${resolution}`;
+      updateData.description = newDescription;
+    }
+    
+    return prisma.ticket.update({
+      where: { id },
+      data: updateData
+    });
+  }
+
+  static async getTicketStatsByPriority() {
+    const priorities = ['low', 'medium', 'high'];
+    const results = await Promise.all(
+      priorities.map(async (priority) => ({
+        priority,
+        count: await prisma.ticket.count({ where: { priority: priority as any } }),
+        open: await prisma.ticket.count({ where: { priority: priority as any, status: 'open' } })
+      }))
+    );
+    return results;
   }
 }
 

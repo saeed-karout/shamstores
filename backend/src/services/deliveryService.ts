@@ -1,7 +1,6 @@
 // backend/src/services/deliveryService.ts
 
 import { prisma } from '../server';
-import { DriverLocation, DeliveryOrder } from '../types';
 
 export class DeliveryService {
   /**
@@ -18,10 +17,6 @@ export class DeliveryService {
             email: true,
             phone: true
           }
-        },
-        deliveries: {
-          take: 10,
-          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -65,10 +60,6 @@ export class DeliveryService {
             phone: true
           }
         },
-        deliveries: {
-          orderBy: { createdAt: 'desc' },
-          take: 50
-        },
         earnings: {
           orderBy: { createdAt: 'desc' }
         },
@@ -87,8 +78,7 @@ export class DeliveryService {
     return prisma.driver.findFirst({
       where: { userId },
       include: {
-        user: true,
-        deliveries: true
+        user: true
       }
     });
   }
@@ -195,7 +185,7 @@ export class DeliveryService {
    * حساب المسافة بين نقطتين (باستخدام Haversine formula)
    */
   static calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // نصف قطر الأرض بالكيلومتر
+    const R = 6371;
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
     const a =
@@ -245,11 +235,7 @@ export class DeliveryService {
 
   // ==================== إدارة الورديات (Shifts) ====================
 
-  /**
-   * بدء وردية جديدة
-   */
   static async startShift(driverId: string) {
-    // إنهاء الوردية السابقة إذا كانت مفتوحة
     await this.endOpenShift(driverId);
     
     return prisma.driverShift.create({
@@ -261,9 +247,6 @@ export class DeliveryService {
     });
   }
 
-  /**
-   * إنهاء الوردية الحالية
-   */
   static async endShift(driverId: string) {
     const activeShift = await prisma.driverShift.findFirst({
       where: {
@@ -277,7 +260,7 @@ export class DeliveryService {
     }
 
     const endedAt = new Date();
-    const duration = (endedAt.getTime() - activeShift.startedAt.getTime()) / (1000 * 60); // بالدقائق
+    const duration = (endedAt.getTime() - activeShift.startedAt.getTime()) / (1000 * 60);
 
     return prisma.driverShift.update({
       where: { id: activeShift.id },
@@ -289,9 +272,6 @@ export class DeliveryService {
     });
   }
 
-  /**
-   * إنهاء الوردية المفتوحة (داخلية)
-   */
   static async endOpenShift(driverId: string) {
     const activeShift = await prisma.driverShift.findFirst({
       where: {
@@ -315,9 +295,6 @@ export class DeliveryService {
     }
   }
 
-  /**
-   * جلب ورديات السائق
-   */
   static async getDriverShifts(driverId: string, startDate?: Date, endDate?: Date) {
     const where: any = { driverId };
     
@@ -336,9 +313,6 @@ export class DeliveryService {
 
   // ==================== إدارة الأرباح (Earnings) ====================
 
-  /**
-   * تسجيل أرباح للسائق
-   */
   static async addEarning(data: {
     driverId: string;
     orderId: string;
@@ -357,7 +331,6 @@ export class DeliveryService {
       }
     });
 
-    // تحديث إجمالي أرباح السائق
     await prisma.driver.update({
       where: { id: data.driverId },
       data: {
@@ -370,9 +343,6 @@ export class DeliveryService {
     return earning;
   }
 
-  /**
-   * تأكيد أرباح السائق
-   */
   static async confirmEarning(earningId: string) {
     const earning = await prisma.driverEarning.update({
       where: { id: earningId },
@@ -382,9 +352,6 @@ export class DeliveryService {
     return earning;
   }
 
-  /**
-   * جلب أرباح السائق
-   */
   static async getDriverEarnings(driverId: string, startDate?: Date, endDate?: Date) {
     const where: any = { driverId };
     
@@ -426,14 +393,11 @@ export class DeliveryService {
 
   // ==================== إحصائيات التوصيل ====================
 
-  /**
-   * إحصائيات السائق
-   */
   static async getDriverStats(driverId: string) {
     const [completedDeliveries, totalEarnings, averageRating, activeHours] = await Promise.all([
       prisma.order.count({
         where: {
-          driverId,
+          driverId: driverId,
           status: 'delivered'
         }
       }),
@@ -463,18 +427,15 @@ export class DeliveryService {
     };
   }
 
-  /**
-   * إحصائيات التوصيل العامة (للسوبر أدمن)
-   */
   static async getDeliveryStats() {
     const [totalDrivers, activeDrivers, onlineDrivers, totalDeliveries, todayDeliveries] = await Promise.all([
       prisma.driver.count(),
       prisma.driver.count({ where: { isActive: true } }),
       prisma.driver.count({ where: { isOnline: true, isActive: true } }),
-      prisma.order.count({ where: { type: 'delivery' } }),
+      prisma.order.count({ where: { orderType: 'delivery' } }),
       prisma.order.count({
         where: {
-          type: 'delivery',
+          orderType: 'delivery',
           createdAt: {
             gte: new Date(new Date().setHours(0, 0, 0, 0))
           }
@@ -496,9 +457,6 @@ export class DeliveryService {
     };
   }
 
-  /**
-   * إحصائيات ورديات السائقين
-   */
   static async getShiftsStats(startDate?: Date, endDate?: Date) {
     const where: any = {};
     
@@ -533,9 +491,6 @@ export class DeliveryService {
     return { shifts, summary };
   }
 
-  /**
-   * إحصائيات أرباح السائقين
-   */
   static async getEarningsStats(startDate?: Date, endDate?: Date) {
     const where: any = {};
     

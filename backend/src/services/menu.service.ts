@@ -1,10 +1,9 @@
 // backend/src/services/menu.service.ts
 
 import prisma from './prisma';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export class MenuService {
-   static async getCategories(restaurantId: string) {
+  static async getCategories(restaurantId: string) {
     return prisma.category.findMany({
       where: { restaurantId, isActive: true },
       include: { 
@@ -17,14 +16,14 @@ export class MenuService {
     });
   }
 
- static async getMenuItems(restaurantId: string, categoryId?: string) {
+  static async getMenuItems(restaurantId: string, categoryId?: string) {
     return prisma.menuItem.findMany({
       where: {
         restaurantId,
         ...(categoryId && { categoryId }),
         isAvailable: true,
       },
-      include: { category: true },  // ✅ إزالة images
+      include: { category: true },
       orderBy: { position: 'asc' }
     });
   }
@@ -32,53 +31,82 @@ export class MenuService {
   static async createCategory(data: {
     restaurantId: string;
     name: string;
+    nameEn?: string;
     description?: string;
-    icon?: string;
-    color?: string;
+    descriptionEn?: string;
+    image?: string;
   }) {
-    return prisma.category.create({ data });
+    return prisma.category.create({
+      data: {
+        restaurantId: data.restaurantId,
+        name: data.name,
+        nameEn: data.nameEn,
+        description: data.description,
+        descriptionEn: data.descriptionEn,
+        image: data.image,
+        isActive: true,
+        position: 0
+      }
+    });
   }
 
- static async createMenuItem(data: {
+  static async createMenuItem(data: {
     restaurantId: string;
     categoryId?: string;
     name: string;
+    nameEn?: string;
     description?: string;
-    price: number | Decimal;
-    originalPrice?: number | Decimal;
+    descriptionEn?: string;
+    price: number;
+    originalPrice?: number;
     image?: string;
     isAvailable?: boolean;
     preparationTime?: number;
     calories?: number;
+    isPopular?: boolean;
+    isNew?: boolean;
   }) {
     return prisma.menuItem.create({
       data: {
         restaurantId: data.restaurantId,
         categoryId: data.categoryId,
         name: data.name,
+        nameEn: data.nameEn,
         description: data.description,
-        price: typeof data.price === 'number' ? new Decimal(data.price) : data.price,
-        originalPrice: data.originalPrice ? (typeof data.originalPrice === 'number' ? new Decimal(data.originalPrice) : data.originalPrice) : undefined,
+        descriptionEn: data.descriptionEn,
+        price: data.price,
+        originalPrice: data.originalPrice,
         image: data.image,
         isAvailable: data.isAvailable ?? true,
+        isPopular: data.isPopular ?? false,
+        isNew: data.isNew ?? false,
         preparationTime: data.preparationTime,
         calories: data.calories,
-        position: 0
+        position: 0,
+        ordersCount: 0
       },
       include: { category: true }
     });
   }
 
-   static async updateMenuItem(id: string, data: any) {
+  static async updateMenuItem(id: string, data: any) {
     const updateData: any = { ...data };
     
-    if (data.price) {
-      updateData.price = typeof data.price === 'number' ? new Decimal(data.price) : data.price;
+    // إزالة الحقول التي لا يجب تحديثها
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.restaurantId;
+    delete updateData.ordersCount;
+    
+    // تنظيف القيم
+    if (updateData.price !== undefined) {
+      updateData.price = typeof updateData.price === 'number' ? updateData.price : Number(updateData.price);
     }
-    if (data.originalPrice) {
-      updateData.originalPrice = typeof data.originalPrice === 'number' ? new Decimal(data.originalPrice) : data.originalPrice;
+    if (updateData.originalPrice !== undefined) {
+      updateData.originalPrice = typeof updateData.originalPrice === 'number' ? updateData.originalPrice : Number(updateData.originalPrice);
     }
-
+    
     return prisma.menuItem.update({
       where: { id },
       data: updateData,
@@ -91,6 +119,12 @@ export class MenuService {
   }
 
   static async deleteCategory(id: string) {
+    // نقل العناصر إلى فئة افتراضية قبل الحذف
+    await prisma.menuItem.updateMany({
+      where: { categoryId: id },
+      data: { categoryId: null }
+    });
+    
     return prisma.category.delete({ where: { id } });
   }
 
@@ -100,11 +134,83 @@ export class MenuService {
         restaurantId,
         isAvailable: true,
         OR: [
-          { name: { contains: searchTerm } },
-          { description: { contains: searchTerm } },
+          { name: { contains: searchTerm, mode: 'insensitive' } },
+          { nameEn: { contains: searchTerm, mode: 'insensitive' } },
+          { description: { contains: searchTerm, mode: 'insensitive' } },
+          { descriptionEn: { contains: searchTerm, mode: 'insensitive' } },
         ]
       },
-      include: { category: true, images: true }
+      include: { category: true },
+      orderBy: { position: 'asc' }
+    });
+  }
+
+  // ✅ دوال إضافية مفيدة
+  static async getMenuItemsByCategory(restaurantId: string, categoryId: string) {
+    return prisma.menuItem.findMany({
+      where: {
+        restaurantId,
+        categoryId,
+        isAvailable: true
+      },
+      include: { category: true },
+      orderBy: { position: 'asc' }
+    });
+  }
+
+  static async getPopularItems(restaurantId: string, limit: number = 10) {
+    return prisma.menuItem.findMany({
+      where: {
+        restaurantId,
+        isAvailable: true,
+        isPopular: true
+      },
+      take: limit,
+      orderBy: { ordersCount: 'desc' }
+    });
+  }
+
+  static async getNewItems(restaurantId: string, limit: number = 10) {
+    return prisma.menuItem.findMany({
+      where: {
+        restaurantId,
+        isAvailable: true,
+        isNew: true
+      },
+      take: limit,
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  static async updateCategoryOrder(categories: { id: string; position: number }[]) {
+    const updates = categories.map(cat =>
+      prisma.category.update({
+        where: { id: cat.id },
+        data: { position: cat.position }
+      })
+    );
+    await Promise.all(updates);
+  }
+
+  static async updateMenuItemsOrder(items: { id: string; position: number }[]) {
+    const updates = items.map(item =>
+      prisma.menuItem.update({
+        where: { id: item.id },
+        data: { position: item.position }
+      })
+    );
+    await Promise.all(updates);
+  }
+
+  static async getCategoryWithItems(categoryId: string) {
+    return prisma.category.findUnique({
+      where: { id: categoryId },
+      include: {
+        menuItems: {
+          where: { isAvailable: true },
+          orderBy: { position: 'asc' }
+        }
+      }
     });
   }
 }
