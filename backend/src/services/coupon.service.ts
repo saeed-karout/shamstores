@@ -1,13 +1,15 @@
 // backend/src/services/coupon.service.ts
 
 import prisma from './prisma';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export class CouponService {
   static async findById(id: string) {
     return prisma.coupon.findUnique({
       where: { id },
-      include: { restaurant: true, store: true, creator: true }
+      include: { 
+        restaurant: true, 
+        store: true 
+      }
     });
   }
 
@@ -21,7 +23,6 @@ export class CouponService {
   static async getRestaurantCoupons(restaurantId: string) {
     return prisma.coupon.findMany({
       where: { restaurantId, isActive: true },
-      include: { creator: true },
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -29,7 +30,6 @@ export class CouponService {
   static async getStoreCoupons(storeId: string) {
     return prisma.coupon.findMany({
       where: { storeId, isActive: true },
-      include: { creator: true },
       orderBy: { createdAt: 'desc' }
     });
   }
@@ -40,55 +40,75 @@ export class CouponService {
     code: string;
     description?: string;
     discountType: 'percentage' | 'fixed';
-    discountValue: number | Decimal;
-    maxUses?: number;
-    minOrderAmount?: number | Decimal;
-    maxDiscountAmount?: number | Decimal;
-    validFrom: Date;
-    validUntil: Date;
-    createdBy: string;
+    discountValue: number;
+    usageLimit?: number;
+    minOrderAmount?: number;
+    startDate: Date;
+    endDate: Date;
   }) {
     return prisma.coupon.create({
       data: {
-        ...data,
-        discountValue: new Decimal(data.discountValue.toString()),
-        minOrderAmount: data.minOrderAmount ? new Decimal(data.minOrderAmount.toString()) : undefined,
-        maxDiscountAmount: data.maxDiscountAmount ? new Decimal(data.maxDiscountAmount.toString()) : undefined,
-      },
-      include: { creator: true }
+        restaurantId: data.restaurantId,
+        storeId: data.storeId,
+        code: data.code.toUpperCase(),
+        discountType: data.discountType,
+        discountValue: data.discountValue,
+        usageLimit: data.usageLimit,
+        minOrderAmount: data.minOrderAmount,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        isActive: true,
+        usageCount: 0
+      }
     });
   }
 
   static async updateCoupon(id: string, data: any) {
-    if (data.discountValue) {
-      data.discountValue = new Decimal(data.discountValue.toString());
-    }
-    if (data.minOrderAmount) {
-      data.minOrderAmount = new Decimal(data.minOrderAmount.toString());
-    }
-    if (data.maxDiscountAmount) {
-      data.maxDiscountAmount = new Decimal(data.maxDiscountAmount.toString());
+    const updateData: any = { ...data };
+    
+    // إزالة الحقول التي لا يجب تحديثها مباشرة
+    delete updateData.id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+    delete updateData.usageCount;
+    
+    if (updateData.code) {
+      updateData.code = updateData.code.toUpperCase();
     }
 
     return prisma.coupon.update({
       where: { id },
-      data,
-      include: { creator: true }
+      data: updateData
     });
   }
 
-  static async validateCoupon(code: string, orderAmount: Decimal) {
-    const coupon = await prisma.coupon.findUnique({
-      where: { code }
+  static async validateCoupon(code: string, orderAmount: number) {
+    const now = new Date();
+    
+    const coupon = await prisma.coupon.findFirst({
+      where: {
+        code: code.toUpperCase(),
+        isActive: true,
+        startDate: { lte: now },
+        OR: [
+          { endDate: null },
+          { endDate: { gte: now } }
+        ]
+      }
     });
 
-    if (!coupon) return { valid: false, error: 'Coupon not found' };
-    if (!coupon.isActive) return { valid: false, error: 'Coupon is inactive' };
-    if (coupon.validFrom > new Date()) return { valid: false, error: 'Coupon not yet valid' };
-    if (coupon.validUntil < new Date()) return { valid: false, error: 'Coupon expired' };
-    if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) return { valid: false, error: 'Coupon usage limit reached' };
+    if (!coupon) {
+      return { valid: false, error: 'الكوبون غير موجود' };
+    }
+    
+    // التحقق من عدد الاستخدامات
+    if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+      return { valid: false, error: 'تم الوصول إلى الحد الأقصى لاستخدام هذا الكوبون' };
+    }
+    
+    // التحقق من الحد الأدنى للطلب
     if (coupon.minOrderAmount && orderAmount < coupon.minOrderAmount) {
-      return { valid: false, error: `Minimum order amount: ${coupon.minOrderAmount}` };
+      return { valid: false, error: `الحد الأدنى للطلب هو ${coupon.minOrderAmount}` };
     }
 
     return { valid: true, coupon };
@@ -97,7 +117,7 @@ export class CouponService {
   static async useCoupon(couponId: string) {
     return prisma.coupon.update({
       where: { id: couponId },
-      data: { currentUses: { increment: 1 } }
+      data: { usageCount: { increment: 1 } }
     });
   }
 
