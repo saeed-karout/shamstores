@@ -1,11 +1,14 @@
 // backend/src/controllers/uploadController.ts
+
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import fs from 'fs';
 import path from 'path';
-import cloudflareImagesService from '../services/cloudflareImagesService';
+import r2ImagesService from '../services/r2ImagesService';
 import prisma from '../services/prisma';
 import { cleanupTempFile } from '../middleware/upload';
+
+type ImageSubType = 'logo' | 'cover' | 'avatar' | 'icon' | 'gallery' | 'menu' | 'product' | 'receipt';
 
 const normalizeBusinessType = (req: AuthRequest): string => {
   if (req.user?.restaurantId) return 'restaurant';
@@ -19,6 +22,22 @@ const resolveBusinessId = (req: AuthRequest, rawId?: string): string | null => {
   return req.user?.restaurantId || req.user?.storeId || null;
 };
 
+const getValidSubType = (subType: string): ImageSubType => {
+  const validSubTypes: ImageSubType[] = ['logo', 'cover', 'avatar', 'icon', 'gallery', 'menu', 'product', 'receipt'];
+  if (validSubTypes.includes(subType as ImageSubType)) {
+    return subType as ImageSubType;
+  }
+  return 'gallery'; // القيمة الافتراضية
+};
+
+const getValidEntity = (type: string): any => {
+  const validEntities = ['restaurants', 'stores', 'menu-items', 'products', 'drivers', 'categories', 'users', 'advertisements', 'orders'];
+  if (validEntities.includes(type)) {
+    return type;
+  }
+  return 'misc';
+};
+
 const saveImageRecord = async (
   req: AuthRequest,
   file: Express.Multer.File,
@@ -27,7 +46,7 @@ const saveImageRecord = async (
   type: string,
   subType: string,
   explicitBusinessId?: string,
-  cloudflareImageId?: string
+  storageImageId?: string
 ): Promise<void> => {
   await prisma.image.create({
     data: {
@@ -38,7 +57,7 @@ const saveImageRecord = async (
       subType: subType,
       provider: provider as any,
       imageUrl: imageUrl,
-      cloudflareImageId: cloudflareImageId || null,
+      cloudflareImageId: storageImageId || null,
       originalName: file.originalname || null,
       mimeType: file.mimetype || null,
       sizeBytes: file.size || null
@@ -47,7 +66,7 @@ const saveImageRecord = async (
 };
 
 /**
- * رفع صورة واحدة
+ * رفع صورة واحدة إلى R2
  */
 export const uploadImage = async (
   req: AuthRequest,
@@ -65,26 +84,25 @@ export const uploadImage = async (
     }
     
     tempFilePath = req.file.path;
-    const { type = 'general', id, subType = 'images' } = req.body;
+    const { type = 'misc', id, subType = 'gallery' } = req.body;
     
-    console.log('📸 Uploading image to Cloudflare:', { type, id, subType, filename: req.file.originalname });
+    console.log('📸 Uploading image to R2:', { type, id, subType, filename: req.file.originalname });
     
-    // رفع إلى Cloudflare Images
-    const uploadedImage = await cloudflareImagesService.uploadImage(req.file, {
-      type: String(type),
-      id: id ? String(id) : undefined,
-      subType: String(subType),
-      uploaderId: req.user?.id
+    // ✅ رفع إلى R2 مع تحويل الأنواع إلى القيم الصحيحة
+    const uploadedImage = await r2ImagesService.uploadImage(req.file, {
+      entity: getValidEntity(String(type)),
+      entityId: id ? String(id) : req.user?.id || 'unknown',
+      subType: getValidSubType(String(subType))
     });
 
-    console.log('✅ Image uploaded to Cloudflare:', uploadedImage.id);
+    console.log('✅ Image uploaded to R2:', uploadedImage.id);
 
     // حفظ السجل في قاعدة البيانات
     await saveImageRecord(
       req,
       req.file,
       uploadedImage.url,
-      'cloudflare',
+      'r2',
       String(type || 'general'),
       String(subType || 'images'),
       id ? String(id) : undefined,
@@ -121,7 +139,7 @@ export const uploadImage = async (
 };
 
 /**
- * رفع عدة صور
+ * رفع عدة صور إلى R2
  */
 export const uploadMultipleImages = async (
   req: AuthRequest,
@@ -140,23 +158,23 @@ export const uploadMultipleImages = async (
     }
 
     const uploadedImages: any[] = [];
-    const { type = 'general', id, subType = 'images' } = req.body;
+    const { type = 'misc', id, subType = 'gallery' } = req.body;
 
     for (const file of files) {
       tempFiles.push(file.path);
       
-      const uploadedImage = await cloudflareImagesService.uploadImage(file, {
-        type: String(type),
-        id: id ? String(id) : undefined,
-        subType: String(subType),
-        uploaderId: req.user?.id
+      // ✅ رفع إلى R2
+      const uploadedImage = await r2ImagesService.uploadImage(file, {
+        entity: getValidEntity(String(type)),
+        entityId: id ? String(id) : req.user?.id || 'unknown',
+        subType: getValidSubType(String(subType))
       });
 
       await saveImageRecord(
         req,
         file,
         uploadedImage.url,
-        'cloudflare',
+        'r2',
         String(type || 'general'),
         String(subType || 'images'),
         id ? String(id) : undefined,
@@ -193,7 +211,7 @@ export const uploadMultipleImages = async (
 };
 
 /**
- * حذف صورة
+ * حذف صورة من R2
  */
 export const deleteImage = async (
   req: AuthRequest,
@@ -204,19 +222,23 @@ export const deleteImage = async (
 
     let idToDelete = imageId;
     if (!idToDelete && imageUrl) {
-      idToDelete = cloudflareImagesService.extractImageIdFromUrl(imageUrl);
+      // استخراج معرف الصورة من URL لـ R2
+      const urlParts = imageUrl.split('.r2.dev/');
+      if (urlParts.length > 1) {
+        idToDelete = urlParts[1];
+      }
     }
 
     if (idToDelete) {
-      // حذف من Cloudflare
-      await cloudflareImagesService.deleteImage(idToDelete);
+      // ✅ حذف من R2
+      await r2ImagesService.deleteImage(idToDelete);
       
       // حذف السجل من قاعدة البيانات
       await prisma.image.deleteMany({
         where: { cloudflareImageId: idToDelete }
       });
       
-      console.log('✅ Image deleted from Cloudflare:', idToDelete);
+      console.log('✅ Image deleted from R2:', idToDelete);
     }
 
     res.json({

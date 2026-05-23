@@ -25,7 +25,7 @@ export { default as firebaseService } from './firebaseService';
 // ==================== Infrastructure Services ====================
 export { default as prisma } from './prisma';
 export { default as settingsService } from './settingsService'; // Legacy - for backward compatibility
-export { CloudflareImagesService } from './cloudflareImagesService';
+
 export { default as d1Service } from './d1Service';
 
 // ==================== Convenience Object ====================
@@ -104,6 +104,5 @@ export default {
   prisma,
   settingsService,
   d1Service,
-  CloudflareImagesService,
   services,
 };
