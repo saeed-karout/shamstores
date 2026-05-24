@@ -1,7 +1,7 @@
 // pages/Admin/AdminStores.tsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IoSearch, IoTrash, IoEye, IoAdd, IoFilter, IoClose, IoCheckmark, IoRefresh, IoBusiness, IoMail, IoCall, IoCalendar, IoStatsChart, IoColorPalette, IoGlobe, IoLockClosed, IoCheckmarkCircle } from 'react-icons/io5';
+import { IoSearch, IoTrash, IoEye, IoAdd, IoFilter, IoClose, IoCheckmark, IoRefresh, IoBusiness, IoMail, IoCall, IoCalendar, IoStatsChart, IoColorPalette, IoGlobe, IoLockClosed, IoCheckmarkCircle, IoPerson } from 'react-icons/io5';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';

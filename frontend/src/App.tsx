@@ -9,12 +9,8 @@ import { IoWarning } from 'react-icons/io5';
 // ==================== خدمات ====================
 import { getCurrentSubdomain, isMainDomain } from './utils/subdomain';
 
-// ==================== صفحات المصادقة ====================
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import UserLogin from './pages/auth/UserLogin';
-import UserRegister from './pages/auth/UserRegister';
-import DeliveryLogin from './pages/auth/DeliveryLogin';
+// frontend/src/pages/auth
+import EmailVerification from './pages/auth/EmailVerification';
 
 // ==================== صفحات المالكين ====================
 import RestaurantDashboard from './pages/Owner/RestaurantDashboard';
@@ -89,6 +85,11 @@ import PublicRouter from './components/PublicRouter';
 import BusinessMarketing from './pages/Owner/BusinessMarketing';
 import SEOHead from './components/dashboard/SEO';
 import StaffDashboard from './pages/Staff/StaffDashboard';
+import UserRegister from './pages/auth/UserRegister';
+import DeliveryLogin from './pages/auth/DeliveryLogin';
+import UserLogin from './pages/auth/UserLogin';
+import Register from './pages/auth/Register';
+import Login from './pages/auth/Login';
 
 // ==================== إعدادات React Query ====================
 const queryClient = new QueryClient({
@@ -181,7 +182,8 @@ const MainApp: React.FC = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/user/login" element={<UserLogin />} />
+        <Route path="/auth/email-verification" element={<EmailVerification />} />
+        <Route path="/user/login" element={<Login />} />
         <Route path="/user/register" element={<UserRegister />} />
         <Route path="/delivery/login" element={<DeliveryLogin />} />
         <Route path="/orders/:orderId/track" element={<DeliveryTracking />} />

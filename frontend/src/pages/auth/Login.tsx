@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettingsContext } from '@/contexts/SettingsContext';
+import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { IoMail, IoLockClosed, IoWarning, IoEye, IoEyeOff, IoRocket } from 'react-icons/io5';
 
 const C = {
@@ -175,6 +176,21 @@ const Login: React.FC = () => {
               )}
             </button>
           </form>
+
+          {/* Google Sign-In */}
+          <div style={{ marginTop: 20, marginBottom: 20 }}>
+            <div style={{ position: 'relative', textAlign: 'center', marginBottom: 12 }}>
+              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: C.border }} />
+              <span style={{ position: 'relative', background: C.card, padding: '0 8px', fontSize: 12, color: C.muted }}>
+                أو
+              </span>
+            </div>
+            <GoogleSignInButton
+              text="تسجيل الدخول عبر Google"
+              variant="secondary"
+              fullWidth
+            />
+          </div>
 
           {/* Footer links */}
           <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>

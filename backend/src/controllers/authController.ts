@@ -77,6 +77,15 @@ export const register = async (
 
     console.log('✅ User created with role:', user.role);
 
+    // Generate and send verification code if email verification is required
+    let verificationCode = null;
+    if (requireEmailVerification) {
+      const emailService = require('../services/emailService').default;
+      await emailService.initializeTransporter();
+      verificationCode = await emailService.generateVerificationCode(email);
+      await emailService.sendVerificationEmail(email, verificationCode);
+    }
+
     token = generateToken({
       id: user.id,
       email: user.email,
@@ -97,7 +106,8 @@ export const register = async (
           restaurantId: user.restaurantId,
           storeId: user.storeId,
           isEmailVerified: user.isEmailVerified
-        }
+        },
+        requiresEmailVerification: requireEmailVerification
       }
     });
   } catch (error) {
@@ -547,10 +557,33 @@ export const verifyEmail = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { token } = req.params;
-    
-    // TODO: تنفيذ منطق التحقق من البريد الإلكتروني
-    
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      res.status(400).json({
+        success: false,
+        error: 'البريد الإلكتروني والكود مطلوبان'
+      });
+      return;
+    }
+
+    const emailService = require('../services/emailService').default;
+    const verified = await emailService.verifyCode(email, code);
+
+    if (!verified) {
+      res.status(400).json({
+        success: false,
+        error: 'الكود غير صحيح أو انتهت صلاحيته'
+      });
+      return;
+    }
+
+    // Mark user email as verified
+    const user = await UserService.findByEmail(email);
+    if (user) {
+      await UserService.update(user.id, { isEmailVerified: true });
+    }
+
     res.json({
       success: true,
       message: 'تم تفعيل البريد الإلكتروني بنجاح'
@@ -561,39 +594,247 @@ export const verifyEmail = async (
   }
 };
 
-// ==================== إعادة إرسال رابط التحقق ====================
+// ==================== إعادة إرسال كود التحقق ====================
 
 export const resendVerificationEmail = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({
+        success: false,
+        error: 'البريد الإلكتروني مطلوب'
+      });
+      return;
+    }
+
+    const user = await UserService.findByEmail(email);
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: 'المستخدم غير موجود'
+      });
+      return;
+    }
+
+    if (user.isEmailVerified) {
+      res.status(400).json({
+        success: false,
+        error: 'البريد الإلكتروني مفعل بالفعل'
+      });
+      return;
+    }
+
+    const emailService = require('../services/emailService').default;
+    const code = await emailService.resendVerificationCode(email);
+
+    if (!code) {
+      res.status(500).json({
+        success: false,
+        error: 'فشل في إرسال البريد الإلكتروني'
+      });
+      return;
+    }
+
+    console.log(`📧 Verification code resent to: ${email}`);
+
+    res.json({
+      success: true,
+      message: 'تم إرسال كود التحقق إلى بريدك الإلكتروني'
+    });
+  } catch (error) {
+    console.error('Error resending verification email:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إعادة إرسال التحقق' });
+  }
+};
+
+// ==================== Firebase Sign-In ====================
+
+export const firebaseSignIn = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      res.status(400).json({
+        success: false,
+        error: 'Firebase ID token مطلوب'
+      });
+      return;
+    }
+
+    const firebaseService = require('../services/firebaseService').default;
+    const decodedToken = await firebaseService.verifyIdToken(idToken);
+
+    if (!decodedToken) {
+      res.status(401).json({
+        success: false,
+        error: 'Invalid Firebase token'
+      });
+      return;
+    }
+
+    const { uid, email, name, picture } = decodedToken;
+
+    // Check if user exists with this email
+    let user = await UserService.findByEmail(email!);
+
+    if (!user) {
+      // Create new user from Firebase data
+      user = await UserService.create({
+        name: name || 'User',
+        email: email!,
+        password: `firebase_${uid}`, // placeholder password
+        phone: null,
+        role: 'user',
+      });
+
+      console.log('✅ New user created from Firebase:', user.id);
+    }
+
+    // Create or update Firebase user link
+    const firebaseUser = await prisma.firebaseUser.upsert({
+      where: { userId: user.id },
+      update: {
+        firebaseUid: uid,
+        displayName: name,
+        photoUrl: picture,
+      },
+      create: {
+        userId: user.id,
+        firebaseUid: uid,
+        displayName: name,
+        photoUrl: picture,
+        authProvider: 'google',
+      },
+    });
+
+    // Mark email as verified (Firebase has already verified it)
+    if (!user.isEmailVerified) {
+      await UserService.update(user.id, { isEmailVerified: true });
+      user.isEmailVerified = true;
+    }
+
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      restaurantId: user.restaurantId || undefined,
+      storeId: user.storeId || undefined
+    });
+
+    await UserService.updateLastLogin(user.id);
+
+    res.json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          restaurantId: user.restaurantId,
+          storeId: user.storeId,
+          isEmailVerified: user.isEmailVerified,
+          photoUrl: picture
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in Firebase sign-in:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في تسجيل الدخول عبر Firebase'
+    });
+  }
+};
+
+// ==================== Link Firebase Account ====================
+
+export const linkFirebaseAccount = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
   try {
     if (!req.user?.id) {
-      res.status(401).json({ success: false, error: 'غير مصرح' });
+      res.status(401).json({
+        success: false,
+        error: 'غير مصرح'
+      });
       return;
     }
-    
+
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      res.status(400).json({
+        success: false,
+        error: 'Firebase ID token مطلوب'
+      });
+      return;
+    }
+
+    const firebaseService = require('../services/firebaseService').default;
+    const decodedToken = await firebaseService.verifyIdToken(idToken);
+
+    if (!decodedToken) {
+      res.status(401).json({
+        success: false,
+        error: 'Invalid Firebase token'
+      });
+      return;
+    }
+
+    const { uid, name, picture } = decodedToken;
     const user = await UserService.findById(req.user.id);
-    
+
     if (!user) {
-      res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+      res.status(404).json({
+        success: false,
+        error: 'المستخدم غير موجود'
+      });
       return;
     }
-    
-    if (user.isEmailVerified) {
-      res.status(400).json({ success: false, error: 'البريد الإلكتروني مفعل بالفعل' });
-      return;
-    }
-    
-    // TODO: إرسال إيميل تحقق جديد
-    console.log(`📧 Resending verification email to: ${user.email}`);
-    
+
+    // Link Firebase account
+    await prisma.firebaseUser.upsert({
+      where: { userId: user.id },
+      update: {
+        firebaseUid: uid,
+        displayName: name,
+        photoUrl: picture,
+      },
+      create: {
+        userId: user.id,
+        firebaseUid: uid,
+        displayName: name,
+        photoUrl: picture,
+        authProvider: 'google',
+      },
+    });
+
+    console.log(`✅ Firebase account linked for user: ${user.id}`);
+
     res.json({
       success: true,
-      message: 'تم إرسال رابط التحقق إلى بريدك الإلكتروني'
+      message: 'تم ربط حساب Firebase بنجاح',
+      data: {
+        firebaseUid: uid,
+        displayName: name,
+        photoUrl: picture
+      }
     });
   } catch (error) {
-    console.error('Error resending verification email:', error);
-    res.status(500).json({ success: false, error: 'حدث خطأ في إعادة إرسال التحقق' });
+    console.error('Error linking Firebase account:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في ربط حساب Firebase'
+    });
   }
 };

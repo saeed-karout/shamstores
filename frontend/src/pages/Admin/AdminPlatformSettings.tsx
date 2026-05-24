@@ -4,6 +4,7 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import MaintenanceToggle from '../../components/admin/MaintenanceToggle';
+import AuthenticationSettings from '../../components/admin/AuthenticationSettings';
 import {
   IoSettings, IoGlobe, IoShield, IoCard, IoCar,
   IoMail, IoChatbubble, IoCloud, IoBusiness, IoTime,
@@ -107,6 +108,7 @@ const AdminPlatformSettings: React.FC = () => {
 
   // تعريف جميع المجموعات
   const allGroups = [
+    { id: 'authentication', name: 'المصادقة المتقدمة', icon: <IoShield />, description: 'إعدادات تسجيل الدخول والتحقق والمصادقة' },
     { id: 'general', name: 'عام', icon: <IoSettings />, description: 'الإعدادات العامة للمنصة' },
     { id: 'auth', name: 'المصادقة', icon: <IoShield />, description: 'إعدادات التسجيل والدخول' },
     { id: 'payment', name: 'الدفع', icon: <IoCard />, description: 'إعدادات الدفع والتحويلات' },
@@ -124,15 +126,22 @@ const AdminPlatformSettings: React.FC = () => {
   // الحصول على المجموعات المتاحة (التي تحتوي على بيانات)
   const getAvailableGroups = () => {
     const available: typeof allGroups = [];
+    // دائماً أضف مجموعة المصادقة المتقدمة (تم تطويرها بشكل مستقل)
+    const authenticationGroup = allGroups.find(g => g.id === 'authentication');
+    if (authenticationGroup) {
+      available.push(authenticationGroup);
+    }
     for (const group of allGroups) {
+      if (group.id === 'authentication') continue; // تجاهل - تم إضافتها بالفعل
       if (settings[group.id] && settings[group.id].length > 0) {
         available.push(group);
       }
     }
-    // إذا لم توجد مجموعات، عرض جميع المجموعات مع رسالة
-    if (available.length === 0 && Object.keys(settings).length > 0) {
-      // إضافة مجموعات من البيانات الفعلية
+    // إذا لم توجد مجموعات أخرى، عرض البيانات الفعلية
+    if (available.length === 1 && Object.keys(settings).length > 0) {
+      // إضافة مجموعات من البيانات الفعلية (ما عدا authentication)
       for (const groupId of Object.keys(settings)) {
+        if (groupId === 'authentication') continue;
         const existingGroup = allGroups.find(g => g.id === groupId);
         if (existingGroup) {
           available.push(existingGroup);
@@ -335,75 +344,87 @@ const AdminPlatformSettings: React.FC = () => {
         {/* Content - عرض الإعدادات */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 24 }}>
-            <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginTop: 0, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-              {availableGroups.find(g => g.id === activeGroup)?.icon}
-              {availableGroups.find(g => g.id === activeGroup)?.name}
-            </h2>
-            <p style={{ color: C.muted, marginBottom: 24, fontSize: 14 }}>
-              {availableGroups.find(g => g.id === activeGroup)?.description || 'إعدادات هذه المجموعة'}
-            </p>
-
-            {currentGroupSettings.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: C.muted }}>
-                لا توجد إعدادات في هذه المجموعة
-              </div>
+            {/* Special handling for Authentication Settings */}
+            {activeGroup === 'authentication' ? (
+              <AuthenticationSettings 
+                onUpdate={() => {
+                  console.log('Authentication settings updated successfully');
+                  toast.success('تم تحديث إعدادات المصادقة بنجاح');
+                }}
+              />
             ) : (
-              <div>
-                {currentGroupSettings.map((setting, idx) => (
-                  <div
-                    key={setting.key_name}
-                    style={{
-                      borderBottom: idx < currentGroupSettings.length - 1 ? '1px solid ' + C.border : 'none',
-                      paddingBottom: 16,
-                      marginBottom: 16,
-                    }}
-                  >
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>
-                      {setting.key_name === 'allow_registration' ? '🔓 السماح بالتسجيل' :
-                       setting.key_name === 'require_email_verification' ? '📧 طلب تفعيل البريد' :
-                       setting.key_name === 'max_login_attempts' ? '🔐 الحد الأقصى لمحاولات الدخول' :
-                       setting.key_name === 'session_timeout_minutes' ? '⏱️ مدة انتهاء الجلسة (دقائق)' :
-                       setting.key_name === 'lockout_duration' ? '🔒 مدة قفل الحساب (دقائق)' :
-                       setting.key_name === 'enable_cash_on_delivery' ? '💵 تفعيل الدفع عند الاستلام' :
-                       setting.key_name === 'enable_online_payment' ? '💳 تفعيل الدفع الإلكتروني' :
-                       setting.key_name === 'enable_2fa' ? '🔑 تفعيل المصادقة الثنائية' :
-                       setting.key_name === 'prevent_weak_passwords' ? '🛡️ منع كلمات المرور الضعيفة' :
-                       setting.key_name === 'enable_analytics' ? '📊 تفعيل التحليلات' :
-                       setting.key_name === 'maintenance_mode' ? '🔧 وضع الصيانة' :
-                       setting.key_name === 'default_delivery_fee' ? '🚚 سعر التوصيل الافتراضي' :
-                       setting.key_name === 'estimated_delivery_time' ? '⏰ وقت التوصيل المتوقع (دقائق)' :
-                       setting.key_name === 'free_delivery_threshold' ? '🎁 الحد الأدنى للتوصيل المجاني' :
-                       setting.key_name === 'default_currency' ? '💰 العملة الافتراضية' :
-                       setting.key_name === 'currency_symbol' ? '💱 رمز العملة' :
-                       setting.key_name === 'site_name' ? '🏷️ اسم المنصة' :
-                       setting.key_name === 'site_name_en' ? '🌐 اسم المنصة (إنجليزي)' :
-                       setting.key_name === 'primary_color' ? '🎨 اللون الأساسي' :
-                       setting.key_name === 'secondary_color' ? '🎨 اللون الثانوي' :
-                       setting.key_name === 'contact_email' ? '📧 بريد الدعم' :
-                       setting.key_name === 'contact_phone' ? '📞 هاتف الدعم' :
-                       setting.key_name === 'contact_whatsapp' ? '💬 واتساب الدعم' :
-                       setting.key_name === 'site_logo' ? '🖼️ شعار المنصة' :
-                       setting.key_name === 'site_favicon' ? '⭐ أيقونة المنصة' :
-                       setting.key_name === 'address' ? '📍 العنوان' :
-                       setting.key_name === 'address_en' ? '📍 العنوان (إنجليزي)' :
-                       setting.key_name.split('_').map(word =>
-                         word.charAt(0).toUpperCase() + word.slice(1)
-                       ).join(' ')}
-                    </label>
-                    {setting.description && (
-                      <p style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{setting.description}</p>
-                    )}
-                    {renderSettingInput(setting)}
-                  </div>
-                ))}
-              </div>
-            )}
+              <>
+                <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginTop: 0, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {availableGroups.find(g => g.id === activeGroup)?.icon}
+                  {availableGroups.find(g => g.id === activeGroup)?.name}
+                </h2>
+                <p style={{ color: C.muted, marginBottom: 24, fontSize: 14 }}>
+                  {availableGroups.find(g => g.id === activeGroup)?.description || 'إعدادات هذه المجموعة'}
+                </p>
 
-            <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid ' + C.border, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button variant="primary" onClick={handleSave} loading={saving}>
-                حفظ جميع الإعدادات
-              </Button>
-            </div>
+                {currentGroupSettings.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '32px 0', color: C.muted }}>
+                    لا توجد إعدادات في هذه المجموعة
+                  </div>
+                ) : (
+                  <div>
+                    {currentGroupSettings.map((setting, idx) => (
+                      <div
+                        key={setting.key_name}
+                        style={{
+                          borderBottom: idx < currentGroupSettings.length - 1 ? '1px solid ' + C.border : 'none',
+                          paddingBottom: 16,
+                          marginBottom: 16,
+                        }}
+                      >
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                          {setting.key_name === 'allow_registration' ? '🔓 السماح بالتسجيل' :
+                           setting.key_name === 'require_email_verification' ? '📧 طلب تفعيل البريد' :
+                           setting.key_name === 'max_login_attempts' ? '🔐 الحد الأقصى لمحاولات الدخول' :
+                           setting.key_name === 'session_timeout_minutes' ? '⏱️ مدة انتهاء الجلسة (دقائق)' :
+                           setting.key_name === 'lockout_duration' ? '🔒 مدة قفل الحساب (دقائق)' :
+                           setting.key_name === 'enable_cash_on_delivery' ? '💵 تفعيل الدفع عند الاستلام' :
+                           setting.key_name === 'enable_online_payment' ? '💳 تفعيل الدفع الإلكتروني' :
+                           setting.key_name === 'enable_2fa' ? '🔑 تفعيل المصادقة الثنائية' :
+                           setting.key_name === 'prevent_weak_passwords' ? '🛡️ منع كلمات المرور الضعيفة' :
+                           setting.key_name === 'enable_analytics' ? '📊 تفعيل التحليلات' :
+                           setting.key_name === 'maintenance_mode' ? '🔧 وضع الصيانة' :
+                           setting.key_name === 'default_delivery_fee' ? '🚚 سعر التوصيل الافتراضي' :
+                           setting.key_name === 'estimated_delivery_time' ? '⏰ وقت التوصيل المتوقع (دقائق)' :
+                           setting.key_name === 'free_delivery_threshold' ? '🎁 الحد الأدنى للتوصيل المجاني' :
+                           setting.key_name === 'default_currency' ? '💰 العملة الافتراضية' :
+                           setting.key_name === 'currency_symbol' ? '💱 رمز العملة' :
+                           setting.key_name === 'site_name' ? '🏷️ اسم المنصة' :
+                           setting.key_name === 'site_name_en' ? '🌐 اسم المنصة (إنجليزي)' :
+                           setting.key_name === 'primary_color' ? '🎨 اللون الأساسي' :
+                           setting.key_name === 'secondary_color' ? '🎨 اللون الثانوي' :
+                           setting.key_name === 'contact_email' ? '📧 بريد الدعم' :
+                           setting.key_name === 'contact_phone' ? '📞 هاتف الدعم' :
+                           setting.key_name === 'contact_whatsapp' ? '💬 واتساب الدعم' :
+                           setting.key_name === 'site_logo' ? '🖼️ شعار المنصة' :
+                           setting.key_name === 'site_favicon' ? '⭐ أيقونة المنصة' :
+                           setting.key_name === 'address' ? '📍 العنوان' :
+                           setting.key_name === 'address_en' ? '📍 العنوان (إنجليزي)' :
+                           setting.key_name.split('_').map(word =>
+                             word.charAt(0).toUpperCase() + word.slice(1)
+                           ).join(' ')}
+                        </label>
+                        {setting.description && (
+                          <p style={{ color: C.muted, fontSize: 12, marginBottom: 8 }}>{setting.description}</p>
+                        )}
+                        {renderSettingInput(setting)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid ' + C.border, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button variant="primary" onClick={handleSave} loading={saving}>
+                    حفظ جميع الإعدادات
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

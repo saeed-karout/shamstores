@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettingsContext } from '../../contexts/SettingsContext';
 import Button from '../../components/common/Button';
+import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import {
   IoRestaurant,
   IoMail,
@@ -123,7 +124,7 @@ const Register: React.FC = () => {
 
     try {
       if (accountType === 'restaurant') {
-        await register({
+        const response = await register({
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -131,10 +132,13 @@ const Register: React.FC = () => {
           restaurantName: formData.businessName,
         });
 
-        const message = requireEmailVerification
-          ? 'تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني'
-          : 'تم إنشاء حساب المطعم بنجاح';
-        toast.success(message);
+        if (requireEmailVerification) {
+          toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
+          navigate('/auth/email-verification', { state: { email: formData.email } });
+        } else {
+          toast.success('تم إنشاء حساب المطعم بنجاح');
+          navigate('/dashboard');
+        }
       } else {
         const response = await api.post('/auth/register-store', {
           name: formData.name,
@@ -144,15 +148,17 @@ const Register: React.FC = () => {
           storeName: formData.businessName,
         });
 
-        if (response.token) {
-          localStorage.setItem('token', response.token);
-          localStorage.setItem('user', JSON.stringify(response.user));
+        if (response.data.success) {
+          localStorage.setItem('token', response.data.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.data.user));
 
-          const message = requireEmailVerification
-            ? 'تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني'
-            : 'تم إنشاء حساب المتجر بنجاح';
-          toast.success(message);
-          navigate('/dashboard');
+          if (requireEmailVerification) {
+            toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
+            navigate('/auth/email-verification', { state: { email: formData.email } });
+          } else {
+            toast.success('تم إنشاء حساب المتجر بنجاح');
+            navigate('/dashboard');
+          }
         }
       }
     } catch (error: any) {
@@ -457,6 +463,21 @@ const Register: React.FC = () => {
               </button>
             </div>
           </form>
+
+          {/* Google Sign-In */}
+          <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1rem' }}>
+              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: C.border }} />
+              <span style={{ position: 'relative', background: C.card, padding: '0 0.75rem', fontSize: '0.875rem', color: C.muted }}>
+                أو استخدم
+              </span>
+            </div>
+            <GoogleSignInButton
+              text="إنشاء حساب عبر Google"
+              variant="secondary"
+              fullWidth
+            />
+          </div>
 
           {/* رابط تسجيل الدخول */}
           <div style={{ marginTop: '1.5rem' }}>

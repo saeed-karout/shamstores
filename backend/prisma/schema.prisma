@@ -107,11 +107,42 @@ model User {
   drivers      Driver[]
   tickets      Ticket[]
   orders       Order[]   @relation("CreatedOrders")
+  firebaseUser FirebaseUser?
 
   @@index([email])
   @@index([restaurantId])
   @@index([storeId])
   @@index([role])
+}
+
+model EmailVerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([code])
+  @@index([expiresAt])
+}
+
+model FirebaseUser {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  firebaseUid    String   @unique
+  displayName    String?
+  photoUrl       String?
+  authProvider   String   @default("google")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([firebaseUid])
+  @@index([userId])
 }
 
 model Plan {
@@ -740,7 +771,29 @@ model ExtendedPlatformSetting {
 
   @@index([keyName])
   @@index([settingGroup])
+  @@index([settingGroup, keyName])
 }
+
+// Auth Configuration Settings stored in ExtendedPlatformSetting table
+// Email Verification settings:
+// - requireEmailVerification: (boolean) whether email verification is required on signup
+// 
+// SMTP settings:
+// - smtpHost: (string) SMTP server hostname
+// - smtpPort: (number) SMTP server port
+// - smtpUser: (string) SMTP authentication username
+// - smtpPassword: (string) SMTP authentication password (encrypted in production)
+// - smtpFromEmail: (string) sender email address for verification emails
+// - smtpTLS: (boolean) whether to use TLS/SSL
+//
+// Firebase settings:
+// - firebaseProjectId: (string) Firebase project ID
+// - firebaseApiKey: (string) Firebase API key
+// - firebaseAuthDomain: (string) Firebase authentication domain
+// - firebaseStorageBucket: (string) Firebase storage bucket
+// - firebaseMessagingSenderId: (string) Firebase messaging sender ID
+// - firebaseAppId: (string) Firebase app ID
+// - firebaseServiceAccountKey: (json) Firebase service account key for backend auth
 
 model UpgradeRequest {
   id              String    @id @default(cuid())

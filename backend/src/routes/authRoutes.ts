@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, logout, registerDriver, resetPassword, registerStore, resendVerificationEmail, verifyEmail } from '../controllers/authController';
+import { register, login, getMe, logout, registerDriver, resetPassword, registerStore, resendVerificationEmail, verifyEmail, firebaseSignIn, linkFirebaseAccount } from '../controllers/authController';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
@@ -39,13 +39,36 @@ router.post('/logout', authenticate, logout);
  */
 router.post('/register-driver', authenticate, authorize(['owner', 'super_admin']), registerDriver);
 
-
 router.post('/register-store', registerStore);
 
 router.post('/reset-password', resetPassword);
 
+/**
+ * @route   POST /api/auth/verify-email
+ * @desc    التحقق من البريد الإلكتروني باستخدام الكود
+ * @access  Public
+ */
+router.post('/verify-email', verifyEmail);
 
-router.get('/verify-email/:token', verifyEmail);
-router.post('/resend-verification', authenticate, resendVerificationEmail);
+/**
+ * @route   POST /api/auth/resend-verification
+ * @desc    إعادة إرسال كود التحقق
+ * @access  Public
+ */
+router.post('/resend-verification', resendVerificationEmail);
+
+/**
+ * @route   POST /api/auth/firebase-signin
+ * @desc    تسجيل الدخول عبر Google Firebase
+ * @access  Public
+ */
+router.post('/firebase-signin', firebaseSignIn);
+
+/**
+ * @route   POST /api/auth/link-firebase
+ * @desc    ربط حساب Firebase بحساب موجود
+ * @access  Private
+ */
+router.post('/link-firebase', authenticate, linkFirebaseAccount);
 
 export default router;

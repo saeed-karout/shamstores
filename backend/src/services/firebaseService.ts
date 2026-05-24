@@ -37,6 +37,9 @@ export interface NotificationData {
 
 class FirebaseService {
   private messaging = admin.messaging();
+  private auth = admin.auth();
+
+  // ==================== Messaging Methods ====================
 
   async sendToDevice(
     deviceToken: string,
@@ -119,6 +122,85 @@ class FirebaseService {
       console.log(`✅ Unsubscribed ${deviceTokens.length} devices from topic: ${topic}`);
     } catch (error) {
       console.error('Error unsubscribing from topic:', error);
+    }
+  }
+
+  // ==================== Firebase Auth Methods ====================
+
+  async verifyIdToken(idToken: string): Promise<admin.auth.DecodedIdToken | null> {
+    try {
+      const decodedToken = await this.auth.verifyIdToken(idToken);
+      console.log(`✅ ID token verified for user: ${decodedToken.uid}`);
+      return decodedToken;
+    } catch (error) {
+      console.error('Error verifying ID token:', error);
+      return null;
+    }
+  }
+
+  async getUserByFirebaseUid(uid: string): Promise<admin.auth.UserRecord | null> {
+    try {
+      const user = await this.auth.getUser(uid);
+      console.log(`✅ Firebase user retrieved: ${uid}`);
+      return user;
+    } catch (error) {
+      console.error('Error retrieving Firebase user:', error);
+      return null;
+    }
+  }
+
+  async createCustomToken(uid: string): Promise<string | null> {
+    try {
+      const token = await this.auth.createCustomToken(uid);
+      console.log(`✅ Custom token created for user: ${uid}`);
+      return token;
+    } catch (error) {
+      console.error('Error creating custom token:', error);
+      return null;
+    }
+  }
+
+  async setCustomUserClaims(uid: string, customClaims: Record<string, any>): Promise<boolean> {
+    try {
+      await this.auth.setCustomUserClaims(uid, customClaims);
+      console.log(`✅ Custom claims set for user: ${uid}`);
+      return true;
+    } catch (error) {
+      console.error('Error setting custom claims:', error);
+      return false;
+    }
+  }
+
+  async disableUser(uid: string): Promise<boolean> {
+    try {
+      await this.auth.updateUser(uid, { disabled: true });
+      console.log(`✅ User disabled: ${uid}`);
+      return true;
+    } catch (error) {
+      console.error('Error disabling user:', error);
+      return false;
+    }
+  }
+
+  async enableUser(uid: string): Promise<boolean> {
+    try {
+      await this.auth.updateUser(uid, { disabled: false });
+      console.log(`✅ User enabled: ${uid}`);
+      return true;
+    } catch (error) {
+      console.error('Error enabling user:', error);
+      return false;
+    }
+  }
+
+  async deleteFirebaseUser(uid: string): Promise<boolean> {
+    try {
+      await this.auth.deleteUser(uid);
+      console.log(`✅ Firebase user deleted: ${uid}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting Firebase user:', error);
+      return false;
     }
   }
 }
