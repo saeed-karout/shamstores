@@ -59,26 +59,37 @@ const AdminStores: React.FC = () => {
   }, []);
 
   const fetchStores = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/admin/stores');
-      // ✅ تصحيح: استقبال البيانات بشكل صحيح
-      const storesData = response.data?.data?.stores || response.data?.stores || response.data || [];
-      setStores(Array.isArray(storesData) ? storesData : []);
-    } catch (error) {
-      console.error('Error fetching stores:', error);
-      toast.error('فشل تحميل المتاجر');
-      setStores([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      try {
+        const response = await api.get('/admin/stores');
+        
+        // ✅ التصحيح: البيانات موجودة مباشرة في response
+        // لأن apiClient يعيد response.data تلقائياً
+        let storesData = [];
+        
+        if (response?.stores && Array.isArray(response.stores)) {
+          storesData = response.stores;
+        } else if (response?.data?.stores && Array.isArray(response.data.stores)) {
+          storesData = response.data.stores;
+        } else if (Array.isArray(response)) {
+          storesData = response;
+        }
+        
+        setStores(storesData);
+      } catch (error) {
+        console.error('Error fetching stores:', error);
+        toast.error('فشل تحميل المتاجر');
+        setStores([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const fetchStoreDetails = async (storeId: string) => {
+   const fetchStoreDetails = async (storeId: string) => {
     setStatsLoading(true);
     try {
       const response = await api.get(`/admin/stores/${storeId}`);
-      setStoreStats(response.data?.data || response.data);
+      setStoreStats(response.data?.data || response.data || null);
     } catch (error) {
       console.error('Error fetching store details:', error);
       toast.error('فشل تحميل تفاصيل المتجر');
