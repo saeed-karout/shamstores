@@ -1,6 +1,6 @@
 // backend/src/controllers/marketingController.ts
 
-import { Response } from 'express';
+import { Request, Response } from 'express'; 
 import { AuthRequest } from '../types';
 import { prisma } from '../server';
 
@@ -65,6 +65,88 @@ const ensureScheduleIsValid = (startAt: Date | null, endAt: Date | null): void =
   }
 };
 
+
+export const getPublicMarketingData = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { businessType, businessId } = req.query;
+    
+    console.log('📢 getPublicMarketingData - businessType:', businessType, 'businessId:', businessId);
+    
+    if (!businessType || !businessId) {
+      res.status(400).json({ 
+        success: false, 
+        error: 'businessType و businessId مطلوبان' 
+      });
+      return;
+    }
+    
+    // التحقق من صحة النوع
+    if (businessType !== 'restaurant' && businessType !== 'store') {
+      res.status(400).json({ 
+        success: false, 
+        error: 'businessType يجب أن يكون restaurant أو store' 
+      });
+      return;
+    }
+    
+    const now = new Date();
+    
+    // جلب إعدادات الأقسام
+    const settings = await prisma.marketingSettings.findFirst({
+      where: {
+        businessType: businessType as any,
+        businessId: businessId as string
+      }
+    });
+    
+    // جلب الأقسام النشطة
+    const sections = await prisma.marketingSection.findMany({
+      where: {
+        businessType: businessType as any,
+        businessId: businessId as string,
+        isActive: true,
+        AND: [
+          {
+            OR: [
+              { startAt: null },
+              { startAt: { lte: now } }
+            ]
+          },
+          {
+            OR: [
+              { endAt: null },
+              { endAt: { gte: now } }
+            ]
+          }
+        ]
+      },
+      orderBy: [
+        { sectionType: 'asc' },
+        { sortOrder: 'asc' }
+      ]
+    });
+    
+    const sectionOrder = (settings?.sectionOrder as any) || ['announcement', 'banner', 'offer'];
+    
+    res.json({
+      success: true,
+      data: {
+        sectionOrder,
+        sections
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public marketing data:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'حدث خطأ في جلب البيانات التسويقية' 
+    });
+  }
+};
+
 // ✅ التحقق من ميزة إخفاء الإعلانات (للمطاعم/المتاجر المدفوعة)
 const isPublicAdsDisabled = async (
   businessType: MarketingBusinessType,
@@ -96,80 +178,7 @@ const isPublicAdsDisabled = async (
   }
 };
 
-// ✅ جلب البيانات العامة للتسويق (للعرض العام)
-export const getPublicMarketingData = async (
-  businessType: MarketingBusinessType,
-  businessId: string
-): Promise<MarketingPayload> => {
-  try {
-    const adsDisabled = await isPublicAdsDisabled(businessType, businessId);
-    if (adsDisabled) {
-      return {
-        sectionOrder: DEFAULT_SECTION_ORDER,
-        announcements: [],
-        banners: [],
-        offers: []
-      };
-    }
 
-    const now = new Date();
-
-    const [settings, sections] = await Promise.all([
-      prisma.marketingSettings.findFirst({
-        where: { businessType, businessId }
-      }),
-      prisma.marketingSection.findMany({
-        where: {
-          businessType,
-          businessId,
-          isActive: true,
-          AND: [
-            {
-              OR: [
-                { startAt: null },
-                { startAt: { lte: now } }
-              ]
-            },
-            {
-              OR: [
-                { endAt: null },
-                { endAt: { gte: now } }
-              ]
-            }
-          ]
-        },
-        orderBy: [
-          { sectionType: 'asc' },
-          { sortOrder: 'asc' },
-          { createdAt: 'desc' }
-        ]
-      })
-    ]);
-
-    const grouped = {
-      announcement: sections.filter(s => s.sectionType === 'announcement'),
-      banner: sections.filter(s => s.sectionType === 'banner'),
-      offer: sections.filter(s => s.sectionType === 'offer')
-    };
-
-    const sectionOrder = normalizeSectionOrder(settings?.sectionOrder as any) || DEFAULT_SECTION_ORDER;
-
-    return {
-      sectionOrder,
-      announcements: grouped.announcement,
-      banners: grouped.banner,
-      offers: grouped.offer
-    };
-  } catch (error) {
-    console.error('Error loading public marketing data:', error);
-    return {
-      sectionOrder: DEFAULT_SECTION_ORDER,
-      announcements: [],
-      banners: [],
-      offers: []
-    };
-  }
-};
 
 // ✅ جلب إعدادات التسويق للمالك (مع فلترة البانرات والعروض فقط)
 export const getMarketingSettingsForOwner = async (req: AuthRequest, res: Response): Promise<void> => {

@@ -267,45 +267,54 @@ export const deletePlan = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
-// ==================== جلب الخطة الحالية للمستخدم ====================
 
 export const getCurrentPlan = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const business = await getBusinessId(req);
-    
-    if (!business) {
-      const freePlan = await prisma.plan.findFirst({ where: { name: 'free', isActive: true } });
-      res.json({ success: true, data: freePlan });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
       return;
     }
-
+    
+    // ✅ جلب المستخدم
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        restaurantId: true,
+        storeId: true
+      }
+    });
+    
     let plan = null;
-
-    if (business.type === 'restaurant') {
+    
+    // ✅ البحث عن الخطة من المطعم
+    if (user?.restaurantId) {
       const restaurant = await prisma.restaurant.findUnique({
-        where: { id: business.id }
+        where: { id: user.restaurantId },
+        include: { plan: true }
       });
-      if (restaurant) {
-        plan = await prisma.plan.findUnique({ where: { id: restaurant.planId } });
-      }
-    } else {
+      plan = restaurant?.plan;
+    } 
+    // ✅ البحث عن الخطة من المتجر
+    else if (user?.storeId) {
       const store = await prisma.store.findUnique({
-        where: { id: business.id }
+        where: { id: user.storeId },
+        include: { plan: true }
       });
-      if (store) {
-        plan = await prisma.plan.findUnique({ where: { id: store.planId } });
-      }
+      plan = store?.plan;
     }
-
+    
+    // ✅ إذا لم توجد خطة، جلب الخطة المجانية
     if (!plan) {
-      plan = await prisma.plan.findFirst({ where: { name: 'free', isActive: true } });
+      plan = await prisma.plan.findFirst({
+        where: { name: 'free' }
+      });
     }
-
+    
     res.json({ success: true, data: plan });
   } catch (error) {
-    console.error('خطأ في جلب الخطة الحالية:', error);
-    const freePlan = await prisma.plan.findFirst({ where: { name: 'free', isActive: true } });
-    res.json({ success: true, data: freePlan });
+    console.error('Error getting current plan:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب الخطة' });
   }
 };
 

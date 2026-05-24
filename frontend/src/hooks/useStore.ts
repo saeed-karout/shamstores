@@ -1,7 +1,7 @@
 // hooks/useStore.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+import api, { getApiBaseUrl } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from './useAuth';
 
@@ -133,7 +133,7 @@ const uploadLogo = useCallback(async (file: File): Promise<string | null> => {
     
     // ✅ استخدام axios مباشرة مع إعدادات صحيحة
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/store/upload/logo', {
+    const response = await fetch(`${getApiBaseUrl()}/store/upload/logo`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -166,7 +166,7 @@ const uploadCover = useCallback(async (file: File): Promise<string | null> => {
     console.log('📸 Uploading cover, file size:', file.size, 'type:', file.type);
     
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/store/upload/cover', {
+    const response = await fetch(`${getApiBaseUrl()}/store/upload/cover`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

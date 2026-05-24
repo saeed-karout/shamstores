@@ -10,6 +10,8 @@ import {
   IoTime, IoFlame, IoPerson, IoLogOut, IoCall, IoLogoWhatsapp, IoArrowUp,
   IoHeart, IoHeartOutline, IoClose, IoMenu, IoGrid, IoList,
 } from 'react-icons/io5';
+import PublicAdvertisements from '@/components/public/PublicAdvertisements';
+import PublicOffers from '@/components/public/PublicOffers';
 
 import Loader from '@/components/common/Loader';
 import MenuItemCard from '@/components/MenuItemCard';
@@ -18,10 +20,11 @@ import OrderTrackingModal from '@/components/OrderTrackingModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { useFavorites } from '@/hooks/useFavorites';
-import api, { getCurrentSubdomain, isMainDomain } from '@/services/api';
+import api, { getCurrentSubdomain } from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { openWhatsApp } from '@/utils/helpers';
 import PublicMarketingSections, { PublicMarketingData } from '@/components/public/PublicMarketingSections';
+import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 
 // ==================== Color Tokens ====================
 
@@ -90,6 +93,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartSubtotal, getCartCount } = useCart();
   const { favorites, toggleFavorite, getFavoritesCount } = useFavorites();
+  const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
 
   // State
   const [data, setData] = useState<{ restaurant: any; categories: Category[]; marketing?: PublicMarketingData } | null>(null);
@@ -141,11 +145,10 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   }, [currentSlug]);
 
   // API Calls
- const fetchRestaurantData = async () => {
+  const fetchRestaurantData = async () => {
     try {
       setLoading(true);
       
-      // ✅ استخدم المعرف (slug أو subdomain) بدلاً من المسار العام
       const identifier = currentSlug;
       if (!identifier) {
         throw new Error('No business identifier found');
@@ -155,7 +158,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       const response = await api.get(`/public/${identifier}`);
       console.log('📦 Restaurant data response:', response);
       
-      // ✅ التعامل مع تنسيق الـ response (قد يكون مباشرة أو داخل data)
       const businessData = response.data || response;
       
       setData({
@@ -174,7 +176,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         marketing: businessData.marketing || undefined
       });
 
-      // Apply theme colors
       const primary = businessData.primaryColor || propBusinessPrimaryColor;
       if (primary) {
         document.documentElement.style.setProperty('--primary-color', primary);
@@ -186,7 +187,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     } catch (error) {
       console.error('Error fetching restaurant data:', error);
       
-      // Fallback to props data
       setData({
         restaurant: {
           id: propBusinessId,
@@ -232,7 +232,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       }
     });
 
-    // Filter by search
     if (searchQuery) {
       items = items.filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -241,10 +240,8 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       );
     }
 
-    // Filter by availability
     items = items.filter(item => item.isAvailable !== false);
 
-    // Sort
     switch (sortBy) {
       case 'popular':
         items.sort((a, b) => (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0));
@@ -316,7 +313,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       setCustomerInfo(prev => ({ ...prev, notes: '' }));
       fetchMyOrders();
 
-      // Send WhatsApp notification if available
       if (data?.restaurant.whatsapp) {
         const message = `🆕 طلب جديد\n👤 ${customerInfo.name || user.name}\n📞 ${customerInfo.phone || user.phone}\n💰 ${subtotal} ر.س`;
         openWhatsApp(data.restaurant.whatsapp, message);
@@ -332,11 +328,10 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const filteredItems = getFilteredItems();
   const categories = data?.categories || [];
   const restaurant = data?.restaurant || {};
-
-  // Use business primary color for interactive elements, fallback to lime
   const primaryColor = restaurant.primaryColor || C.accent;
 
-  if (loading || authLoading) return <Loader fullScreen />;
+  // دمج حالة التحميل
+  if (loading || authLoading || planLoading) return <Loader fullScreen />;
 
   return (
     <>
@@ -410,14 +405,27 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           </div>
         </div>
 
-        <PublicMarketingSections marketing={data?.marketing} className="max-w-7xl mx-auto px-4 mt-4" />
+        {/* ==================== الأقسام التسويقية (بانرات وعروض) ==================== */}
+    <PublicMarketingSections 
+  businessId={restaurant.id}
+  businessType="restaurant"
+  className="mt-6"
+  limitPerSection={10}
+/>
+
+        {/* ==================== العروض الخاصة ==================== */}
+        <PublicOffers 
+          businessId={restaurant.id}
+          businessType="restaurant"
+          className="max-w-7xl mx-auto px-4 mt-4"
+          limit={5}
+        />
 
         {/* Controls Bar */}
         <div style={{ position: 'sticky', top: 0, zIndex: 10, background: C.card, borderBottom: `1px solid ${C.border}`, marginTop: 16 }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 8 }}>
-                {/* Search Toggle */}
                 <button
                   onClick={() => setShowSearch(!showSearch)}
                   style={{
@@ -436,7 +444,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   <span>بحث</span>
                 </button>
 
-                {/* Filter Toggle */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
                   style={{
@@ -456,7 +463,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   {showFilters ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
                 </button>
 
-                {/* View Mode Toggle */}
                 <div style={{ display: 'flex', gap: 4, background: 'rgba(200,226,53,0.08)', borderRadius: 9999, padding: 4, border: `1px solid ${C.border}` }}>
                   <button
                     onClick={() => setViewMode('grid')}
@@ -761,6 +767,16 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           onSelectOrder={setTrackingOrder}
           formatPrice={(price) => price.toLocaleString()}
           loading={loadingOrders}
+        />
+
+        {/* ==================== إعلانات أسفل الصفحة ==================== */}
+        <PublicAdvertisements 
+          businessId={restaurant.id}
+          businessType="restaurant"
+          currentPlan={currentPlan}
+          className="max-w-7xl mx-auto px-4 mt-8 mb-8"
+          limit={2}
+          position="bottom"
         />
       </div>
 

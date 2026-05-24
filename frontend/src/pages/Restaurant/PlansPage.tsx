@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../../services/api';
+import api, { getCurrentSubdomain } from '../../services/api';
 import { Plan } from '../../services/types';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
@@ -53,15 +53,20 @@ const PlansPage: React.FC = () => {
   }, [isAdmin]);
 
   const fetchData = async () => {
-    try {
-      const [plansData, currentPlanData] = await Promise.all([
-        api.get<Plan[]>('/plans'),
-        api.get<Plan>('/plans/current/me').catch(() => null)
-      ]);
-      setPlans(plansData);
-      setCurrentPlan(currentPlanData);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
-  };
+  try {
+    const [plansData, currentPlanData] = await Promise.all([
+      api.get<Plan[]>('/plans'),
+      // ✅ استخدام المسار العام
+      api.get<Plan>(`/plans/business/${getCurrentSubdomain() || 'default'}`).catch(() => null)
+    ]);
+    setPlans(plansData);
+    setCurrentPlan(currentPlanData);
+  } catch (error) { 
+    console.error(error); 
+  } finally { 
+    setLoading(false); 
+  }
+};
 
   const fetchUpgradeRequests = async () => {
     try { const r = await api.get('/admin/upgrade-requests'); setUpgradeRequests(r); } catch {}

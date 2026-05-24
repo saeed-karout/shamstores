@@ -7,16 +7,18 @@ import {
   deleteMarketingSection,
   getMarketingSettings,
   updateMarketingSection,
-  updateMarketingSectionOrder
+  updateMarketingSectionOrder,
+  getPublicMarketingData  // ✅ تأكد من وجود هذا الاستيراد
 } from '../controllers/marketingController';
 
 const router = Router();
 
-// ✅ جميع المسارات تحتاج مصادقة
+// ==================== مسار عام (بدون مصادقة) ====================
+router.get('/public', getPublicMarketingData as any);
+
+// ==================== المسارات المحمية ====================
 router.use(authenticate);
 
-// ✅ السماح لكل من super_admin و owner بالوصول
-// مع فلترة في الـ controller حسب الدور
 router.get('/', authorize(['super_admin', 'owner']), getMarketingSettings);
 router.put('/section-order', authorize(['super_admin', 'owner']), updateMarketingSectionOrder);
 router.post('/sections', authorize(['super_admin', 'owner']), createMarketingSection);

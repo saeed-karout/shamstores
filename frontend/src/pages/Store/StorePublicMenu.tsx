@@ -471,7 +471,12 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           </div>
         </div>
 
-        <PublicMarketingSections marketing={marketing} className="max-w-7xl mx-auto px-4 mt-4" />
+        {/* ==================== الأقسام التسويقية ==================== */}
+        <PublicMarketingSections 
+          businessId={store.id}
+          businessType="store"
+          className="max-w-7xl mx-auto px-4 mt-4"
+        />
 
         {/* Search and Filters Bar */}
         <div style={{ position: 'sticky', top: 0, zIndex: 20, background: C.card, borderBottom: `1px solid ${C.border}`, marginTop: 24 }}>

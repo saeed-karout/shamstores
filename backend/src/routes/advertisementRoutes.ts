@@ -1,32 +1,32 @@
 // backend/src/routes/advertisementRoutes.ts
+
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import {
-  getActiveAdvertisements,
   getAllAdvertisements,
   getAdvertisement,
   createAdvertisement,
   updateAdvertisement,
   deleteAdvertisement,
   toggleAdvertisementStatus,
-  getAdvertisementsStats
+  getAdvertisementsStats,
+  getPublicAdvertisements
 } from '../controllers/advertisementController';
 
 const router = Router();
 
-// ==================== مسارات عامة (بدون مصادقة) ====================
-router.get('/public', getActiveAdvertisements);
+// ✅ استخدم as any للتجاوز
+router.get('/public', getPublicAdvertisements as any);
 
-// ==================== مسارات السوبر أدمن فقط ====================
 router.use(authenticate);
 router.use(authorize(['super_admin']));
 
-router.get('/', getAllAdvertisements);
-router.get('/stats', getAdvertisementsStats);
-router.get('/:id', getAdvertisement);
-router.post('/', createAdvertisement);
-router.put('/:id', updateAdvertisement);
-router.delete('/:id', deleteAdvertisement);
-router.patch('/:id/toggle', toggleAdvertisementStatus);
+router.get('/', getAllAdvertisements as any);
+router.get('/stats', getAdvertisementsStats as any);
+router.get('/:id', getAdvertisement as any);
+router.post('/', createAdvertisement as any);
+router.put('/:id', updateAdvertisement as any);
+router.delete('/:id', deleteAdvertisement as any);
+router.patch('/:id/toggle', toggleAdvertisementStatus as any);
 
 export default router;

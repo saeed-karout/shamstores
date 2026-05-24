@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { getApiBaseUrl } from '../services/api';
 import { Restaurant } from '../services/types';
 import toast from 'react-hot-toast';
 import { useAuth } from './useAuth';
@@ -57,7 +57,7 @@ const uploadLogo = async (file: File) => {
     
     // استخدام fetch مباشرة لتجنب مشاكل axios
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/restaurants/logo', {
+    const response = await fetch(`${getApiBaseUrl()}/restaurants/logo`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -90,7 +90,7 @@ const uploadCover = async (file: File) => {
     formData.append('image', file);
     
     const token = localStorage.getItem('token');
-    const response = await fetch('http://localhost:5000/api/restaurants/cover', {
+    const response = await fetch(`${getApiBaseUrl()}/restaurants/cover`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`

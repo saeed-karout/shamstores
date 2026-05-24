@@ -5,48 +5,30 @@ import prisma from '../services/prisma';
 
 // ==================== إعلانات عامة للجمهور (بدون مصادقة) ====================
 
-export const getActiveAdvertisements = async (
-  req: AuthRequest,
+
+
+export const getPublicAdvertisements = async (
+  req: Request,
   res: Response
 ): Promise<void> => {
   try {
     const now = new Date();
     
-    const ads = await prisma.advertisement.findMany({
+    const advertisements = await prisma.advertisement.findMany({
       where: {
         isActive: true,
-        AND: [
-          {
-            OR: [
-              { startAt: null },
-              { startAt: { lte: now } }
-            ]
-          },
-          {
-            OR: [
-              { endAt: null },
-              { endAt: { gte: now } }
-            ]
-          }
-        ]
+        
       },
-      orderBy: { position: 'asc' },
-      select: {
-        id: true,
-        title: true,
-        titleEn: true,
-        description: true,
-        descriptionEn: true,
-        imageUrl: true,
-        linkUrl: true,
-        position: true
-      }
+      orderBy: { position: 'asc' }
     });
-
-    res.json({ success: true, data: ads });
+    
+    res.json({ success: true, data: advertisements });
   } catch (error) {
-    console.error('Error fetching advertisements:', error);
-    res.status(500).json({ success: false, error: 'حدث خطأ في جلب الإعلانات' });
+    console.error('Error fetching public advertisements:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'حدث خطأ في جلب الإعلانات' 
+    });
   }
 };
 

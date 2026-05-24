@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import api from '@/services/api';
+import api, { getCurrentSubdomain } from '@/services/api';
 
 export interface Plan {
   id: string;
@@ -84,7 +84,9 @@ export const useCurrentPlan = (): UseCurrentPlanReturn => {
     
     try {
       // ✅ المسار من planRoutes
-      const response = await api.get('/plans/current/me');
+      const currentSlug = getCurrentSubdomain(); // أو استقبله كـ prop
+const response = await api.get(`/plans/business/${currentSlug}`);
+
       
       if (response && response.success !== false) {
         const planData = response.data || response;
