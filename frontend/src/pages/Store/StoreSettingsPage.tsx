@@ -14,7 +14,6 @@ import {
   IoCall,
   IoLogoInstagram,
   IoLogoFacebook,
-  IoTimer,
   IoMap,
   IoLink,
   IoLockClosed,
@@ -26,9 +25,14 @@ import {
   IoCalculator,
   IoLogoWhatsapp,
   IoSave,
+  IoPricetag,
+  IoBrush,
+  IoText,
+  IoAlbums,
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 
+// ==================== ثوابت التصميم الأساسية (للخلفية فقط) ====================
 const C = {
   bg: '#082E24',
   card: '#112E23',
@@ -42,6 +46,8 @@ const C = {
   border: 'rgba(200,226,53,0.15)',
   red: '#FF6B6B',
   blue: '#60A5FA',
+  purple: '#A78BFA',
+  orange: '#FB923C',
 };
 
 interface DeliverySettings {
@@ -120,6 +126,7 @@ const StoreSettingsPage: React.FC = () => {
   const hasCustomDomain = currentPlan?.hasCustomDomain === true || isSuperAdmin;
   const hasOnlinePayment = currentPlan?.hasOnlineOrders === true || isSuperAdmin;
 
+  // ✅ بيانات النموذج العام
   const [generalForm, setGeneralForm] = useState({
     name: '',
     email: '',
@@ -134,21 +141,29 @@ const StoreSettingsPage: React.FC = () => {
     longitude: '',
   });
 
+  // ✅ بيانات التصميم - جميع الألوان
   const [designForm, setDesignForm] = useState({
     primaryColor: '#3B82F6',
     secondaryColor: '#10B981',
-    backgroundColor: '#FFFFFF',
-    textColor: '#000000',
+    backgroundColor: '#082E24',
+    cardColor: '#112E23',
+    surfaceColor: '#0F3D31',
+    textColor: '#E8F5E9',
+    mutedColor: '#9DC4AC',
+    accentColor: '#C8E235',
     fontFamily: 'Cairo',
   });
 
+  // ✅ بيانات الدومين
   const [domainForm, setDomainForm] = useState({
     subdomain: '',
     customDomain: '',
   });
 
+  // ✅ إعدادات التوصيل
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(defaultDeliverySettings);
 
+  // ✅ تحميل بيانات المتجر
   useEffect(() => {
     if (store) {
       console.log('✅ Store data for settings:', store);
@@ -167,11 +182,16 @@ const StoreSettingsPage: React.FC = () => {
         longitude: store.longitude?.toString() || '',
       });
 
+      // ✅ تحميل جميع ألوان المتجر
       setDesignForm({
         primaryColor: store.primaryColor || '#3B82F6',
         secondaryColor: store.secondaryColor || '#10B981',
-        backgroundColor: store.backgroundColor || '#FFFFFF',
-        textColor: store.textColor || '#000000',
+        backgroundColor: store.backgroundColor || '#082E24',
+        cardColor: store.cardColor || '#112E23',
+        surfaceColor: store.surfaceColor || '#0F3D31',
+        textColor: store.textColor || '#E8F5E9',
+        mutedColor: store.mutedColor || '#9DC4AC',
+        accentColor: store.accentColor || '#C8E235',
         fontFamily: store.fontFamily || 'Cairo',
       });
 
@@ -194,6 +214,7 @@ const StoreSettingsPage: React.FC = () => {
     }
   }, [store]);
 
+  // ✅ حفظ البيانات العامة
   const handleSaveGeneral = async () => {
     try {
       await updateStore(generalForm);
@@ -203,15 +224,17 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
+  // ✅ حفظ التصميم (جميع الألوان)
   const handleSaveDesign = async () => {
     try {
       await updateStore(designForm);
-      toast.success('تم تحديث التصميم');
+      toast.success('تم تحديث التصميم والألوان');
     } catch (error) {
       toast.error('فشل تحديث التصميم');
     }
   };
 
+  // ✅ حفظ إعدادات الدومين
   const handleSaveDomain = async () => {
     if (!hasCustomDomain && !isSuperAdmin) {
       toast.error('الدومين المخصص متاح فقط في الخطة الاحترافية');
@@ -225,6 +248,7 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
+  // ✅ حفظ إعدادات التوصيل
   const handleSaveDeliverySettings = async () => {
     try {
       await updateStore({ deliverySettings });
@@ -234,6 +258,7 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
+  // ✅ رفع الشعار
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -248,6 +273,7 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
+  // ✅ رفع صورة الغلاف
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -262,20 +288,23 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
+  // ✅ حساب مثال للتوصيل
   const calculateExampleFee = () => {
     const distance = 5;
     const extraKm = Math.max(0, distance - deliverySettings.minDistance);
     return deliverySettings.baseFee + (extraKm * deliverySettings.feePerKm);
   };
 
+  // ✅ ستايل الحقول مع تأثير التركيز
   const getInput = (id: string) => ({
     ...inputStyle,
     border: focusedInput === id ? `1px solid ${C.accent}` : inputStyle.border,
   });
 
+  // ✅ التبويبات
   const tabs = [
     { id: 'general', label: 'عام', icon: IoStorefront },
-    { id: 'design', label: 'التصميم', icon: IoColorPalette },
+    { id: 'design', label: 'التصميم والألوان', icon: IoColorPalette },
     { id: 'images', label: 'الصور', icon: IoImage },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
     { id: 'domain', label: 'الدومين', icon: IoGlobe },
@@ -283,12 +312,24 @@ const StoreSettingsPage: React.FC = () => {
 
   if (loading || planLoading) return <Loader fullScreen />;
 
+  // ✅ معاينة الألوان الديناميكية
+  const previewColors = {
+    bg: designForm.backgroundColor,
+    card: designForm.cardColor,
+    surf: designForm.surfaceColor,
+    primary: designForm.primaryColor,
+    secondary: designForm.secondaryColor,
+    text: designForm.textColor,
+    muted: designForm.mutedColor,
+    accent: designForm.accentColor,
+  };
+
   return (
     <div dir="rtl" style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>🛍️ إعدادات المتجر</h1>
-        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المتجر</p>
+        <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>🎨 إعدادات المتجر</h1>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المتجر وتخصيص الألوان</p>
       </div>
 
       {/* Tabs */}
@@ -318,7 +359,7 @@ const StoreSettingsPage: React.FC = () => {
         ))}
       </div>
 
-      {/* ==================== عام ==================== */}
+      {/* ==================== تبويب عام ==================== */}
       {activeTab === 'general' && (
         <div>
           <div style={sectionCard}>
@@ -345,6 +386,8 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.email}
                   onChange={(e) => setGeneralForm({ ...generalForm, email: e.target.value })}
                   style={getInput('email')}
+                  onFocus={() => setFocusedInput('email')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </div>
               <div>
@@ -356,6 +399,8 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.phone}
                   onChange={(e) => setGeneralForm({ ...generalForm, phone: e.target.value })}
                   style={getInput('phone')}
+                  onFocus={() => setFocusedInput('phone')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </div>
               <div>
@@ -367,6 +412,8 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.whatsapp}
                   onChange={(e) => setGeneralForm({ ...generalForm, whatsapp: e.target.value })}
                   style={getInput('whatsapp')}
+                  onFocus={() => setFocusedInput('whatsapp')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -378,6 +425,8 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.address}
                   onChange={(e) => setGeneralForm({ ...generalForm, address: e.target.value })}
                   style={getInput('address')}
+                  onFocus={() => setFocusedInput('address')}
+                  onBlur={() => setFocusedInput(null)}
                 />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -386,6 +435,8 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.description}
                   onChange={(e) => setGeneralForm({ ...generalForm, description: e.target.value })}
                   style={{ ...getInput('description'), minHeight: 100, resize: 'vertical' }}
+                  onFocus={() => setFocusedInput('description')}
+                  onBlur={() => setFocusedInput(null)}
                   rows={4}
                 />
               </div>
@@ -404,6 +455,9 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.instagram}
                   onChange={(e) => setGeneralForm({ ...generalForm, instagram: e.target.value })}
                   style={getInput('instagram')}
+                  onFocus={() => setFocusedInput('instagram')}
+                  onBlur={() => setFocusedInput(null)}
+                  placeholder="username"
                 />
               </div>
               <div>
@@ -415,6 +469,9 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.facebook}
                   onChange={(e) => setGeneralForm({ ...generalForm, facebook: e.target.value })}
                   style={getInput('facebook')}
+                  onFocus={() => setFocusedInput('facebook')}
+                  onBlur={() => setFocusedInput(null)}
+                  placeholder="pagename"
                 />
               </div>
             </div>
@@ -433,6 +490,8 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.latitude}
                   onChange={(e) => setGeneralForm({ ...generalForm, latitude: e.target.value })}
                   style={getInput('lat')}
+                  onFocus={() => setFocusedInput('lat')}
+                  onBlur={() => setFocusedInput(null)}
                   placeholder="33.5138"
                 />
               </div>
@@ -443,10 +502,13 @@ const StoreSettingsPage: React.FC = () => {
                   value={generalForm.longitude}
                   onChange={(e) => setGeneralForm({ ...generalForm, longitude: e.target.value })}
                   style={getInput('lng')}
+                  onFocus={() => setFocusedInput('lng')}
+                  onBlur={() => setFocusedInput(null)}
                   placeholder="36.2765"
                 />
               </div>
             </div>
+            <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>يمكنك الحصول على الإحداثيات من خرائط جوجل</p>
           </div>
 
           <button style={saveBtn} onClick={handleSaveGeneral}>
@@ -455,71 +517,272 @@ const StoreSettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* ==================== التصميم ==================== */}
+      {/* ==================== تبويب التصميم والألوان ==================== */}
       {activeTab === 'design' && (
         <div>
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoColorPalette style={{ color: C.accent }} />
-              تخصيص التصميم
+              تخصيص ألوان المتجر
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-              {([
-                ['primaryColor', 'اللون الأساسي'],
-                ['secondaryColor', 'اللون الثانوي'],
-                ['backgroundColor', 'لون الخلفية'],
-                ['textColor', 'لون النص'],
-              ] as [keyof typeof designForm, string][]).map(([field, label]) => (
-                <div key={field}>
-                  <label style={labelStyle}>{label}</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input
-                      type="color"
-                      value={designForm[field]}
-                      onChange={(e) => setDesignForm({ ...designForm, [field]: e.target.value })}
-                      style={{ width: 44, height: 40, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', background: 'none' }}
-                    />
-                    <input
-                      type="text"
-                      value={designForm[field]}
-                      onChange={(e) => setDesignForm({ ...designForm, [field]: e.target.value })}
-                      style={{ ...getInput(field), flex: 1 }}
-                    />
-                  </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+              
+              {/* اللون الأساسي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoPricetag size={14} /> اللون الأساسي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.primaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, primaryColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.primaryColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.primaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, primaryColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#3B82F6"
+                  />
                 </div>
-              ))}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>نوع الخط</label>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للأزرار الرئيسية والعناوين البارزة</p>
+              </div>
+
+              {/* اللون الثانوي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoBrush size={14} /> اللون الثانوي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.secondaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, secondaryColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.secondaryColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.secondaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, secondaryColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#10B981"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للعناصر الثانوية والتفاصيل</p>
+              </div>
+
+              {/* لون الخلفية */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoAlbums size={14} /> لون خلفية الصفحة
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.backgroundColor}
+                    onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.backgroundColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.backgroundColor}
+                    onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#082E24"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الصفحة الرئيسية للمتجر</p>
+              </div>
+
+              {/* لون البطاقات */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoAlbums size={14} /> لون البطاقات والقوائم
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.cardColor}
+                    onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.cardColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.cardColor}
+                    onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#112E23"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية البطاقات والقوائم الجانبية</p>
+              </div>
+
+              {/* لون الأسطح */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoAlbums size={14} /> لون الأسطح والحقول
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.surfaceColor}
+                    onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.surfaceColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.surfaceColor}
+                    onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#0F3D31"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الحقول والنماذج</p>
+              </div>
+
+              {/* لون النص الرئيسي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoText size={14} /> لون النص الرئيسي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.textColor}
+                    onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.textColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.textColor}
+                    onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#E8F5E9"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الرئيسية والعناوين</p>
+              </div>
+
+              {/* لون النص الثانوي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoText size={14} /> لون النص الثانوي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.mutedColor}
+                    onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.mutedColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.mutedColor}
+                    onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#9DC4AC"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الثانوية والوصف</p>
+              </div>
+
+              {/* لون الأكسن */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoBrush size={14} /> لون الأكسن
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.accentColor}
+                    onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.accentColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.accentColor}
+                    onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#C8E235"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون الإشعارات والتنبيهات والعناصر البارزة</p>
+              </div>
+
+              {/* نوع الخط */}
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoText size={14} /> نوع الخط
+                </label>
                 <select
                   value={designForm.fontFamily}
                   onChange={(e) => setDesignForm({ ...designForm, fontFamily: e.target.value })}
-                  style={getInput('font')}
+                  style={getInput('fontFamily')}
+                  onFocus={() => setFocusedInput('fontFamily')}
+                  onBlur={() => setFocusedInput(null)}
                 >
                   <option value="Cairo">Cairo</option>
                   <option value="Tajawal">Tajawal</option>
                   <option value="Almarai">Almarai</option>
+                  <option value="Noto Kufi Arabic">Noto Kufi Arabic</option>
                   <option value="Arial">Arial</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Preview */}
-          <div style={{ ...sectionCard, backgroundColor: designForm.backgroundColor, color: designForm.textColor, fontFamily: designForm.fontFamily }}>
-            <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: designForm.primaryColor }}>معاينة التصميم</h3>
-            <p style={{ fontSize: 14 }}>هذا نص تجريبي لإظهار شكل الخط والألوان</p>
-            <button style={{ padding: '8px 16px', borderRadius: 8, border: 'none', color: '#fff', background: designForm.secondaryColor }}>
-              زر تجريبي
-            </button>
+          {/* معاينة التصميم */}
+          <div style={{ 
+            ...sectionCard, 
+            background: previewColors.bg, 
+            color: previewColors.text, 
+            fontFamily: designForm.fontFamily,
+            border: `1px solid ${previewColors.accent}40`
+          }}>
+            <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: previewColors.primary }}>
+              معاينة التصميم
+            </h3>
+            <p style={{ fontSize: 14, color: previewColors.muted, marginBottom: 16 }}>
+              هذا نص تجريبي لإظهار شكل الخط والألوان التي اخترتها
+            </p>
+            
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.primary, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>
+                زر رئيسي
+              </button>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: `1px solid ${previewColors.secondary}`, background: 'transparent', color: previewColors.secondary, cursor: 'pointer' }}>
+                زر ثانوي
+              </button>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.accent, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>
+                زر أكسن
+              </button>
+            </div>
+            
+            <div style={{ marginTop: 16, padding: 16, background: previewColors.card, borderRadius: 12, border: `1px solid ${previewColors.border || C.border}` }}>
+              <p style={{ color: previewColors.text, margin: 0 }}>✨ هذا مثال لبطاقة بهذا اللون</p>
+              <p style={{ color: previewColors.muted, fontSize: 12, marginTop: 8 }}>نص ثانوي داخل البطاقة</p>
+            </div>
+
+            <div style={{ marginTop: 12, padding: 12, background: previewColors.surf, borderRadius: 10 }}>
+              <input
+                type="text"
+                placeholder="مثال لحقل إدخال"
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: `1px solid ${previewColors.accent}40`, background: previewColors.bg, color: previewColors.text }}
+                readOnly
+              />
+            </div>
           </div>
 
           <button style={saveBtn} onClick={handleSaveDesign}>
-            <IoSave size={16} /> حفظ التصميم
+            <IoSave size={16} /> حفظ التصميم والألوان
           </button>
         </div>
       )}
 
-      {/* ==================== الصور ==================== */}
+      {/* ==================== تبويب الصور ==================== */}
       {activeTab === 'images' && (
         <div>
           <div style={sectionCard}>
@@ -543,6 +806,7 @@ const StoreSettingsPage: React.FC = () => {
                     accept="image/*"
                     onChange={handleLogoUpload}
                     disabled={uploading}
+                    style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}
                   />
                 </div>
               </div>
@@ -568,19 +832,26 @@ const StoreSettingsPage: React.FC = () => {
                 accept="image/*"
                 onChange={handleCoverUpload}
                 disabled={uploading}
+                style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}
               />
             </div>
+            {uploading && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, color: C.accent }}>
+                <div style={{ width: 16, height: 16, border: `2px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <span style={{ fontSize: 13 }}>جاري رفع الصورة...</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ==================== التوصيل ==================== */}
+      {/* ==================== تبويب التوصيل ==================== */}
       {activeTab === 'delivery' && (
         <div>
           <div style={{ ...sectionCard, background: `rgba(200,226,53,0.07)`, marginBottom: 16 }}>
             <p style={{ color: C.text, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <IoWarning style={{ color: C.accent, flexShrink: 0 }} />
-              قم بتعيين أسعار التوصيل حسب المسافة.
+              قم بتعيين أسعار التوصيل حسب المسافة. سيتم حساب سعر التوصيل تلقائياً بناءً على موقع العميل.
             </p>
           </div>
 
@@ -590,64 +861,118 @@ const StoreSettingsPage: React.FC = () => {
               إعدادات خدمة التوصيل
             </h2>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 16px', background: C.surf, borderRadius: 10 }}>
+            {/* تفعيل التوصيل */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 16px', background: C.surf, borderRadius: 10, border: `1px solid ${C.border}` }}>
               <button
                 onClick={() => setDeliverySettings({ ...deliverySettings, enableDelivery: !deliverySettings.enableDelivery })}
                 style={{
                   width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
                   background: deliverySettings.enableDelivery ? C.accent : 'rgba(255,255,255,0.15)',
-                  position: 'relative',
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0,
                 }}
               >
                 <span style={{
                   position: 'absolute', top: 3,
                   right: deliverySettings.enableDelivery ? 3 : undefined,
                   left: deliverySettings.enableDelivery ? undefined : 3,
-                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'all 0.2s',
                 }} />
               </button>
-              <span style={{ color: C.text, fontWeight: 600 }}>تفعيل خدمة التوصيل</span>
+              <span style={{ color: C.text, fontWeight: 600, fontSize: 14 }}>تفعيل خدمة التوصيل</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
               <div>
-                <label style={labelStyle}>سعر التوصيل الأساسي (ل.س)</label>
-                <input type="number" value={deliverySettings.baseFee} onChange={(e) => setDeliverySettings({ ...deliverySettings, baseFee: Number(e.target.value) })} style={getInput('baseFee')} />
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoCash size={13} /> سعر التوصيل الأساسي (ل.س)
+                </label>
+                <input
+                  type="number"
+                  value={deliverySettings.baseFee}
+                  onChange={(e) => setDeliverySettings({ ...deliverySettings, baseFee: Number(e.target.value) })}
+                  style={getInput('baseFee')}
+                  min={0} step={0.5}
+                />
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر الثابت للطلب (دون احتساب المسافة)</p>
               </div>
               <div>
-                <label style={labelStyle}>سعر الكيلومتر الإضافي (ل.س/كم)</label>
-                <input type="number" value={deliverySettings.feePerKm} onChange={(e) => setDeliverySettings({ ...deliverySettings, feePerKm: Number(e.target.value) })} style={getInput('feePerKm')} />
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoCar size={13} /> سعر الكيلومتر الإضافي (ل.س/كم)
+                </label>
+                <input
+                  type="number"
+                  value={deliverySettings.feePerKm}
+                  onChange={(e) => setDeliverySettings({ ...deliverySettings, feePerKm: Number(e.target.value) })}
+                  style={getInput('feePerKm')}
+                  min={0} step={0.5}
+                />
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر لكل كيلومتر إضافي بعد المسافة الأساسية</p>
               </div>
               <div>
                 <label style={labelStyle}>الحد الأدنى للمسافة (كم)</label>
-                <input type="number" value={deliverySettings.minDistance} onChange={(e) => setDeliverySettings({ ...deliverySettings, minDistance: Number(e.target.value) })} style={getInput('minDist')} />
+                <input
+                  type="number"
+                  value={deliverySettings.minDistance}
+                  onChange={(e) => setDeliverySettings({ ...deliverySettings, minDistance: Number(e.target.value) })}
+                  style={getInput('minDist')}
+                  min={0} step={0.5}
+                />
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>المسافة التي يتم احتساب السعر الأساسي خلالها</p>
               </div>
               <div>
                 <label style={labelStyle}>أقصى مسافة للتوصيل (كم)</label>
-                <input type="number" value={deliverySettings.maxDistance} onChange={(e) => setDeliverySettings({ ...deliverySettings, maxDistance: Number(e.target.value) })} style={getInput('maxDist')} />
+                <input
+                  type="number"
+                  value={deliverySettings.maxDistance}
+                  onChange={(e) => setDeliverySettings({ ...deliverySettings, maxDistance: Number(e.target.value) })}
+                  style={getInput('maxDist')}
+                  min={0} step={0.5}
+                />
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>أقصى مسافة يمكن التوصيل إليها</p>
               </div>
               <div>
                 <label style={labelStyle}>توصيل مجاني للطلبات فوق (ل.س)</label>
-                <input type="number" value={deliverySettings.freeDeliveryAbove} onChange={(e) => setDeliverySettings({ ...deliverySettings, freeDeliveryAbove: Number(e.target.value) })} style={getInput('freeDel')} />
+                <input
+                  type="number"
+                  value={deliverySettings.freeDeliveryAbove}
+                  onChange={(e) => setDeliverySettings({ ...deliverySettings, freeDeliveryAbove: Number(e.target.value) })}
+                  style={getInput('freeDel')}
+                  min={0}
+                />
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>إذا كان الطلب أكبر من هذا المبلغ، يصبح التوصيل مجانياً</p>
               </div>
               <div>
-                <label style={labelStyle}>الوقت التقديري للتوصيل (دقيقة)</label>
-                <input type="number" value={deliverySettings.estimatedTime} onChange={(e) => setDeliverySettings({ ...deliverySettings, estimatedTime: Number(e.target.value) })} style={getInput('estTime')} />
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoTime size={13} /> الوقت التقديري للتوصيل (دقيقة)
+                </label>
+                <input
+                  type="number"
+                  value={deliverySettings.estimatedTime}
+                  onChange={(e) => setDeliverySettings({ ...deliverySettings, estimatedTime: Number(e.target.value) })}
+                  style={getInput('estTime')}
+                  min={15} step={5}
+                />
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>الوقت المتوقع لإيصال الطلب</p>
               </div>
             </div>
           </div>
 
+          {/* مثال حساب سعر التوصيل */}
           <div style={{ ...sectionCard, background: C.surfL }}>
             <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoCalculator size={16} style={{ color: C.accent }} />
               مثال لحساب سعر التوصيل (لمسافة 5 كم)
             </h3>
-            <div style={{ fontSize: 13 }}>
-              <p>• السعر الأساسي: <strong>{deliverySettings.baseFee} ل.س</strong></p>
-              <p>• المسافة الأساسية: <strong>{deliverySettings.minDistance} كم</strong></p>
-              <p>• المسافة الإضافية: <strong>{Math.max(0, 5 - deliverySettings.minDistance)} كم</strong></p>
-              <p>• تكلفة المسافة الإضافية: <strong>{Math.max(0, 5 - deliverySettings.minDistance) * deliverySettings.feePerKm} ل.س</strong></p>
-              <p style={{ color: C.accent, fontWeight: 700, fontSize: 15, marginTop: 8 }}>الإجمالي: {calculateExampleFee()} ل.س</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+              <p style={{ color: C.muted }}>• السعر الأساسي: <span style={{ color: C.text, fontWeight: 600 }}>{deliverySettings.baseFee} ل.س</span></p>
+              <p style={{ color: C.muted }}>• المسافة الأساسية: <span style={{ color: C.text, fontWeight: 600 }}>{deliverySettings.minDistance} كم</span></p>
+              <p style={{ color: C.muted }}>• المسافة الإضافية: <span style={{ color: C.text, fontWeight: 600 }}>{Math.max(0, 5 - deliverySettings.minDistance)} كم</span></p>
+              <p style={{ color: C.muted }}>• تكلفة المسافة الإضافية: <span style={{ color: C.text, fontWeight: 600 }}>{Math.max(0, 5 - deliverySettings.minDistance) * deliverySettings.feePerKm} ل.س</span></p>
+              <div style={{ paddingTop: 8, borderTop: `1px solid ${C.border}`, marginTop: 4 }}>
+                <p style={{ color: C.accent, fontWeight: 700, fontSize: 15 }}>
+                  إجمالي سعر التوصيل: {calculateExampleFee()} ل.س
+                </p>
+              </div>
             </div>
           </div>
 
@@ -657,7 +982,7 @@ const StoreSettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* ==================== الدومين ==================== */}
+      {/* ==================== تبويب الدومين ==================== */}
       {activeTab === 'domain' && (
         <div>
           <div style={sectionCard}>
@@ -676,14 +1001,19 @@ const StoreSettingsPage: React.FC = () => {
                   style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }}
                   placeholder="my-store"
                 />
-                <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, borderRadius: '0 10px 10px 0' }}>
+                <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, fontSize: 13, borderRadius: '0 10px 10px 0' }}>
                   .shamstores.com
                 </span>
               </div>
+              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
+                سيكون رابط متجرك: {domainForm.subdomain || 'my-store'}.shamstores.com
+              </p>
             </div>
 
             <div>
-              <label style={labelStyle}>الدومين المخصص</label>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <IoLink size={13} /> الدومين المخصص
+              </label>
               {hasCustomDomain || isSuperAdmin ? (
                 <input
                   type="text"
@@ -696,13 +1026,21 @@ const StoreSettingsPage: React.FC = () => {
                 <div style={{ background: C.surf, padding: 16, borderRadius: 10, border: `1px solid ${C.border}` }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, marginBottom: 12 }}>
                     <IoLockClosed />
-                    <span>الدومين المخصص متاح فقط في الخطة الاحترافية</span>
+                    <span style={{ fontSize: 13 }}>الدومين المخصص متاح فقط في الخطة الاحترافية</span>
                   </div>
-                  <button onClick={() => window.location.href = '/plans'} style={{ ...saveBtn, padding: '8px 16px', fontSize: 13 }}>
+                  <button
+                    onClick={() => window.location.href = '/plans'}
+                    style={{ ...saveBtn, padding: '8px 16px', fontSize: 13 }}
+                  >
                     ترقية الخطة
                   </button>
                 </div>
               )}
+              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
+                {hasCustomDomain || isSuperAdmin
+                  ? 'أدخل الدومين الخاص بك (مثال: www.my-store.com)'
+                  : 'قم بترقية خطتك لاستخدام دومين خاص'}
+              </p>
             </div>
           </div>
 
@@ -711,6 +1049,24 @@ const StoreSettingsPage: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Footer */}
+      <div style={{ marginTop: 32, textAlign: 'center', padding: '16px 0' }}>
+        <p style={{ color: C.muted, fontSize: 12 }}>
+          آخر تحديث: {store?.updatedAt ? new Date(store.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}
+        </p>
+      </div>
+
+      {/* أنماط CSS إضافية */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };
