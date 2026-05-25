@@ -1,15 +1,5 @@
-/* frontend/src/index.css */
-
-/* Import fonts */
-@import './styles/fonts.css';
-
-/* Tailwind */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* ===== CSS DESIGN TOKENS ===== */
 :root {
+  /* Default colors - will be overridden by theme provider */
   --sham-bg:           #082E24;
   --sham-primary:      #0D4A3A;
   --sham-secondary:    #1A6B55;
@@ -26,6 +16,13 @@
   /* Font family */
   --font-primary: 'Al-Jazeera-Arabic';
 }
+
+
+
+/* Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ===== GLOBAL STYLES ===== */
 * {

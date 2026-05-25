@@ -138,7 +138,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
   const fetchStoreData = async () => {
     try {
-      const response = await api.get('/public');
+      const identifier = currentSlug;
+      const response = await api.get(`/public/${identifier}`);
       const businessData = response.data || response;
       
       // ✅ تحديث ألوان ThemeProvider ديناميكياً

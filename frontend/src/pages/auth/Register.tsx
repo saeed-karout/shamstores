@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useSettingsContext } from '../../contexts/SettingsContext';
+import { useSettingsContext } from '../../hooks/SettingsContext';
 import Button from '../../components/common/Button';
 import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import {

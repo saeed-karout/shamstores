@@ -242,12 +242,21 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     
     const { 
       name, email, phone, address, description, 
-      primaryColor, secondaryColor, backgroundColor, textColor, fontFamily,
+      primaryColor, secondaryColor, 
+      backgroundColor, cardColor, surfaceColor,
+      textColor, mutedColor, accentColor, fontFamily,
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
       deliverySettings, paymentSettings, notificationSettings,
       isActive 
     } = req.body;
+    
+    console.log('🎨 Updating store colors:', {
+      primaryColor, secondaryColor,
+      backgroundColor, cardColor, surfaceColor,
+      textColor, mutedColor, accentColor,
+      fontFamily
+    });
     
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
@@ -255,11 +264,18 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
     if (description !== undefined) updateData.description = description;
+    
+    // ✅ جميع ألوان المتجر
     if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
     if (secondaryColor !== undefined) updateData.secondaryColor = secondaryColor;
     if (backgroundColor !== undefined) updateData.backgroundColor = backgroundColor;
+    if (cardColor !== undefined) updateData.cardColor = cardColor;
+    if (surfaceColor !== undefined) updateData.surfaceColor = surfaceColor;
     if (textColor !== undefined) updateData.textColor = textColor;
+    if (mutedColor !== undefined) updateData.mutedColor = mutedColor;
+    if (accentColor !== undefined) updateData.accentColor = accentColor;
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
+    
     if (latitude !== undefined) updateData.latitude = latitude ? parseFloat(latitude) : null;
     if (longitude !== undefined) updateData.longitude = longitude ? parseFloat(longitude) : null;
     if (timezone !== undefined) updateData.timezone = timezone;
@@ -278,6 +294,12 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       where: { id: storeId }, 
       data: updateData,
       include: { plan: true }
+    });
+    
+    console.log('✅ Store updated with colors:', {
+      primaryColor: updatedStore.primaryColor,
+      backgroundColor: updatedStore.backgroundColor,
+      cardColor: updatedStore.cardColor
     });
     
     res.json({ success: true, message: 'تم تحديث المتجر بنجاح', data: updatedStore });

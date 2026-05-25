@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useSettingsContext } from '@/contexts/SettingsContext';
+import { useSettingsContext } from '@/hooks/SettingsContext';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import { IoMail, IoLockClosed, IoWarning, IoEye, IoEyeOff, IoRocket } from 'react-icons/io5';
 

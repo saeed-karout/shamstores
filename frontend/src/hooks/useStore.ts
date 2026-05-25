@@ -30,6 +30,13 @@ export interface Store {
   longitude?: number;
   primaryColor: string;
   secondaryColor: string;
+  backgroundColor?: string;
+  cardColor?: string;
+  surfaceColor?: string;
+  textColor?: string;
+  mutedColor?: string;
+  accentColor?: string;
+  fontFamily?: string;
   isActive: boolean;
   planId: string;
   settings?: StoreSettings;
@@ -56,6 +63,8 @@ interface UseStoreReturn {
   updateStore: (data: Partial<Store>) => Promise<void>;
   uploadLogo: (file: File) => Promise<string | null>;
   uploadCover: (file: File) => Promise<string | null>;
+  removeLogo: () => Promise<void>;
+  removeCover: () => Promise<void>;
   getStoreUrl: () => string;
   getStorePublicUrl: (slug?: string) => string;
 }
@@ -78,8 +87,12 @@ export const useStore = (): UseStoreReturn => {
       
       const response = await api.get('/store/profile');
       
-      if (response && response.id) {
-        setStore(response);
+      // ✅ استخراج البيانات بشكل صحيح
+      const storeData = response?.data || response;
+      
+      if (storeData && storeData.id) {
+        console.log('✅ Store fetched:', storeData);
+        setStore(storeData);
       } else {
         setStore(null);
       }
@@ -87,7 +100,6 @@ export const useStore = (): UseStoreReturn => {
       console.error('Error fetching store:', err);
       if (err.response?.status !== 404) {
         setError(err.response?.data?.error || 'حدث خطأ في جلب بيانات المتجر');
-        toast.error('حدث خطأ في جلب بيانات المتجر');
       }
       setStore(null);
     } finally {
@@ -95,14 +107,24 @@ export const useStore = (): UseStoreReturn => {
     }
   }, [isAuthenticated]);
 
+  // ✅ إصلاح دالة updateStore - ترسل جميع البيانات وتحدث الحالة
   const updateStore = useCallback(async (data: Partial<Store>) => {
     try {
       setLoading(true);
+      
+      console.log('📤 Updating store with data:', data);
+      
       const response = await api.put('/store/profile', data);
       
-      if (response && response.id) {
-        setStore(response);
+      // ✅ استخراج البيانات من response
+      const updatedStore = response?.data || response;
+      
+      if (updatedStore && updatedStore.id) {
+        console.log('✅ Store updated successfully:', updatedStore);
+        setStore(updatedStore);
         toast.success('تم تحديث بيانات المتجر بنجاح');
+      } else {
+        throw new Error('No data returned from server');
       }
     } catch (err: any) {
       console.error('Error updating store:', err);
@@ -115,82 +137,76 @@ export const useStore = (): UseStoreReturn => {
     }
   }, []);
 
-
-// hooks/useStore.ts - تحديث دوال رفع الصور
-
-// hooks/useStore.ts - تحديث دوال رفع الصور
-
-const uploadLogo = useCallback(async (file: File): Promise<string | null> => {
-  try {
-    const formData = new FormData();
-    formData.append('logo', file);
-    
-    console.log('📸 Uploading logo, file size:', file.size, 'type:', file.type);
-    console.log('FormData entries:');
-    for (let pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
+  // ✅ إصلاح رفع الشعار - استخدام api service بدلاً من fetch
+  const uploadLogo = useCallback(async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);
+      
+      console.log('📸 Uploading logo, file size:', file.size, 'type:', file.type);
+      
+      // ✅ استخدام api service (الذي يتعامل مع multipart/form-data)
+      const response = await api.upload('/store/upload/logo', file, 'logo');
+      
+      if (response && response.logoUrl) {
+        setStore(prev => prev ? { ...prev, logo: response.logoUrl } : null);
+        toast.success('تم رفع الشعار بنجاح');
+        return response.logoUrl;
+      }
+      return null;
+    } catch (err: any) {
+      console.error('Error uploading logo:', err);
+      toast.error(err.message || 'حدث خطأ في رفع الشعار');
+      return null;
     }
-    
-    // ✅ استخدام axios مباشرة مع إعدادات صحيحة
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${getApiBaseUrl()}/store/upload/logo`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
-    
-    const result = await response.json();
-    console.log('✅ Upload response:', result);
-    
-    if (result.success && result.data?.logoUrl) {
-      setStore(prev => prev ? { ...prev, logo: result.data.logoUrl } : null);
-      toast.success('تم رفع الشعار بنجاح');
-      return result.data.logoUrl;
-    } else {
-      throw new Error(result.error || 'فشل رفع الشعار');
-    }
-  } catch (err: any) {
-    console.error('Error uploading logo:', err);
-    toast.error(err.message || 'حدث خطأ في رفع الشعار');
-    return null;
-  }
-}, []);
+  }, []);
 
-const uploadCover = useCallback(async (file: File): Promise<string | null> => {
-  try {
-    const formData = new FormData();
-    formData.append('cover', file);
-    
-    console.log('📸 Uploading cover, file size:', file.size, 'type:', file.type);
-    
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${getApiBaseUrl()}/store/upload/cover`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
-    
-    const result = await response.json();
-    console.log('✅ Upload response:', result);
-    
-    if (result.success && result.data?.coverUrl) {
-      setStore(prev => prev ? { ...prev, coverImage: result.data.coverUrl } : null);
-      toast.success('تم رفع صورة الغلاف بنجاح');
-      return result.data.coverUrl;
-    } else {
-      throw new Error(result.error || 'فشل رفع صورة الغلاف');
+  // ✅ إصلاح رفع صورة الغلاف
+  const uploadCover = useCallback(async (file: File): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('cover', file);
+      
+      console.log('📸 Uploading cover, file size:', file.size, 'type:', file.type);
+      
+      const response = await api.upload('/store/upload/cover', file, 'cover');
+      
+      if (response && response.coverUrl) {
+        setStore(prev => prev ? { ...prev, coverImage: response.coverUrl } : null);
+        toast.success('تم رفع صورة الغلاف بنجاح');
+        return response.coverUrl;
+      }
+      return null;
+    } catch (err: any) {
+      console.error('Error uploading cover:', err);
+      toast.error(err.message || 'حدث خطأ في رفع صورة الغلاف');
+      return null;
     }
-  } catch (err: any) {
-    console.error('Error uploading cover:', err);
-    toast.error(err.message || 'حدث خطأ في رفع صورة الغلاف');
-    return null;
-  }
-}, []);
+  }, []);
 
+  // ✅ إضافة دالة إزالة الشعار
+  const removeLogo = useCallback(async () => {
+    try {
+      await api.delete('/store/logo');
+      setStore(prev => prev ? { ...prev, logo: undefined } : null);
+      toast.success('تم إزالة الشعار بنجاح');
+    } catch (err: any) {
+      console.error('Error removing logo:', err);
+      toast.error(err.message || 'حدث خطأ في إزالة الشعار');
+    }
+  }, []);
+
+  // ✅ إضافة دالة إزالة صورة الغلاف
+  const removeCover = useCallback(async () => {
+    try {
+      await api.delete('/store/cover');
+      setStore(prev => prev ? { ...prev, coverImage: undefined } : null);
+      toast.success('تم إزالة صورة الغلاف بنجاح');
+    } catch (err: any) {
+      console.error('Error removing cover:', err);
+      toast.error(err.message || 'حدث خطأ في إزالة صورة الغلاف');
+    }
+  }, []);
 
   const getStoreUrl = useCallback((): string => {
     if (store?.slug) {
@@ -224,6 +240,8 @@ const uploadCover = useCallback(async (file: File): Promise<string | null> => {
     updateStore,
     uploadLogo,
     uploadCover,
+    removeLogo,
+    removeCover,
     getStoreUrl,
     getStorePublicUrl,
   };

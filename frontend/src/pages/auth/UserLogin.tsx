@@ -11,7 +11,7 @@ import {
   IoCall,
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
-import { useSettingsContext } from '@/contexts/SettingsContext';
+import { useSettingsContext } from '@/hooks/SettingsContext';
 
 const C = {
   bg:     '#082E24',

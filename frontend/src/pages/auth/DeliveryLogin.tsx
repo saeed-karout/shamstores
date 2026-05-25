@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { IoCar, IoMail, IoLockClosed, IoEye, IoEyeOff, IoWarning } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
-import { useSettingsContext } from '@/contexts/SettingsContext';
+import { useSettingsContext } from '@/hooks/SettingsContext';
 
 const C = {
   bg:     '#082E24',
