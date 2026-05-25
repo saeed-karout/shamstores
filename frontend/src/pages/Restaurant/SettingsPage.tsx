@@ -1,4 +1,4 @@
-// pages/SettingsPage.tsx
+// src/pages/SettingsPage.tsx - النسخة المعدلة
 
 import React, { useState, useEffect } from 'react';
 import { useRestaurant } from '../../hooks/useRestaurant';
@@ -26,7 +26,10 @@ import {
   IoCalculator,
   IoLogoWhatsapp,
   IoSave,
-  IoCheckmark,
+  IoBrush,
+  IoText,
+  IoAlbums,
+  IoPricetag,
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 import api from '@/services/api';
@@ -163,11 +166,16 @@ export const SettingsPage: React.FC = () => {
     longitude: '',
   });
 
+  // ✅ جميع ألوان المطعم
   const [designForm, setDesignForm] = useState({
     primaryColor: '#3B82F6',
     secondaryColor: '#10B981',
-    backgroundColor: '#FFFFFF',
-    textColor: '#000000',
+    backgroundColor: '#082E24',
+    cardColor: '#112E23',
+    surfaceColor: '#0F3D31',
+    textColor: '#E8F5E9',
+    mutedColor: '#9DC4AC',
+    accentColor: '#C8E235',
     fontFamily: 'Cairo',
   });
 
@@ -199,11 +207,16 @@ export const SettingsPage: React.FC = () => {
         longitude: restaurant.longitude?.toString() || '',
       });
 
+      // ✅ تحميل جميع ألوان المطعم
       setDesignForm({
         primaryColor: restaurant.primaryColor || '#3B82F6',
         secondaryColor: restaurant.secondaryColor || '#10B981',
-        backgroundColor: restaurant.backgroundColor || '#FFFFFF',
-        textColor: restaurant.textColor || '#000000',
+        backgroundColor: restaurant.backgroundColor || '#082E24',
+        cardColor: restaurant.cardColor || '#112E23',
+        surfaceColor: restaurant.surfaceColor || '#0F3D31',
+        textColor: restaurant.textColor || '#E8F5E9',
+        mutedColor: restaurant.mutedColor || '#9DC4AC',
+        accentColor: restaurant.accentColor || '#C8E235',
         fontFamily: restaurant.fontFamily || 'Cairo',
       });
 
@@ -250,7 +263,7 @@ export const SettingsPage: React.FC = () => {
   const handleSaveDesign = async () => {
     try {
       await updateRestaurant(designForm);
-      toast.success('تم تحديث التصميم');
+      toast.success('تم تحديث التصميم والألوان');
     } catch (error) {}
   };
 
@@ -344,7 +357,7 @@ export const SettingsPage: React.FC = () => {
 
   const tabs = [
     { id: 'general', label: 'عام', icon: IoRestaurant },
-    { id: 'design', label: 'التصميم', icon: IoColorPalette },
+    { id: 'design', label: 'التصميم والألوان', icon: IoColorPalette },
     { id: 'images', label: 'الصور', icon: IoImage },
     { id: 'hours', label: 'أوقات العمل', icon: IoTimer },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
@@ -356,12 +369,24 @@ export const SettingsPage: React.FC = () => {
     border: focusedInput === id ? `1px solid ${C.accent}` : inputStyle.border,
   });
 
+  // معاينة الألوان
+  const previewColors = {
+    bg: designForm.backgroundColor,
+    card: designForm.cardColor,
+    surf: designForm.surfaceColor,
+    primary: designForm.primaryColor,
+    secondary: designForm.secondaryColor,
+    text: designForm.textColor,
+    muted: designForm.mutedColor,
+    accent: designForm.accentColor,
+  };
+
   return (
     <div dir="rtl" style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>الإعدادات</h1>
-        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المطعم</p>
+        <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>🎨 إعدادات المطعم</h1>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المطعم وتخصيص الألوان</p>
       </div>
 
       {/* Tabs */}
@@ -565,53 +590,217 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* ==================== التصميم ==================== */}
+      {/* ==================== التصميم والألوان ==================== */}
       {activeTab === 'design' && (
         <div>
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoColorPalette style={{ color: C.accent }} />
-              تخصيص التصميم
+              تخصيص ألوان المطعم
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-              {([
-                ['primaryColor', 'اللون الأساسي'],
-                ['secondaryColor', 'اللون الثانوي'],
-                ['backgroundColor', 'لون الخلفية'],
-                ['textColor', 'لون النص'],
-              ] as [keyof typeof designForm, string][]).map(([field, label]) => (
-                <div key={field}>
-                  <label style={labelStyle}>{label}</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input
-                      type="color"
-                      value={designForm[field]}
-                      onChange={(e) => setDesignForm({ ...designForm, [field]: e.target.value })}
-                      style={{ width: 44, height: 40, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', background: 'none', padding: 2 }}
-                    />
-                    <input
-                      type="text"
-                      value={designForm[field]}
-                      onChange={(e) => setDesignForm({ ...designForm, [field]: e.target.value })}
-                      style={{ ...getInput(field), flex: 1, width: 'auto' }}
-                      onFocus={() => setFocusedInput(field)}
-                      onBlur={() => setFocusedInput(null)}
-                    />
-                  </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
+              
+              {/* اللون الأساسي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoPricetag size={14} /> اللون الأساسي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.primaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, primaryColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.primaryColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.primaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, primaryColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#3B82F6"
+                  />
                 </div>
-              ))}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>نوع الخط</label>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للأزرار الرئيسية والعناوين البارزة</p>
+              </div>
+
+              {/* اللون الثانوي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoBrush size={14} /> اللون الثانوي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.secondaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, secondaryColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.secondaryColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.secondaryColor}
+                    onChange={(e) => setDesignForm({ ...designForm, secondaryColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#10B981"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للعناصر الثانوية والتفاصيل</p>
+              </div>
+
+              {/* لون الخلفية */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoAlbums size={14} /> لون خلفية الصفحة
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.backgroundColor}
+                    onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.backgroundColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.backgroundColor}
+                    onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#082E24"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الصفحة الرئيسية للمطعم</p>
+              </div>
+
+              {/* لون البطاقات */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoAlbums size={14} /> لون البطاقات والقوائم
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.cardColor}
+                    onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.cardColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.cardColor}
+                    onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#112E23"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية البطاقات والقوائم الجانبية</p>
+              </div>
+
+              {/* لون الأسطح */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoAlbums size={14} /> لون الأسطح والحقول
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.surfaceColor}
+                    onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.surfaceColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.surfaceColor}
+                    onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#0F3D31"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الحقول والنماذج</p>
+              </div>
+
+              {/* لون النص الرئيسي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoText size={14} /> لون النص الرئيسي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.textColor}
+                    onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.textColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.textColor}
+                    onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#E8F5E9"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الرئيسية والعناوين</p>
+              </div>
+
+              {/* لون النص الثانوي */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoText size={14} /> لون النص الثانوي
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.mutedColor}
+                    onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.mutedColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.mutedColor}
+                    onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#9DC4AC"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الثانوية والوصف</p>
+              </div>
+
+              {/* لون الأكسن */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoBrush size={14} /> لون الأكسن
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <input
+                    type="color"
+                    value={designForm.accentColor}
+                    onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
+                    style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.accentColor, border: `1px solid ${C.border}` }}
+                  />
+                  <input
+                    type="text"
+                    value={designForm.accentColor}
+                    onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
+                    style={{ flex: 1, ...inputStyle }}
+                    placeholder="#C8E235"
+                  />
+                </div>
+                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون الإشعارات والتنبيهات والعناصر البارزة</p>
+              </div>
+
+              {/* نوع الخط */}
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <IoText size={14} /> نوع الخط
+                </label>
                 <select
                   value={designForm.fontFamily}
                   onChange={(e) => setDesignForm({ ...designForm, fontFamily: e.target.value })}
-                  style={{ ...getInput('font') }}
-                  onFocus={() => setFocusedInput('font')}
+                  style={getInput('fontFamily')}
+                  onFocus={() => setFocusedInput('fontFamily')}
                   onBlur={() => setFocusedInput(null)}
                 >
                   <option value="Cairo">Cairo</option>
                   <option value="Tajawal">Tajawal</option>
                   <option value="Almarai">Almarai</option>
+                  <option value="Noto Kufi Arabic">Noto Kufi Arabic</option>
                   <option value="Arial">Arial</option>
                   <option value="Roboto">Roboto</option>
                 </select>
@@ -619,23 +808,57 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Preview */}
-          <div style={{ ...sectionCard, backgroundColor: designForm.backgroundColor, color: designForm.textColor, fontFamily: designForm.fontFamily }}>
-            <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: designForm.primaryColor }}>معاينة التصميم</h3>
-            <p style={{ fontSize: 14, marginBottom: 12 }}>هذا نص تجريبي لإظهار شكل الخط والألوان التي اخترتها</p>
-            <button style={{ padding: '8px 16px', borderRadius: 8, border: 'none', color: '#fff', fontSize: 13, cursor: 'pointer', background: designForm.secondaryColor }}>
-              زر تجريبي
-            </button>
+          {/* معاينة التصميم */}
+          <div style={{ 
+            ...sectionCard, 
+            background: previewColors.bg, 
+            color: previewColors.text, 
+            fontFamily: designForm.fontFamily,
+            border: `1px solid ${previewColors.accent}40`
+          }}>
+            <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: previewColors.primary }}>
+              معاينة التصميم
+            </h3>
+            <p style={{ fontSize: 14, color: previewColors.muted, marginBottom: 16 }}>
+              هذا نص تجريبي لإظهار شكل الخط والألوان التي اخترتها
+            </p>
+            
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.primary, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>
+                زر رئيسي
+              </button>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: `1px solid ${previewColors.secondary}`, background: 'transparent', color: previewColors.secondary, cursor: 'pointer' }}>
+                زر ثانوي
+              </button>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.accent, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>
+                زر أكسن
+              </button>
+            </div>
+            
+            <div style={{ marginTop: 16, padding: 16, background: previewColors.card, borderRadius: 12, border: `1px solid ${previewColors.border || C.border}` }}>
+              <p style={{ color: previewColors.text, margin: 0 }}>🍕 هذا مثال لبطاقة بهذا اللون</p>
+              <p style={{ color: previewColors.muted, fontSize: 12, marginTop: 8 }}>نص ثانوي داخل البطاقة</p>
+            </div>
+
+            <div style={{ marginTop: 12, padding: 12, background: previewColors.surf, borderRadius: 10 }}>
+              <input
+                type="text"
+                placeholder="مثال لحقل إدخال"
+                style={{ width: '100%', padding: 10, borderRadius: 8, border: `1px solid ${previewColors.accent}40`, background: previewColors.bg, color: previewColors.text }}
+                readOnly
+              />
+            </div>
           </div>
 
           <button style={saveBtn} onClick={handleSaveDesign}>
-            <IoSave size={16} /> حفظ التصميم
+            <IoSave size={16} /> حفظ التصميم والألوان
           </button>
         </div>
       )}
 
       {/* ==================== الصور ==================== */}
       {activeTab === 'images' && (
+        // ... (نفس الكود السابق للصور)
         <div>
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -672,7 +895,6 @@ export const SettingsPage: React.FC = () => {
             </h2>
             {restaurant?.coverImage && (
               <img
-              
                 src={getImageUrl(restaurant.coverImage)}
                 alt="Cover"
                 style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 16 }}
@@ -700,6 +922,7 @@ export const SettingsPage: React.FC = () => {
 
       {/* ==================== أوقات العمل ==================== */}
       {activeTab === 'hours' && (
+        // ... (نفس الكود السابق لأوقات العمل)
         <div>
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -714,7 +937,6 @@ export const SettingsPage: React.FC = () => {
                   <div key={key} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, padding: '12px 16px', background: C.surf, borderRadius: 10, border: `1px solid ${C.border}` }}>
                     <span style={{ color: C.text, fontWeight: 600, width: 64, fontSize: 14 }}>{name}</span>
 
-                    {/* Toggle */}
                     <button
                       onClick={() => handleDayChange(key, 'closed', isOpen)}
                       style={{
@@ -773,6 +995,7 @@ export const SettingsPage: React.FC = () => {
 
       {/* ==================== التوصيل ==================== */}
       {activeTab === 'delivery' && (
+        // ... (نفس الكود السابق للتوصيل)
         <div>
           <div style={{ ...sectionCard, background: `rgba(200,226,53,0.07)`, border: `1px solid rgba(200,226,53,0.25)`, marginBottom: 16 }}>
             <p style={{ color: C.text, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -787,32 +1010,20 @@ export const SettingsPage: React.FC = () => {
               إعدادات خدمة التوصيل
             </h2>
 
-            {/* Enable Delivery Toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 16px', background: C.surf, borderRadius: 10, border: `1px solid ${C.border}` }}>
               <button
                 onClick={() => setDeliverySettings({ ...deliverySettings, enableDelivery: !deliverySettings.enableDelivery })}
                 style={{
-                  width: 48,
-                  height: 26,
-                  borderRadius: 13,
-                  border: 'none',
-                  cursor: 'pointer',
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
                   background: deliverySettings.enableDelivery ? C.accent : 'rgba(255,255,255,0.15)',
-                  position: 'relative',
-                  transition: 'background 0.2s',
-                  flexShrink: 0,
+                  position: 'relative', transition: 'background 0.2s', flexShrink: 0,
                 }}
               >
                 <span style={{
-                  position: 'absolute',
-                  top: 3,
+                  position: 'absolute', top: 3,
                   right: deliverySettings.enableDelivery ? 3 : undefined,
                   left: deliverySettings.enableDelivery ? undefined : 3,
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  background: '#fff',
-                  transition: 'all 0.2s',
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'all 0.2s',
                 }} />
               </button>
               <span style={{ color: C.text, fontWeight: 600, fontSize: 14 }}>تفعيل خدمة التوصيل</span>
@@ -828,11 +1039,8 @@ export const SettingsPage: React.FC = () => {
                   value={deliverySettings.baseFee}
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, baseFee: Number(e.target.value) })}
                   style={getInput('baseFee')}
-                  onFocus={() => setFocusedInput('baseFee')}
-                  onBlur={() => setFocusedInput(null)}
                   min={0} step={0.5}
                 />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر الثابت للطلب (دون احتساب المسافة)</p>
               </div>
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -843,11 +1051,8 @@ export const SettingsPage: React.FC = () => {
                   value={deliverySettings.feePerKm}
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, feePerKm: Number(e.target.value) })}
                   style={getInput('feePerKm')}
-                  onFocus={() => setFocusedInput('feePerKm')}
-                  onBlur={() => setFocusedInput(null)}
                   min={0} step={0.5}
                 />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر لكل كيلومتر إضافي بعد المسافة الأساسية</p>
               </div>
               <div>
                 <label style={labelStyle}>الحد الأدنى للمسافة (كم)</label>
@@ -856,11 +1061,8 @@ export const SettingsPage: React.FC = () => {
                   value={deliverySettings.minDistance}
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, minDistance: Number(e.target.value) })}
                   style={getInput('minDist')}
-                  onFocus={() => setFocusedInput('minDist')}
-                  onBlur={() => setFocusedInput(null)}
                   min={0} step={0.5}
                 />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>المسافة التي يتم احتساب السعر الأساسي خلالها</p>
               </div>
               <div>
                 <label style={labelStyle}>أقصى مسافة للتوصيل (كم)</label>
@@ -869,11 +1071,8 @@ export const SettingsPage: React.FC = () => {
                   value={deliverySettings.maxDistance}
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, maxDistance: Number(e.target.value) })}
                   style={getInput('maxDist')}
-                  onFocus={() => setFocusedInput('maxDist')}
-                  onBlur={() => setFocusedInput(null)}
                   min={0} step={0.5}
                 />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>أقصى مسافة يمكن التوصيل إليها</p>
               </div>
               <div>
                 <label style={labelStyle}>توصيل مجاني للطلبات فوق (ل.س)</label>
@@ -882,11 +1081,8 @@ export const SettingsPage: React.FC = () => {
                   value={deliverySettings.freeDeliveryAbove}
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, freeDeliveryAbove: Number(e.target.value) })}
                   style={getInput('freeDel')}
-                  onFocus={() => setFocusedInput('freeDel')}
-                  onBlur={() => setFocusedInput(null)}
                   min={0}
                 />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>إذا كان الطلب أكبر من هذا المبلغ، يصبح التوصيل مجانياً</p>
               </div>
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -897,16 +1093,12 @@ export const SettingsPage: React.FC = () => {
                   value={deliverySettings.estimatedTime}
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, estimatedTime: Number(e.target.value) })}
                   style={getInput('estTime')}
-                  onFocus={() => setFocusedInput('estTime')}
-                  onBlur={() => setFocusedInput(null)}
                   min={15} step={5}
                 />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>الوقت المتوقع لإيصال الطلب</p>
               </div>
             </div>
           </div>
 
-          {/* Example calculation */}
           <div style={{ ...sectionCard, background: C.surfL }}>
             <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoCalculator size={16} style={{ color: C.accent }} />
@@ -933,6 +1125,7 @@ export const SettingsPage: React.FC = () => {
 
       {/* ==================== SEO والدومين ==================== */}
       {activeTab === 'seo' && (
+        // ... (نفس الكود السابق لـ SEO)
         <div>
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -948,8 +1141,6 @@ export const SettingsPage: React.FC = () => {
                   value={seoForm.metaTitle}
                   onChange={(e) => setSeoForm({ ...seoForm, metaTitle: e.target.value })}
                   style={getInput('metaTitle')}
-                  onFocus={() => setFocusedInput('metaTitle')}
-                  onBlur={() => setFocusedInput(null)}
                   maxLength={60}
                 />
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{seoForm.metaTitle.length}/60 حرف</p>
@@ -961,8 +1152,6 @@ export const SettingsPage: React.FC = () => {
                   value={seoForm.metaDescription}
                   onChange={(e) => setSeoForm({ ...seoForm, metaDescription: e.target.value })}
                   style={{ ...getInput('metaDesc'), minHeight: 80, resize: 'vertical' }}
-                  onFocus={() => setFocusedInput('metaDesc')}
-                  onBlur={() => setFocusedInput(null)}
                   rows={3}
                   maxLength={160}
                 />
@@ -977,8 +1166,6 @@ export const SettingsPage: React.FC = () => {
                     value={seoForm.subdomain}
                     onChange={(e) => setSeoForm({ ...seoForm, subdomain: e.target.value })}
                     style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }}
-                    onFocus={() => setFocusedInput('subdomain')}
-                    onBlur={() => setFocusedInput(null)}
                     placeholder="my-restaurant"
                     disabled={!permissions.checkPermission('customDomain') && !isSuperAdmin}
                   />
@@ -1007,8 +1194,6 @@ export const SettingsPage: React.FC = () => {
                     value={seoForm.customDomain}
                     onChange={(e) => setSeoForm({ ...seoForm, customDomain: e.target.value })}
                     style={getInput('customDomain')}
-                    onFocus={() => setFocusedInput('customDomain')}
-                    onBlur={() => setFocusedInput(null)}
                     placeholder="www.my-restaurant.com"
                   />
                 ) : (
@@ -1034,7 +1219,6 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Search Preview */}
           <div style={sectionCard}>
             <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>معاينة في محركات البحث</h3>
             <div style={{ background: '#fff', padding: 16, borderRadius: 10 }}>
@@ -1055,6 +1239,13 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

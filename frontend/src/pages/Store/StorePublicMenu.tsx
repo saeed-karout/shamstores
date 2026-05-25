@@ -1,4 +1,4 @@
-// src/pages/Store/StorePublicMenu.tsx - النسخة المصححة
+// src/pages/Store/StorePublicMenu.tsx
 
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -26,6 +26,10 @@ import { openWhatsApp } from '@/utils/helpers';
 import { DeliveryLocation } from '@/models/order';
 import { calculateDistance } from '@/utils/distance';
 import PublicMarketingSections, { PublicMarketingData } from '@/components/public/PublicMarketingSections';
+import PublicAdvertisements from '@/components/public/PublicAdvertisements';
+import PublicOffers from '@/components/public/PublicOffers';
+import { useTheme } from '@/context/ThemeContext';
+import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 
 interface StorePublicMenuProps {
   businessId?: string;
@@ -55,6 +59,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
+  const { setThemeColors } = useTheme();
+  
   const {
     cart,
     addToCart,
@@ -132,10 +139,27 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const fetchStoreData = async () => {
     try {
       const response = await api.get('/public');
-      setStore(response.business);
-      setCategories(response.categories || []);
-      setProducts(response.products || []);
-      setMarketing(response.marketing || undefined);
+      const businessData = response.data || response;
+      
+      // ✅ تحديث ألوان ThemeProvider ديناميكياً
+      const storeColors = {
+        primaryColor: businessData.primaryColor || propBusinessPrimaryColor || '#3B82F6',
+        secondaryColor: businessData.secondaryColor || propBusinessSecondaryColor || '#10B981',
+        backgroundColor: businessData.backgroundColor || '#082E24',
+        cardBgColor: businessData.cardColor || '#112E23',
+        surfaceColor: businessData.surfaceColor || '#0F3D31',
+        textColor: businessData.textColor || '#E8F5E9',
+        mutedColor: businessData.mutedColor || '#9DC4AC',
+        accentColor: businessData.accentColor || '#C8E235',
+        fontFamily: businessData.fontFamily || 'Cairo, sans-serif',
+      };
+      
+      setThemeColors(storeColors);
+      
+      setStore(businessData);
+      setCategories(businessData.categories || []);
+      setProducts(businessData.products || []);
+      setMarketing(businessData.marketing || undefined);
     } catch (error) {
       console.error('Error fetching store:', error);
       setStore({
@@ -149,6 +173,13 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         whatsapp: propBusinessWhatsapp,
         primaryColor: propBusinessPrimaryColor || '#3B82F6',
         secondaryColor: propBusinessSecondaryColor || '#10B981',
+        backgroundColor: '#082E24',
+        cardColor: '#112E23',
+        surfaceColor: '#0F3D31',
+        textColor: '#E8F5E9',
+        mutedColor: '#9DC4AC',
+        accentColor: '#C8E235',
+        fontFamily: 'Cairo',
         deliverySettings: {
           enableDelivery: true,
           baseFee: 5,
@@ -391,7 +422,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
   const filteredProducts = getFilteredProducts();
 
-  if (loading || favoritesLoading) return <Loader fullScreen />;
+  if (loading || favoritesLoading || planLoading) return <Loader fullScreen />;
   if (!store) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>لا توجد بيانات</div>;
 
   // ✅ استخدام ألوان المتجر المخصصة
@@ -399,7 +430,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const secondaryColor = store.secondaryColor || '#10B981';
   const backgroundColor = store.backgroundColor || '#082E24';
   const cardColor = store.cardColor || '#112E23';
-  const surfColor = store.surfColor || '#0F3D31';
+  const surfColor = store.surfaceColor || '#0F3D31';
   const textColor = store.textColor || '#E8F5E9';
   const mutedColor = store.mutedColor || '#9DC4AC';
   
@@ -429,7 +460,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         {store.logo && <meta property="og:image" content={getImageUrl(store.logo)} />}
       </Helmet>
 
-      <div style={{ background: dynamicColors.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ background: dynamicColors.bg, minHeight: '100vh', fontFamily: store.fontFamily || 'Cairo, sans-serif' }} dir="rtl">
         {/* Cover Image */}
         {store.coverImage && (
           <div
@@ -484,11 +515,19 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           </div>
         </div>
 
-        {/* Marketing Sections */}
+        {/* ==================== الأقسام التسويقية ==================== */}
         <PublicMarketingSections 
           businessId={store.id}
           businessType="store"
           className="max-w-7xl mx-auto px-4 mt-4"
+        />
+
+        {/* ==================== العروض الخاصة ==================== */}
+        <PublicOffers 
+          businessId={store.id}
+          businessType="store"
+          className="max-w-7xl mx-auto px-4 mt-4"
+          limit={5}
         />
 
         {/* Search and Filters Bar */}
@@ -506,7 +545,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                     borderRadius: 12,
                     color: dynamicColors.text,
                     cursor: 'pointer',
-                    fontFamily: 'Cairo, sans-serif',
+                    fontFamily: store.fontFamily || 'Cairo, sans-serif',
                     fontSize: 14,
                     fontWeight: 500
                   }}
@@ -524,7 +563,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                     borderRadius: 12,
                     color: dynamicColors.text,
                     cursor: 'pointer',
-                    fontFamily: 'Cairo, sans-serif',
+                    fontFamily: store.fontFamily || 'Cairo, sans-serif',
                     fontSize: 14,
                     fontWeight: 500
                   }}
@@ -536,7 +575,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
               <button
                 onClick={() => navigate('/my-orders')}
-                style={{ padding: '10px 16px', background: dynamicColors.purple, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(167,139,250,0.3)' }}
+                style={{ padding: '10px 16px', background: dynamicColors.purple, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(167,139,250,0.3)' }}
               >
                 <IoTime size={18} style={{ display: 'inline', marginLeft: 4 }} />
                 طلباتي
@@ -545,7 +584,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => navigate('/favorites')}
-                  style={{ position: 'relative', padding: '10px 16px', background: '#BE185D', color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(190,24,93,0.3)' }}
+                  style={{ position: 'relative', padding: '10px 16px', background: '#BE185D', color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(190,24,93,0.3)' }}
                 >
                   <IoHeart size={18} style={{ display: 'inline', marginLeft: 4 }} />
                   المفضلة
@@ -560,7 +599,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   <>
                     <button
                       onClick={() => setShowCartModal(true)}
-                      style={{ position: 'relative', padding: '10px 16px', background: dynamicColors.accent, color: dynamicColors.bg, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 600 }}
+                      style={{ position: 'relative', padding: '10px 16px', background: dynamicColors.accent, color: dynamicColors.bg, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, fontWeight: 600 }}
                     >
                       <IoCart size={18} style={{ display: 'inline', marginLeft: 4 }} />
                       سلة
@@ -572,7 +611,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                     </button>
                     <button
                       onClick={logout}
-                      style={{ padding: '10px 16px', background: dynamicColors.red, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                      style={{ padding: '10px 16px', background: dynamicColors.red, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                     >
                       <IoLogOut size={18} style={{ display: 'inline', marginLeft: 4 }} />
                       خروج
@@ -581,7 +620,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 ) : (
                   <Link
                     to="/user/login"
-                    style={{ padding: '10px 16px', background: dynamicColors.blue, color: '#fff', borderRadius: 12, textDecoration: 'none', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                    style={{ padding: '10px 16px', background: dynamicColors.blue, color: '#fff', borderRadius: 12, textDecoration: 'none', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                   >
                     <IoPerson size={18} style={{ display: 'inline', marginLeft: 4 }} />
                     دخول
@@ -612,7 +651,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                       borderRadius: 12,
                       color: dynamicColors.text,
                       outline: 'none',
-                      fontFamily: 'Cairo, sans-serif',
+                      fontFamily: store.fontFamily || 'Cairo, sans-serif',
                       fontSize: 14,
                       boxSizing: 'border-box',
                       transition: 'border-color 0.2s'
@@ -641,7 +680,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                         borderRadius: 12,
                         border: 'none',
                         cursor: 'pointer',
-                        fontFamily: 'Cairo, sans-serif',
+                        fontFamily: store.fontFamily || 'Cairo, sans-serif',
                         fontSize: 13,
                         transition: 'all 0.2s',
                         background: sortBy === 'price-low' ? dynamicColors.accent : 'rgba(200,226,53,0.08)',
@@ -660,7 +699,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                         borderRadius: 12,
                         border: 'none',
                         cursor: 'pointer',
-                        fontFamily: 'Cairo, sans-serif',
+                        fontFamily: store.fontFamily || 'Cairo, sans-serif',
                         fontSize: 13,
                         transition: 'all 0.2s',
                         background: sortBy === 'price-high' ? dynamicColors.accent : 'rgba(200,226,53,0.08)',
@@ -690,7 +729,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 fontWeight: 500,
                 border: selectedCategory === 'all' ? 'none' : `1px solid ${dynamicColors.border}`,
                 cursor: 'pointer',
-                fontFamily: 'Cairo, sans-serif',
+                fontFamily: store.fontFamily || 'Cairo, sans-serif',
                 fontSize: 14,
                 transition: 'all 0.2s',
                 background: selectedCategory === 'all' ? dynamicColors.accent : dynamicColors.card,
@@ -711,7 +750,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   fontWeight: 500,
                   border: selectedCategory === cat.id ? 'none' : `1px solid ${dynamicColors.border}`,
                   cursor: 'pointer',
-                  fontFamily: 'Cairo, sans-serif',
+                  fontFamily: store.fontFamily || 'Cairo, sans-serif',
                   fontSize: 14,
                   transition: 'all 0.2s',
                   background: selectedCategory === cat.id ? dynamicColors.accent : dynamicColors.card,
@@ -734,7 +773,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  style={{ marginTop: 16, color: dynamicColors.accent, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 500 }}
+                  style={{ marginTop: 16, color: dynamicColors.accent, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, fontWeight: 500 }}
                 >
                   مسح البحث
                 </button>
@@ -763,6 +802,16 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             </div>
           )}
         </div>
+
+        {/* ==================== إعلانات أسفل الصفحة ==================== */}
+        <PublicAdvertisements 
+          businessId={store.id}
+          businessType="store"
+          currentPlan={currentPlan}
+          className="max-w-7xl mx-auto px-4 mt-8 mb-8"
+          limit={2}
+          position="bottom"
+        />
 
         {/* Floating Scroll Top Button */}
         <AnimatePresence>

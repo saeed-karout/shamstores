@@ -25,14 +25,7 @@ import { getImageUrl } from '@/utils/imageHelpers';
 import { openWhatsApp } from '@/utils/helpers';
 import PublicMarketingSections, { PublicMarketingData } from '@/components/public/PublicMarketingSections';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
-
-// ==================== Color Tokens ====================
-
-const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
-};
+import { useTheme } from '@/context/ThemeContext'; // ✅ استيراد useTheme
 
 interface Category {
   id: string;
@@ -94,6 +87,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartSubtotal, getCartCount } = useCart();
   const { favorites, toggleFavorite, getFavoritesCount } = useFavorites();
   const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
+  const { setThemeColors } = useTheme(); // ✅ استخدام setThemeColors لتحديث الألوان
 
   // State
   const [data, setData] = useState<{ restaurant: any; categories: Category[]; marketing?: PublicMarketingData } | null>(null);
@@ -160,6 +154,21 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       
       const businessData = response.data || response;
       
+      // ✅ تحديث ألوان ThemeProvider ديناميكياً
+      const restaurantColors = {
+        primaryColor: businessData.primaryColor || propBusinessPrimaryColor || '#3B82F6',
+        secondaryColor: businessData.secondaryColor || propBusinessSecondaryColor || '#10B981',
+        backgroundColor: businessData.backgroundColor || '#082E24',
+        cardBgColor: businessData.cardColor || '#112E23',
+        surfaceColor: businessData.surfaceColor || '#0F3D31',
+        textColor: businessData.textColor || '#E8F5E9',
+        mutedColor: businessData.mutedColor || '#9DC4AC',
+        accentColor: businessData.accentColor || '#C8E235',
+        fontFamily: businessData.fontFamily || 'Cairo, sans-serif',
+      };
+      
+      setThemeColors(restaurantColors);
+      
       setData({
         restaurant: {
           id: businessData.id || propBusinessId,
@@ -171,6 +180,13 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           whatsapp: businessData.whatsapp || propBusinessWhatsapp,
           primaryColor: businessData.primaryColor || propBusinessPrimaryColor || '#3B82F6',
           secondaryColor: businessData.secondaryColor || propBusinessSecondaryColor || '#10B981',
+          backgroundColor: businessData.backgroundColor || '#082E24',
+          cardColor: businessData.cardColor || '#112E23',
+          surfaceColor: businessData.surfaceColor || '#0F3D31',
+          textColor: businessData.textColor || '#E8F5E9',
+          mutedColor: businessData.mutedColor || '#9DC4AC',
+          accentColor: businessData.accentColor || '#C8E235',
+          fontFamily: businessData.fontFamily || 'Cairo',
         },
         categories: businessData.categories || [],
         marketing: businessData.marketing || undefined
@@ -198,6 +214,13 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           whatsapp: propBusinessWhatsapp,
           primaryColor: propBusinessPrimaryColor || '#3B82F6',
           secondaryColor: propBusinessSecondaryColor || '#10B981',
+          backgroundColor: '#082E24',
+          cardColor: '#112E23',
+          surfaceColor: '#0F3D31',
+          textColor: '#E8F5E9',
+          mutedColor: '#9DC4AC',
+          accentColor: '#C8E235',
+          fontFamily: 'Cairo',
         },
         categories: [],
         marketing: undefined
@@ -328,7 +351,25 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const filteredItems = getFilteredItems();
   const categories = data?.categories || [];
   const restaurant = data?.restaurant || {};
-  const primaryColor = restaurant.primaryColor || C.accent;
+
+  // ✅ إنشاء ألوان ديناميكية من بيانات المطعم
+  const dynamicColors = {
+    bg: restaurant.backgroundColor || '#082E24',
+    card: restaurant.cardColor || '#112E23',
+    surf: restaurant.surfaceColor || '#0F3D31',
+    primary: restaurant.primaryColor || '#C8E235',
+    secondary: restaurant.secondaryColor || '#10B981',
+    text: restaurant.textColor || '#E8F5E9',
+    muted: restaurant.mutedColor || '#9DC4AC',
+    accent: restaurant.accentColor || '#C8E235',
+    red: '#FF6B6B',
+    blue: '#60A5FA',
+    purple: '#A78BFA',
+    orange: '#FB923C',
+    border: `rgba(200,226,53,0.15)`,
+  };
+
+  const primaryColor = restaurant.primaryColor || dynamicColors.primary;
 
   // دمج حالة التحميل
   if (loading || authLoading || planLoading) return <Loader fullScreen />;
@@ -341,7 +382,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         {restaurant.logo && <meta property="og:image" content={getImageUrl(restaurant.logo)} />}
       </Helmet>
 
-      <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ background: dynamicColors.bg, minHeight: '100vh', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif' }} dir="rtl">
         {/* Cover Image */}
         {restaurant.coverImage && (
           <div
@@ -353,7 +394,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
               position: 'relative'
             }}
           >
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,46,36,0.85) 0%, transparent 60%)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${dynamicColors.bg} 0%, transparent 60%)` }} />
           </div>
         )}
 
@@ -362,20 +403,20 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           position: 'sticky',
           top: 0,
           zIndex: 20,
-          background: C.card,
-          borderBottom: `1px solid ${C.border}`,
+          background: dynamicColors.card,
+          borderBottom: `1px solid ${dynamicColors.border}`,
           display: 'none'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
-            <button onClick={() => setShowMobileMenu(!showMobileMenu)} style={{ background: 'none', border: 'none', color: C.text, cursor: 'pointer' }}>
+            <button onClick={() => setShowMobileMenu(!showMobileMenu)} style={{ background: 'none', border: 'none', color: dynamicColors.text, cursor: 'pointer' }}>
               <IoMenu size={24} />
             </button>
-            <h2 style={{ fontWeight: 700, fontSize: 17, color: C.text, margin: 0 }}>{restaurant.name}</h2>
+            <h2 style={{ fontWeight: 700, fontSize: 17, color: dynamicColors.text, margin: 0 }}>{restaurant.name}</h2>
             <div style={{ position: 'relative' }}>
-              <button onClick={() => setShowCartModal(true)} style={{ background: 'none', border: 'none', color: C.text, cursor: 'pointer' }}>
+              <button onClick={() => setShowCartModal(true)} style={{ background: 'none', border: 'none', color: dynamicColors.text, cursor: 'pointer' }}>
                 <IoCart size={24} />
                 {getCartCount() > 0 && (
-                  <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {getCartCount()}
                   </span>
                 )}
@@ -386,19 +427,19 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
         {/* Business Info */}
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', marginTop: restaurant.coverImage ? -64 : 16, position: 'relative', zIndex: 10 }}>
-          <div style={{ background: C.card, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', padding: '16px 24px', border: `1px solid ${C.border}` }}>
+          <div style={{ background: dynamicColors.card, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', padding: '16px 24px', border: `1px solid ${dynamicColors.border}` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               {restaurant.logo && (
                 <img
                   src={getImageUrl(restaurant.logo)}
                   alt={restaurant.name}
-                  style={{ width: 72, height: 72, borderRadius: 12, objectFit: 'cover', border: `2px solid ${C.border}` }}
+                  style={{ width: 72, height: 72, borderRadius: 12, objectFit: 'cover', border: `2px solid ${dynamicColors.primary}` }}
                 />
               )}
               <div style={{ flex: 1 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>{restaurant.name}</h1>
+                <h1 style={{ fontSize: 24, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>{restaurant.name}</h1>
                 {restaurant.description && (
-                  <p style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>{restaurant.description}</p>
+                  <p style={{ color: dynamicColors.muted, fontSize: 14, marginTop: 4 }}>{restaurant.description}</p>
                 )}
               </div>
             </div>
@@ -406,12 +447,12 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         </div>
 
         {/* ==================== الأقسام التسويقية (بانرات وعروض) ==================== */}
-    <PublicMarketingSections 
-  businessId={restaurant.id}
-  businessType="restaurant"
-  className="mt-6"
-  limitPerSection={10}
-/>
+        <PublicMarketingSections 
+          businessId={restaurant.id}
+          businessType="restaurant"
+          className="mt-6"
+          limitPerSection={10}
+        />
 
         {/* ==================== العروض الخاصة ==================== */}
         <PublicOffers 
@@ -422,7 +463,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         />
 
         {/* Controls Bar */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: C.card, borderBottom: `1px solid ${C.border}`, marginTop: 16 }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: dynamicColors.card, borderBottom: `1px solid ${dynamicColors.border}`, marginTop: 16 }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -432,11 +473,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 16px',
                     background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${C.border}`,
+                    border: `1px solid ${dynamicColors.border}`,
                     borderRadius: 9999,
-                    color: C.text,
+                    color: dynamicColors.text,
                     cursor: 'pointer',
-                    fontFamily: 'Cairo, sans-serif',
+                    fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
                     fontSize: 14
                   }}
                 >
@@ -450,11 +491,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 16px',
                     background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${C.border}`,
+                    border: `1px solid ${dynamicColors.border}`,
                     borderRadius: 9999,
-                    color: C.text,
+                    color: dynamicColors.text,
                     cursor: 'pointer',
-                    fontFamily: 'Cairo, sans-serif',
+                    fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
                     fontSize: 14
                   }}
                 >
@@ -463,16 +504,16 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   {showFilters ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
                 </button>
 
-                <div style={{ display: 'flex', gap: 4, background: 'rgba(200,226,53,0.08)', borderRadius: 9999, padding: 4, border: `1px solid ${C.border}` }}>
+                <div style={{ display: 'flex', gap: 4, background: 'rgba(200,226,53,0.08)', borderRadius: 9999, padding: 4, border: `1px solid ${dynamicColors.border}` }}>
                   <button
                     onClick={() => setViewMode('grid')}
-                    style={{ padding: 8, borderRadius: 9999, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? C.surf : 'transparent', color: viewMode === 'grid' ? C.accent : C.muted, transition: 'all 0.2s' }}
+                    style={{ padding: 8, borderRadius: 9999, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? dynamicColors.surf : 'transparent', color: viewMode === 'grid' ? dynamicColors.accent : dynamicColors.muted, transition: 'all 0.2s' }}
                   >
                     <IoGrid size={18} />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    style={{ padding: 8, borderRadius: 9999, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? C.surf : 'transparent', color: viewMode === 'list' ? C.accent : C.muted, transition: 'all 0.2s' }}
+                    style={{ padding: 8, borderRadius: 9999, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? dynamicColors.surf : 'transparent', color: viewMode === 'list' ? dynamicColors.accent : dynamicColors.muted, transition: 'all 0.2s' }}
                   >
                     <IoList size={18} />
                   </button>
@@ -484,13 +525,13 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   <>
                     <button
                       onClick={() => setShowOrderTracking(true)}
-                      style={{ padding: '8px 16px', background: C.purple, color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                      style={{ padding: '8px 16px', background: dynamicColors.purple, color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                     >
                       طلباتي
                     </button>
                     <button
                       onClick={logout}
-                      style={{ padding: '8px 16px', background: C.red, color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                      style={{ padding: '8px 16px', background: dynamicColors.red, color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                     >
                       <IoLogOut style={{ display: 'inline', marginLeft: 4 }} />
                       خروج
@@ -499,7 +540,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 ) : (
                   <Link
                     to="/user/login"
-                    style={{ padding: '8px 16px', background: C.blue, color: '#fff', borderRadius: 8, textDecoration: 'none', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                    style={{ padding: '8px 16px', background: dynamicColors.blue, color: '#fff', borderRadius: 8, textDecoration: 'none', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                   >
                     <IoPerson style={{ display: 'inline', marginLeft: 4 }} />
                     دخول
@@ -509,7 +550,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 {restaurant.phone && (
                   <a
                     href={`tel:${restaurant.phone}`}
-                    style={{ padding: '8px 16px', background: 'rgba(200,226,53,0.08)', border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, textDecoration: 'none', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                    style={{ padding: '8px 16px', background: 'rgba(200,226,53,0.08)', border: `1px solid ${dynamicColors.border}`, borderRadius: 8, color: dynamicColors.text, textDecoration: 'none', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                   >
                     <IoCall style={{ display: 'inline', marginLeft: 4 }} />
                     اتصال
@@ -519,7 +560,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 {restaurant.whatsapp && (
                   <button
                     onClick={() => openWhatsApp(restaurant.whatsapp, `مرحباً، أود الاستفسار عن ${restaurant.name}`)}
-                    style={{ padding: '8px 16px', background: '#16A34A', color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                    style={{ padding: '8px 16px', background: '#16A34A', color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                   >
                     <IoLogoWhatsapp style={{ display: 'inline', marginLeft: 4 }} />
                     واتساب
@@ -546,12 +587,12 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                     style={{
                       width: '100%',
                       padding: 12,
-                      background: C.surf,
-                      border: `1px solid ${C.border}`,
+                      background: dynamicColors.surf,
+                      border: `1px solid ${dynamicColors.border}`,
                       borderRadius: 12,
-                      color: C.text,
+                      color: dynamicColors.text,
                       outline: 'none',
-                      fontFamily: 'Cairo, sans-serif',
+                      fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
                       fontSize: 14,
                       boxSizing: 'border-box'
                     }}
@@ -585,11 +626,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                           borderRadius: 9999,
                           border: 'none',
                           cursor: 'pointer',
-                          fontFamily: 'Cairo, sans-serif',
+                          fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
                           fontSize: 13,
                           transition: 'all 0.2s',
                           background: sortBy === option.value ? primaryColor : 'rgba(200,226,53,0.08)',
-                          color: sortBy === option.value ? C.bg : C.text
+                          color: sortBy === option.value ? dynamicColors.bg : dynamicColors.text
                         }}
                       >
                         <option.icon size={16} />
@@ -615,11 +656,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 fontWeight: 500,
                 border: 'none',
                 cursor: 'pointer',
-                fontFamily: 'Cairo, sans-serif',
+                fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
                 fontSize: 14,
                 transition: 'all 0.2s',
-                background: selectedCategory === 'all' ? primaryColor : C.card,
-                color: selectedCategory === 'all' ? C.bg : C.text,
+                background: selectedCategory === 'all' ? primaryColor : dynamicColors.card,
+                color: selectedCategory === 'all' ? dynamicColors.bg : dynamicColors.text,
                 boxShadow: selectedCategory === 'all' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
               }}
             >
@@ -636,11 +677,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   fontWeight: 500,
                   border: 'none',
                   cursor: 'pointer',
-                  fontFamily: 'Cairo, sans-serif',
+                  fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
                   fontSize: 14,
                   transition: 'all 0.2s',
-                  background: selectedCategory === cat.id ? primaryColor : C.card,
-                  color: selectedCategory === cat.id ? C.bg : C.text,
+                  background: selectedCategory === cat.id ? primaryColor : dynamicColors.card,
+                  color: selectedCategory === cat.id ? dynamicColors.bg : dynamicColors.text,
                   boxShadow: selectedCategory === cat.id ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
                 }}
               >
@@ -654,12 +695,12 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 32px' }}>
           {filteredItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 16px' }}>
-              <IoRestaurant style={{ fontSize: 64, color: C.muted, opacity: 0.3, display: 'block', margin: '0 auto 16px' }} />
-              <p style={{ color: C.muted, fontSize: 17 }}>لا توجد عناصر في هذه الفئة</p>
+              <IoRestaurant style={{ fontSize: 64, color: dynamicColors.muted, opacity: 0.3, display: 'block', margin: '0 auto 16px' }} />
+              <p style={{ color: dynamicColors.muted, fontSize: 17 }}>لا توجد عناصر في هذه الفئة</p>
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  style={{ marginTop: 16, color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                  style={{ marginTop: 16, color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
                 >
                   مسح البحث
                 </button>
@@ -699,7 +740,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 position: 'fixed', bottom: 96, right: 16, zIndex: 30,
                 width: 44, height: 44,
                 background: primaryColor,
-                color: C.bg,
+                color: dynamicColors.bg,
                 borderRadius: '50%',
                 border: 'none',
                 cursor: 'pointer',
@@ -722,7 +763,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
             style={{
               position: 'fixed', bottom: 24, left: 16, zIndex: 30,
               background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
-              color: C.bg,
+              color: dynamicColors.bg,
               padding: 16,
               borderRadius: '50%',
               border: 'none',
@@ -732,7 +773,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           >
             <div style={{ position: 'relative' }}>
               <IoCart size={24} />
-              <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+              <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                 {getCartCount()}
               </span>
             </div>

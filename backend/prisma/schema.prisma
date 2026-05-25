@@ -202,6 +202,13 @@ model Restaurant {
   longitude      Float?
   primaryColor   String   @default("#3B82F6")
   secondaryColor String   @default("#10B981")
+  backgroundColor String  @default("#082E24")
+  cardColor       String  @default("#112E23")
+  surfaceColor    String  @default("#0F3D31")
+  textColor       String  @default("#E8F5E9")
+  mutedColor      String  @default("#9DC4AC")
+  accentColor     String  @default("#C8E235")
+  fontFamily      String  @default("Cairo")
   subdomain      String?  @unique
   customDomain              String?   @unique
   customDomainVerified      Boolean?  @default(false)

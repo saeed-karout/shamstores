@@ -1,4 +1,5 @@
 // backend/src/controllers/publicController.ts
+
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
@@ -22,6 +23,9 @@ export const getBusinessBySlug = async (
           { subdomain: identifier }
         ],
         isActive: true
+      },
+      include: {
+        plan: true
       }
     });
     
@@ -52,9 +56,30 @@ export const getBusinessBySlug = async (
           phone: restaurant.phone,
           whatsapp: restaurant.whatsapp,
           email: restaurant.email,
+          instagram: restaurant.instagram,
+          facebook: restaurant.facebook,
+          tiktok: restaurant.tiktok,
+          latitude: restaurant.latitude,
+          longitude: restaurant.longitude,
+          // ✅ جميع ألوان المطعم
           primaryColor: restaurant.primaryColor,
           secondaryColor: restaurant.secondaryColor,
+          backgroundColor: restaurant.backgroundColor,
+          cardColor: restaurant.cardColor,
+          surfaceColor: restaurant.surfaceColor,
+          textColor: restaurant.textColor,
+          mutedColor: restaurant.mutedColor,
+          accentColor: restaurant.accentColor,
+          fontFamily: restaurant.fontFamily,
+          // ✅ إعدادات إضافية
+          deliverySettings: restaurant.deliverySettings,
+          timezone: restaurant.timezone,
+          currency: restaurant.currency,
+          language: restaurant.language,
           isActive: restaurant.isActive,
+          createdAt: restaurant.createdAt,
+          updatedAt: restaurant.updatedAt,
+          plan: restaurant.plan,
           categories,
           menuItems
         }
@@ -70,6 +95,9 @@ export const getBusinessBySlug = async (
           { subdomain: identifier }
         ],
         isActive: true
+      },
+      include: {
+        plan: true
       }
     });
     
@@ -99,9 +127,33 @@ export const getBusinessBySlug = async (
           address: store.address,
           phone: store.phone,
           email: store.email,
+          whatsapp: store.whatsapp,
+          instagram: store.instagram,
+          facebook: store.facebook,
+          tiktok: store.tiktok,
+          latitude: store.latitude,
+          longitude: store.longitude,
+          // ✅ جميع ألوان المتجر
           primaryColor: store.primaryColor,
           secondaryColor: store.secondaryColor,
+          backgroundColor: store.backgroundColor,
+          cardColor: store.cardColor,
+          surfaceColor: store.surfaceColor,
+          textColor: store.textColor,
+          mutedColor: store.mutedColor,
+          accentColor: store.accentColor,
+          fontFamily: store.fontFamily,
+          // ✅ إعدادات إضافية
+          deliverySettings: store.deliverySettings,
+          paymentSettings: store.paymentSettings,
+          notificationSettings: store.notificationSettings,
+          timezone: store.timezone,
+          currency: store.currency,
+          language: store.language,
           isActive: store.isActive,
+          createdAt: store.createdAt,
+          updatedAt: store.updatedAt,
+          plan: store.plan,
           categories,
           products
         }
@@ -163,7 +215,14 @@ export const getTableById = async (
           slug: restaurant.slug,
           logo: restaurant.logo,
           primaryColor: restaurant.primaryColor,
-          secondaryColor: restaurant.secondaryColor
+          secondaryColor: restaurant.secondaryColor,
+          backgroundColor: restaurant.backgroundColor,
+          cardColor: restaurant.cardColor,
+          surfaceColor: restaurant.surfaceColor,
+          textColor: restaurant.textColor,
+          mutedColor: restaurant.mutedColor,
+          accentColor: restaurant.accentColor,
+          fontFamily: restaurant.fontFamily
         },
         table: {
           id: table.id,
@@ -221,7 +280,14 @@ export const getProductById = async (
           slug: store.slug,
           logo: store.logo,
           primaryColor: store.primaryColor,
-          secondaryColor: store.secondaryColor
+          secondaryColor: store.secondaryColor,
+          backgroundColor: store.backgroundColor,
+          cardColor: store.cardColor,
+          surfaceColor: store.surfaceColor,
+          textColor: store.textColor,
+          mutedColor: store.mutedColor,
+          accentColor: store.accentColor,
+          fontFamily: store.fontFamily
         },
         product: {
           id: product.id,
@@ -229,7 +295,6 @@ export const getProductById = async (
           sku: product.sku,
           description: product.description,
           price: product.price,
-          // ✅ تم إزالة originalPrice
           stock: product.stock,
           imageUrl: product.imageUrl,
           isAvailable: product.isAvailable,
@@ -281,14 +346,22 @@ export const getMenuItemById = async (
           id: restaurant.id,
           name: restaurant.name,
           slug: restaurant.slug,
-          logo: restaurant.logo
+          logo: restaurant.logo,
+          primaryColor: restaurant.primaryColor,
+          secondaryColor: restaurant.secondaryColor,
+          backgroundColor: restaurant.backgroundColor,
+          cardColor: restaurant.cardColor,
+          surfaceColor: restaurant.surfaceColor,
+          textColor: restaurant.textColor,
+          mutedColor: restaurant.mutedColor,
+          accentColor: restaurant.accentColor,
+          fontFamily: restaurant.fontFamily
         },
         menuItem: {
           id: menuItem.id,
           name: menuItem.name,
           description: menuItem.description,
           price: menuItem.price,
-          // ✅ تم إزالة originalPrice (إذا كان غير موجود)
           image: menuItem.image,
           isAvailable: menuItem.isAvailable,
           category: category?.name || null
@@ -441,14 +514,22 @@ export const getMenuItemByShareToken = async (
           id: restaurant.id,
           name: restaurant.name,
           slug: restaurant.slug,
-          logo: restaurant.logo
+          logo: restaurant.logo,
+          primaryColor: restaurant.primaryColor,
+          secondaryColor: restaurant.secondaryColor,
+          backgroundColor: restaurant.backgroundColor,
+          cardColor: restaurant.cardColor,
+          surfaceColor: restaurant.surfaceColor,
+          textColor: restaurant.textColor,
+          mutedColor: restaurant.mutedColor,
+          accentColor: restaurant.accentColor,
+          fontFamily: restaurant.fontFamily
         },
         menuItem: {
           id: menuItem.id,
           name: menuItem.name,
           description: menuItem.description,
           price: menuItem.price,
-          // ✅ تم إزالة originalPrice
           image: menuItem.image,
           isAvailable: menuItem.isAvailable,
           category: category?.name || null

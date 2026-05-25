@@ -1390,12 +1390,84 @@ export const updateStoreStaffPermissions = async (req: AuthRequest, res: Respons
 export const getPublicStore = async (req: Request, res: Response) => {
   try {
     const { slug } = req.params;
+    
     const store = await prisma.store.findFirst({
-      where: { OR: [{ slug }, { subdomain: slug }], isActive: true },
-      select: { id: true, name: true, slug: true, subdomain: true, logo: true, coverImage: true, description: true, phone: true, address: true, primaryColor: true, secondaryColor: true, whatsapp: true, instagram: true, facebook: true, tiktok: true }
+      where: { 
+        OR: [{ slug }, { subdomain: slug }], 
+        isActive: true 
+      },
+      include: {
+        categories: {
+          where: { isActive: true },
+          orderBy: { position: 'asc' },
+          include: {
+            products: {
+              where: { isAvailable: true },
+              orderBy: { sortOrder: 'asc' },
+              take: 50
+            }
+          }
+        },
+        products: {
+          where: { isAvailable: true },
+          orderBy: { sortOrder: 'asc' },
+          take: 100
+        },
+        plan: true
+      }
     });
-    if (!store) return res.status(404).json({ success: false, error: 'المتجر غير موجود' });
-    res.json({ success: true, data: store });
+    
+    if (!store) {
+      return res.status(404).json({ success: false, error: 'المتجر غير موجود' });
+    }
+    
+    // ✅ إرجاع جميع حقول المتجر بما فيها الألوان
+    res.json({ 
+      success: true, 
+      data: {
+        id: store.id,
+        name: store.name,
+        slug: store.slug,
+        subdomain: store.subdomain,
+        type: 'store',
+        logo: store.logo,
+        coverImage: store.coverImage,
+        description: store.description,
+        address: store.address,
+        phone: store.phone,
+        email: store.email,
+        whatsapp: store.whatsapp,
+        instagram: store.instagram,
+        facebook: store.facebook,
+        tiktok: store.tiktok,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        // ✅ جميع ألوان المتجر
+        primaryColor: store.primaryColor,
+        secondaryColor: store.secondaryColor,
+        backgroundColor: store.backgroundColor,
+        cardColor: store.cardColor,
+        surfaceColor: store.surfaceColor,
+        textColor: store.textColor,
+        mutedColor: store.mutedColor,
+        accentColor: store.accentColor,
+        fontFamily: store.fontFamily,
+        // ✅ إعدادات أخرى
+        deliverySettings: store.deliverySettings,
+        paymentSettings: store.paymentSettings,
+        notificationSettings: store.notificationSettings,
+        timezone: store.timezone,
+        currency: store.currency,
+        language: store.language,
+        isActive: store.isActive,
+        createdAt: store.createdAt,
+        updatedAt: store.updatedAt,
+        // ✅ الفئات والمنتجات
+        categories: store.categories,
+        products: store.products,
+        plan: store.plan
+      }
+    });
   } catch (error) {
     console.error('Error getting public store:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب بيانات المتجر' });

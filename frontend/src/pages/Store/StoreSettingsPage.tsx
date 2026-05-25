@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
+import { useTheme } from '@/context/ThemeContext'; // ✅ إضافة استيراد useTheme
 import Loader from '@/components/common/Loader';
 import toast from 'react-hot-toast';
 import {
@@ -117,6 +118,7 @@ const StoreSettingsPage: React.FC = () => {
   const { store, loading, updateStore, uploadLogo, uploadCover } = useStore();
   const { user, isSuperAdmin, isOwner } = useAuth();
   const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
+  const { setThemeColors } = useTheme(); // ✅ استخدام setThemeColors
   
   const [activeTab, setActiveTab] = useState('general');
   const [uploading, setUploading] = useState(false);
@@ -224,10 +226,25 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
-  // ✅ حفظ التصميم (جميع الألوان)
+  // ✅ حفظ التصميم (جميع الألوان) مع تحديث ThemeProvider
   const handleSaveDesign = async () => {
     try {
       await updateStore(designForm);
+      
+      // ✅ تحديث ألوان ThemeProvider فوراً بعد الحفظ
+      const updatedColors = {
+        primaryColor: designForm.primaryColor,
+        secondaryColor: designForm.secondaryColor,
+        backgroundColor: designForm.backgroundColor,
+        cardBgColor: designForm.cardColor,
+        surfaceColor: designForm.surfaceColor,
+        textColor: designForm.textColor,
+        mutedColor: designForm.mutedColor,
+        accentColor: designForm.accentColor,
+        fontFamily: designForm.fontFamily,
+      };
+      
+      setThemeColors(updatedColors);
       toast.success('تم تحديث التصميم والألوان');
     } catch (error) {
       toast.error('فشل تحديث التصميم');
