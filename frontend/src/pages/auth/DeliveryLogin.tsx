@@ -60,7 +60,13 @@ const DeliveryLogin: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      toast.error(error.response?.data?.error || 'فشل تسجيل الدخول');
+      const errorMessage = error.response?.data?.error || 'فشل تسجيل الدخول';
+      if (typeof errorMessage === 'string' && errorMessage.includes('تفعيل حسابك عبر البريد الإلكتروني')) {
+        toast.error('يرجى تفعيل حسابك عبر البريد الإلكتروني أولاً');
+        navigate('/auth/email-verification', { state: { email, accountType: 'delivery' } });
+        return;
+      }
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

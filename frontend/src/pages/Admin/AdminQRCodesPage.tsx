@@ -600,32 +600,7 @@ const AdminQRCodesPage: React.FC = () => {
                   )}
                   
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button 
-  onClick={(e) => {
-    e.stopPropagation();
-    const element = document.createElement('div');
-    const qrCode = new QRCode(element, {
-      text: fullUrl,
-      width: 200,
-      height: 200
-    });
-    toast.success('تم إنشاء QR Code');
-  }}
-  style={{ 
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: 4, 
-    background: `${C.accent}15`, 
-    padding: '4px 12px', 
-    borderRadius: 20, 
-    fontSize: 12, 
-    color: C.accent,
-    fontWeight: 500,
-    cursor: 'pointer'
-  }}
->
-  <IoQrCode size={13} /> إنشاء QR
-</button>
+               
                   <button 
   onClick={(e) => {
     e.stopPropagation();

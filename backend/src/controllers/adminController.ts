@@ -1958,6 +1958,7 @@ export const createStoreStaff = async (req: AuthRequest, res: Response): Promise
         role: 'staff',
         storeId,
         isActive: true,
+        isEmailVerified: true,
         permissions: permissions || {}
       },
       select: { id: true, name: true, email: true, phone: true, isActive: true, permissions: true }
@@ -2280,7 +2281,8 @@ export const createPlatformStaff = async (
         phone: phone || null,
         role: 'staff',
         permissions: permissions || {},
-        isActive: true
+        isActive: true,
+        isEmailVerified: true
       },
       select: {
         id: true,

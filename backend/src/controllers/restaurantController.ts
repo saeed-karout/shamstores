@@ -711,7 +711,8 @@ export const addStaff = async (
         role: 'staff',
         restaurantId,
         permissions: permissions || {},
-        isActive: true
+        isActive: true,
+        isEmailVerified: true
       },
       select: {
         id: true,

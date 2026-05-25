@@ -21,32 +21,24 @@ const C = {
 const EmailVerification: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const email = (location.state as any)?.email || '';
+  const initialEmail = (location.state as any)?.email || '';
   const accountType = (location.state as any)?.accountType || 'owner';
-  const loginPath = accountType === 'user' ? '/user/login' : '/login';
-  const registerPath = accountType === 'user' ? '/user/register' : '/register';
+  const loginPath = accountType === 'user' ? '/user/login' : accountType === 'delivery' ? '/delivery/login' : '/login';
+  const registerPath = accountType === 'user' ? '/user/register' : accountType === 'delivery' ? '/delivery/login' : '/register';
 
+  const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
 
-  if (!email) {
-    console.log('⚠️ Email verification missing email in state');
-    return (
-      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} dir="rtl">
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 40, textAlign: 'center', maxWidth: 420 }}>
-          <p style={{ color: C.text, marginBottom: 20 }}>لم يتم العثور على بريد إلكتروني. يرجى العودة والتسجيل مرة أخرى.</p>
-          <Button onClick={() => navigate(registerPath)} style={{ width: '100%' }}>
-            العودة للتسجيل
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!email.trim()) {
+      toast.error('يرجى إدخال البريد الإلكتروني');
+      return;
+    }
 
     if (!code.trim()) {
       toast.error('يرجى إدخال الكود');
@@ -73,6 +65,11 @@ const EmailVerification: React.FC = () => {
   };
 
   const handleResend = async () => {
+    if (!email.trim()) {
+      toast.error('يرجى إدخال البريد الإلكتروني');
+      return;
+    }
+
     setResendLoading(true);
     try {
       console.log('🔁 Resend verification code:', { email });
@@ -108,8 +105,26 @@ const EmailVerification: React.FC = () => {
             <IoMail size={40} style={{ color: C.accent }} />
           </div>
           <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, marginBottom: 10 }}>تحقق من بريدك الإلكتروني</h1>
-          <p style={{ color: C.muted, fontSize: 14, marginBottom: 5 }}>لقد أرسلنا لك كود التحقق إلى:</p>
-          <p style={{ color: C.accent, fontSize: 14, fontWeight: 600 }}>{email}</p>
+          <p style={{ color: C.muted, fontSize: 14, marginBottom: 12 }}>
+            أدخل بريدك الإلكتروني لإرسال كود التحقق
+          </p>
+          <input
+            type="email"
+            placeholder="your@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value.trim())}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: C.prim,
+              border: `1px solid ${C.border}`,
+              borderRadius: 12,
+              color: C.text,
+              fontSize: 14,
+              textAlign: 'left',
+              direction: 'ltr'
+            }}
+          />
         </div>
 
         <form onSubmit={handleVerify}>
@@ -168,7 +183,9 @@ const EmailVerification: React.FC = () => {
               opacity: resendCountdown > 0 ? 0.5 : 1,
             }}
           >
-            {resendCountdown > 0 ? `إعادة الإرسال بعد ${resendCountdown}s` : 'إعادة الإرسال'}
+            {resendCountdown > 0
+              ? `إعادة الإرسال بعد ${resendCountdown}s`
+              : initialEmail ? 'إعادة الإرسال' : 'إرسال الكود'}
           </button>
         </div>
 

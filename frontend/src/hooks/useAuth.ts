@@ -156,7 +156,14 @@ export const useAuth = () => {
       const requireEmailVerification = await settingsService.requireEmailVerification();
       if (requireEmailVerification && response.user?.isEmailVerified === false) {
         toast.error('يرجى تفعيل حسابك عبر البريد الإلكتروني أولاً');
+        authService.logout();
         setLoading(false);
+        const accountType = location.pathname.startsWith('/user/')
+          ? 'user'
+          : location.pathname.startsWith('/delivery/')
+            ? 'delivery'
+            : 'owner';
+        navigate('/auth/email-verification', { state: { email, accountType } });
         throw new Error('Email not verified');
       }
       
@@ -207,6 +214,19 @@ export const useAuth = () => {
     } catch (error: any) {
       console.error('❌ Login error:', error);
       setLoading(false);
+      const errorMessage = error.response?.data?.error || error.message;
+      const isEmailVerificationError = typeof errorMessage === 'string' &&
+        errorMessage.includes('تفعيل حسابك عبر البريد الإلكتروني');
+      if (isEmailVerificationError) {
+        const accountType = location.pathname.startsWith('/user/')
+          ? 'user'
+          : location.pathname.startsWith('/delivery/')
+            ? 'delivery'
+            : 'owner';
+        toast.error('يرجى تفعيل حسابك عبر البريد الإلكتروني أولاً');
+        navigate('/auth/email-verification', { state: { email, accountType } });
+        throw error;
+      }
       if (error.message !== 'Maintenance mode' && error.message !== 'Email not verified') {
         toast.error(error.response?.data?.error || 'فشل تسجيل الدخول');
       }

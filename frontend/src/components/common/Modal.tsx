@@ -1,6 +1,8 @@
+// components/common/Modal.tsx
+
 import React, { useEffect } from 'react';
 import { IoClose } from 'react-icons/io5';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ModalProps {
   isOpen: boolean;
@@ -13,6 +15,15 @@ interface ModalProps {
 const maxWidths = { sm: 440, md: 560, lg: 720, xl: 960 };
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  const theme = useTheme(); // ✅ صحيح - useTheme هو hook بالفعل
+  
+  // ✅ استخدام ألوان ThemeContext الديناميكية
+  const cardColor = theme.cardBgColor || '#112E23';
+  const borderColor = theme.borderColor || 'rgba(200,226,53,0.15)';
+  const textColor = theme.textColor || '#E8F5E9';
+  const mutedColor = theme.mutedColor || '#9DC4AC';
+  const primaryColor = theme.primaryColor || '#C8E235';
+
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
@@ -31,8 +42,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
     >
       <div
         style={{
-          background: '#112E23',
-          border: '1px solid rgba(200,226,53,0.15)',
+          background: cardColor,
+          border: `1px solid ${borderColor}`,
           borderRadius: 20,
           width: '100%',
           maxWidth: maxWidths[size],
@@ -48,17 +59,17 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
           <div
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 24px', borderBottom: '1px solid rgba(200,226,53,0.15)',
+              padding: '18px 24px', borderBottom: `1px solid ${borderColor}`,
             }}
           >
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#E8F5E9', fontFamily: 'Cairo, sans-serif' }}>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: textColor, fontFamily: 'Cairo, sans-serif' }}>
               {title}
             </h3>
             <button
               onClick={onClose}
               style={{
-                background: 'rgba(200,226,53,0.08)', border: 'none', borderRadius: 8,
-                color: '#9DC4AC', cursor: 'pointer', padding: 6, display: 'flex',
+                background: `${primaryColor}14`, border: 'none', borderRadius: 8,
+                color: mutedColor, cursor: 'pointer', padding: 6, display: 'flex',
                 transition: 'all 0.15s',
               }}
             >
@@ -73,8 +84,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             <button
               onClick={onClose}
               style={{
-                float: 'left', background: 'rgba(200,226,53,0.08)', border: 'none',
-                borderRadius: 8, color: '#9DC4AC', cursor: 'pointer', padding: 6,
+                float: 'left', background: `${primaryColor}14`, border: 'none',
+                borderRadius: 8, color: mutedColor, cursor: 'pointer', padding: 6,
                 display: 'flex', marginBottom: 8,
               }}
             >

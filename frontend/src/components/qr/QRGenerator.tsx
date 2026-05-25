@@ -3,19 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode.react';
 import api from '../../services/api';
-import Button from '../common/Button';
 import Modal from '../common/Modal';
-import { IoDownload, IoPrint, IoQrCode, IoColorPalette, IoImage, IoText, IoRefresh, IoCopy, IoShare } from 'react-icons/io5';
+import { IoDownload, IoPrint, IoQrCode, IoColorPalette, IoCopy } from 'react-icons/io5';
 import toast from 'react-hot-toast';
-import { getImageUrl } from '../../utils/imageHelpers';
 
 interface QRGeneratorProps {
   type: 'restaurant' | 'table' | 'item' | 'store' | 'store-product';
   id?: string;
   name?: string;
   slug?: string;
-  subdomain?: string;  // ✅ إضافة subdomain
-  customDomain?: string; // ✅ إضافة customDomain
+  subdomain?: string;
+  customDomain?: string;
   buttonText?: string | React.ReactNode;
   className?: string;
   variant?: 'primary' | 'outline' | 'accent';
@@ -45,8 +43,8 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   id,
   name,
   slug,
-  subdomain,      // ✅ استقبال subdomain
-  customDomain,   // ✅ استقبال customDomain
+  subdomain,
+  customDomain,
   buttonText = 'إنشاء QR',
   className = '',
   variant = 'primary',
@@ -59,7 +57,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   const [showDesignModal, setShowDesignModal] = useState(false);
   const [qrData, setQrData] = useState<{ png?: string; svg?: string; url: string } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeQRType, setActiveQRType] = useState<'standard' | 'dynamic'>('standard');
   const [design, setDesign] = useState<QRDesign>({
     backgroundColor: '#FFFFFF',
     foregroundColor: '#000000',
@@ -74,14 +71,11 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     shadow: true
   });
 
-  const getBaseUrl = () => {
-    return import.meta.env.VITE_FRONTEND_URL || window.location.origin;
-  };
+  // ✅ الدومين الثابت للمنصة (وليس localhost)
+  const PRODUCTION_DOMAIN = 'https://shamstores.com';
 
-  // ✅ دالة للحصول على الرابط الصحيح (باستخدام subdomain أو slug)
+  // ✅ دالة للحصول على الرابط الصحيح
   const getEntityUrl = (): string => {
-    const baseUrl = getBaseUrl();
-    
     // إذا كان هناك customDomain
     if (customDomain) {
       return `https://${customDomain}`;
@@ -89,14 +83,11 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     
     // إذا كان هناك subdomain
     if (subdomain) {
-      const url = new URL(baseUrl);
-      url.hostname = subdomain;
-      if (url.port === '3000') url.port = '3000';
-      return `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+      return `https://${subdomain}.shamstores.com`;
     }
     
     // الوضع العادي: domain/slug
-    return `${baseUrl}/${slug}`;
+    return `${PRODUCTION_DOMAIN}/${slug}`;
   };
 
   useEffect(() => {
@@ -120,7 +111,9 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     setLoading(true);
     try {
       let response;
-      const qrUrl = getEntityUrl(); // ✅ استخدام الدالة الجديدة
+      const qrUrl = getEntityUrl();
+      
+      console.log('🔍 Generating QR for URL:', qrUrl); // ✅ للتأكد
 
       if (type === 'restaurant' && slug) {
         const endpoint = id ? `/qr/admin/restaurant/${id}` : '/qr/restaurant';
@@ -361,150 +354,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
         </div>
       </Modal>
 
-      {/* Design Modal (نفسه بدون تغيير) */}
-      <Modal isOpen={showDesignModal} onClose={() => setShowDesignModal(false)} title="تخصيص تصميم QR Code" size="lg">
-        <div className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">لون الخلفية</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={design.backgroundColor}
-                  onChange={(e) => setDesign({ ...design, backgroundColor: e.target.value })}
-                  className="w-12 h-10 rounded border cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={design.backgroundColor}
-                  onChange={(e) => setDesign({ ...design, backgroundColor: e.target.value })}
-                  className="flex-1 p-2 border rounded bg-gray-800 text-white"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">لون الرمز</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={design.foregroundColor}
-                  onChange={(e) => setDesign({ ...design, foregroundColor: e.target.value })}
-                  className="w-12 h-10 rounded border cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={design.foregroundColor}
-                  onChange={(e) => setDesign({ ...design, foregroundColor: e.target.value })}
-                  className="flex-1 p-2 border rounded bg-gray-800 text-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">حجم QR (بكسل): {design.size}px</label>
-            <input
-              type="range"
-              min="150"
-              max="400"
-              step="10"
-              value={design.size}
-              onChange={(e) => setDesign({ ...design, size: parseInt(e.target.value) })}
-              className="w-full"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">شكل الإطار</label>
-              <select
-                value={design.frameStyle}
-                onChange={(e) => setDesign({ ...design, frameStyle: e.target.value as any })}
-                className="w-full p-2 border rounded bg-gray-800 text-white"
-              >
-                <option value="none">بدون إطار</option>
-                <option value="simple">بسيط</option>
-                <option value="rounded">مدور</option>
-                <option value="modern">حديث</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">شكل الزوايا</label>
-              <select
-                value={design.cornerStyle}
-                onChange={(e) => setDesign({ ...design, cornerStyle: e.target.value as any })}
-                className="w-full p-2 border rounded bg-gray-800 text-white"
-              >
-                <option value="square">مربعة</option>
-                <option value="rounded">مدورة</option>
-                <option value="circle">دائرية</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={design.includeLogo}
-                onChange={(e) => setDesign({ ...design, includeLogo: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <span>إظهار الشعار</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={design.includeText}
-                onChange={(e) => setDesign({ ...design, includeText: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <span>إظهار النص</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={design.shadow}
-                onChange={(e) => setDesign({ ...design, shadow: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <span>إظهار الظل</span>
-            </label>
-          </div>
-
-          <div className="border-t pt-4 mt-2">
-            <h4 className="font-bold mb-3">معاينة التصميم</h4>
-            <div className="bg-gray-100 p-6 rounded-xl flex justify-center">
-              <div className={`p-4 bg-white ${design.frameStyle === 'rounded' ? 'rounded-2xl' : design.frameStyle === 'modern' ? 'rounded-3xl' : 'rounded-lg'} ${design.shadow ? 'shadow-lg' : ''}`}>
-                <div 
-                  className="w-32 h-32 flex items-center justify-center rounded-lg"
-                  style={{ backgroundColor: design.backgroundColor }}
-                >
-                  <div 
-                    className="w-24 h-24 rounded"
-                    style={{ backgroundColor: design.foregroundColor }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={saveDesignSettings}
-              className="flex-1 bg-[#C8E235] text-[#082E24] py-2.5 rounded-xl font-semibold hover:bg-[#B0C820] transition-all"
-            >
-              حفظ الإعدادات
-            </button>
-            <button
-              onClick={() => setShowDesignModal(false)}
-              className="flex-1 bg-gray-700 text-white py-2.5 rounded-xl font-semibold hover:bg-gray-600 transition-all"
-            >
-              إلغاء
-            </button>
-          </div>
-        </div>
-      </Modal>
+      {/* Design Modal - يمكنك إضافته لاحقاً */}
     </>
   );
 };

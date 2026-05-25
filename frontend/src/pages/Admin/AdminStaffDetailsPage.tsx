@@ -1,4 +1,5 @@
 // frontend/src/pages/Admin/AdminStaffDetailsPage.tsx
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
@@ -62,7 +63,20 @@ const AdminStaffDetailsPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await api.get(`/admin/staff/${staffId}`);
-      const data = response.data?.data || response.data;
+      console.log('📦 API Response:', response);
+      
+      // ✅ استخراج البيانات بشكل صحيح
+      let data = null;
+      if (response.data?.data) {
+        data = response.data.data;
+      } else if (response.data) {
+        data = response.data;
+      } else if (response) {
+        data = response;
+      }
+      
+      console.log('✅ Parsed staff data:', data);
+      
       setStaff(data);
       setFormData({
         name: data.name || '',
@@ -88,7 +102,7 @@ const AdminStaffDetailsPage: React.FC = () => {
       };
       if (formData.password) data.password = formData.password;
       
-      // تحديد المسار المناسب (موظف منصة أو موظف مطعم/متجر)
+      // ✅ تحديد المسار المناسب (موظف منصة أو موظف مطعم/متجر)
       const isPlatformStaff = !staff?.storeId && !staff?.restaurantId;
       const endpoint = isPlatformStaff 
         ? `/admin/platform-staff/${staffId}` 
@@ -399,22 +413,29 @@ const AdminStaffDetailsPage: React.FC = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-            {(isPlatformStaff ? platformPermissionsList : businessPermissionsList).map(perm => (
-              <label key={perm.key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: editingPermissions ? 'pointer' : 'default', color: C.text, fontSize: 13 }}>
-                <input
-                  type="checkbox"
-                  checked={editingPermissions ? (permissions[perm.key] || false) : (staff.permissions?.[perm.key] || false)}
-                  onChange={(e) => {
-                    if (editingPermissions) {
-                      setPermissions({ ...permissions, [perm.key]: e.target.checked });
-                    }
-                  }}
-                  disabled={!editingPermissions}
-                  style={{ width: 16, height: 16, cursor: editingPermissions ? 'pointer' : 'default', accentColor: C.accent }}
-                />
-                {perm.label}
-              </label>
-            ))}
+            {(isPlatformStaff ? platformPermissionsList : businessPermissionsList).map(perm => {
+              // ✅ الحصول على قيمة الصلاحية من staff.permissions أو permissions (حسب وضع التحرير)
+              const permissionValue = editingPermissions 
+                ? (permissions[perm.key] || false)
+                : (staff.permissions?.[perm.key] || false);
+              
+              return (
+                <label key={perm.key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: editingPermissions ? 'pointer' : 'default', color: C.text, fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={permissionValue}
+                    onChange={(e) => {
+                      if (editingPermissions) {
+                        setPermissions({ ...permissions, [perm.key]: e.target.checked });
+                      }
+                    }}
+                    disabled={!editingPermissions}
+                    style={{ width: 16, height: 16, cursor: editingPermissions ? 'pointer' : 'default', accentColor: C.accent }}
+                  />
+                  {perm.label}
+                </label>
+              );
+            })}
           </div>
 
           {!editingPermissions && Object.keys(staff.permissions || {}).filter(k => staff.permissions?.[k]).length === 0 && (
