@@ -6,6 +6,7 @@ import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import { IoAdd, IoPencil, IoTrash, IoKey } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+import { useCurrentPlan } from '../../hooks/stores/useCurrentPlan';
 
 const C = {
   bg:     '#082E24',
@@ -44,6 +45,7 @@ const labelStyle: React.CSSProperties = {
 };
 
 const StaffPage: React.FC = () => {
+  const { isFree, loading: planLoading } = useCurrentPlan();
   const [staff, setStaff] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -65,8 +67,13 @@ const StaffPage: React.FC = () => {
   });
 
   useEffect(() => {
+    if (planLoading) return;
+    if (isFree) {
+      setLoading(false);
+      return;
+    }
     fetchStaff();
-  }, []);
+  }, [planLoading, isFree]);
 
   const fetchStaff = async () => {
     try {
@@ -189,7 +196,28 @@ const StaffPage: React.FC = () => {
     </label>
   );
 
-  if (loading) return <Loader fullScreen />;
+  if (planLoading || loading) return <Loader fullScreen />;
+
+  if (isFree) {
+    return (
+      <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
+        <div style={{ maxWidth: 520, margin: '40px auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 32, textAlign: 'center' }}>
+          <IoKey size={48} color={C.accent} style={{ marginBottom: 12 }} />
+          <h2 style={{ margin: '0 0 8px', fontSize: 20 }}>إدارة الموظفين غير متاحة</h2>
+          <p style={{ color: C.muted, margin: '0 0 20px' }}>
+            هذه الميزة متاحة فقط في الخطط المدفوعة. قم بترقية خطتك للمتابعة.
+          </p>
+          <Button
+            onClick={() => {
+              window.location.href = '/plans';
+            }}
+          >
+            ترقية الخطة
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>

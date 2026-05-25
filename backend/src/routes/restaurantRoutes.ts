@@ -14,6 +14,7 @@ import {
   deleteStaff
 } from '../controllers/restaurantController';
 import { authenticate, authorizeOwner, authorizeAdmin } from '../middleware/auth';
+import { requirePaidPlanForStaff } from '../middleware/checkPlan';
 import { upload } from '../middleware/upload';
 
 const router = Router();
@@ -29,10 +30,10 @@ router.post('/cover', authenticate, upload.single('image'), uploadCover);
 router.post('/', authenticate, authorizeAdmin, createRestaurant);
 
 // ==================== مسارات الموظفين ====================
-router.get('/staff', authenticate, authorizeOwner, getStaff);
-router.post('/staff', authenticate, authorizeOwner, addStaff);
-router.put('/staff/:id', authenticate, authorizeOwner, updateStaff);
-router.delete('/staff/:id', authenticate, authorizeOwner, deleteStaff);
+router.get('/staff', authenticate, authorizeOwner, requirePaidPlanForStaff('restaurant'), getStaff);
+router.post('/staff', authenticate, authorizeOwner, requirePaidPlanForStaff('restaurant'), addStaff);
+router.put('/staff/:id', authenticate, authorizeOwner, requirePaidPlanForStaff('restaurant'), updateStaff);
+router.delete('/staff/:id', authenticate, authorizeOwner, requirePaidPlanForStaff('restaurant'), deleteStaff);
 
 // ==================== المسارات العامة ====================
 router.get('/:identifier', getRestaurantById);

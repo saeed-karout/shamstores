@@ -2,6 +2,7 @@
 
 import { Router } from 'express';
 import { authenticate, authorizeOwner } from '../middleware/auth';
+import { requirePaidPlanForStaff } from '../middleware/checkPlan';
 import { upload } from '../middleware/upload';
 import {
   getProfile,
@@ -118,6 +119,7 @@ router.put('/categories/:id', updateCategory);
 router.delete('/categories/:id', deleteCategory);
 
 // ==================== الموظفين ====================
+router.use('/staff', requirePaidPlanForStaff('store'));
 router.get('/staff', getStoreStaff);
 router.get('/staff/:staffId', getStoreStaffDetails);
 router.put('/staff/:staffId', updateStoreStaff);
