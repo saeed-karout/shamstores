@@ -32,6 +32,7 @@ const EmailVerification: React.FC = () => {
   const [resendCountdown, setResendCountdown] = useState(0);
 
   if (!email) {
+    console.log('⚠️ Email verification missing email in state');
     return (
       <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} dir="rtl">
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 40, textAlign: 'center', maxWidth: 420 }}>
@@ -54,10 +55,12 @@ const EmailVerification: React.FC = () => {
 
     setLoading(true);
     try {
+      console.log('🔎 Verifying email code:', { email });
       const response = await apiClient.post('/auth/verify-email', { email, code });
 
       if (response.success) {
         toast.success('تم تفعيل البريد الإلكتروني بنجاح!');
+        console.log('✅ Email verified, redirecting:', { loginPath });
         navigate(loginPath);
       } else {
         toast.error(response.error || 'فشل التحقق من الكود');
@@ -72,6 +75,7 @@ const EmailVerification: React.FC = () => {
   const handleResend = async () => {
     setResendLoading(true);
     try {
+      console.log('🔁 Resend verification code:', { email });
       const response = await apiClient.post('/auth/resend-verification', { email });
 
       if (response.success) {

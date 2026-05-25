@@ -123,6 +123,7 @@ const Register: React.FC = () => {
     setError('');
 
     try {
+      console.log('📝 Register submit:', { accountType, email: formData.email });
       if (accountType === 'restaurant') {
         const response = await register({
           name: formData.name,
@@ -133,6 +134,7 @@ const Register: React.FC = () => {
         });
 
         const requiresVerification = response?.requiresEmailVerification ?? requireEmailVerification;
+        console.log('📝 Register restaurant response:', { requiresVerification });
 
         if (requiresVerification) {
           toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
@@ -153,6 +155,7 @@ const Register: React.FC = () => {
         if (response.success) {
           const responseData = response.data;
           const requiresVerification = responseData?.requiresEmailVerification ?? requireEmailVerification;
+          console.log('📝 Register store response:', { requiresVerification, hasToken: !!responseData?.token });
 
           if (responseData?.token && !requiresVerification) {
             localStorage.setItem('token', responseData.token);

@@ -38,6 +38,7 @@ export const register = async (
     }
 
     const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
+    console.log('🔐 Email verification required (register):', requireEmailVerification);
 
     let user;
     let token: string | null = null;
@@ -83,7 +84,8 @@ export const register = async (
       const emailService = require('../services/emailService').default;
       await emailService.initializeTransporter();
       verificationCode = await emailService.generateVerificationCode(email);
-      await emailService.sendVerificationEmail(email, verificationCode);
+      const emailSent = await emailService.sendVerificationEmail(email, verificationCode);
+      console.log('📧 Verification email sent (register):', emailSent);
     }
 
     if (!requireEmailVerification) {
@@ -95,6 +97,7 @@ export const register = async (
         storeId: user.storeId || undefined
       });
     }
+    console.log('🔑 Token issued (register):', !!token);
 
     res.status(201).json({
       success: true,
@@ -170,6 +173,7 @@ export const registerStore = async (
     console.log('✅ Unique slug generated:', uniqueSlug);
 
     const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
+    console.log('🔐 Email verification required (register-store):', requireEmailVerification);
 
     // إنشاء المستخدم أولاً
     const user = await UserService.create({
@@ -205,7 +209,8 @@ export const registerStore = async (
       const emailService = require('../services/emailService').default;
       await emailService.initializeTransporter();
       const verificationCode = await emailService.generateVerificationCode(email);
-      await emailService.sendVerificationEmail(email, verificationCode);
+      const emailSent = await emailService.sendVerificationEmail(email, verificationCode);
+      console.log('📧 Verification email sent (register-store):', emailSent);
     }
 
     let token: string | null = null;
@@ -218,6 +223,7 @@ export const registerStore = async (
         storeId: store.id
       });
     }
+    console.log('🔑 Token issued (register-store):', !!token);
 
     res.status(201).json({
       success: true,
@@ -580,6 +586,7 @@ export const verifyEmail = async (
       return;
     }
 
+    console.log('🔎 Email verification attempt:', { email });
     const emailService = require('../services/emailService').default;
     const verified = await emailService.verifyCode(email, code);
 
@@ -596,6 +603,7 @@ export const verifyEmail = async (
     if (user) {
       await UserService.update(user.id, { isEmailVerified: true });
     }
+    console.log('✅ Email verified:', { email });
 
     res.json({
       success: true,
@@ -624,6 +632,7 @@ export const resendVerificationEmail = async (
       return;
     }
 
+    console.log('🔁 Resend verification requested:', { email });
     const user = await UserService.findByEmail(email);
     if (!user) {
       res.status(404).json({

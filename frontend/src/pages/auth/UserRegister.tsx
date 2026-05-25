@@ -37,8 +37,10 @@ const UserRegister: React.FC = () => {
     }
     setLoading(true);
     try {
+      console.log('📝 User register submit:', { email: formData.email });
       const response = await register({ name: formData.name, email: formData.email, password: formData.password, phone: formData.phone, restaurantName: '' });
       if (response?.requiresEmailVerification) {
+        console.log('📝 User register requires verification');
         navigate('/auth/email-verification', { state: { email: formData.email, accountType: 'user' } });
         return;
       }

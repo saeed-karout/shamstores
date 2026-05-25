@@ -223,6 +223,7 @@ export const useAuth = () => {
   }) => {
     try {
       setLoading(true);
+      console.log('📝 Register start:', { email: data.email, hasRestaurantName: !!data.restaurantName });
       
       // ✅ التحقق من وضع الصيانة
       const isMaintenance = await settingsService.isMaintenanceMode();
@@ -242,11 +243,13 @@ export const useAuth = () => {
       
       const response = await authService.register(data);
       const requireEmailVerification = response.requiresEmailVerification ?? await settingsService.requireEmailVerification();
+      console.log('📝 Register response:', { requiresEmailVerification: requireEmailVerification, hasToken: !!response.token });
 
       // ✅ رسالة مختلفة إذا كان التفعيل مطلوباً
       if (requireEmailVerification) {
         toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
         setLoading(false);
+        console.log('📝 Register requires verification, skipping session set');
         return response;
       }
 

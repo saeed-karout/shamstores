@@ -54,7 +54,12 @@ class EmailService {
           },
         });
         this.config = emailConfig;
-        console.log('✅ Email service initialized with SMTP');
+        const source = smtpUser || smtpPassword || smtpHost || smtpPort || smtpFrom ? 'settings' : 'env';
+        console.log(`✅ Email service initialized with SMTP (${source})`, {
+          host: emailConfig.host,
+          port: emailConfig.port,
+          from: emailConfig.from
+        });
       } else {
         console.warn('⚠️ SMTP credentials not configured. Email sending disabled.');
       }

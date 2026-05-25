@@ -183,7 +183,7 @@ const MainApp: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/auth/email-verification" element={<EmailVerification />} />
-        <Route path="/user/login" element={<Login />} />
+        <Route path="/user/login" element={<UserLogin />} />
         <Route path="/user/register" element={<UserRegister />} />
         <Route path="/delivery/login" element={<DeliveryLogin />} />
         <Route path="/orders/:orderId/track" element={<DeliveryTracking />} />

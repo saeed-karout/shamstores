@@ -4,6 +4,30 @@ import prisma from './prisma';
 
 export class SettingService {
   private static cache = new Map<string, any>();
+  
+  private static async getRawSetting(keyName: string) {
+    const extendedSetting = await prisma.extendedPlatformSetting.findUnique({
+      where: { keyName }
+    });
+    if (extendedSetting) {
+      return {
+        value: extendedSetting.value,
+        type: extendedSetting.type
+      };
+    }
+
+    const platformSetting = await prisma.platformSetting.findUnique({
+      where: { key: keyName }
+    });
+    if (platformSetting) {
+      return {
+        value: platformSetting.value,
+        type: platformSetting.type
+      };
+    }
+
+    return null;
+  }
 
   // ==================== الدوال الأساسية ====================
 
@@ -51,7 +75,7 @@ export class SettingService {
   // ==================== دوال مساعدة لاستخراج القيم ====================
 
   static async getSettingValue(keyName: string, defaultValue: any = null) {
-    const setting = await this.getSetting(keyName);
+    const setting = await this.getRawSetting(keyName);
     if (!setting) return defaultValue;
     
     switch (setting.type) {
@@ -101,15 +125,17 @@ export class SettingService {
 
   // ✅ دالة getJSON (للقيم من نوع JSON)
   static async getJSON(keyName: string, defaultValue: any = null): Promise<any> {
-    const setting = await this.getSetting(keyName);
+    const setting = await this.getRawSetting(keyName);
     if (!setting) return defaultValue;
-    if (setting.type === 'json') {
+    
+    if (setting.type === 'json' || setting.type === 'array') {
       try {
         return JSON.parse(setting.value);
       } catch {
         return defaultValue;
       }
     }
+    
     return defaultValue;
   }
 
