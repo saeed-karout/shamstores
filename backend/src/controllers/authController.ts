@@ -115,21 +115,25 @@ export const register = async (
     }
     console.log('🔑 Token issued (register):', !!token);
 
+    const registerData: any = {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        restaurantId: user.restaurantId,
+        storeId: user.storeId,
+        isEmailVerified: user.isEmailVerified
+      },
+      requiresEmailVerification: shouldRequireEmailVerification
+    };
+    if (!shouldRequireEmailVerification) {
+      registerData.token = token;
+    }
+
     res.status(201).json({
       success: true,
-      data: {
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          restaurantId: user.restaurantId,
-          storeId: user.storeId,
-          isEmailVerified: user.isEmailVerified
-        },
-        requiresEmailVerification: shouldRequireEmailVerification
-      }
+      data: registerData
     });
   } catch (error) {
     console.error('❌ خطأ في التسجيل:', error);
@@ -241,25 +245,29 @@ export const registerStore = async (
     }
     console.log('🔑 Token issued (register-store):', !!token);
 
+    const registerStoreData: any = {
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        storeId: store.id,
+        isEmailVerified: updatedUser.isEmailVerified
+      },
+      store: {
+        id: store.id,
+        name: store.name,
+        slug: store.slug
+      },
+      requiresEmailVerification: shouldRequireEmailVerification
+    };
+    if (!shouldRequireEmailVerification) {
+      registerStoreData.token = token;
+    }
+
     res.status(201).json({
       success: true,
-      data: {
-        token,
-        user: {
-          id: updatedUser.id,
-          name: updatedUser.name,
-          email: updatedUser.email,
-          role: updatedUser.role,
-          storeId: store.id,
-          isEmailVerified: updatedUser.isEmailVerified
-        },
-        store: {
-          id: store.id,
-          name: store.name,
-          slug: store.slug
-        },
-        requiresEmailVerification: shouldRequireEmailVerification
-      },
+      data: registerStoreData,
       message: 'تم إنشاء المتجر بنجاح'
     });
   } catch (error) {

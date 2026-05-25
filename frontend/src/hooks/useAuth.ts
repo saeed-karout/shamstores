@@ -248,6 +248,7 @@ export const useAuth = () => {
       // ✅ رسالة مختلفة إذا كان التفعيل مطلوباً
       if (requireEmailVerification) {
         toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
+        authService.logout();
         setLoading(false);
         console.log('📝 Register requires verification, skipping session set');
         return response;
