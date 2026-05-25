@@ -235,8 +235,10 @@ export const updateProfile = async (
     const {
       name, email, phone, whatsapp, address, description,
       openingHours, instagram, facebook, tiktok,
-      latitude, longitude, primaryColor, secondaryColor,
-      subdomain, customDomain, isActive
+      latitude, longitude, 
+      primaryColor, secondaryColor, backgroundColor, cardColor, surfaceColor,
+      textColor, mutedColor, accentColor, fontFamily,
+      subdomain, customDomain, isActive, deliverySettings
     } = req.body;
 
     let restaurant = null;
@@ -264,6 +266,13 @@ export const updateProfile = async (
             planId: '11111111-1111-1111-1111-111111111111',
             primaryColor: primaryColor || '#3B82F6',
             secondaryColor: secondaryColor || '#10B981',
+            backgroundColor: backgroundColor || '#082E24',
+            cardColor: cardColor || '#112E23',
+            surfaceColor: surfaceColor || '#0F3D31',
+            textColor: textColor || '#E8F5E9',
+            mutedColor: mutedColor || '#9DC4AC',
+            accentColor: accentColor || '#C8E235',
+            fontFamily: fontFamily || 'Cairo',
             isActive: true
           }
         });
@@ -300,8 +309,19 @@ export const updateProfile = async (
     if (instagram !== undefined) updateData.instagram = instagram;
     if (facebook !== undefined) updateData.facebook = facebook;
     if (tiktok !== undefined) updateData.tiktok = tiktok;
+    
+    // ✅ جميع ألوان المطعم
     if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
     if (secondaryColor !== undefined) updateData.secondaryColor = secondaryColor;
+    if (backgroundColor !== undefined) updateData.backgroundColor = backgroundColor;
+    if (cardColor !== undefined) updateData.cardColor = cardColor;
+    if (surfaceColor !== undefined) updateData.surfaceColor = surfaceColor;
+    if (textColor !== undefined) updateData.textColor = textColor;
+    if (mutedColor !== undefined) updateData.mutedColor = mutedColor;
+    if (accentColor !== undefined) updateData.accentColor = accentColor;
+    if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
+    
+    if (deliverySettings !== undefined) updateData.deliverySettings = deliverySettings;
     if (customDomain !== undefined && req.user?.role === 'super_admin') updateData.customDomain = customDomain;
     if (isActive !== undefined && req.user?.role === 'super_admin') updateData.isActive = isActive;
     
