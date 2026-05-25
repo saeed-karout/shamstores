@@ -1,4 +1,5 @@
 // pages/Admin/AdminQRCodesPage.tsx
+
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
@@ -7,7 +8,8 @@ import {
   IoQrCode, IoSearch, IoRefresh, IoStorefront, IoRestaurant, 
   IoArrowBack, IoLink, IoCopy, IoDownload, IoShare, IoPrint,
   IoCheckmarkCircle, IoTime, IoGlobe, IoLocation,
-  IoStatsChart, IoChatbubble, IoHeart, IoStar
+  IoStatsChart, IoChatbubble, IoHeart, IoStar,
+  IoPhoneLandscape
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -111,6 +113,7 @@ const AdminQRCodesPage: React.FC = () => {
     }
   };
 
+  // ✅ دالة الحصول على الرابط الصحيح (باستخدام subdomain أو slug)
   const getFullUrl = (slug: string, subdomain?: string, customDomain?: string): string => {
     const baseUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
     
@@ -121,11 +124,7 @@ const AdminQRCodesPage: React.FC = () => {
     
     // إذا كان هناك subdomain
     if (subdomain) {
-      // استبدال localhost بالـ subdomain
-      const url = new URL(baseUrl);
-      url.hostname = subdomain;
-      if (url.port === '3000') url.port = '3000';
-      return `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+      return `https://${subdomain}.shamstores.com`;
     }
     
     // الوضع العادي: domain/slug
@@ -310,7 +309,7 @@ const AdminQRCodesPage: React.FC = () => {
               )}
             </div>
 
-            {/* QR Section */}
+            {/* QR Section - ✅ تم تمرير subdomain و customDomain */}
             <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
               <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <IoQrCode size={20} style={{ color: C.accent }} /> رمز QR الرئيسي
@@ -320,6 +319,8 @@ const AdminQRCodesPage: React.FC = () => {
                   type={type === 'restaurant' ? 'restaurant' : 'store'} 
                   id={data.id}
                   slug={data.slug}
+                  subdomain={data.subdomain}
+                  customDomain={data.customDomain}
                   storeName={data.name}
                   storeLogo={data.logo}
                   buttonText={
@@ -363,7 +364,7 @@ const AdminQRCodesPage: React.FC = () => {
             {(data.email || data.phone || data.address) && (
               <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginTop: 16 }}>
                 <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <IoPhone size={18} style={{ color: C.blue }} /> معلومات التواصل
+                  <IoPhoneLandscape size={18} style={{ color: C.blue }} /> معلومات التواصل
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                   {data.email && (
@@ -498,7 +499,7 @@ const AdminQRCodesPage: React.FC = () => {
           <p style={{ color: C.muted, fontSize: 14 }}>لم يتم العثور على نتائج مطابقة للبحث</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
           {filteredData.map(item => {
             const fullUrl = getFullUrl(item.slug, item.subdomain, item.customDomain);
             return (
@@ -599,39 +600,52 @@ const AdminQRCodesPage: React.FC = () => {
                   )}
                   
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <span style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 4, 
-                      background: `${C.accent}15`, 
-                      padding: '4px 12px', 
-                      borderRadius: 20, 
-                      fontSize: 12, 
-                      color: C.accent,
-                      fontWeight: 500
-                    }}>
-                      <IoQrCode size={13} /> إنشاء QR
-                    </span>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copyToClipboard(fullUrl);
-                      }}
-                      style={{ 
-                        background: `${C.muted}20`, 
-                        border: 'none', 
-                        borderRadius: 20, 
-                        padding: '4px 10px', 
-                        color: C.muted, 
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4
-                      }}
-                    >
-                      <IoCopy size={12} /> نسخ
-                    </button>
+                  <button 
+  onClick={(e) => {
+    e.stopPropagation();
+    const element = document.createElement('div');
+    const qrCode = new QRCode(element, {
+      text: fullUrl,
+      width: 200,
+      height: 200
+    });
+    toast.success('تم إنشاء QR Code');
+  }}
+  style={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: 4, 
+    background: `${C.accent}15`, 
+    padding: '4px 12px', 
+    borderRadius: 20, 
+    fontSize: 12, 
+    color: C.accent,
+    fontWeight: 500,
+    cursor: 'pointer'
+  }}
+>
+  <IoQrCode size={13} /> إنشاء QR
+</button>
+                  <button 
+  onClick={(e) => {
+    e.stopPropagation();
+    handleSelectEntity(activeTab === 'restaurants' ? 'restaurant' : 'store', item);
+  }}
+  style={{ 
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: 4, 
+    background: `${C.accent}15`, 
+    padding: '4px 12px', 
+    borderRadius: 20, 
+    fontSize: 12, 
+    color: C.accent,
+    fontWeight: 500,
+    cursor: 'pointer'
+  }}
+>
+  <IoQrCode size={13} /> عرض QR
+</button>
                   </div>
                 </div>
               </div>

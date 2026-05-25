@@ -32,6 +32,8 @@ interface User {
   role: string;
   isActive: boolean;
   createdAt: string;
+  restaurantId?: string | null;
+  storeId?: string | null;
   restaurant?: { name: string };
   store?: { name: string };
 }
@@ -50,7 +52,10 @@ const AdminUsers: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const response = await api.get('/admin/users');
-      setUsers(response.users);
+      // ✅ تصحيح استقبال البيانات
+      const usersData = response.data?.users || response.users || response;
+      setUsers(usersData);
+      console.log('✅ Users fetched:', usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('فشل تحميل المستخدمين');
@@ -131,16 +136,23 @@ const AdminUsers: React.FC = () => {
 
   const roleLabels: Record<string, string> = {
     super_admin:     'مدير المنصة',
-    owner:           'مالك مطعم',
+    owner:           'مالك مطعم/متجر',
     staff:           'موظف',
     delivery_driver: 'مندوب توصيل',
-    user:            'مستخدم',
+    user:            'مستخدم عادي',
+  };
+
+  // ✅ دالة لتحديد نوع الارتباط (مطعم أو متجر)
+  const getBusinessType = (user: User) => {
+    if (user.restaurantId) return { type: 'مطعم', id: user.restaurantId };
+    if (user.storeId) return { type: 'متجر', id: user.storeId };
+    return null;
   };
 
   return (
     <div style={{ padding: 24, background: C.bg, minHeight: '100vh', color: C.text }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text }}>إدارة المستخدمين</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text }}>👥 إدارة المستخدمين</h1>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ position: 'relative' }}>
             <input
@@ -176,7 +188,7 @@ const AdminUsers: React.FC = () => {
             }}
           >
             <option value="all">جميع الأدوار</option>
-            <option value="owner">مالك مطعم</option>
+            <option value="owner">مالك</option>
             <option value="delivery_driver">مندوب توصيل</option>
             <option value="staff">موظف</option>
             <option value="user">مستخدم عادي</option>
@@ -189,6 +201,7 @@ const AdminUsers: React.FC = () => {
           <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
+                <th style={thStyle}>#</th>
                 <th style={thStyle}>الاسم</th>
                 <th style={thStyle}>البريد الإلكتروني</th>
                 <th style={thStyle}>رقم الهاتف</th>
@@ -200,94 +213,86 @@ const AdminUsers: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
-                <tr
-                  key={user.id}
-                  style={{ transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td
-                    style={{ ...tdStyle, color: C.accent, cursor: 'pointer', fontWeight: 600 }}
-                    onClick={() => handleViewDetails(user.id)}
+              {filteredUsers.map((user, index) => {
+                const business = getBusinessType(user);
+                return (
+                  <tr
+                    key={user.id}
+                    style={{ transition: 'background 0.15s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    {user.name}
-                  </td>
-                  <td style={tdStyle}>{user.email}</td>
-                  <td style={tdStyle}>{user.phone || '-'}</td>
-                  <td style={tdStyle}>
-                    <select
-                      value={user.role}
-                      onChange={(e) => updateRole(user.id, e.target.value)}
-                      style={{
-                        background: C.surf,
-                        border: `1px solid ${C.border}`,
-                        borderRadius: 8,
-                        color: C.text,
-                        padding: '4px 10px',
-                        fontSize: 12,
-                        outline: 'none',
-                        cursor: 'pointer',
-                      }}
+                    <td style={{ ...tdStyle, color: C.muted, width: 50 }}>{index + 1}</td>
+                    <td
+                      style={{ ...tdStyle, color: C.accent, cursor: 'pointer', fontWeight: 600 }}
+                      onClick={() => handleViewDetails(user.id)}
                     >
-                      <option value="user">👤 مستخدم عادي</option>
-                      <option value="owner">🏢 مالك (مطعم/متجر)</option>
-                      <option value="staff">👨‍💼 موظف</option>
-                      <option value="delivery_driver">🚚 مندوب توصيل</option>
-                    </select>
-                    {user.role === 'owner' && (
-                      <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
-                        {user.restaurant ? '📱 مطعم' : user.store ? '🛍️ متجر' : '⚠️ لا يوجد مطعم أو متجر'}
+                      {user.name}
+                    </td>
+                    <td style={tdStyle}>{user.email}</td>
+                    <td style={tdStyle}>{user.phone || '-'}</td>
+                    <td style={tdStyle}>
+                      <span
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: roleColors[user.role]?.bg || `${C.muted}20`,
+                          color: roleColors[user.role]?.color || C.muted,
+                        }}
+                      >
+                        {roleLabels[user.role] || user.role}
+                      </span>
+                    </td>
+                    <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
+                      {business ? `${business.type}: ${business.id.slice(0, 8)}...` : '-'}
+                    </td>
+                    <td style={tdStyle}>
+                      <button
+                        onClick={() => toggleStatus(user.id, user.isActive)}
+                        style={{
+                          padding: '3px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                          border: 'none', cursor: 'pointer',
+                          background: user.isActive ? `${C.accent}20` : `${C.red}20`,
+                          color: user.isActive ? C.accent : C.red,
+                        }}
+                      >
+                        {user.isActive ? '✅ نشط' : '⛔ غير نشط'}
+                      </button>
+                    </td>
+                    <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
+                      {new Date(user.createdAt).toLocaleDateString('ar-SA')}
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => handleViewDetails(user.id)}
+                          title="عرض التفاصيل"
+                          style={{
+                            padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                            background: `${C.accent}15`, color: C.accent,
+                            display: 'flex', alignItems: 'center',
+                          }}
+                        >
+                          <IoEye size={16} />
+                        </button>
+                        <button
+                          onClick={() => deleteUser(user.id, user.name)}
+                          title="حذف"
+                          style={{
+                            padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
+                            background: `${C.red}15`, color: C.red,
+                            display: 'flex', alignItems: 'center',
+                          }}
+                        >
+                          <IoTrash size={16} />
+                        </button>
                       </div>
-                    )}
-                  </td>
-                  <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
-                    {user.restaurant?.name || user.store?.name || '-'}
-                  </td>
-                  <td style={tdStyle}>
-                    <button
-                      onClick={() => toggleStatus(user.id, user.isActive)}
-                      style={{
-                        padding: '3px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600,
-                        border: 'none', cursor: 'pointer',
-                        background: user.isActive ? `${C.accent}20` : `${C.red}20`,
-                        color: user.isActive ? C.accent : C.red,
-                      }}
-                    >
-                      {user.isActive ? 'نشط' : 'غير نشط'}
-                    </button>
-                  </td>
-                  <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
-                    {new Date(user.createdAt).toLocaleDateString('ar-SA')}
-                  </td>
-                  <td style={tdStyle}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={() => handleViewDetails(user.id)}
-                        title="عرض التفاصيل"
-                        style={{
-                          padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
-                          background: `${C.accent}15`, color: C.accent,
-                          display: 'flex', alignItems: 'center',
-                        }}
-                      >
-                        <IoEye size={16} />
-                      </button>
-                      <button
-                        onClick={() => deleteUser(user.id, user.name)}
-                        title="حذف"
-                        style={{
-                          padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
-                          background: `${C.red}15`, color: C.red,
-                          display: 'flex', alignItems: 'center',
-                        }}
-                      >
-                        <IoTrash size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

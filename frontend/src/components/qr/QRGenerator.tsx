@@ -1,4 +1,5 @@
 // components/qr/QRGenerator.tsx
+
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode.react';
 import api from '../../services/api';
@@ -13,6 +14,8 @@ interface QRGeneratorProps {
   id?: string;
   name?: string;
   slug?: string;
+  subdomain?: string;  // ✅ إضافة subdomain
+  customDomain?: string; // ✅ إضافة customDomain
   buttonText?: string | React.ReactNode;
   className?: string;
   variant?: 'primary' | 'outline' | 'accent';
@@ -42,7 +45,8 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   id,
   name,
   slug,
-  shareToken,
+  subdomain,      // ✅ استقبال subdomain
+  customDomain,   // ✅ استقبال customDomain
   buttonText = 'إنشاء QR',
   className = '',
   variant = 'primary',
@@ -74,6 +78,27 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     return import.meta.env.VITE_FRONTEND_URL || window.location.origin;
   };
 
+  // ✅ دالة للحصول على الرابط الصحيح (باستخدام subdomain أو slug)
+  const getEntityUrl = (): string => {
+    const baseUrl = getBaseUrl();
+    
+    // إذا كان هناك customDomain
+    if (customDomain) {
+      return `https://${customDomain}`;
+    }
+    
+    // إذا كان هناك subdomain
+    if (subdomain) {
+      const url = new URL(baseUrl);
+      url.hostname = subdomain;
+      if (url.port === '3000') url.port = '3000';
+      return `${url.protocol}//${url.hostname}${url.port ? ':' + url.port : ''}`;
+    }
+    
+    // الوضع العادي: domain/slug
+    return `${baseUrl}/${slug}`;
+  };
+
   useEffect(() => {
     const savedDesign = localStorage.getItem('qr_design_settings');
     if (savedDesign) {
@@ -95,8 +120,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     setLoading(true);
     try {
       let response;
-      const baseUrl = getBaseUrl();
-      let qrUrl = '';
+      const qrUrl = getEntityUrl(); // ✅ استخدام الدالة الجديدة
 
       if (type === 'restaurant' && slug) {
         const endpoint = id ? `/qr/admin/restaurant/${id}` : '/qr/restaurant';
@@ -104,7 +128,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
           backgroundColor: design.backgroundColor,
           foregroundColor: design.foregroundColor
         });
-        qrUrl = `${baseUrl}/${slug}`;
       } 
       else if (type === 'store' && slug) {
         const endpoint = id ? `/qr/admin/store/${id}` : '/qr/store';
@@ -112,7 +135,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
           backgroundColor: design.backgroundColor,
           foregroundColor: design.foregroundColor
         });
-        qrUrl = `${baseUrl}/${slug}`;
       }
       else if (type === 'table' && id) {
         if (id === 'all') {
@@ -125,7 +147,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             backgroundColor: design.backgroundColor,
             foregroundColor: design.foregroundColor
           });
-          qrUrl = `${baseUrl}/${slug}/table/${id}`;
         }
       }
       else if (type === 'item' && id && slug) {
@@ -133,14 +154,12 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
           backgroundColor: design.backgroundColor,
           foregroundColor: design.foregroundColor
         });
-        qrUrl = `${baseUrl}/${slug}/item/${shareToken || id}`;
       }
       else if (type === 'store-product' && id && slug) {
         response = await api.post(`/qr/store-product/${id}`, {
           backgroundColor: design.backgroundColor,
           foregroundColor: design.foregroundColor
         });
-        qrUrl = `${baseUrl}/${slug}/product/${id}`;
       }
 
       setQrData({
@@ -279,7 +298,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
 
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={getModalTitle()} size="md">
         <div className="text-center">
-          {/* QR Code Display */}
           <div className={`p-6 bg-white rounded-2xl ${design.shadow ? 'shadow-xl' : ''} ${design.frameStyle === 'rounded' ? 'rounded-2xl' : design.frameStyle === 'modern' ? 'rounded-3xl' : 'rounded-lg'}`}>
             {qrData?.png ? (
               <img 
@@ -300,14 +318,12 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             )}
           </div>
 
-          {/* URL Display */}
           {design.includeText && qrData?.url && (
             <div className="mt-4 p-3 bg-gray-800 rounded-xl">
               <code className="text-xs text-[#C8E235] break-all font-mono">{qrData.url}</code>
             </div>
           )}
 
-          {/* Action Buttons */}
           <div className="flex justify-center gap-2 mt-6 flex-wrap">
             <button
               onClick={copyUrl}
@@ -345,10 +361,9 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
         </div>
       </Modal>
 
-      {/* Design Modal */}
+      {/* Design Modal (نفسه بدون تغيير) */}
       <Modal isOpen={showDesignModal} onClose={() => setShowDesignModal(false)} title="تخصيص تصميم QR Code" size="lg">
         <div className="space-y-5">
-          {/* Colors */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">لون الخلفية</label>
@@ -386,7 +401,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Size Slider */}
           <div>
             <label className="block text-sm font-medium mb-2">حجم QR (بكسل): {design.size}px</label>
             <input
@@ -400,7 +414,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             />
           </div>
 
-          {/* Style Selectors */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">شكل الإطار</label>
@@ -429,7 +442,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Options */}
           <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -460,7 +472,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             </label>
           </div>
 
-          {/* Preview */}
           <div className="border-t pt-4 mt-2">
             <h4 className="font-bold mb-3">معاينة التصميم</h4>
             <div className="bg-gray-100 p-6 rounded-xl flex justify-center">
@@ -478,7 +489,6 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex gap-3 pt-2">
             <button
               onClick={saveDesignSettings}

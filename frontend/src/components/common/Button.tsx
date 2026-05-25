@@ -1,4 +1,7 @@
+// components/common/Button.tsx
+
 import React from 'react';
+import { useTheme } from '@/context/ThemeContext'; // ✅ استخدم useTheme فقط
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'outline';
@@ -7,14 +10,6 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
   children: React.ReactNode;
 }
-
-const variantStyles: Record<string, React.CSSProperties> = {
-  primary:   { background: '#C8E235', color: '#082E24', border: 'none' },
-  secondary: { background: '#0F3D31', color: '#9DC4AC', border: '1px solid rgba(200,226,53,0.2)' },
-  danger:    { background: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,0.3)' },
-  success:   { background: 'rgba(76,175,125,0.15)', color: '#4CAF7D', border: '1px solid rgba(76,175,125,0.3)' },
-  outline:   { background: 'transparent', color: '#C8E235', border: '1.5px solid #C8E235' },
-};
 
 const sizePadding = { sm: '6px 14px', md: '10px 18px', lg: '13px 24px' };
 const sizeFontSize = { sm: 12, md: 14, lg: 15 };
@@ -29,6 +24,22 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
+  const theme = useTheme(); // ✅ استخدم useTheme مباشرة
+  const primaryColor = theme.primaryColor || '#C8E235';
+  const secondaryColor = theme.secondaryColor || '#10B981';
+  const bgColor = theme.backgroundColor || '#082E24';
+  const textColor = theme.textColor || '#E8F5E9';
+  const mutedColor = theme.mutedColor || '#9DC4AC';
+  const surfaceColor = theme.surfaceColor || '#0F3D31';
+
+  const variantStyles: Record<string, React.CSSProperties> = {
+    primary:   { background: primaryColor, color: bgColor, border: 'none' },
+    secondary: { background: surfaceColor, color: mutedColor, border: `1px solid ${primaryColor}20` },
+    danger:    { background: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,0.3)' },
+    success:   { background: 'rgba(76,175,125,0.15)', color: '#4CAF7D', border: '1px solid rgba(76,175,125,0.3)' },
+    outline:   { background: 'transparent', color: primaryColor, border: `1.5px solid ${primaryColor}` },
+  };
+
   const isDisabled = disabled || loading;
 
   return (
@@ -58,7 +69,7 @@ const Button: React.FC<ButtonProps> = ({
           <div
             style={{
               width: 16, height: 16,
-              border: '2px solid currentColor',
+              border: `2px solid ${variant === 'primary' ? bgColor : primaryColor}`,
               borderTopColor: 'transparent',
               borderRadius: '50%',
               animation: 'spin 0.8s linear infinite',

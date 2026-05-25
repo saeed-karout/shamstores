@@ -1,6 +1,6 @@
 // src/context/ThemeContext.tsx
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react'; // ✅ أضف useState و useEffect
 
 interface ThemeColors {
   primaryColor: string;
@@ -52,7 +52,7 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, initialColors }) => {
-  const [colors, setColors] = React.useState<ThemeColors>({
+  const [colors, setColors] = useState<ThemeColors>({
     ...defaultColors,
     ...initialColors,
   });
@@ -60,6 +60,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, initialC
   const setThemeColors = (newColors: Partial<ThemeColors>) => {
     setColors(prev => ({ ...prev, ...newColors }));
   };
+
+  // ✅ تطبيق الألوان على CSS variables
+  useEffect(() => {
+    const root = document.documentElement;
+    
+    root.style.setProperty('--sham-primary', colors.primaryColor);
+    root.style.setProperty('--sham-secondary', colors.secondaryColor);
+    root.style.setProperty('--sham-bg', colors.backgroundColor);
+    root.style.setProperty('--sham-card', colors.cardBgColor);
+    root.style.setProperty('--sham-surface', colors.surfaceColor);
+    root.style.setProperty('--sham-text', colors.textColor);
+    root.style.setProperty('--sham-muted', colors.mutedColor);
+    root.style.setProperty('--sham-accent', colors.accentColor);
+    root.style.setProperty('--font-primary', colors.fontFamily);
+    
+    console.log('🎨 Theme colors applied to CSS variables');
+  }, [colors]);
 
   return (
     <ThemeContext.Provider

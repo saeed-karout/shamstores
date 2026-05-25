@@ -202,6 +202,15 @@ router.put('/stores/:storeId/staff/:staffId/permissions', authorize(['super_admi
 router.delete('/stores/:storeId/staff/:staffId', authorize(['super_admin', 'owner']), deleteStoreStaff);
 
 // -------------------- إدارة موظفي المنصة (سوبر أدمن فقط) --------------------
+// Legacy aliases: keep /staff for backward compatibility with frontend
+router.get('/staff', authorize(['super_admin']), getAllPlatformStaff);
+router.post('/staff', authorize(['super_admin']), createPlatformStaff);
+router.get('/staff/:staffId', authorize(['super_admin']), getPlatformStaffDetails);
+router.put('/staff/:staffId', authorize(['super_admin']), updatePlatformStaff);
+router.patch('/staff/:staffId/toggle', authorize(['super_admin']), togglePlatformStaffStatus);
+router.delete('/staff/:staffId', authorize(['super_admin']), deletePlatformStaff);
+router.put('/staff/:id/permissions', authorize(['super_admin']), updatePlatformStaffPermissions);
+
 router.get('/platform-staff', authorize(['super_admin']), getAllPlatformStaff);
 router.post('/platform-staff', authorize(['super_admin']), createPlatformStaff);
 router.get('/platform-staff/:staffId', authorize(['super_admin']), getPlatformStaffDetails);

@@ -1,4 +1,5 @@
 // frontend/src/pages/Admin/AdminDrivers.tsx
+
 import React, { useEffect, useState } from 'react';
 import { IoSearch, IoTrash, IoEye, IoCar, IoAdd, IoClose, IoLocation, IoCall, IoMail, IoCalendar, IoStatsChart, IoCheckmarkCircle, IoTime, IoCard, IoRefresh, IoMap, IoPerson, IoKey, IoBusiness, IoWarning } from 'react-icons/io5';
 import api from '../../services/api';
@@ -38,6 +39,9 @@ interface Driver {
     slug?: string;
     logo?: string;
   } | null;
+  businessId?: string | null;
+  businessType?: string | null;
+  businessName?: string | null;
   lastLocation: {
     lat: number;
     lng: number;
@@ -96,7 +100,7 @@ const AdminDrivers: React.FC = () => {
     fetchBusinessesWithoutDrivers();
   }, []);
 
-  // جلب السائقين
+  // ✅ جلب السائقين مع معالجة صحيحة للبيانات
   const fetchDrivers = async () => {
     setLoading(true);
     try {
@@ -115,6 +119,14 @@ const AdminDrivers: React.FC = () => {
         driversData = response;
       }
       
+      // ✅ معالجة البيانات للتأكد من وجود businessName
+      driversData = driversData.map((driver: any) => ({
+        ...driver,
+        businessName: driver.business?.name || driver.businessName || null,
+        businessId: driver.business?.id || driver.businessId || null,
+        businessType: driver.business?.type || driver.businessType || null,
+      }));
+      
       setDrivers(driversData);
     } catch (error) {
       console.error('Error fetching drivers:', error);
@@ -125,32 +137,66 @@ const AdminDrivers: React.FC = () => {
     }
   };
 
-  // جلب المنشآت بدون سائقين
-  const fetchBusinessesWithoutDrivers = async () => {
-    try {
-      const response = await api.get('/admin/drivers/businesses-without-drivers');
-      
-      let data = {};
-      if (response.data?.data) {
-        data = response.data.data;
-      } else if (response.data) {
-        data = response.data;
-      }
-      
-      const restaurants = (data as any).restaurants || [];
-      const stores = (data as any).stores || [];
-      const allBusinesses: Business[] = [
-        ...restaurants.map((r: any) => ({ ...r, type: 'restaurant' as const })),
-        ...stores.map((s: any) => ({ ...s, type: 'store' as const }))
-      ];
-      setBusinesses(allBusinesses);
-    } catch (error) {
-      console.error('Error fetching businesses:', error);
-      setBusinesses([]);
+  // ✅ جلب المنشآت بدون سائقين
+  // ✅ جلب المنشآت بدون سائقين - نسخة محسنة
+const fetchBusinessesWithoutDrivers = async () => {
+  try {
+    const response = await api.get('/admin/drivers/businesses-without-drivers');
+    console.log('Businesses response:', response);
+    
+    let restaurants: any[] = [];
+    let stores: any[] = [];
+    
+    // ✅ معالجة مختلفة للاستجابة
+    if (response.data?.data?.restaurants) {
+      restaurants = response.data.data.restaurants;
+      stores = response.data.data.stores;
+    } else if (response.data?.restaurants) {
+      restaurants = response.data.restaurants;
+      stores = response.data.stores;
+    } else if (response.restaurants) {
+      restaurants = response.restaurants;
+      stores = response.stores;
     }
-  };
+    
+    console.log('Restaurants found:', restaurants);
+    console.log('Stores found:', stores);
+    
+    const allBusinesses: Business[] = [
+      ...restaurants.map((r: any) => ({ 
+        id: r.id, 
+        name: r.name, 
+        type: 'restaurant' as const,
+        logo: r.logo,
+        email: r.email,
+        phone: r.phone,
+        address: r.address
+      })),
+      ...stores.map((s: any) => ({ 
+        id: s.id, 
+        name: s.name, 
+        type: 'store' as const,
+        logo: s.logo,
+        email: s.email,
+        phone: s.phone,
+        address: s.address
+      }))
+    ];
+    
+    console.log('All businesses for assignment:', allBusinesses);
+    setBusinesses(allBusinesses);
+    
+    if (allBusinesses.length === 0) {
+      toast('لا توجد منشآت متاحة لتعيين سائقين', { icon: 'ℹ️' });
+    }
+  } catch (error) {
+    console.error('Error fetching businesses:', error);
+    toast.error('فشل تحميل المنشآت');
+    setBusinesses([]);
+  }
+};
 
-  // جلب تفاصيل سائق
+  // ✅ جلب تفاصيل سائق
   const fetchDriverDetails = async (driverId: string) => {
     setStatsLoading(true);
     try {
@@ -176,7 +222,7 @@ const AdminDrivers: React.FC = () => {
     }
   };
 
-  // عرض تفاصيل السائق
+  // ✅ عرض تفاصيل السائق
   const viewDetails = async (driver: Driver) => {
     console.log('Viewing driver details for:', driver);
     setSelectedDriver(driver);
@@ -184,7 +230,7 @@ const AdminDrivers: React.FC = () => {
     await fetchDriverDetails(driver.id);
   };
 
-  // فتح نافذة التعديل
+  // ✅ فتح نافذة التعديل
   const openEditModal = (driver: any) => {
     setEditFormData({
       name: driver.name,
@@ -196,7 +242,7 @@ const AdminDrivers: React.FC = () => {
     setShowEditModal(true);
   };
 
-  // تحديث بيانات السائق
+  // ✅ تحديث بيانات السائق
   const handleUpdateDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -228,7 +274,7 @@ const AdminDrivers: React.FC = () => {
     }
   };
 
-  // تبديل حالة الحساب (تفعيل/تعطيل)
+  // ✅ تبديل حالة الحساب (تفعيل/تعطيل)
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
       await api.patch(`/admin/drivers/${id}/toggle`);
@@ -242,7 +288,7 @@ const AdminDrivers: React.FC = () => {
     }
   };
 
-  // إعادة تعيين كلمة المرور
+  // ✅ إعادة تعيين كلمة المرور
   const resetDriverPassword = async (driverId: string) => {
     const newPassword = prompt('أدخل كلمة المرور الجديدة (6 أحرف على الأقل)');
     if (!newPassword) return;
@@ -261,7 +307,7 @@ const AdminDrivers: React.FC = () => {
     }
   };
 
-  // حذف سائق
+  // ✅ حذف سائق
   const deleteDriver = async (id: string, name: string) => {
     if (!window.confirm(`هل أنت متأكد من حذف السائق "${name}"؟`)) return;
     try {
@@ -276,7 +322,23 @@ const AdminDrivers: React.FC = () => {
     }
   };
 
-  // إنشاء سائق جديد
+  // ✅ إزالة سائق من منشأة
+  const removeDriverFromBusiness = async (driverId: string, businessName: string) => {
+    if (!window.confirm(`هل أنت متأكد من إزالة السائق من "${businessName}"؟`)) return;
+    try {
+      await api.delete(`/admin/drivers/${driverId}/assign`);
+      toast.success('تم إزالة السائق من المنشأة بنجاح');
+      fetchDrivers();
+      if (selectedDriver?.id === driverId) {
+        await fetchDriverDetails(driverId);
+      }
+      fetchBusinessesWithoutDrivers();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'فشل إزالة السائق');
+    }
+  };
+
+  // ✅ إنشاء سائق جديد
   const createDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.password) {
@@ -315,7 +377,7 @@ const AdminDrivers: React.FC = () => {
     }
   };
 
-  // تعيين سائق لمنشأة
+  // ✅ تعيين سائق لمنشأة
   const assignDriverToBusiness = async () => {
     if (!assignData.driverId || !assignData.businessId) {
       toast.error('الرجاء اختيار السائق والمنشأة');
@@ -532,17 +594,37 @@ const AdminDrivers: React.FC = () => {
                   <td style={tdStyle}>{driver.phone || '-'}</td>
                   <td style={tdStyle}>
                     {driver.business ? (
-                      <span style={{
-                        padding: '3px 10px',
-                        borderRadius: 99,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: driver.business.type === 'restaurant' ? `${C.blue}20` : `${C.purple}20`,
-                        color: driver.business.type === 'restaurant' ? C.blue : C.purple,
-                      }}>
-                        {driver.business.type === 'restaurant' ? '🍽️ ' : '🛍️ '}
-                        {driver.business.name}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: 99,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: driver.business.type === 'restaurant' ? `${C.blue}20` : `${C.purple}20`,
+                          color: driver.business.type === 'restaurant' ? C.blue : C.purple,
+                        }}>
+                          {driver.business.type === 'restaurant' ? '🍽️ ' : '🛍️ '}
+                          {driver.business.name}
+                        </span>
+                        <button
+                          onClick={() => removeDriverFromBusiness(driver.id, driver.business!.name)}
+                          title="إزالة من المنشأة"
+                          style={{
+                            padding: '2px 6px',
+                            borderRadius: 6,
+                            border: 'none',
+                            cursor: 'pointer',
+                            background: `${C.red}20`,
+                            color: C.red,
+                            fontSize: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 3,
+                          }}
+                        >
+                          <IoClose size={12} /> إزالة
+                        </button>
+                      </div>
                     ) : '-'}
                   </td>
                   <td style={tdStyle}>
@@ -554,7 +636,6 @@ const AdminDrivers: React.FC = () => {
                   </td>
                   <td style={tdStyle}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {/* حالة الحساب (isActive) - يتحكم بها السوبر أدمن */}
                       <button
                         onClick={() => toggleStatus(driver.id, driver.isActive)}
                         style={{
@@ -570,7 +651,6 @@ const AdminDrivers: React.FC = () => {
                       >
                         {driver.isActive ? '✅ حساب نشط' : '❌ حساب معطل'}
                       </button>
-                      {/* حالة الاتصال (isOnline) - للعرض فقط */}
                       <span style={{
                         padding: '3px 8px',
                         borderRadius: 99,
@@ -718,53 +798,101 @@ const AdminDrivers: React.FC = () => {
       </Modal>
 
       {/* ==================== MODAL: تعيين سائق لمنشأة ==================== */}
-      <Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="🔄 تعيين سائق لمنشأة" size="md">
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>اختر السائق</label>
-          <select
-            value={assignData.driverId}
-            onChange={(e) => setAssignData({ ...assignData, driverId: e.target.value })}
-            style={inputStyle}
-          >
-            <option value="">-- اختر السائق --</option>
-            {drivers.filter(d => !d.business).map(driver => (
-              <option key={driver.id} value={driver.id}>{driver.name} ({driver.email})</option>
-            ))}
-          </select>
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>نوع المنشأة</label>
-          <select
-            value={assignData.businessType}
-            onChange={(e) => setAssignData({ ...assignData, businessType: e.target.value as 'restaurant' | 'store', businessId: '' })}
-            style={inputStyle}
-          >
-            <option value="restaurant">🍽️ مطعم</option>
-            <option value="store">🛍️ متجر</option>
-          </select>
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>اختر المنشأة</label>
-          <select
-            value={assignData.businessId}
-            onChange={(e) => setAssignData({ ...assignData, businessId: e.target.value })}
-            style={inputStyle}
-          >
-            <option value="">-- اختر المنشأة --</option>
-            {businesses.filter(b => b.type === assignData.businessType).map(business => (
-              <option key={business.id} value={business.id}>{business.name}</option>
-            ))}
-          </select>
-        </div>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>
-          <button onClick={() => setShowAssignModal(false)} style={{ padding: '8px 16px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, cursor: 'pointer' }}>
-            إلغاء
-          </button>
-          <button onClick={assignDriverToBusiness} style={{ padding: '8px 24px', background: C.blue, border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
-            تعيين
-          </button>
-        </div>
-      </Modal>
+      {/* ==================== MODAL: تعيين سائق لمنشأة ==================== */}
+<Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="🔄 تعيين سائق لمنشأة" size="md">
+  <div style={{ marginBottom: 16 }}>
+    <label style={labelStyle}>اختر السائق</label>
+    <select
+      value={assignData.driverId}
+      onChange={(e) => setAssignData({ ...assignData, driverId: e.target.value })}
+      style={inputStyle}
+    >
+      <option value="">-- اختر السائق --</option>
+      {drivers.filter(d => !d.business).map(driver => (
+        <option key={driver.id} value={driver.id}>
+          {driver.name} ({driver.email})
+        </option>
+      ))}
+    </select>
+    {drivers.filter(d => !d.business).length === 0 && (
+      <p style={{ color: C.yellow, fontSize: 12, marginTop: 8 }}>
+        ⚠️ لا يوجد سائقون غير مرتبطين بمنشأة
+      </p>
+    )}
+  </div>
+  
+  <div style={{ marginBottom: 16 }}>
+    <label style={labelStyle}>نوع المنشأة</label>
+    <select
+      value={assignData.businessType}
+      onChange={(e) => setAssignData({ ...assignData, businessType: e.target.value as 'restaurant' | 'store', businessId: '' })}
+      style={inputStyle}
+    >
+      <option value="restaurant">🍽️ مطعم</option>
+      <option value="store">🛍️ متجر</option>
+    </select>
+  </div>
+  
+  <div style={{ marginBottom: 16 }}>
+    <label style={labelStyle}>اختر المنشأة</label>
+    <select
+      value={assignData.businessId}
+      onChange={(e) => setAssignData({ ...assignData, businessId: e.target.value })}
+      style={inputStyle}
+    >
+      <option value="">-- اختر المنشأة --</option>
+      {businesses
+        .filter(b => b.type === assignData.businessType)
+        .map(business => (
+          <option key={business.id} value={business.id}>
+            {business.type === 'restaurant' ? '🍽️' : '🛍️'} {business.name}
+          </option>
+        ))}
+    </select>
+    {businesses.filter(b => b.type === assignData.businessType).length === 0 && (
+      <p style={{ color: C.yellow, fontSize: 12, marginTop: 8 }}>
+        ⚠️ لا توجد {assignData.businessType === 'restaurant' ? 'مطاعم' : 'متاجر'} متاحة لتعيين سائق
+      </p>
+    )}
+  </div>
+  
+  {/* عرض إحصاءات سريعة */}
+  <div style={{ 
+    background: C.surf, 
+    padding: 12, 
+    borderRadius: 8, 
+    marginBottom: 16,
+    fontSize: 12,
+    color: C.muted
+  }}>
+    <div>📊 ملخص:</div>
+    <div>• مطاعم متاحة: {businesses.filter(b => b.type === 'restaurant').length}</div>
+    <div>• متاجر متاحة: {businesses.filter(b => b.type === 'store').length}</div>
+    <div>• سائقين غير مرتبطين: {drivers.filter(d => !d.business).length}</div>
+  </div>
+  
+  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 20 }}>
+    <button onClick={() => setShowAssignModal(false)} style={{ padding: '8px 16px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, cursor: 'pointer' }}>
+      إلغاء
+    </button>
+    <button 
+      onClick={assignDriverToBusiness} 
+      disabled={!assignData.driverId || !assignData.businessId}
+      style={{ 
+        padding: '8px 24px', 
+        background: (!assignData.driverId || !assignData.businessId) ? C.muted : C.blue, 
+        border: 'none', 
+        borderRadius: 8, 
+        color: '#fff', 
+        cursor: (!assignData.driverId || !assignData.businessId) ? 'not-allowed' : 'pointer', 
+        fontWeight: 600,
+        opacity: (!assignData.driverId || !assignData.businessId) ? 0.6 : 1
+      }}
+    >
+      تعيين
+    </button>
+  </div>
+</Modal>
 
       {/* ==================== MODAL: تفاصيل السائق ==================== */}
       <Modal isOpen={showDetailsModal} onClose={() => { 
@@ -824,6 +952,23 @@ const AdminDrivers: React.FC = () => {
                       }}>
                         🍽️ {driverStats.restaurant.name}
                       </span>
+                      <button
+                        onClick={() => removeDriverFromBusiness(driverStats.id, driverStats.restaurant.name)}
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: `${C.red}20`,
+                          color: C.red,
+                          fontSize: 11,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
+                        <IoClose size={12} /> إزالة
+                      </button>
                     </div>
                   )}
                   {driverStats.store && (
@@ -837,6 +982,23 @@ const AdminDrivers: React.FC = () => {
                       }}>
                         🛍️ {driverStats.store.name}
                       </span>
+                      <button
+                        onClick={() => removeDriverFromBusiness(driverStats.id, driverStats.store.name)}
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: `${C.red}20`,
+                          color: C.red,
+                          fontSize: 11,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
+                        <IoClose size={12} /> إزالة
+                      </button>
                     </div>
                   )}
                 </div>
