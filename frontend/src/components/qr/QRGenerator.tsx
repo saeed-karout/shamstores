@@ -1,9 +1,10 @@
 // components/qr/QRGenerator.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import QRCode from 'qrcode.react';
 import api from '../../services/api';
 import Modal from '../common/Modal';
+import { useTheme } from '@/context/ThemeContext';
 import { IoDownload, IoPrint, IoQrCode, IoColorPalette, IoCopy } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 
@@ -57,6 +58,8 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   const [showDesignModal, setShowDesignModal] = useState(false);
   const [qrData, setQrData] = useState<{ png?: string; svg?: string; url: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const theme = useTheme();
+  
   const [design, setDesign] = useState<QRDesign>({
     backgroundColor: '#FFFFFF',
     foregroundColor: '#000000',
@@ -66,27 +69,22 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     frameStyle: 'modern',
     cornerStyle: 'rounded',
     gradient: false,
-    gradientStart: '#C8E235',
+    gradientStart: theme.primaryColor || '#C8E235',
     gradientEnd: '#60A5FA',
     shadow: true
   });
 
-  // ✅ الدومين الثابت للمنصة (وليس localhost)
+  // ✅ الدومين الثابت للمنصة
   const PRODUCTION_DOMAIN = 'https://shamstores.com';
 
   // ✅ دالة للحصول على الرابط الصحيح
   const getEntityUrl = (): string => {
-    // إذا كان هناك customDomain
     if (customDomain) {
       return `https://${customDomain}`;
     }
-    
-    // إذا كان هناك subdomain
     if (subdomain) {
       return `https://${subdomain}.shamstores.com`;
     }
-    
-    // الوضع العادي: domain/slug
     return `${PRODUCTION_DOMAIN}/${slug}`;
   };
 
@@ -113,7 +111,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
       let response;
       const qrUrl = getEntityUrl();
       
-      console.log('🔍 Generating QR for URL:', qrUrl); // ✅ للتأكد
+      console.log('🔍 Generating QR for URL:', qrUrl);
 
       if (type === 'restaurant' && slug) {
         const endpoint = id ? `/qr/admin/restaurant/${id}` : '/qr/restaurant';
@@ -255,14 +253,19 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     printWindow.print();
   };
 
+  // ✅ تحديث الـ variant styles لاستخدام ألوان ThemeContext
   const getVariantStyles = () => {
+    const primaryColor = theme.primaryColor || '#3B82F6';
+    const accentColor = theme.accentColor || '#C8E235';
+    const bgColor = theme.backgroundColor || '#082E24';
+    
     switch (variant) {
       case 'primary':
-        return 'bg-blue-500 text-white hover:bg-blue-600 shadow-md';
+        return `bg-[${primaryColor}] text-[${bgColor}] hover:bg-[${primaryColor}]dd shadow-md`;
       case 'accent':
-        return 'bg-[#C8E235] text-[#082E24] hover:bg-[#B0C820] shadow-md';
+        return `bg-[${accentColor}] text-[${bgColor}] hover:bg-[${accentColor}]dd shadow-md`;
       default:
-        return 'border border-gray-600 text-gray-300 hover:bg-gray-800';
+        return `border border-[${theme.mutedColor || '#9DC4AC'}] text-[${theme.textColor || '#E8F5E9'}] hover:bg-[${theme.surfaceColor || '#0F3D31'}]`;
     }
   };
 
@@ -281,6 +284,11 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
         onClick={generateQR}
         disabled={loading}
         className={`flex items-center justify-center px-5 py-2.5 rounded-xl disabled:opacity-50 transition-all duration-200 font-semibold ${getVariantStyles()} ${className}`}
+        style={{
+          backgroundColor: variant === 'primary' ? theme.primaryColor : variant === 'accent' ? theme.accentColor : undefined,
+          color: variant === 'primary' || variant === 'accent' ? theme.backgroundColor : undefined,
+          border: variant === 'outline' ? `1px solid ${theme.primaryColor}` : undefined,
+        }}
       >
         {loading ? (
           <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -354,7 +362,152 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
         </div>
       </Modal>
 
-      {/* Design Modal - يمكنك إضافته لاحقاً */}
+      {/* Design Modal */}
+      {showDesignModal && (
+        <Modal isOpen={showDesignModal} onClose={() => setShowDesignModal(false)} title="تخصيص تصميم QR Code" size="lg">
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">لون الخلفية</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={design.backgroundColor}
+                    onChange={(e) => setDesign({ ...design, backgroundColor: e.target.value })}
+                    className="w-12 h-10 rounded border cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={design.backgroundColor}
+                    onChange={(e) => setDesign({ ...design, backgroundColor: e.target.value })}
+                    className="flex-1 p-2 border rounded bg-gray-800 text-white"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">لون الرمز</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={design.foregroundColor}
+                    onChange={(e) => setDesign({ ...design, foregroundColor: e.target.value })}
+                    className="w-12 h-10 rounded border cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={design.foregroundColor}
+                    onChange={(e) => setDesign({ ...design, foregroundColor: e.target.value })}
+                    className="flex-1 p-2 border rounded bg-gray-800 text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">حجم QR (بكسل): {design.size}px</label>
+              <input
+                type="range"
+                min="150"
+                max="400"
+                step="10"
+                value={design.size}
+                onChange={(e) => setDesign({ ...design, size: parseInt(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">شكل الإطار</label>
+                <select
+                  value={design.frameStyle}
+                  onChange={(e) => setDesign({ ...design, frameStyle: e.target.value as any })}
+                  className="w-full p-2 border rounded bg-gray-800 text-white"
+                >
+                  <option value="none">بدون إطار</option>
+                  <option value="simple">بسيط</option>
+                  <option value="rounded">مدور</option>
+                  <option value="modern">حديث</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">شكل الزوايا</label>
+                <select
+                  value={design.cornerStyle}
+                  onChange={(e) => setDesign({ ...design, cornerStyle: e.target.value as any })}
+                  className="w-full p-2 border rounded bg-gray-800 text-white"
+                >
+                  <option value="square">مربعة</option>
+                  <option value="rounded">مدورة</option>
+                  <option value="circle">دائرية</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={design.includeLogo}
+                  onChange={(e) => setDesign({ ...design, includeLogo: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span>إظهار الشعار</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={design.includeText}
+                  onChange={(e) => setDesign({ ...design, includeText: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span>إظهار النص</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={design.shadow}
+                  onChange={(e) => setDesign({ ...design, shadow: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span>إظهار الظل</span>
+              </label>
+            </div>
+
+            <div className="border-t pt-4 mt-2">
+              <h4 className="font-bold mb-3">معاينة التصميم</h4>
+              <div className="bg-gray-100 p-6 rounded-xl flex justify-center">
+                <div className={`p-4 bg-white ${design.frameStyle === 'rounded' ? 'rounded-2xl' : design.frameStyle === 'modern' ? 'rounded-3xl' : 'rounded-lg'} ${design.shadow ? 'shadow-lg' : ''}`}>
+                  <div 
+                    className="w-32 h-32 flex items-center justify-center rounded-lg"
+                    style={{ backgroundColor: design.backgroundColor }}
+                  >
+                    <div 
+                      className="w-24 h-24 rounded"
+                      style={{ backgroundColor: design.foregroundColor }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={saveDesignSettings}
+                className="flex-1 bg-[#C8E235] text-[#082E24] py-2.5 rounded-xl font-semibold hover:bg-[#B0C820] transition-all"
+              >
+                حفظ الإعدادات
+              </button>
+              <button
+                onClick={() => setShowDesignModal(false)}
+                className="flex-1 bg-gray-700 text-white py-2.5 rounded-xl font-semibold hover:bg-gray-600 transition-all"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 };

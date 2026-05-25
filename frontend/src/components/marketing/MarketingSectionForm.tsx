@@ -17,6 +17,7 @@ import {
 } from 'react-icons/io5';
 import { MarketingSection, MarketingSectionType } from '../../types/marketing';
 import { uploadService } from '../../services/api/upload.service';
+import { useTheme } from '@/context/ThemeContext';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -50,6 +51,20 @@ const MarketingSectionForm: React.FC<Props> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const theme = useTheme();
+  
+  // ✅ ألوان المودال باستخدام ThemeContext
+  const colors = {
+    bg: theme.backgroundColor || '#082E24',
+    card: theme.cardBgColor || '#112E23',
+    surf: theme.surfaceColor || '#0F3D31',
+    accent: theme.primaryColor || '#3B82F6',
+    text: theme.textColor || '#E8F5E9',
+    muted: theme.mutedColor || '#9DC4AC',
+    border: `rgba(200,226,53,0.15)`,
+    red: '#FF6B6B',
+    blue: '#60A5FA',
+  };
   
   const [formData, setFormData] = useState({
     sectionType: (allowedSectionType || 'announcement') as MarketingSectionType,
@@ -112,13 +127,11 @@ const MarketingSectionForm: React.FC<Props> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // التحقق من حجم الملف (حد أقصى 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setImageError('حجم الصورة يجب أن لا يتجاوز 5 ميجابايت');
       return;
     }
 
-    // التحقق من نوع الملف
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
       setImageError('نوع الملف غير مدعوم. يرجى رفع صورة من نوع JPG, PNG, أو WEBP');
@@ -128,7 +141,6 @@ const MarketingSectionForm: React.FC<Props> = ({
     setUploadingImage(true);
     setImageError(null);
 
-    // عرض المعاينة
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
@@ -136,7 +148,6 @@ const MarketingSectionForm: React.FC<Props> = ({
     reader.readAsDataURL(file);
 
     try {
-      // رفع الصورة إلى الخادم
       const uploadType = businessType === 'restaurant' ? 'restaurant' : 'store';
       const response = await uploadService.uploadImage(file, `marketing_${uploadType}`);
       
@@ -166,7 +177,6 @@ const MarketingSectionForm: React.FC<Props> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // التحقق من وجود صورة
     if (!formData.imageUrl && !initialData?.imageUrl) {
       toast.error('الرجاء رفع صورة للعنصر التسويقي');
       return;
@@ -191,35 +201,267 @@ const MarketingSectionForm: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
+  // ✅ Styles مخصصة باستخدام ألوان ThemeContext
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 50,
+    overflowY: 'auto'
+  };
+
+  const backdropStyle: React.CSSProperties = {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.75)',
+    transition: 'opacity 0.2s'
+  };
+
+  const modalStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    padding: '1rem',
+    position: 'relative',
+    zIndex: 51
+  };
+
+  const containerStyle: React.CSSProperties = {
+    background: colors.card,
+    borderRadius: '1rem',
+    width: '100%',
+    maxWidth: '50rem',
+    maxHeight: '95vh',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+    border: `1px solid ${colors.border}`
+  };
+
+  const headerStyle: React.CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1.25rem 1.5rem',
+    borderBottom: `1px solid ${colors.border}`
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: '1.25rem',
+    fontWeight: 700,
+    color: colors.text,
+    margin: 0
+  };
+
+  const closeBtnStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    color: colors.muted,
+    cursor: 'pointer',
+    padding: '0.25rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '0.5rem',
+    transition: 'all 0.2s'
+  };
+
+  const bodyStyle: React.CSSProperties = {
+    padding: '1.5rem',
+    overflowY: 'auto',
+    flex: 1
+  };
+
+  const footerStyle: React.CSSProperties = {
+    padding: '1rem 1.5rem',
+    borderTop: `1px solid ${colors.border}`,
+    display: 'flex',
+    gap: '0.75rem',
+    justifyContent: 'flex-end',
+    background: colors.surf
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    color: colors.muted,
+    marginBottom: '0.5rem'
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '0.5rem 0.75rem',
+    background: colors.surf,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '0.5rem',
+    color: colors.text,
+    fontSize: '0.875rem',
+    outline: 'none',
+    transition: 'all 0.2s'
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    ...inputStyle,
+    resize: 'vertical'
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    cursor: 'pointer'
+  };
+
+  const uploadAreaStyle: React.CSSProperties = {
+    marginTop: '0.25rem',
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '1.25rem 1.5rem',
+    border: `2px dashed ${colors.border}`,
+    borderRadius: '0.5rem',
+    transition: 'all 0.2s',
+    background: colors.surf
+  };
+
+  const uploadContentStyle: React.CSSProperties = {
+    textAlign: 'center'
+  };
+
+  const uploadIconStyle: React.CSSProperties = {
+    width: '3rem',
+    height: '3rem',
+    margin: '0 auto',
+    color: colors.muted
+  };
+
+  const uploadTextStyle: React.CSSProperties = {
+    color: colors.muted,
+    fontSize: '0.875rem'
+  };
+
+  const uploadLinkStyle: React.CSSProperties = {
+    color: colors.accent,
+    cursor: 'pointer',
+    fontWeight: 500,
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+    fontSize: '0.875rem'
+  };
+
+  const previewContainerStyle: React.CSSProperties = {
+    position: 'relative',
+    width: '100%'
+  };
+
+  const previewImageStyle: React.CSSProperties = {
+    width: '100%',
+    height: '12rem',
+    objectFit: 'cover',
+    borderRadius: '0.5rem'
+  };
+
+  const removeBtnStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '0.5rem',
+    right: '0.5rem',
+    padding: '0.25rem',
+    background: colors.red,
+    color: '#fff',
+    border: 'none',
+    borderRadius: '9999px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s'
+  };
+
+  const checkboxContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem'
+  };
+
+  const checkboxStyle: React.CSSProperties = {
+    width: '1rem',
+    height: '1rem',
+    accentColor: colors.accent
+  };
+
+  const checkboxLabelStyle: React.CSSProperties = {
+    color: colors.text,
+    fontSize: '0.875rem'
+  };
+
+  const errorStyle: React.CSSProperties = {
+    marginTop: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    color: colors.red,
+    fontSize: '0.75rem'
+  };
+
+  const loadingSpinnerStyle: React.CSSProperties = {
+    width: '1rem',
+    height: '1rem',
+    border: `2px solid ${colors.accent}`,
+    borderTopColor: 'transparent',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite'
+  };
+
+  const cancelBtnStyle: React.CSSProperties = {
+    padding: '0.5rem 1rem',
+    background: 'transparent',
+    color: colors.muted,
+    border: `1px solid ${colors.border}`,
+    borderRadius: '0.5rem',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  };
+
+  const submitBtnStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.5rem 1rem',
+    background: colors.accent,
+    color: colors.bg,
+    border: 'none',
+    borderRadius: '0.5rem',
+    cursor: loading || uploadingImage ? 'not-allowed' : 'pointer',
+    opacity: loading || uploadingImage ? 0.6 : 1,
+    transition: 'all 0.2s'
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose} />
-
-        <div className="inline-block align-bottom bg-white rounded-2xl text-right overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+    <div style={overlayStyle}>
+      <div style={backdropStyle} onClick={onClose} />
+      <div style={modalStyle}>
+        <div style={containerStyle}>
           <form onSubmit={handleSubmit}>
-            <div className="bg-white px-6 pt-6 pb-4 max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">
-                  {initialData ? 'تعديل العنصر التسويقي' : 'إضافة عنصر تسويقي جديد'}
-                </h3>
-                <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-500">
-                  <IoClose className="w-6 h-6" />
-                </button>
-              </div>
+            <div style={headerStyle}>
+              <h3 style={titleStyle}>
+                {initialData ? 'تعديل العنصر التسويقي' : 'إضافة عنصر تسويقي جديد'}
+              </h3>
+              <button type="button" onClick={onClose} style={closeBtnStyle}>
+                <IoClose size={20} />
+              </button>
+            </div>
 
-              <div className="space-y-4">
-                {/* Section Type - مخفي إذا كان هناك allowedSectionType */}
+            <div style={bodyStyle}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Section Type */}
                 {!allowedSectionType && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      نوع القسم *
-                    </label>
+                    <label style={labelStyle}>نوع القسم *</label>
                     <select
                       name="sectionType"
                       value={formData.sectionType}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={selectStyle}
                       required
                     >
                       {sectionTypes.map(type => (
@@ -233,51 +475,39 @@ const MarketingSectionForm: React.FC<Props> = ({
 
                 {/* Image Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <IoImage className="w-4 h-4 inline ml-1" />
+                  <label style={labelStyle}>
+                    <IoImage style={{ display: 'inline', marginLeft: '0.25rem' }} size={14} />
                     الصورة *
                   </label>
                   
-                  {/* Preview and Upload Area */}
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-500 transition-colors">
+                  <div style={uploadAreaStyle}>
                     {imagePreview ? (
-                      <div className="relative w-full">
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
-                        >
-                          <IoTrash className="w-4 h-4" />
+                      <div style={previewContainerStyle}>
+                        <img src={imagePreview} alt="Preview" style={previewImageStyle} />
+                        <button type="button" onClick={handleRemoveImage} style={removeBtnStyle}>
+                          <IoTrash size={14} />
                         </button>
                       </div>
                     ) : (
-                      <div className="space-y-2 text-center">
-                        <IoCloudUpload className="mx-auto h-12 w-12 text-gray-400" />
-                        <div className="flex text-sm text-gray-600">
-                          <label
-                            htmlFor="image-upload"
-                            className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
-                          >
-                            <span>رفع صورة</span>
+                      <div style={uploadContentStyle}>
+                        <IoCloudUpload style={uploadIconStyle} />
+                        <div style={uploadTextStyle}>
+                          <label htmlFor="image-upload" style={{ cursor: 'pointer' }}>
+                            <span style={uploadLinkStyle}>رفع صورة</span>
                             <input
                               id="image-upload"
                               name="image-upload"
                               type="file"
                               ref={fileInputRef}
-                              className="sr-only"
+                              style={{ display: 'none' }}
                               accept="image/jpeg,image/png,image/webp,image/jpg"
                               onChange={handleImageUpload}
                               disabled={uploadingImage}
                             />
                           </label>
-                          <p className="pr-1">أو اسحب وأفلت</p>
+                          <span> أو اسحب وأفلت</span>
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p style={{ fontSize: '0.75rem', color: colors.muted, marginTop: '0.5rem' }}>
                           PNG, JPG, WEBP حتى 5MB
                         </p>
                       </div>
@@ -285,88 +515,73 @@ const MarketingSectionForm: React.FC<Props> = ({
                   </div>
                   
                   {uploadingImage && (
-                    <div className="mt-2 flex items-center gap-2 text-blue-600">
-                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm">جاري رفع الصورة...</span>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: colors.accent }}>
+                      <div style={loadingSpinnerStyle} />
+                      <span style={{ fontSize: '0.75rem' }}>جاري رفع الصورة...</span>
                     </div>
                   )}
                   
                   {imageError && (
-                    <div className="mt-2 flex items-center gap-2 text-red-600">
-                      <IoWarning className="w-4 h-4" />
-                      <span className="text-sm">{imageError}</span>
+                    <div style={errorStyle}>
+                      <IoWarning size={14} />
+                      <span>{imageError}</span>
                     </div>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Title Arabic */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      العنوان (عربي)
-                    </label>
+                    <label style={labelStyle}>العنوان (عربي)</label>
                     <input
                       type="text"
                       name="title"
                       value={formData.title}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={inputStyle}
                       placeholder="أدخل العنوان بالعربية"
                     />
                   </div>
-
-                  {/* Title English */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      العنوان (English)
-                    </label>
+                    <label style={labelStyle}>العنوان (English)</label>
                     <input
                       type="text"
                       name="titleEn"
                       value={formData.titleEn}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={inputStyle}
                       placeholder="Enter title in English"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Description Arabic */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      الوصف (عربي)
-                    </label>
+                    <label style={labelStyle}>الوصف (عربي)</label>
                     <textarea
                       name="description"
                       value={formData.description}
                       onChange={handleChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={textareaStyle}
                       placeholder="أدخل الوصف بالعربية"
                     />
                   </div>
-
-                  {/* Description English */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      الوصف (English)
-                    </label>
+                    <label style={labelStyle}>الوصف (English)</label>
                     <textarea
                       name="descriptionEn"
                       value={formData.descriptionEn}
                       onChange={handleChange}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={textareaStyle}
                       placeholder="Enter description in English"
                     />
                   </div>
                 </div>
 
-                {/* Link URL - الوجهة */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <IoLink className="w-4 h-4 inline ml-1" />
+                  <label style={labelStyle}>
+                    <IoLink style={{ display: 'inline', marginLeft: '0.25rem' }} size={14} />
                     رابط الوجهة
                   </label>
                   <input
@@ -374,34 +589,29 @@ const MarketingSectionForm: React.FC<Props> = ({
                     name="linkUrl"
                     value={formData.linkUrl}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    style={inputStyle}
                     placeholder="https://example.com/product"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p style={{ fontSize: '0.75rem', color: colors.muted, marginTop: '0.25rem' }}>
                     الرابط الذي ينتقل إليه المستخدم عند النقر على البانر (اختياري)
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Sort Order */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ترتيب العرض
-                    </label>
+                    <label style={labelStyle}>ترتيب العرض</label>
                     <input
                       type="number"
                       name="sortOrder"
                       value={formData.sortOrder}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={inputStyle}
                       min="0"
                     />
                   </div>
-
-                  {/* Start Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <IoCalendar className="w-4 h-4 inline ml-1" />
+                    <label style={labelStyle}>
+                      <IoCalendar style={{ display: 'inline', marginLeft: '0.25rem' }} size={14} />
                       تاريخ البداية
                     </label>
                     <input
@@ -409,14 +619,12 @@ const MarketingSectionForm: React.FC<Props> = ({
                       name="startAt"
                       value={formData.startAt}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={inputStyle}
                     />
                   </div>
-
-                  {/* End Date */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      <IoCalendar className="w-4 h-4 inline ml-1" />
+                    <label style={labelStyle}>
+                      <IoCalendar style={{ display: 'inline', marginLeft: '0.25rem' }} size={14} />
                       تاريخ النهاية
                     </label>
                     <input
@@ -424,48 +632,41 @@ const MarketingSectionForm: React.FC<Props> = ({
                       name="endAt"
                       value={formData.endAt}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      style={inputStyle}
                     />
                   </div>
                 </div>
 
-                {/* Active Status */}
-                <div className="flex items-center">
+                <div style={checkboxContainerStyle}>
                   <input
                     type="checkbox"
                     name="isActive"
                     checked={formData.isActive}
                     onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    style={checkboxStyle}
                   />
-                  <label className="mr-2 text-sm text-gray-700">
-                    مفعل
-                  </label>
+                  <label style={checkboxLabelStyle}>مفعل</label>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
+            <div style={footerStyle}>
+              <button type="button" onClick={onClose} style={cancelBtnStyle}>
                 إلغاء
               </button>
               <button
                 type="submit"
                 disabled={loading || uploadingImage}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                style={submitBtnStyle}
               >
                 {uploadingImage ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div style={loadingSpinnerStyle} />
                     جاري رفع الصورة...
                   </>
                 ) : (
                   <>
-                    <IoSave className="w-4 h-4" />
+                    <IoSave size={14} />
                     {loading ? 'جاري الحفظ...' : (initialData ? 'تحديث' : 'إضافة')}
                   </>
                 )}
@@ -474,6 +675,12 @@ const MarketingSectionForm: React.FC<Props> = ({
           </form>
         </div>
       </div>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

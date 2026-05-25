@@ -1,8 +1,12 @@
 // backend/src/controllers/qrController.ts
+
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import QRCode from 'qrcode';
 import prisma from '../services/prisma';
+
+// ✅ استخدام CLIENT_URL من متغيرات البيئة
+const CLIENT_URL = process.env.CLIENT_URL || 'https://shamstores.com';
 
 // دالة مساعدة للحصول على restaurantId
 const getRestaurantId = async (req: AuthRequest): Promise<string | null> => {
@@ -24,6 +28,34 @@ const getStoreId = async (req: AuthRequest): Promise<string | null> => {
     return stores.length > 0 ? stores[0].id : null;
   }
   return req.user?.storeId || null;
+};
+
+// ✅ دالة للحصول على الرابط الصحيح للمطعم (مع subdomain أو customDomain)
+const getRestaurantUrl = (restaurant: any): string => {
+  // إذا كان هناك customDomain
+  if (restaurant.customDomain) {
+    return `https://${restaurant.customDomain}`;
+  }
+  // إذا كان هناك subdomain
+  if (restaurant.subdomain) {
+    return `https://${restaurant.subdomain}.shamstores.com`;
+  }
+  // الوضع العادي: domain/slug
+  return `${CLIENT_URL}/${restaurant.slug}`;
+};
+
+// ✅ دالة للحصول على الرابط الصحيح للمتجر (مع subdomain أو customDomain)
+const getStoreUrl = (store: any): string => {
+  // إذا كان هناك customDomain
+  if (store.customDomain) {
+    return `https://${store.customDomain}`;
+  }
+  // إذا كان هناك subdomain
+  if (store.subdomain) {
+    return `https://${store.subdomain}.shamstores.com`;
+  }
+  // الوضع العادي: domain/slug
+  return `${CLIENT_URL}/${store.slug}`;
 };
 
 // دالة مساعدة لتوليد QR
@@ -82,8 +114,8 @@ export const generateRestaurantQR = async (
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = `${frontendUrl}/${restaurant.slug}`;
+    // ✅ استخدام الرابط الصحيح مع subdomain أو customDomain
+    const url = getRestaurantUrl(restaurant);
     const qrData = await generateQRData(url);
 
     res.json({
@@ -131,8 +163,8 @@ export const generateTableQR = async (
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = `${frontendUrl}/${restaurant.slug}/table/${table.id}`;
+    const baseUrl = getRestaurantUrl(restaurant);
+    const url = `${baseUrl}/table/${table.id}`;
     const qrData = await generateQRData(url);
 
     res.json({
@@ -175,8 +207,8 @@ export const generateItemQR = async (
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = `${frontendUrl}/${restaurant.slug}/item/${item.id}`;
+    const baseUrl = getRestaurantUrl(restaurant);
+    const url = `${baseUrl}/item/${item.id}`;
     const qrData = await generateQRData(url);
 
     res.json({
@@ -226,8 +258,8 @@ export const generateStoreQR = async (
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = `${frontendUrl}/${store.slug}`;
+    // ✅ استخدام الرابط الصحيح مع subdomain أو customDomain
+    const url = getStoreUrl(store);
     const qrData = await generateQRData(url);
 
     res.json({
@@ -270,8 +302,8 @@ export const generateStoreProductQR = async (
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = `${frontendUrl}/${store.slug}/product/${product.id}`;
+    const baseUrl = getStoreUrl(store);
+    const url = `${baseUrl}/product/${product.id}`;
     const qrData = await generateQRData(url);
 
     res.json({
@@ -306,8 +338,7 @@ export const generateAdminRestaurantQR = async (
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = `${frontendUrl}/${restaurant.slug}`;
+    const url = getRestaurantUrl(restaurant);
     const qrData = await generateQRData(url);
 
     res.json({
@@ -340,8 +371,7 @@ export const generateAdminStoreQR = async (
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const url = `${frontendUrl}/${store.slug}`;
+    const url = getStoreUrl(store);
     const qrData = await generateQRData(url);
 
     res.json({
@@ -380,11 +410,11 @@ export const generateAllTablesQR = async (
     }
 
     const tables = await prisma.table.findMany({ where: { restaurantId } });
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const baseUrl = getRestaurantUrl(restaurant);
     const results = [];
 
     for (const table of tables) {
-      const url = `${frontendUrl}/${restaurant.slug}/table/${table.id}`;
+      const url = `${baseUrl}/table/${table.id}`;
       const qrData = await generateQRData(url);
       results.push({
         tableId: table.id,

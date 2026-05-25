@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '../../hooks/useStore';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '@/context/ThemeContext';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
@@ -12,19 +13,10 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 
-const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
+// ✅ الألوان الثابتة فقط للعناصر التي لا تتغير (الأحمر، الأزرق، إلخ)
+const staticColors = {
+  red: '#FF6B6B',
+  blue: '#60A5FA',
   yellow: '#F59E0B',
   purple: '#A78BFA',
 };
@@ -68,28 +60,25 @@ const extractData = (response: any) => {
   return [];
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 12px',
-  background: C.surf,
-  border: `1px solid ${C.border}`,
-  borderRadius: 8,
-  color: C.text,
-  outline: 'none',
-};
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 13,
-  fontWeight: 500,
-  marginBottom: 4,
-  color: C.muted,
-};
-
 const StoreProductsPage: React.FC = () => {
   const { store, loading: storeLoading } = useStore();
   const permissions = usePermissions();
   const { isSuperAdmin, isStoreOwner, isStaff } = useAuth();
+  const theme = useTheme();
+
+  // ✅ استخدام ألوان المتجر الديناميكية
+  const dynamicColors = {
+    bg: theme.backgroundColor || '#082E24',
+    card: theme.cardBgColor || '#112E23',
+    prim: '#0D4A3A',
+    surf: theme.surfaceColor || '#0F3D31',
+    surfL: '#164D3E',
+    accent: theme.primaryColor || '#C8E235',
+    acDk: '#A8C220',
+    text: theme.textColor || '#E8F5E9',
+    muted: theme.mutedColor || '#9DC4AC',
+    border: `rgba(200,226,53,0.15)`,
+  };
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -138,14 +127,11 @@ const StoreProductsPage: React.FC = () => {
       console.log('Categories response:', categoriesResponse);
       console.log('Products response:', productsResponse);
 
-      // استخراج الفئات
       const categoriesData = extractData(categoriesResponse);
       setCategories(categoriesData);
 
-      // استخراج المنتجات
       let productsData = extractData(productsResponse);
       
-      // معالجة المنتجات
       const processedProducts = productsData.map((product: any) => ({
         ...product,
         price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
@@ -310,10 +296,10 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const getStockStatus = (stock: number) => {
-    if (stock <= 0) return { text: 'نفد من المخزون', bg: `rgba(255,107,107,0.15)`, color: C.red };
-    if (stock <= 5) return { text: 'مخزون منخفض', bg: `rgba(245,158,11,0.15)`, color: C.yellow };
-    if (stock <= 20) return { text: 'مخزون متوسط', bg: `rgba(96,165,250,0.15)`, color: C.blue };
-    return { text: 'مخزون جيد', bg: `rgba(200,226,53,0.15)`, color: C.accent };
+    if (stock <= 0) return { text: 'نفد من المخزون', bg: `${staticColors.red}20`, color: staticColors.red };
+    if (stock <= 5) return { text: 'مخزون منخفض', bg: `${staticColors.yellow}20`, color: staticColors.yellow };
+    if (stock <= 20) return { text: 'مخزون متوسط', bg: `${staticColors.blue}20`, color: staticColors.blue };
+    return { text: 'مخزون جيد', bg: `${dynamicColors.accent}20`, color: dynamicColors.accent };
   };
 
   const getCategoryName = (categoryId: string) => {
@@ -321,27 +307,46 @@ const StoreProductsPage: React.FC = () => {
     return category?.name || 'بدون فئة';
   };
 
+  // ✅ ستايل الحقول مع الألوان الديناميكية
+  const dynamicInputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 12px',
+    background: dynamicColors.surf,
+    border: `1px solid ${dynamicColors.border}`,
+    borderRadius: 8,
+    color: dynamicColors.text,
+    outline: 'none',
+  };
+
+  const dynamicLabelStyle: React.CSSProperties = {
+    display: 'block',
+    fontSize: 13,
+    fontWeight: 500,
+    marginBottom: 4,
+    color: dynamicColors.muted,
+  };
+
   if (loading || storeLoading) return <Loader fullScreen />;
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: 24 }} dir="rtl">
+    <div style={{ background: dynamicColors.bg, minHeight: '100vh', padding: 24, fontFamily: theme.fontFamily || 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>إدارة منتجات المتجر</h1>
-          <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>إدارة الفئات والمنتجات في متجرك</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>🛍️ إدارة منتجات المتجر</h1>
+          <p style={{ fontSize: 13, color: dynamicColors.muted, marginTop: 4 }}>إدارة الفئات والمنتجات في متجرك</p>
         </div>
         {(isSuperAdmin || isStoreOwner) && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => handleOpenCategoryModal()}
-              style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.accent, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+              style={{ background: dynamicColors.surf, border: `1px solid ${dynamicColors.border}`, color: dynamicColors.accent, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
             >
               <IoAdd size={18} /> إضافة فئة
             </button>
             <button
               onClick={() => handleOpenProductModal()}
-              style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none' }}
+              style={{ background: dynamicColors.accent, color: dynamicColors.bg, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none' }}
             >
               <IoAdd size={18} /> إضافة منتج
             </button>
@@ -352,13 +357,13 @@ const StoreProductsPage: React.FC = () => {
       {/* إحصائيات سريعة */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
         {[
-          { label: 'إجمالي الفئات', value: categories.length, color: C.blue },
-          { label: 'إجمالي المنتجات', value: products.length, color: C.accent },
-          { label: 'غير متوفرة', value: products.filter(p => !p.isAvailable).length, color: C.yellow },
-          { label: 'نفد من المخزون', value: products.filter(p => p.stock === 0).length, color: C.red },
+          { label: 'إجمالي الفئات', value: categories.length, color: staticColors.blue },
+          { label: 'إجمالي المنتجات', value: products.length, color: dynamicColors.accent },
+          { label: 'غير متوفرة', value: products.filter(p => !p.isAvailable).length, color: staticColors.yellow },
+          { label: 'نفد من المخزون', value: products.filter(p => p.stock === 0).length, color: staticColors.red },
         ].map((stat, i) => (
-          <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16 }}>
-            <p style={{ color: C.muted, fontSize: 13, margin: 0 }}>{stat.label}</p>
+          <div key={i} style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: 16 }}>
+            <p style={{ color: dynamicColors.muted, fontSize: 13, margin: 0 }}>{stat.label}</p>
             <p style={{ color: stat.color, fontSize: 28, fontWeight: 700, margin: '4px 0 0' }}>{stat.value}</p>
           </div>
         ))}
@@ -367,36 +372,36 @@ const StoreProductsPage: React.FC = () => {
       {/* الفئات */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 4, height: 22, background: C.accent, borderRadius: 4, display: 'inline-block' }}></span>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: dynamicColors.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 4, height: 22, background: dynamicColors.accent, borderRadius: 4, display: 'inline-block' }}></span>
             الفئات
           </h2>
-          <span style={{ color: C.muted, fontSize: 13 }}>{categories.length} فئة</span>
+          <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{categories.length} فئة</span>
         </div>
 
         {categories.length === 0 ? (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
-            <IoCube style={{ color: C.muted, fontSize: 48, marginBottom: 12 }} />
-            <p style={{ color: C.muted, margin: 0 }}>لا توجد فئات. أضف فئة جديدة!</p>
+          <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
+            <IoCube style={{ color: dynamicColors.muted, fontSize: 48, marginBottom: 12 }} />
+            <p style={{ color: dynamicColors.muted, margin: 0 }}>لا توجد فئات. أضف فئة جديدة!</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
             {categories.map(cat => (
-              <div key={cat.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 16, transition: 'border-color 0.2s' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = C.accent)}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
+              <div key={cat.id} style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: 16, transition: 'border-color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = dynamicColors.accent)}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = dynamicColors.border)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontWeight: 600, color: C.text, margin: 0, fontSize: 14 }}>{cat.name}</h3>
-                    {cat.nameEn && <p style={{ color: C.muted, fontSize: 11, margin: '2px 0 0' }}>{cat.nameEn}</p>}
+                    <h3 style={{ fontWeight: 600, color: dynamicColors.text, margin: 0, fontSize: 14 }}>{cat.name}</h3>
+                    {cat.nameEn && <p style={{ color: dynamicColors.muted, fontSize: 11, margin: '2px 0 0' }}>{cat.nameEn}</p>}
                   </div>
                   {(isSuperAdmin || isStoreOwner) && (
                     <div style={{ display: 'flex', gap: 4 }}>
-                      <button onClick={() => handleOpenCategoryModal(cat)} style={{ padding: 6, background: 'transparent', border: 'none', color: C.accent, cursor: 'pointer', borderRadius: 8 }}>
+                      <button onClick={() => handleOpenCategoryModal(cat)} style={{ padding: 6, background: 'transparent', border: 'none', color: dynamicColors.accent, cursor: 'pointer', borderRadius: 8 }}>
                         <IoPencil size={15} />
                       </button>
-                      <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: 6, background: 'transparent', border: 'none', color: C.red, cursor: 'pointer', borderRadius: 8 }}>
+                      <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: 6, background: 'transparent', border: 'none', color: staticColors.red, cursor: 'pointer', borderRadius: 8 }}>
                         <IoTrash size={15} />
                       </button>
                     </div>
@@ -405,10 +410,10 @@ const StoreProductsPage: React.FC = () => {
                 {cat.image && (
                   <img src={getImageUrl(cat.image)} alt={cat.name} style={{ width: '100%', height: 96, objectFit: 'cover', borderRadius: 10, marginTop: 10 }} />
                 )}
-                {cat.description && <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>{cat.description}</p>}
-                <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: C.muted, fontSize: 12 }}>{products.filter(p => p.categoryId === cat.id).length} منتج</span>
-                  <span style={{ color: C.accent, fontSize: 12 }}>نشط</span>
+                {cat.description && <p style={{ color: dynamicColors.muted, fontSize: 12, marginTop: 8 }}>{cat.description}</p>}
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${dynamicColors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: dynamicColors.muted, fontSize: 12 }}>{products.filter(p => p.categoryId === cat.id).length} منتج</span>
+                  <span style={{ color: dynamicColors.accent, fontSize: 12 }}>نشط</span>
                 </div>
               </div>
             ))}
@@ -419,17 +424,17 @@ const StoreProductsPage: React.FC = () => {
       {/* المنتجات */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 4, height: 22, background: C.accent, borderRadius: 4, display: 'inline-block' }}></span>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: dynamicColors.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 4, height: 22, background: dynamicColors.accent, borderRadius: 4, display: 'inline-block' }}></span>
             المنتجات
           </h2>
-          <span style={{ color: C.muted, fontSize: 13 }}>{products.length} منتج</span>
+          <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{products.length} منتج</span>
         </div>
 
         {products.length === 0 ? (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
-            <IoCube style={{ color: C.muted, fontSize: 48, marginBottom: 12 }} />
-            <p style={{ color: C.muted, margin: 0 }}>لا توجد منتجات. أضف منتجاً جديداً!</p>
+          <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
+            <IoCube style={{ color: dynamicColors.muted, fontSize: 48, marginBottom: 12 }} />
+            <p style={{ color: dynamicColors.muted, margin: 0 }}>لا توجد منتجات. أضف منتجاً جديداً!</p>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 20 }}>
@@ -440,28 +445,28 @@ const StoreProductsPage: React.FC = () => {
               const discountPercent = hasDiscount ? Math.round(((product.price - product.discountedPrice!) / product.price) * 100) : 0;
               
               return (
-                <div key={product.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = C.accent)}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
+                <div key={product.id} style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.borderColor = dynamicColors.accent)}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = dynamicColors.border)}
                 >
                   {/* صورة المنتج */}
-                  <div style={{ position: 'relative', height: 140, background: C.surf, overflow: 'hidden' }}>
+                  <div style={{ position: 'relative', height: 140, background: dynamicColors.surf, overflow: 'hidden' }}>
                     {product.imageUrl ? (
                       <img src={getImageUrl(product.imageUrl)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <IoImage style={{ color: C.muted, fontSize: 36 }} />
-                        <span style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>لا توجد صورة</span>
+                        <IoImage style={{ color: dynamicColors.muted, fontSize: 36 }} />
+                        <span style={{ color: dynamicColors.muted, fontSize: 12, marginTop: 4 }}>لا توجد صورة</span>
                       </div>
                     )}
                     <button
                       onClick={() => handleToggleAvailability(product.id, product.isAvailable)}
-                      style={{ position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: '50%', border: 'none', cursor: 'pointer', background: product.isAvailable ? C.accent : C.muted, color: C.bg }}
+                      style={{ position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: '50%', border: 'none', cursor: 'pointer', background: product.isAvailable ? dynamicColors.accent : dynamicColors.muted, color: dynamicColors.bg }}
                     >
                       {product.isAvailable ? <IoEye size={13} /> : <IoEyeOff size={13} />}
                     </button>
                     <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 4 }}>
-                      {hasDiscount && <span style={{ background: C.red, color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>-{discountPercent}%</span>}
+                      {hasDiscount && <span style={{ background: staticColors.red, color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>-{discountPercent}%</span>}
                       {product.stock === 0 && <span style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>نفد</span>}
                     </div>
                     {(isSuperAdmin || isStoreOwner) && (
@@ -469,11 +474,11 @@ const StoreProductsPage: React.FC = () => {
                         onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
                         onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
                       >
-                        <button onClick={() => handleOpenProductModal(product)} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: C.prim, cursor: 'pointer' }}>
+                        <button onClick={() => handleOpenProductModal(product)} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: dynamicColors.prim, cursor: 'pointer' }}>
                           <IoPencil size={15} />
                         </button>
-                        <button onClick={() => handleDeleteProduct(product.id)} disabled={deleting === product.id} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: C.red, cursor: 'pointer' }}>
-                          {deleting === product.id ? <div style={{ width: 15, height: 15, border: `2px solid ${C.red}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <IoTrash size={15} />}
+                        <button onClick={() => handleDeleteProduct(product.id)} disabled={deleting === product.id} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: staticColors.red, cursor: 'pointer' }}>
+                          {deleting === product.id ? <div style={{ width: 15, height: 15, border: `2px solid ${staticColors.red}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <IoTrash size={15} />}
                         </button>
                       </div>
                     )}
@@ -481,30 +486,30 @@ const StoreProductsPage: React.FC = () => {
 
                   {/* معلومات المنتج */}
                   <div style={{ padding: 12 }}>
-                    <h3 style={{ fontWeight: 600, color: C.text, margin: 0, fontSize: 13 }}>{product.name}</h3>
-                    {product.nameEn && <p style={{ color: C.muted, fontSize: 11, margin: '2px 0 0' }}>{product.nameEn}</p>}
+                    <h3 style={{ fontWeight: 600, color: dynamicColors.text, margin: 0, fontSize: 13 }}>{product.name}</h3>
+                    {product.nameEn && <p style={{ color: dynamicColors.muted, fontSize: 11, margin: '2px 0 0' }}>{product.nameEn}</p>}
                     <div style={{ marginTop: 6 }}>
-                      <span style={{ background: C.surf, color: C.muted, fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>
+                      <span style={{ background: dynamicColors.surf, color: dynamicColors.muted, fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>
                         {getCategoryName(product.categoryId || '')}
                       </span>
                     </div>
-                    <p style={{ color: C.muted, fontSize: 12, marginTop: 8, minHeight: 32 }}>{product.description || 'لا يوجد وصف'}</p>
+                    <p style={{ color: dynamicColors.muted, fontSize: 12, marginTop: 8, minHeight: 32 }}>{product.description || 'لا يوجد وصف'}</p>
                     <div style={{ marginTop: 8 }}>
                       {hasDiscount ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ color: C.accent, fontSize: 16, fontWeight: 700 }}>{finalPrice.toFixed(2)} ر.س</span>
-                          <span style={{ color: C.muted, fontSize: 11, textDecoration: 'line-through' }}>{product.price.toFixed(2)} ر.س</span>
-                          <span style={{ background: `rgba(200,226,53,0.15)`, color: C.accent, fontSize: 11, padding: '1px 6px', borderRadius: 10 }}>
+                          <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{finalPrice.toFixed(2)} ر.س</span>
+                          <span style={{ color: dynamicColors.muted, fontSize: 11, textDecoration: 'line-through' }}>{product.price.toFixed(2)} ر.س</span>
+                          <span style={{ background: `${dynamicColors.accent}20`, color: dynamicColors.accent, fontSize: 11, padding: '1px 6px', borderRadius: 10 }}>
                             -{discountPercent}%
                           </span>
                         </div>
                       ) : (
-                        <span style={{ color: C.accent, fontSize: 16, fontWeight: 700 }}>{product.price.toFixed(2)} ر.س</span>
+                        <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{product.price.toFixed(2)} ر.س</span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: `1px solid ${dynamicColors.border}` }}>
                       <span style={{ background: stockStatus.bg, color: stockStatus.color, fontSize: 11, padding: '3px 8px', borderRadius: 12 }}>{stockStatus.text}</span>
-                      {product.sku && <span style={{ color: C.muted, fontSize: 11, fontFamily: 'monospace' }}>{product.sku.length > 8 ? product.sku.substring(0, 8) + '…' : product.sku}</span>}
+                      {product.sku && <span style={{ color: dynamicColors.muted, fontSize: 11, fontFamily: 'monospace' }}>{product.sku.length > 8 ? product.sku.substring(0, 8) + '…' : product.sku}</span>}
                     </div>
                   </div>
                 </div>
@@ -518,37 +523,37 @@ const StoreProductsPage: React.FC = () => {
       <Modal isOpen={showCategoryModal} onClose={() => { setShowCategoryModal(false); resetCategoryForm(); }} title={selectedCategory ? 'تعديل فئة' : 'إضافة فئة جديدة'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={labelStyle}>اسم الفئة (عربي) <span style={{ color: C.red }}>*</span></label>
-            <input type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} style={inputStyle} placeholder="مثال: إلكترونيات" />
+            <label style={dynamicLabelStyle}>اسم الفئة (عربي) <span style={{ color: staticColors.red }}>*</span></label>
+            <input type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} style={dynamicInputStyle} placeholder="مثال: إلكترونيات" />
           </div>
           <div>
-            <label style={labelStyle}>اسم الفئة (إنجليزي)</label>
-            <input type="text" value={categoryForm.nameEn} onChange={(e) => setCategoryForm({ ...categoryForm, nameEn: e.target.value })} style={inputStyle} placeholder="Example: Electronics" />
+            <label style={dynamicLabelStyle}>اسم الفئة (إنجليزي)</label>
+            <input type="text" value={categoryForm.nameEn} onChange={(e) => setCategoryForm({ ...categoryForm, nameEn: e.target.value })} style={dynamicInputStyle} placeholder="Example: Electronics" />
           </div>
           <div>
-            <label style={labelStyle}>الوصف</label>
-            <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="وصف الفئة..." />
+            <label style={dynamicLabelStyle}>الوصف</label>
+            <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} style={{ ...dynamicInputStyle, resize: 'vertical' }} rows={3} placeholder="وصف الفئة..." />
           </div>
           <div>
-            <label style={labelStyle}>الصورة</label>
+            <label style={dynamicLabelStyle}>الصورة</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <label style={{ flex: 1, cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', border: `2px dashed ${C.border}`, borderRadius: 10, color: C.muted }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', border: `2px dashed ${dynamicColors.border}`, borderRadius: 10, color: dynamicColors.muted }}>
                   <IoCloudUpload />
                   <span style={{ fontSize: 13 }}>اختر صورة</span>
                 </div>
                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'category')} style={{ display: 'none' }} disabled={uploading} />
               </label>
               {categoryForm.image && (
-                <button onClick={() => removeImage('category')} style={{ padding: 8, background: 'transparent', border: 'none', color: C.red, cursor: 'pointer' }}>
+                <button onClick={() => removeImage('category')} style={{ padding: 8, background: 'transparent', border: 'none', color: staticColors.red, cursor: 'pointer' }}>
                   <IoTrash size={18} />
                 </button>
               )}
             </div>
-            {uploading && <p style={{ color: C.accent, fontSize: 13, marginTop: 4 }}>جاري رفع الصورة...</p>}
-            {categoryForm.image && <img src={getImageUrl(categoryForm.image)} alt="معاينة" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, marginTop: 8, border: `1px solid ${C.border}` }} />}
+            {uploading && <p style={{ color: dynamicColors.accent, fontSize: 13, marginTop: 4 }}>جاري رفع الصورة...</p>}
+            {categoryForm.image && <img src={getImageUrl(categoryForm.image)} alt="معاينة" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, marginTop: 8, border: `1px solid ${dynamicColors.border}` }} />}
           </div>
-          <button onClick={handleSaveCategory} disabled={uploading} style={{ background: C.accent, color: C.bg, padding: '10px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 14 }}>
+          <button onClick={handleSaveCategory} disabled={uploading} style={{ background: dynamicColors.accent, color: dynamicColors.bg, padding: '10px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 14 }}>
             {uploading ? 'جاري الحفظ...' : 'حفظ'}
           </button>
         </div>
@@ -558,74 +563,74 @@ const StoreProductsPage: React.FC = () => {
       <Modal isOpen={showProductModal} onClose={() => { setShowProductModal(false); resetProductForm(); }} title={selectedProduct ? 'تعديل منتج' : 'إضافة منتج جديد'} size="lg">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxHeight: '70vh', overflowY: 'auto', padding: 4 }}>
           <div>
-            <label style={labelStyle}>الفئة</label>
-            <select value={productForm.categoryId} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })} style={{ ...inputStyle }}>
+            <label style={dynamicLabelStyle}>الفئة</label>
+            <select value={productForm.categoryId} onChange={(e) => setProductForm({ ...productForm, categoryId: e.target.value })} style={{ ...dynamicInputStyle }}>
               <option value="">بدون فئة</option>
               {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
             </select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>اسم المنتج (عربي) <span style={{ color: C.red }}>*</span></label>
-              <input type="text" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} style={inputStyle} placeholder="اسم المنتج" />
+              <label style={dynamicLabelStyle}>اسم المنتج (عربي) <span style={{ color: staticColors.red }}>*</span></label>
+              <input type="text" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} style={dynamicInputStyle} placeholder="اسم المنتج" />
             </div>
             <div>
-              <label style={labelStyle}>اسم المنتج (إنجليزي)</label>
-              <input type="text" value={productForm.nameEn} onChange={(e) => setProductForm({ ...productForm, nameEn: e.target.value })} style={inputStyle} placeholder="Product name" />
+              <label style={dynamicLabelStyle}>اسم المنتج (إنجليزي)</label>
+              <input type="text" value={productForm.nameEn} onChange={(e) => setProductForm({ ...productForm, nameEn: e.target.value })} style={dynamicInputStyle} placeholder="Product name" />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>السعر (ر.س) <span style={{ color: C.red }}>*</span></label>
-              <input type="number" step="0.01" min="0" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} style={inputStyle} placeholder="0.00" />
+              <label style={dynamicLabelStyle}>السعر (ر.س) <span style={{ color: staticColors.red }}>*</span></label>
+              <input type="number" step="0.01" min="0" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} style={dynamicInputStyle} placeholder="0.00" />
             </div>
             <div>
-              <label style={labelStyle}>السعر بعد الخصم (ر.س)</label>
-              <input type="number" step="0.01" min="0" value={productForm.discountedPrice} onChange={(e) => setProductForm({ ...productForm, discountedPrice: e.target.value })} style={inputStyle} placeholder="0.00" />
+              <label style={dynamicLabelStyle}>السعر بعد الخصم (ر.س)</label>
+              <input type="number" step="0.01" min="0" value={productForm.discountedPrice} onChange={(e) => setProductForm({ ...productForm, discountedPrice: e.target.value })} style={dynamicInputStyle} placeholder="0.00" />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>المخزون</label>
-              <input type="number" min="0" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} style={inputStyle} placeholder="0" />
+              <label style={dynamicLabelStyle}>المخزون</label>
+              <input type="number" min="0" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} style={dynamicInputStyle} placeholder="0" />
             </div>
             <div>
-              <label style={labelStyle}>SKU (رمز المنتج)</label>
-              <input type="text" value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} style={inputStyle} placeholder="PRD-001" />
+              <label style={dynamicLabelStyle}>SKU (رمز المنتج)</label>
+              <input type="text" value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} style={dynamicInputStyle} placeholder="PRD-001" />
             </div>
           </div>
           <div>
-            <label style={labelStyle}>الوصف (عربي)</label>
-            <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="وصف المنتج..." />
+            <label style={dynamicLabelStyle}>الوصف (عربي)</label>
+            <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} style={{ ...dynamicInputStyle, resize: 'vertical' }} rows={3} placeholder="وصف المنتج..." />
           </div>
           <div>
-            <label style={labelStyle}>الوصف (إنجليزي)</label>
-            <textarea value={productForm.descriptionEn} onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} placeholder="Product description..." />
+            <label style={dynamicLabelStyle}>الوصف (إنجليزي)</label>
+            <textarea value={productForm.descriptionEn} onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })} style={{ ...dynamicInputStyle, resize: 'vertical' }} rows={3} placeholder="Product description..." />
           </div>
           <div>
-            <label style={labelStyle}>صورة المنتج</label>
+            <label style={dynamicLabelStyle}>صورة المنتج</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <label style={{ flex: 1, cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', border: `2px dashed ${C.border}`, borderRadius: 10, color: C.muted }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', border: `2px dashed ${dynamicColors.border}`, borderRadius: 10, color: dynamicColors.muted }}>
                   <IoCloudUpload />
                   <span style={{ fontSize: 13 }}>اختر صورة</span>
                 </div>
                 <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'product')} style={{ display: 'none' }} disabled={uploading} />
               </label>
               {productForm.imageUrl && (
-                <button onClick={() => removeImage('product')} style={{ padding: 8, background: 'transparent', border: 'none', color: C.red, cursor: 'pointer' }}>
+                <button onClick={() => removeImage('product')} style={{ padding: 8, background: 'transparent', border: 'none', color: staticColors.red, cursor: 'pointer' }}>
                   <IoTrash size={18} />
                 </button>
               )}
             </div>
-            {uploading && <p style={{ color: C.accent, fontSize: 13, marginTop: 4 }}>جاري رفع الصورة...</p>}
-            {productForm.imageUrl && <img src={getImageUrl(productForm.imageUrl)} alt="معاينة" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, marginTop: 8, border: `1px solid ${C.border}` }} />}
+            {uploading && <p style={{ color: dynamicColors.accent, fontSize: 13, marginTop: 4 }}>جاري رفع الصورة...</p>}
+            {productForm.imageUrl && <img src={getImageUrl(productForm.imageUrl)} alt="معاينة" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, marginTop: 8, border: `1px solid ${dynamicColors.border}` }} />}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm({ ...productForm, isAvailable: e.target.checked })} style={{ width: 16, height: 16, accentColor: C.accent }} />
-            <span style={{ color: C.text, fontSize: 14, fontWeight: 500 }}>المنتج متاح للبيع</span>
+            <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm({ ...productForm, isAvailable: e.target.checked })} style={{ width: 16, height: 16, accentColor: dynamicColors.accent }} />
+            <span style={{ color: dynamicColors.text, fontSize: 14, fontWeight: 500 }}>المنتج متاح للبيع</span>
           </div>
-          <button onClick={handleSaveProduct} disabled={uploading} style={{ background: C.accent, color: C.bg, padding: '10px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 14 }}>
+          <button onClick={handleSaveProduct} disabled={uploading} style={{ background: dynamicColors.accent, color: dynamicColors.bg, padding: '10px', borderRadius: 10, border: 'none', fontWeight: 700, cursor: 'pointer', width: '100%', fontSize: 14 }}>
             {uploading ? 'جاري الحفظ...' : 'حفظ المنتج'}
           </button>
         </div>
