@@ -334,9 +334,22 @@ export const login = async (
     const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
     console.log('🔐 Email verification requirement (login):', { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification });
     if (shouldRequireEmailVerification && !user.isEmailVerified) {
+      let emailSent = false;
+      if (smtpConfigured) {
+        const emailService = require('../services/emailService').default;
+        await emailService.initializeTransporter();
+        const verificationCode = await emailService.generateVerificationCode(user.email);
+        emailSent = await emailService.sendVerificationEmail(user.email, verificationCode);
+        console.log('📧 Verification email sent (login):', emailSent);
+      } else {
+        console.warn('⚠️ SMTP credentials not configured. Email sending disabled.');
+      }
+
       res.status(401).json({ 
         success: false,
-        error: 'يرجى تفعيل حسابك عبر البريد الإلكتروني أولاً' 
+        error: 'يرجى تفعيل حسابك عبر البريد الإلكتروني أولاً',
+        requiresEmailVerification: true,
+        emailSent
       });
       return;
     }
