@@ -9,6 +9,22 @@ import bcrypt from 'bcrypt';
 import settingsService from '../services/settingsService';
 import prisma from '../services/prisma';
 
+const getEmailVerificationRequirement = async () => {
+  const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
+  const [smtpUser, smtpPassword] = await Promise.all([
+    settingsService.getString('smtp_user', ''),
+    settingsService.getString('smtp_password', ''),
+  ]);
+  const smtpConfigured = (!!smtpUser && !!smtpPassword) || (!!process.env.SMTP_USER && !!process.env.SMTP_PASSWORD);
+  const shouldRequireEmailVerification = requireEmailVerification || smtpConfigured;
+
+  return {
+    requireEmailVerification,
+    smtpConfigured,
+    shouldRequireEmailVerification
+  };
+};
+
 // ==================== تسجيل مطعم جديد ====================
 
 export const register = async (
@@ -37,8 +53,8 @@ export const register = async (
       return;
     }
 
-    const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
-    console.log('🔐 Email verification required (register):', requireEmailVerification);
+    const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
+    console.log('🔐 Email verification requirement (register):', { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification });
 
     let user;
     let token: string | null = null;
@@ -80,7 +96,7 @@ export const register = async (
 
     // Generate and send verification code if email verification is required
     let verificationCode = null;
-    if (requireEmailVerification) {
+    if (shouldRequireEmailVerification) {
       const emailService = require('../services/emailService').default;
       await emailService.initializeTransporter();
       verificationCode = await emailService.generateVerificationCode(email);
@@ -88,7 +104,7 @@ export const register = async (
       console.log('📧 Verification email sent (register):', emailSent);
     }
 
-    if (!requireEmailVerification) {
+    if (!shouldRequireEmailVerification) {
       token = generateToken({
         id: user.id,
         email: user.email,
@@ -112,7 +128,7 @@ export const register = async (
           storeId: user.storeId,
           isEmailVerified: user.isEmailVerified
         },
-        requiresEmailVerification: requireEmailVerification
+        requiresEmailVerification: shouldRequireEmailVerification
       }
     });
   } catch (error) {
@@ -172,8 +188,8 @@ export const registerStore = async (
 
     console.log('✅ Unique slug generated:', uniqueSlug);
 
-    const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
-    console.log('🔐 Email verification required (register-store):', requireEmailVerification);
+    const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
+    console.log('🔐 Email verification requirement (register-store):', { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification });
 
     // إنشاء المستخدم أولاً
     const user = await UserService.create({
@@ -205,7 +221,7 @@ export const registerStore = async (
     // تحديث المستخدم
     const updatedUser = await UserService.update(user.id, { storeId: store.id });
 
-    if (requireEmailVerification) {
+    if (shouldRequireEmailVerification) {
       const emailService = require('../services/emailService').default;
       await emailService.initializeTransporter();
       const verificationCode = await emailService.generateVerificationCode(email);
@@ -214,7 +230,7 @@ export const registerStore = async (
     }
 
     let token: string | null = null;
-    if (!requireEmailVerification) {
+    if (!shouldRequireEmailVerification) {
       token = generateToken({
         id: updatedUser.id,
         email: updatedUser.email,
@@ -242,7 +258,7 @@ export const registerStore = async (
           name: store.name,
           slug: store.slug
         },
-        requiresEmailVerification: requireEmailVerification
+        requiresEmailVerification: shouldRequireEmailVerification
       },
       message: 'تم إنشاء المتجر بنجاح'
     });
@@ -307,8 +323,9 @@ export const login = async (
       return;
     }
 
-    const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
-    if (requireEmailVerification && !user.isEmailVerified) {
+    const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
+    console.log('🔐 Email verification requirement (login):', { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification });
+    if (shouldRequireEmailVerification && !user.isEmailVerified) {
       res.status(401).json({ 
         success: false,
         error: 'يرجى تفعيل حسابك عبر البريد الإلكتروني أولاً' 
