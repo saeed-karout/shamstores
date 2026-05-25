@@ -16,7 +16,7 @@ import {
   IoWarning
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
-import api from '../../services/api';
+import apiClient from '../../services/api/client';
 
 const C = {
   bg:     '#082E24',
@@ -132,15 +132,17 @@ const Register: React.FC = () => {
           restaurantName: formData.businessName,
         });
 
-        if (requireEmailVerification) {
+        const requiresVerification = response?.requiresEmailVerification ?? requireEmailVerification;
+
+        if (requiresVerification) {
           toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
-          navigate('/auth/email-verification', { state: { email: formData.email } });
+          navigate('/auth/email-verification', { state: { email: formData.email, accountType: 'owner' } });
         } else {
           toast.success('تم إنشاء حساب المطعم بنجاح');
           navigate('/dashboard');
         }
       } else {
-        const response = await api.post('/auth/register-store', {
+        const response = await apiClient.post('/auth/register-store', {
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -148,13 +150,18 @@ const Register: React.FC = () => {
           storeName: formData.businessName,
         });
 
-        if (response.data.success) {
-          localStorage.setItem('token', response.data.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        if (response.success) {
+          const responseData = response.data;
+          const requiresVerification = responseData?.requiresEmailVerification ?? requireEmailVerification;
 
-          if (requireEmailVerification) {
+          if (responseData?.token && !requiresVerification) {
+            localStorage.setItem('token', responseData.token);
+            localStorage.setItem('user', JSON.stringify(responseData.user));
+          }
+
+          if (requiresVerification) {
             toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
-            navigate('/auth/email-verification', { state: { email: formData.email } });
+            navigate('/auth/email-verification', { state: { email: formData.email, accountType: 'owner' } });
           } else {
             toast.success('تم إنشاء حساب المتجر بنجاح');
             navigate('/dashboard');

@@ -62,13 +62,17 @@ const UserLogin: React.FC = () => {
           toast.error('يرجى إدخال رقم الهاتف');
           return;
         }
-        await register({
+        const response = await register({
           name,
           email,
           password,
           phone,
           restaurantName: '',
         });
+        if (response?.requiresEmailVerification) {
+          navigate('/auth/email-verification', { state: { email, accountType: 'user' } });
+          return;
+        }
       }
     } catch (error: any) {
       console.error('❌ Auth error:', error);

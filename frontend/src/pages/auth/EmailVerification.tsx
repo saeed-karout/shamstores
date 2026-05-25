@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { IoMail, IoArrowBack } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import Button from '@/components/common/Button';
-import api from '@/services/api';
+import apiClient from '@/services/api/client';
 
 const C = {
   bg:     '#082E24',
@@ -22,6 +22,9 @@ const EmailVerification: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const email = (location.state as any)?.email || '';
+  const accountType = (location.state as any)?.accountType || 'owner';
+  const loginPath = accountType === 'user' ? '/user/login' : '/login';
+  const registerPath = accountType === 'user' ? '/user/register' : '/register';
 
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,7 +36,7 @@ const EmailVerification: React.FC = () => {
       <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} dir="rtl">
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 40, textAlign: 'center', maxWidth: 420 }}>
           <p style={{ color: C.text, marginBottom: 20 }}>لم يتم العثور على بريد إلكتروني. يرجى العودة والتسجيل مرة أخرى.</p>
-          <Button onClick={() => navigate('/auth/register')} style={{ width: '100%' }}>
+          <Button onClick={() => navigate(registerPath)} style={{ width: '100%' }}>
             العودة للتسجيل
           </Button>
         </div>
@@ -51,13 +54,13 @@ const EmailVerification: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/verify-email', { email, code });
+      const response = await apiClient.post('/auth/verify-email', { email, code });
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('تم تفعيل البريد الإلكتروني بنجاح!');
-        navigate('/auth/login');
+        navigate(loginPath);
       } else {
-        toast.error(response.data.error || 'فشل التحقق من الكود');
+        toast.error(response.error || 'فشل التحقق من الكود');
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'حدث خطأ في التحقق');
@@ -69,9 +72,9 @@ const EmailVerification: React.FC = () => {
   const handleResend = async () => {
     setResendLoading(true);
     try {
-      const response = await api.post('/auth/resend-verification', { email });
+      const response = await apiClient.post('/auth/resend-verification', { email });
 
-      if (response.data.success) {
+      if (response.success) {
         toast.success('تم إرسال كود جديد إلى بريدك الإلكتروني');
         setResendCountdown(60);
         const interval = setInterval(() => {
@@ -84,7 +87,7 @@ const EmailVerification: React.FC = () => {
           });
         }, 1000);
       } else {
-        toast.error(response.data.error || 'فشل في إعادة الإرسال');
+        toast.error(response.error || 'فشل في إعادة الإرسال');
       }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'حدث خطأ');
@@ -166,7 +169,7 @@ const EmailVerification: React.FC = () => {
         </div>
 
         <button
-          onClick={() => navigate('/auth/register')}
+          onClick={() => navigate(registerPath)}
           style={{
             background: 'transparent',
             border: 'none',

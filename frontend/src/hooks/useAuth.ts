@@ -241,20 +241,21 @@ export const useAuth = () => {
       }
       
       const response = await authService.register(data);
-      
+      const requireEmailVerification = response.requiresEmailVerification ?? await settingsService.requireEmailVerification();
+
+      // ✅ رسالة مختلفة إذا كان التفعيل مطلوباً
+      if (requireEmailVerification) {
+        toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
+        setLoading(false);
+        return response;
+      }
+
       if (response.user && !response.user.role) {
         response.user.role = 'user';
       }
       
       setUser(response.user);
-      
-      // ✅ رسالة مختلفة إذا كان التفعيل مطلوباً
-      const requireEmailVerification = await settingsService.requireEmailVerification();
-      if (requireEmailVerification) {
-        toast.success('تم إنشاء الحساب. يرجى تفعيل بريدك الإلكتروني');
-      } else {
-        toast.success('✅ تم إنشاء الحساب بنجاح');
-      }
+      toast.success('✅ تم إنشاء الحساب بنجاح');
       
       const redirectTo = localStorage.getItem('redirectAfterLogin');
       

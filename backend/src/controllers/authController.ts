@@ -40,7 +40,7 @@ export const register = async (
     const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
 
     let user;
-    let token;
+    let token: string | null = null;
 
     if (restaurantName && restaurantName.trim() !== '') {
       const slug = slugify(restaurantName);
@@ -86,13 +86,15 @@ export const register = async (
       await emailService.sendVerificationEmail(email, verificationCode);
     }
 
-    token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      restaurantId: user.restaurantId || undefined,
-      storeId: user.storeId || undefined
-    });
+    if (!requireEmailVerification) {
+      token = generateToken({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        restaurantId: user.restaurantId || undefined,
+        storeId: user.storeId || undefined
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -199,13 +201,23 @@ export const registerStore = async (
     // تحديث المستخدم
     const updatedUser = await UserService.update(user.id, { storeId: store.id });
 
-    const token = generateToken({
-      id: updatedUser.id,
-      email: updatedUser.email,
-      role: updatedUser.role,
-      restaurantId: undefined,
-      storeId: store.id
-    });
+    if (requireEmailVerification) {
+      const emailService = require('../services/emailService').default;
+      await emailService.initializeTransporter();
+      const verificationCode = await emailService.generateVerificationCode(email);
+      await emailService.sendVerificationEmail(email, verificationCode);
+    }
+
+    let token: string | null = null;
+    if (!requireEmailVerification) {
+      token = generateToken({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        restaurantId: undefined,
+        storeId: store.id
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -223,7 +235,8 @@ export const registerStore = async (
           id: store.id,
           name: store.name,
           slug: store.slug
-        }
+        },
+        requiresEmailVerification: requireEmailVerification
       },
       message: 'تم إنشاء المتجر بنجاح'
     });

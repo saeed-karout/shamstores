@@ -37,7 +37,11 @@ const UserRegister: React.FC = () => {
     }
     setLoading(true);
     try {
-      await register({ name: formData.name, email: formData.email, password: formData.password, phone: formData.phone, restaurantName: '' });
+      const response = await register({ name: formData.name, email: formData.email, password: formData.password, phone: formData.phone, restaurantName: '' });
+      if (response?.requiresEmailVerification) {
+        navigate('/auth/email-verification', { state: { email: formData.email, accountType: 'user' } });
+        return;
+      }
       const redirectTo = localStorage.getItem('redirectAfterLogin') || '/';
       localStorage.removeItem('redirectAfterLogin');
       navigate(redirectTo);

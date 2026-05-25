@@ -33,7 +33,7 @@ class AuthService {
       console.log('🔍 Register attempt:', data.email);
       const response = await api.post<AuthResponse>('/auth/register', data);
       
-      if (response.token) {
+      if (response.token && !response.requiresEmailVerification) {
         console.log('✅ Register successful, saving token');
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));

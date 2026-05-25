@@ -2,6 +2,7 @@
 
 import nodemailer from 'nodemailer';
 import prisma from './prisma';
+import settingsService from './settingsService';
 
 export interface EmailConfig {
   host: string;
@@ -17,13 +18,29 @@ class EmailService {
 
   async initializeTransporter(): Promise<void> {
     try {
-      // Try to use environment variables for SMTP configuration
-      const emailConfig = {
+      const [smtpHost, smtpPort, smtpUser, smtpPassword, smtpFrom] = await Promise.all([
+        settingsService.getString('smtp_host', ''),
+        settingsService.getNumber('smtp_port', 0),
+        settingsService.getString('smtp_user', ''),
+        settingsService.getString('smtp_password', ''),
+        settingsService.getString('smtp_from_email', ''),
+      ]);
+
+      // Fallback to environment variables if settings are not configured
+      const envConfig = {
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT || '587'),
         user: process.env.SMTP_USER || '',
         password: process.env.SMTP_PASSWORD || '',
         from: process.env.SMTP_FROM_EMAIL || 'noreply@shamstores.com',
+      };
+
+      const emailConfig = {
+        host: smtpHost || envConfig.host,
+        port: smtpPort || envConfig.port,
+        user: smtpUser || envConfig.user,
+        password: smtpPassword || envConfig.password,
+        from: smtpFrom || envConfig.from,
       };
 
       if (emailConfig.user && emailConfig.password) {

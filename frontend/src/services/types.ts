@@ -228,10 +228,11 @@ export interface CartItem {
     restaurantName?: string;
   }
   
-  export interface AuthResponse {
-    token: string;
-    user: User;
-  }
+export interface AuthResponse {
+  token?: string | null;
+  user: User;
+  requiresEmailVerification?: boolean;
+}
   
   export interface ApiResponse<T = any> {
     success: boolean;
