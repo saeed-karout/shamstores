@@ -59,6 +59,9 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+  token?: string;
+  requiresEmailVerification?: boolean;  // ✅ أضف هذا السطر
+  emailSent?: boolean;    
 }
 
 export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'delivering' | 'delivered' | 'served' | 'cancelled';
