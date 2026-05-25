@@ -209,6 +209,12 @@ model Restaurant {
   mutedColor      String  @default("#9DC4AC")
   accentColor     String  @default("#C8E235")
   fontFamily      String  @default("Cairo")
+  
+  // ✅ أضف هذه الحقول الجديدة هنا
+  timezone        String  @default("Asia/Riyadh")
+  currency        String  @default("SAR")
+  language        String  @default("ar")
+  
   subdomain      String?  @unique
   customDomain              String?   @unique
   customDomainVerified      Boolean?  @default(false)
