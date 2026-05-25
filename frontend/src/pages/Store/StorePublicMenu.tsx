@@ -1,4 +1,4 @@
-// src/pages/Store/StorePublicMenu.tsx
+// src/pages/Store/StorePublicMenu.tsx - النسخة المصححة
 
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -26,14 +26,6 @@ import { openWhatsApp } from '@/utils/helpers';
 import { DeliveryLocation } from '@/models/order';
 import { calculateDistance } from '@/utils/distance';
 import PublicMarketingSections, { PublicMarketingData } from '@/components/public/PublicMarketingSections';
-
-// ==================== Color Tokens ====================
-
-const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
-};
 
 interface StorePublicMenuProps {
   businessId?: string;
@@ -400,13 +392,34 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const filteredProducts = getFilteredProducts();
 
   if (loading || favoritesLoading) return <Loader fullScreen />;
-  if (!store) return <div style={{ color: C.text, background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>لا توجد بيانات</div>;
+  if (!store) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>لا توجد بيانات</div>;
 
-  // ✅ تأكد من وجود slug قبل تمريره إلى ProductCard
+  // ✅ استخدام ألوان المتجر المخصصة
+  const primaryColor = store.primaryColor || '#3B82F6';
+  const secondaryColor = store.secondaryColor || '#10B981';
+  const backgroundColor = store.backgroundColor || '#082E24';
+  const cardColor = store.cardColor || '#112E23';
+  const surfColor = store.surfColor || '#0F3D31';
+  const textColor = store.textColor || '#E8F5E9';
+  const mutedColor = store.mutedColor || '#9DC4AC';
+  
+  // ✅ إنشاء ثيم ديناميكي بناءً على ألوان المتجر
+  const dynamicColors = {
+    bg: backgroundColor,
+    card: cardColor,
+    surf: surfColor,
+    accent: primaryColor,
+    secondary: secondaryColor,
+    text: textColor,
+    muted: mutedColor,
+    border: `rgba(200,226,53,0.15)`,
+    red: '#FF6B6B',
+    blue: '#60A5FA',
+    purple: '#A78BFA',
+    orange: '#FB923C',
+  };
+
   const storeSlug = store.slug || currentSlug;
-
-  // Use business primary color for interactive elements, fallback to lime
-  const primaryColor = store.primaryColor || C.accent;
 
   return (
     <>
@@ -416,7 +429,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         {store.logo && <meta property="og:image" content={getImageUrl(store.logo)} />}
       </Helmet>
 
-      <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ background: dynamicColors.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
         {/* Cover Image */}
         {store.coverImage && (
           <div
@@ -428,32 +441,32 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               position: 'relative'
             }}
           >
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,46,36,0.85) 0%, transparent 60%)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${dynamicColors.bg} 0%, transparent 60%)` }} />
           </div>
         )}
 
         {/* Store Header */}
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', marginTop: store.coverImage ? -80 : 24, position: 'relative', zIndex: 10 }}>
-          <div style={{ background: C.card, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', padding: '20px 24px', border: `1px solid ${C.border}` }}>
+          <div style={{ background: dynamicColors.card, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', padding: '20px 24px', border: `1px solid ${dynamicColors.border}` }}>
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
               {store.logo && (
                 <img
                   src={getImageUrl(store.logo)}
                   alt={store.name}
-                  style={{ width: 80, height: 80, borderRadius: 16, objectFit: 'cover', border: `3px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}
+                  style={{ width: 80, height: 80, borderRadius: 16, objectFit: 'cover', border: `3px solid ${dynamicColors.accent}`, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}
                 />
               )}
               <div style={{ flex: 1 }}>
-                <h1 style={{ fontSize: 26, fontWeight: 700, color: C.text, margin: 0 }}>{store.name}</h1>
+                <h1 style={{ fontSize: 26, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>{store.name}</h1>
                 {store.description && (
-                  <p style={{ color: C.muted, fontSize: 14, marginTop: 4 }}>{store.description}</p>
+                  <p style={{ color: dynamicColors.muted, fontSize: 14, marginTop: 4 }}>{store.description}</p>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {store.phone && (
                   <a
                     href={`tel:${store.phone}`}
-                    style={{ padding: 12, background: 'rgba(200,226,53,0.08)', border: `1px solid ${C.border}`, borderRadius: '50%', color: C.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    style={{ padding: 12, background: 'rgba(200,226,53,0.08)', border: `1px solid ${dynamicColors.border}`, borderRadius: '50%', color: dynamicColors.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   >
                     <IoCall size={20} />
                   </a>
@@ -471,7 +484,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           </div>
         </div>
 
-        {/* ==================== الأقسام التسويقية ==================== */}
+        {/* Marketing Sections */}
         <PublicMarketingSections 
           businessId={store.id}
           businessType="store"
@@ -479,7 +492,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         />
 
         {/* Search and Filters Bar */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: C.card, borderBottom: `1px solid ${C.border}`, marginTop: 24 }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: dynamicColors.card, borderBottom: `1px solid ${dynamicColors.border}`, marginTop: 24 }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -489,9 +502,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '10px 16px',
                     background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${C.border}`,
+                    border: `1px solid ${dynamicColors.border}`,
                     borderRadius: 12,
-                    color: C.text,
+                    color: dynamicColors.text,
                     cursor: 'pointer',
                     fontFamily: 'Cairo, sans-serif',
                     fontSize: 14,
@@ -507,9 +520,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '10px 16px',
                     background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${C.border}`,
+                    border: `1px solid ${dynamicColors.border}`,
                     borderRadius: 12,
-                    color: C.text,
+                    color: dynamicColors.text,
                     cursor: 'pointer',
                     fontFamily: 'Cairo, sans-serif',
                     fontSize: 14,
@@ -523,7 +536,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
               <button
                 onClick={() => navigate('/my-orders')}
-                style={{ padding: '10px 16px', background: C.purple, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(167,139,250,0.3)' }}
+                style={{ padding: '10px 16px', background: dynamicColors.purple, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(167,139,250,0.3)' }}
               >
                 <IoTime size={18} style={{ display: 'inline', marginLeft: 4 }} />
                 طلباتي
@@ -537,7 +550,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   <IoHeart size={18} style={{ display: 'inline', marginLeft: 4 }} />
                   المفضلة
                   {getFavoritesCount() > 0 && (
-                    <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {getFavoritesCount()}
                     </span>
                   )}
@@ -547,19 +560,19 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   <>
                     <button
                       onClick={() => setShowCartModal(true)}
-                      style={{ position: 'relative', padding: '10px 16px', background: primaryColor, color: C.bg, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 600 }}
+                      style={{ position: 'relative', padding: '10px 16px', background: dynamicColors.accent, color: dynamicColors.bg, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 600 }}
                     >
                       <IoCart size={18} style={{ display: 'inline', marginLeft: 4 }} />
                       سلة
                       {getCartCount() > 0 && (
-                        <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {getCartCount()}
                         </span>
                       )}
                     </button>
                     <button
                       onClick={logout}
-                      style={{ padding: '10px 16px', background: C.red, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                      style={{ padding: '10px 16px', background: dynamicColors.red, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
                     >
                       <IoLogOut size={18} style={{ display: 'inline', marginLeft: 4 }} />
                       خروج
@@ -568,7 +581,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 ) : (
                   <Link
                     to="/user/login"
-                    style={{ padding: '10px 16px', background: C.blue, color: '#fff', borderRadius: 12, textDecoration: 'none', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
+                    style={{ padding: '10px 16px', background: dynamicColors.blue, color: '#fff', borderRadius: 12, textDecoration: 'none', fontFamily: 'Cairo, sans-serif', fontSize: 14 }}
                   >
                     <IoPerson size={18} style={{ display: 'inline', marginLeft: 4 }} />
                     دخول
@@ -594,10 +607,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                     style={{
                       width: '100%',
                       padding: 12,
-                      background: C.surf,
-                      border: `2px solid ${C.border}`,
+                      background: dynamicColors.surf,
+                      border: `2px solid ${dynamicColors.border}`,
                       borderRadius: 12,
-                      color: C.text,
+                      color: dynamicColors.text,
                       outline: 'none',
                       fontFamily: 'Cairo, sans-serif',
                       fontSize: 14,
@@ -631,8 +644,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                         fontFamily: 'Cairo, sans-serif',
                         fontSize: 13,
                         transition: 'all 0.2s',
-                        background: sortBy === 'price-low' ? primaryColor : 'rgba(200,226,53,0.08)',
-                        color: sortBy === 'price-low' ? C.bg : C.text,
+                        background: sortBy === 'price-low' ? dynamicColors.accent : 'rgba(200,226,53,0.08)',
+                        color: sortBy === 'price-low' ? dynamicColors.bg : dynamicColors.text,
                         boxShadow: sortBy === 'price-low' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
                       }}
                     >
@@ -650,8 +663,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                         fontFamily: 'Cairo, sans-serif',
                         fontSize: 13,
                         transition: 'all 0.2s',
-                        background: sortBy === 'price-high' ? primaryColor : 'rgba(200,226,53,0.08)',
-                        color: sortBy === 'price-high' ? C.bg : C.text,
+                        background: sortBy === 'price-high' ? dynamicColors.accent : 'rgba(200,226,53,0.08)',
+                        color: sortBy === 'price-high' ? dynamicColors.bg : dynamicColors.text,
                         boxShadow: sortBy === 'price-high' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
                       }}
                     >
@@ -675,13 +688,13 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 borderRadius: 12,
                 whiteSpace: 'nowrap',
                 fontWeight: 500,
-                border: selectedCategory === 'all' ? 'none' : `1px solid ${C.border}`,
+                border: selectedCategory === 'all' ? 'none' : `1px solid ${dynamicColors.border}`,
                 cursor: 'pointer',
                 fontFamily: 'Cairo, sans-serif',
                 fontSize: 14,
                 transition: 'all 0.2s',
-                background: selectedCategory === 'all' ? primaryColor : C.card,
-                color: selectedCategory === 'all' ? C.bg : C.text,
+                background: selectedCategory === 'all' ? dynamicColors.accent : dynamicColors.card,
+                color: selectedCategory === 'all' ? dynamicColors.bg : dynamicColors.text,
                 boxShadow: selectedCategory === 'all' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
               }}
             >
@@ -696,13 +709,13 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   borderRadius: 12,
                   whiteSpace: 'nowrap',
                   fontWeight: 500,
-                  border: selectedCategory === cat.id ? 'none' : `1px solid ${C.border}`,
+                  border: selectedCategory === cat.id ? 'none' : `1px solid ${dynamicColors.border}`,
                   cursor: 'pointer',
                   fontFamily: 'Cairo, sans-serif',
                   fontSize: 14,
                   transition: 'all 0.2s',
-                  background: selectedCategory === cat.id ? primaryColor : C.card,
-                  color: selectedCategory === cat.id ? C.bg : C.text,
+                  background: selectedCategory === cat.id ? dynamicColors.accent : dynamicColors.card,
+                  color: selectedCategory === cat.id ? dynamicColors.bg : dynamicColors.text,
                   boxShadow: selectedCategory === cat.id ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
                 }}
               >
@@ -715,13 +728,13 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         {/* Products Grid */}
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 32px' }}>
           {filteredProducts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '80px 24px', background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
-              <IoStorefront style={{ fontSize: 64, color: C.muted, opacity: 0.3, display: 'block', margin: '0 auto 16px' }} />
-              <p style={{ color: C.muted, fontSize: 17 }}>لا توجد منتجات</p>
+            <div style={{ textAlign: 'center', padding: '80px 24px', background: dynamicColors.card, borderRadius: 16, border: `1px solid ${dynamicColors.border}` }}>
+              <IoStorefront style={{ fontSize: 64, color: dynamicColors.muted, opacity: 0.3, display: 'block', margin: '0 auto 16px' }} />
+              <p style={{ color: dynamicColors.muted, fontSize: 17 }}>لا توجد منتجات</p>
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  style={{ marginTop: 16, color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 500 }}
+                  style={{ marginTop: 16, color: dynamicColors.accent, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'Cairo, sans-serif', fontSize: 14, fontWeight: 500 }}
                 >
                   مسح البحث
                 </button>
@@ -751,7 +764,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           )}
         </div>
 
-        {/* Floating Buttons */}
+        {/* Floating Scroll Top Button */}
         <AnimatePresence>
           {showScrollTop && (
             <motion.button
@@ -762,8 +775,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               style={{
                 position: 'fixed', bottom: 96, right: 16, zIndex: 30,
                 width: 48, height: 48,
-                background: primaryColor,
-                color: C.bg,
+                background: dynamicColors.accent,
+                color: dynamicColors.bg,
                 borderRadius: '50%',
                 border: 'none',
                 cursor: 'pointer',
@@ -785,8 +798,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             onClick={() => setShowCartModal(true)}
             style={{
               position: 'fixed', bottom: 24, left: 16, zIndex: 30,
-              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
-              color: C.bg,
+              background: `linear-gradient(135deg, ${dynamicColors.accent}, ${dynamicColors.accent}cc)`,
+              color: dynamicColors.bg,
               padding: 16,
               borderRadius: '50%',
               border: 'none',
@@ -796,7 +809,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           >
             <div style={{ position: 'relative' }}>
               <IoCart size={26} />
-              <span style={{ position: 'absolute', top: -8, right: -8, background: C.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+              <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
                 {getCartCount()}
               </span>
             </div>

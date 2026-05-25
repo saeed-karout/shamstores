@@ -5,6 +5,7 @@ import { FcGoogle } from 'react-icons/fc';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import toast from 'react-hot-toast';
 
 interface GoogleSignInButtonProps {
   variant?: 'primary' | 'secondary';
@@ -19,13 +20,50 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 }) => {
   const { signInWithGoogle, loading } = useFirebaseAuth();
   const navigate = useNavigate();
-  const { setAuthData } = useAuth();
+  const { setAuthData, login } = useAuth(); // ✅ تأكد من وجود setAuthData
 
   const handleClick = async () => {
-    const result = await signInWithGoogle();
-    if (result) {
-      setAuthData(result.token, result.user);
-      navigate('/');
+    try {
+      const result = await signInWithGoogle();
+      
+      if (result && result.token) {
+        console.log('✅ Google sign-in successful, storing token');
+        
+        // تخزين التوكن مباشرة
+        localStorage.setItem('token', result.token);
+        
+        if (result.user) {
+          localStorage.setItem('user', JSON.stringify(result.user));
+        }
+        
+        // ✅ التحقق من وجود setAuthData قبل استدعائها
+        if (setAuthData && typeof setAuthData === 'function') {
+          setAuthData(result.token, result.user);
+        } else if (login && typeof login === 'function') {
+          // إذا كان هناك دالة login بديلة
+          login(result.token, result.user);
+        } else {
+          console.warn('⚠️ No setAuthData or login function found');
+        }
+        
+        toast.success('تم تسجيل الدخول بنجاح');
+        
+        // توجيه المستخدم بناءً على دوره
+        if (result.user?.role === 'super_admin') {
+          navigate('/admin/dashboard');
+        } else if (result.user?.role === 'owner') {
+          navigate('/dashboard');
+        } else if (result.user?.role === 'delivery_driver') {
+          navigate('/delivery/dashboard');
+        } else {
+          navigate('/');
+        }
+      } else {
+        throw new Error('No token received from Google sign-in');
+      }
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      toast.error(error.message || 'فشل تسجيل الدخول بواسطة Google');
     }
   };
 

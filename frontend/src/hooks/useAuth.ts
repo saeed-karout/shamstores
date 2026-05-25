@@ -281,6 +281,24 @@ export const useAuth = () => {
     }
   };
 
+  // ✅ دالة setAuthData - لتخزين بيانات المصادقة مباشرة (مستخدمة مع Firebase)
+  const setAuthData = (token: string, userData: User) => {
+    console.log('✅ setAuthData - storing token and user');
+    
+    // تخزين التوكن
+    localStorage.setItem('token', token);
+    
+    // تخزين بيانات المستخدم
+    localStorage.setItem('user', JSON.stringify(userData));
+    
+    // تحديث الحالة
+    setUser(userData);
+    setLoading(false);
+    setInitialized(true);
+    
+    console.log('✅ User data stored:', userData);
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -309,6 +327,7 @@ export const useAuth = () => {
     login,
     register,
     logout,
+    setAuthData, // ✅ دالة تخزين بيانات المصادقة
     isAuthenticated: !!user,
     isSuperAdmin,
     isOwner,

@@ -3,25 +3,36 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { useAuth } from '@/hooks/useAuth';
-import { useStoreSettings } from '@/hooks/stores/useStoreSettings';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
-import { usePermissions } from '@/hooks/usePermissions';
 import Loader from '@/components/common/Loader';
-import SettingsTabs, { SettingsTab } from '@/components/settings/settingsStore//SettingsTabs';
-import GeneralSettingsTab from '@/components/settings/settingsStore//GeneralSettingsTab';
-import DesignSettingsTab from '@/components/settings/settingsStore//DesignSettingsTab';
-import ImageSettingsTab from '@/components/settings/settingsStore//ImageSettingsTab';
-import DeliverySettingsTab from '@/components/settings/settingsStore//DeliverySettingsTab';
-import DomainSettingsTab from '@/components/settings/settingsStore/DomainSettingsTab';
-import SocialSettingsTab from '@/components/settings/settingsStore//SocialSettingsTab';
-import PaymentSettingsTab from '@/components/settings/settingsStore//PaymentSettingsTab';
-import NotificationSettingsTab from '@/components/settings/settingsStore//NotificationSettingsTab';
 import toast from 'react-hot-toast';
+import {
+  IoStorefront,
+  IoColorPalette,
+  IoImage,
+  IoGlobe,
+  IoCall,
+  IoLogoInstagram,
+  IoLogoFacebook,
+  IoTimer,
+  IoMap,
+  IoLink,
+  IoLockClosed,
+  IoCar,
+  IoLocation,
+  IoCash,
+  IoTime,
+  IoWarning,
+  IoCalculator,
+  IoLogoWhatsapp,
+  IoSave,
+} from 'react-icons/io5';
+import { getImageUrl } from '@/utils/imageHelpers';
 
-// ==================== ثوابت التصميم ====================
 const C = {
   bg: '#082E24',
   card: '#112E23',
+  prim: '#0D4A3A',
   surf: '#0F3D31',
   surfL: '#164D3E',
   accent: '#C8E235',
@@ -31,423 +42,675 @@ const C = {
   border: 'rgba(200,226,53,0.15)',
   red: '#FF6B6B',
   blue: '#60A5FA',
-  purple: '#A78BFA',
-  orange: '#FB923C',
+};
+
+interface DeliverySettings {
+  enableDelivery: boolean;
+  baseFee: number;
+  feePerKm: number;
+  minDistance: number;
+  maxDistance: number;
+  freeDeliveryAbove: number;
+  estimatedTime: number;
+}
+
+const defaultDeliverySettings: DeliverySettings = {
+  enableDelivery: true,
+  baseFee: 5,
+  feePerKm: 2,
+  minDistance: 1,
+  maxDistance: 20,
+  freeDeliveryAbove: 100,
+  estimatedTime: 45
+};
+
+const inputStyle: React.CSSProperties = {
+  background: C.surf,
+  border: `1px solid ${C.border}`,
+  borderRadius: 10,
+  color: C.text,
+  padding: '10px 14px',
+  width: '100%',
+  fontFamily: 'Cairo, sans-serif',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontSize: 14,
+};
+
+const labelStyle: React.CSSProperties = {
+  color: C.muted,
+  fontSize: 13,
+  marginBottom: 6,
+  display: 'block',
+};
+
+const sectionCard: React.CSSProperties = {
+  background: C.card,
+  border: `1px solid ${C.border}`,
+  borderRadius: 16,
+  padding: 24,
+  marginBottom: 16,
+};
+
+const saveBtn: React.CSSProperties = {
+  background: C.accent,
+  color: C.bg,
+  fontWeight: 700,
+  borderRadius: 10,
+  border: 'none',
+  padding: '11px 24px',
+  cursor: 'pointer',
+  fontFamily: 'Cairo, sans-serif',
+  fontSize: 14,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
 };
 
 const StoreSettingsPage: React.FC = () => {
-  // ==================== Hooks ====================
-  const { 
-    store, 
-    loading: storeLoading, 
-    updateStore, 
-    uploadLogo, 
-    uploadCover, 
-    removeLogo, 
-    removeCover 
-  } = useStore();
-  
+  const { store, loading, updateStore, uploadLogo, uploadCover } = useStore();
   const { user, isSuperAdmin, isOwner } = useAuth();
-  const permissions = usePermissions();
   const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
-  const { 
-    settings, 
-    loading: settingsLoading, 
-    saving, 
-    saveGeneralSettings, 
-    saveDesignSettings, 
-    saveDeliverySettings, 
-    saveSocialSettings, 
-    savePaymentSettings, 
-    saveNotificationSettings, 
-    saveDomainSettings 
-  } = useStoreSettings(store?.id);
-
-  // ==================== State ====================
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  
+  const [activeTab, setActiveTab] = useState('general');
   const [uploading, setUploading] = useState(false);
-  const [savingDomain, setSavingDomain] = useState(false);
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
-  // ==================== التحقق من الصلاحيات والميزات ====================
-  const canEdit = isSuperAdmin || isOwner;
-  const isStoreOwner = isSuperAdmin || isOwner;
-  
-  // ✅ التحقق من الخطة Pro
-  const isPro = currentPlan?.hasCustomDomain === true || 
-                currentPlan?.hasOnlineOrders === true || 
-                currentPlan?.name === 'pro' || 
-                currentPlan?.name === 'enterprise' ||
-                isSuperAdmin;
-  
-  // ✅ التحقق من ميزة الدومين المخصص
-  const hasCustomDomainFeature = currentPlan?.hasCustomDomain === true || 
-                                  currentPlan?.name === 'pro' || 
-                                  currentPlan?.name === 'enterprise' || 
-                                  isSuperAdmin;
-  
-  // ✅ التحقق من ميزة الدفع الإلكتروني
-  const hasOnlinePayment = currentPlan?.hasOnlineOrders === true || 
-                           currentPlan?.name === 'pro' || 
-                           currentPlan?.name === 'enterprise';
+  // ✅ التحقق من الميزات حسب الخطة
+  const hasCustomDomain = currentPlan?.hasCustomDomain === true || isSuperAdmin;
+  const hasOnlinePayment = currentPlan?.hasOnlineOrders === true || isSuperAdmin;
 
-  // ==================== دوال رفع الصور ====================
-  const handleUploadLogo = async (file: File) => {
-    if (!canEdit) {
-      toast.error('ليس لديك صلاحية لتغيير الشعار');
-      return;
+  const [generalForm, setGeneralForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    whatsapp: '',
+    address: '',
+    description: '',
+    instagram: '',
+    facebook: '',
+    tiktok: '',
+    latitude: '',
+    longitude: '',
+  });
+
+  const [designForm, setDesignForm] = useState({
+    primaryColor: '#3B82F6',
+    secondaryColor: '#10B981',
+    backgroundColor: '#FFFFFF',
+    textColor: '#000000',
+    fontFamily: 'Cairo',
+  });
+
+  const [domainForm, setDomainForm] = useState({
+    subdomain: '',
+    customDomain: '',
+  });
+
+  const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(defaultDeliverySettings);
+
+  useEffect(() => {
+    if (store) {
+      console.log('✅ Store data for settings:', store);
+
+      setGeneralForm({
+        name: store.name || '',
+        email: store.email || '',
+        phone: store.phone || '',
+        whatsapp: store.whatsapp || '',
+        address: store.address || '',
+        description: store.description || '',
+        instagram: store.instagram || '',
+        facebook: store.facebook || '',
+        tiktok: store.tiktok || '',
+        latitude: store.latitude?.toString() || '',
+        longitude: store.longitude?.toString() || '',
+      });
+
+      setDesignForm({
+        primaryColor: store.primaryColor || '#3B82F6',
+        secondaryColor: store.secondaryColor || '#10B981',
+        backgroundColor: store.backgroundColor || '#FFFFFF',
+        textColor: store.textColor || '#000000',
+        fontFamily: store.fontFamily || 'Cairo',
+      });
+
+      setDomainForm({
+        subdomain: store.subdomain || '',
+        customDomain: store.customDomain || '',
+      });
+
+      if (store.deliverySettings) {
+        try {
+          let parsedSettings = store.deliverySettings;
+          if (typeof parsedSettings === 'string') {
+            parsedSettings = JSON.parse(parsedSettings);
+          }
+          setDeliverySettings(prev => ({ ...prev, ...parsedSettings }));
+        } catch (error) {
+          console.error('Error parsing delivery settings:', error);
+        }
+      }
     }
-    setUploading(true);
+  }, [store]);
+
+  const handleSaveGeneral = async () => {
     try {
-      await uploadLogo(file);
-      toast.success('تم تحديث الشعار بنجاح');
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل تحديث الشعار');
-    } finally {
-      setUploading(false);
+      await updateStore(generalForm);
+      toast.success('تم تحديث البيانات العامة');
+    } catch (error) {
+      toast.error('فشل تحديث البيانات');
     }
   };
 
-  const handleUploadCover = async (file: File) => {
-    if (!canEdit) {
-      toast.error('ليس لديك صلاحية لتغيير صورة الغلاف');
-      return;
-    }
-    setUploading(true);
+  const handleSaveDesign = async () => {
     try {
-      await uploadCover(file);
-      toast.success('تم تحديث صورة الغلاف بنجاح');
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل تحديث صورة الغلاف');
-    } finally {
-      setUploading(false);
+      await updateStore(designForm);
+      toast.success('تم تحديث التصميم');
+    } catch (error) {
+      toast.error('فشل تحديث التصميم');
     }
   };
 
-  const handleRemoveLogo = async () => {
-    if (!canEdit) {
-      toast.error('ليس لديك صلاحية لإزالة الشعار');
-      return;
-    }
-    try {
-      await removeLogo();
-      toast.success('تم إزالة الشعار');
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إزالة الشعار');
-    }
-  };
-
-  const handleRemoveCover = async () => {
-    if (!canEdit) {
-      toast.error('ليس لديك صلاحية لإزالة صورة الغلاف');
-      return;
-    }
-    try {
-      await removeCover();
-      toast.success('تم إزالة صورة الغلاف');
-    } catch (error: any) {
-      toast.error(error?.message || 'فشل إزالة صورة الغلاف');
-    }
-  };
-
-  // ==================== دوال حفظ الإعدادات ====================
-  const handleSaveGeneral = async (data: any) => {
-    if (!canEdit) {
-      toast.error('ليس لديك صلاحية لتغيير الإعدادات العامة');
-      return;
-    }
-    await saveGeneralSettings(data);
-  };
-
-  const handleSaveDesign = async (data: any) => {
-    if (!canEdit) {
-      toast.error('ليس لديك صلاحية لتغيير التصميم');
-      return;
-    }
-    await saveDesignSettings(data);
-  };
-
-  const handleSaveDelivery = async (data: any) => {
-    if (!permissions.checkPermission('canManageDelivery') && !isSuperAdmin && !isOwner) {
-      toast.error('ليس لديك صلاحية لتغيير إعدادات التوصيل');
-      return;
-    }
-    await saveDeliverySettings(data);
-  };
-
-  const handleSaveSocial = async (data: any) => {
-    if (!permissions.checkPermission('canManageSocial') && !isSuperAdmin && !isOwner) {
-      toast.error('ليس لديك صلاحية لتغيير إعدادات وسائل التواصل');
-      return;
-    }
-    await saveSocialSettings(data);
-  };
-
-  const handleSavePayment = async (data: any) => {
-    if (!hasOnlinePayment) {
-      toast.error('الدفع الإلكتروني متاح فقط في الخطة الاحترافية');
-      return;
-    }
-    if (!permissions.checkPermission('canManagePayment') && !isSuperAdmin && !isOwner) {
-      toast.error('ليس لديك صلاحية لتغيير إعدادات الدفع');
-      return;
-    }
-    await savePaymentSettings(data);
-  };
-
-  const handleSaveNotifications = async (data: any) => {
-    if (!permissions.checkPermission('canManageNotifications') && !isSuperAdmin && !isOwner) {
-      toast.error('ليس لديك صلاحية لتغيير إعدادات الإشعارات');
-      return;
-    }
-    await saveNotificationSettings(data);
-  };
-
-  const handleSaveDomain = async (data: any) => {
-    if (!hasCustomDomainFeature) {
+  const handleSaveDomain = async () => {
+    if (!hasCustomDomain && !isSuperAdmin) {
       toast.error('الدومين المخصص متاح فقط في الخطة الاحترافية');
       return;
     }
-    setSavingDomain(true);
     try {
-      await saveDomainSettings(data);
-    } finally {
-      setSavingDomain(false);
+      await updateStore(domainForm);
+      toast.success('تم تحديث إعدادات الدومين');
+    } catch (error) {
+      toast.error('فشل تحديث الدومين');
     }
   };
 
-  // ==================== تجهيز بيانات المتجر ====================
-  const storeData = {
-    id: store?.id,
-    name: store?.name || '',
-    slug: store?.slug || '',
-    subdomain: store?.subdomain || '',
-    email: store?.email || '',
-    phone: store?.phone || '',
-    whatsapp: store?.whatsapp || '',
-    address: store?.address || '',
-    description: store?.description || '',
-    logo: store?.logo,
-    coverImage: store?.coverImage,
-    primaryColor: store?.primaryColor || '#3B82F6',
-    secondaryColor: store?.secondaryColor || '#10B981',
-    backgroundColor: store?.backgroundColor || '#FFFFFF',
-    textColor: store?.textColor || '#000000',
-    fontFamily: store?.fontFamily || 'Cairo',
-    latitude: store?.latitude,
-    longitude: store?.longitude,
-    isActive: store?.isActive ?? true,
-    planId: store?.planId,
-    customDomain: store?.customDomain,
-    customDomainVerified: store?.customDomainVerified ?? false,
-    createdAt: store?.createdAt,
-    timezone: store?.timezone || 'Asia/Riyadh',
-    currency: store?.currency || 'SAR',
-    language: store?.language || 'ar',
-    deliverySettings: store?.deliverySettings,
-    paymentSettings: store?.paymentSettings,
-    notificationSettings: store?.notificationSettings,
-    socialLinks: store?.socialLinks,
+  const handleSaveDeliverySettings = async () => {
+    try {
+      await updateStore({ deliverySettings });
+      toast.success('تم حفظ إعدادات التوصيل');
+    } catch (error) {
+      toast.error('فشل حفظ الإعدادات');
+    }
   };
 
-  // ==================== حالة التحميل ====================
-  if (storeLoading || settingsLoading || planLoading) {
-    return <Loader fullScreen />;
-  }
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadLogo(file);
+      toast.success('تم تحديث الشعار');
+    } catch (error) {
+      toast.error('فشل تحديث الشعار');
+    } finally {
+      setUploading(false);
+    }
+  };
 
-  // ==================== إذا لم يوجد متجر ====================
-  if (!store && !isSuperAdmin) {
-    return (
-      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div style={{ textAlign: 'center', background: C.card, borderRadius: 20, padding: 40, border: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>🛍️</div>
-          <h2 style={{ color: C.text, fontSize: 20, marginBottom: 12 }}>لا يوجد متجر</h2>
-          <p style={{ color: C.muted, marginBottom: 24 }}>لم تقم بإنشاء متجر بعد. يرجى إنشاء متجر أولاً.</p>
-          <button 
-            onClick={() => window.location.href = '/store/create'}
-            style={{ background: C.accent, color: C.bg, border: 'none', padding: '10px 24px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}
-          >
-            إنشاء متجر
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadCover(file);
+      toast.success('تم تحديث صورة الغلاف');
+    } catch (error) {
+      toast.error('فشل تحديث صورة الغلاف');
+    } finally {
+      setUploading(false);
+    }
+  };
 
-  // ==================== العرض الرئيسي ====================
+  const calculateExampleFee = () => {
+    const distance = 5;
+    const extraKm = Math.max(0, distance - deliverySettings.minDistance);
+    return deliverySettings.baseFee + (extraKm * deliverySettings.feePerKm);
+  };
+
+  const getInput = (id: string) => ({
+    ...inputStyle,
+    border: focusedInput === id ? `1px solid ${C.accent}` : inputStyle.border,
+  });
+
+  const tabs = [
+    { id: 'general', label: 'عام', icon: IoStorefront },
+    { id: 'design', label: 'التصميم', icon: IoColorPalette },
+    { id: 'images', label: 'الصور', icon: IoImage },
+    { id: 'delivery', label: 'التوصيل', icon: IoCar },
+    { id: 'domain', label: 'الدومين', icon: IoGlobe },
+  ];
+
+  if (loading || planLoading) return <Loader fullScreen />;
+
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
-      
+    <div dir="rtl" style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              🛍️ إعدادات المتجر
-              {storeData.name && (
-                <span style={{ 
-                  fontSize: 14, fontWeight: 400, color: C.accent, 
-                  background: 'rgba(200,226,53,0.1)', padding: '4px 12px', borderRadius: 20 
-                }}>
-                  {storeData.name}
-                </span>
-              )}
-            </h1>
-            <p style={{ color: C.muted, fontSize: 13, marginTop: 8 }}>
-              قم بتخصيص إعدادات متجرك وجعله فريداً
-            </p>
-          </div>
-          
-          {/* خطة المتجر */}
-          {currentPlan && (
-            <div style={{ 
-              background: 'rgba(200,226,53,0.1)', 
-              border: `1px solid ${C.border}`, 
-              borderRadius: 12, 
-              padding: '8px 16px' 
-            }}>
-              <span style={{ color: C.muted, fontSize: 12 }}>الخطة الحالية</span>
-              <div style={{ color: C.accent, fontWeight: 700, fontSize: 16 }}>
-                {currentPlan.name === 'free' ? 'مجانية' : 
-                 currentPlan.name === 'basic' ? 'أساسية' : 
-                 currentPlan.name === 'pro' ? 'احترافية' : 'مؤسسية'}
-              </div>
-            </div>
-          )}
-        </div>
+        <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>🛍️ إعدادات المتجر</h1>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المتجر</p>
       </div>
 
       {/* Tabs */}
-      <SettingsTabs 
-        activeTab={activeTab} 
-        onTabChange={setActiveTab} 
-        isPro={isPro}
-        isStoreOwner={isStoreOwner}
-      />
-
-      {/* Tab Content */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 24, marginTop: 16 }}>
-        
-        {/* تبويب عام */}
-        {activeTab === 'general' && (
-          <GeneralSettingsTab
-            initialData={storeData}
-            onSave={handleSaveGeneral}
-            saving={saving}
-          />
-        )}
-
-        {/* تبويب التصميم */}
-        {activeTab === 'design' && (
-          <DesignSettingsTab
-            initialData={{
-              primaryColor: storeData.primaryColor,
-              secondaryColor: storeData.secondaryColor,
-              backgroundColor: storeData.backgroundColor,
-              textColor: storeData.textColor,
-              fontFamily: storeData.fontFamily,
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24, paddingBottom: 16, borderBottom: `1px solid ${C.border}` }}>
+        {tabs.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 10,
+              border: activeTab === id ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+              background: activeTab === id ? C.accent : C.surf,
+              color: activeTab === id ? C.bg : C.muted,
+              fontWeight: activeTab === id ? 700 : 500,
+              cursor: 'pointer',
+              fontFamily: 'Cairo, sans-serif',
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
             }}
-            onSave={handleSaveDesign}
-            saving={saving}
-          />
-        )}
-
-        {/* تبويب الصور */}
-        {activeTab === 'images' && (
-          <ImageSettingsTab
-            logo={storeData.logo}
-            coverImage={storeData.coverImage}
-            onUploadLogo={handleUploadLogo}
-            onUploadCover={handleUploadCover}
-            onRemoveLogo={handleRemoveLogo}
-            onRemoveCover={handleRemoveCover}
-            uploading={uploading}
-          />
-        )}
-
-        {/* تبويب التوصيل */}
-        {activeTab === 'delivery' && (
-          <DeliverySettingsTab
-            initialData={storeData.deliverySettings || {
-              enableDelivery: true,
-              baseFee: 5,
-              feePerKm: 2,
-              minDistance: 1,
-              maxDistance: 20,
-              freeDeliveryAbove: 100,
-              estimatedTime: 45,
-              cashOnDelivery: true,
-              onlinePayment: false
-            }}
-            onSave={handleSaveDelivery}
-            saving={saving}
-          />
-        )}
-
-        {/* تبويب الدومين */}
-        {activeTab === 'domain' && (
-          <DomainSettingsTab
-            initialData={{
-              subdomain: storeData.subdomain,
-              customDomain: storeData.customDomain || '',
-              customDomainVerified: storeData.customDomainVerified,
-            }}
-            onSave={handleSaveDomain}
-            isPro={hasCustomDomainFeature}
-            currentPlan={currentPlan}
-          />
-        )}
-
-        {/* تبويب وسائل التواصل */}
-        {activeTab === 'social' && (
-          <SocialSettingsTab
-            initialData={storeData.socialLinks || {}}
-            onSave={handleSaveSocial}
-            saving={saving}
-          />
-        )}
-
-        {/* تبويب الدفع */}
-        {activeTab === 'payment' && (
-          <PaymentSettingsTab
-            initialData={storeData.paymentSettings || {}}
-            onSave={handleSavePayment}
-            saving={saving}
-            isPro={hasOnlinePayment}
-          />
-        )}
-
-        {/* تبويب الإشعارات */}
-        {activeTab === 'notifications' && (
-          <NotificationSettingsTab
-            initialData={storeData.notificationSettings || {}}
-            onSave={handleSaveNotifications}
-            saving={saving}
-          />
-        )}
+          >
+            <Icon size={15} />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Footer */}
-      <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <p style={{ color: C.muted, fontSize: 12 }}>
-          آخر تحديث: {storeData.createdAt ? new Date(storeData.createdAt).toLocaleDateString('ar-SA') : 'غير معروف'}
-        </p>
-        {!canEdit && (
-          <p style={{ color: C.red, fontSize: 12, marginTop: 8 }}>
-            ⚠️ ليس لديك صلاحية التعديل. يمكنك فقط عرض الإعدادات.
-          </p>
-        )}
-      </div>
+      {/* ==================== عام ==================== */}
+      {activeTab === 'general' && (
+        <div>
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoStorefront style={{ color: C.accent }} />
+              معلومات المتجر
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+              <div>
+                <label style={labelStyle}>اسم المتجر</label>
+                <input
+                  type="text"
+                  value={generalForm.name}
+                  onChange={(e) => setGeneralForm({ ...generalForm, name: e.target.value })}
+                  style={getInput('name')}
+                  onFocus={() => setFocusedInput('name')}
+                  onBlur={() => setFocusedInput(null)}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>البريد الإلكتروني</label>
+                <input
+                  type="email"
+                  value={generalForm.email}
+                  onChange={(e) => setGeneralForm({ ...generalForm, email: e.target.value })}
+                  style={getInput('email')}
+                />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoCall size={13} /> رقم الهاتف
+                </label>
+                <input
+                  type="tel"
+                  value={generalForm.phone}
+                  onChange={(e) => setGeneralForm({ ...generalForm, phone: e.target.value })}
+                  style={getInput('phone')}
+                />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoLogoWhatsapp size={13} /> رقم الواتساب
+                </label>
+                <input
+                  type="tel"
+                  value={generalForm.whatsapp}
+                  onChange={(e) => setGeneralForm({ ...generalForm, whatsapp: e.target.value })}
+                  style={getInput('whatsapp')}
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoLocation size={13} /> العنوان
+                </label>
+                <input
+                  type="text"
+                  value={generalForm.address}
+                  onChange={(e) => setGeneralForm({ ...generalForm, address: e.target.value })}
+                  style={getInput('address')}
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>الوصف</label>
+                <textarea
+                  value={generalForm.description}
+                  onChange={(e) => setGeneralForm({ ...generalForm, description: e.target.value })}
+                  style={{ ...getInput('description'), minHeight: 100, resize: 'vertical' }}
+                  rows={4}
+                />
+              </div>
+            </div>
+          </div>
 
-      {/* أنماط CSS إضافية */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20 }}>وسائل التواصل الاجتماعي</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoLogoInstagram size={13} /> انستغرام
+                </label>
+                <input
+                  type="text"
+                  value={generalForm.instagram}
+                  onChange={(e) => setGeneralForm({ ...generalForm, instagram: e.target.value })}
+                  style={getInput('instagram')}
+                />
+              </div>
+              <div>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <IoLogoFacebook size={13} /> فيسبوك
+                </label>
+                <input
+                  type="text"
+                  value={generalForm.facebook}
+                  onChange={(e) => setGeneralForm({ ...generalForm, facebook: e.target.value })}
+                  style={getInput('facebook')}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoMap style={{ color: C.accent }} size={16} />
+              موقع المتجر على الخريطة
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <label style={labelStyle}>خط العرض (Latitude)</label>
+                <input
+                  type="text"
+                  value={generalForm.latitude}
+                  onChange={(e) => setGeneralForm({ ...generalForm, latitude: e.target.value })}
+                  style={getInput('lat')}
+                  placeholder="33.5138"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>خط الطول (Longitude)</label>
+                <input
+                  type="text"
+                  value={generalForm.longitude}
+                  onChange={(e) => setGeneralForm({ ...generalForm, longitude: e.target.value })}
+                  style={getInput('lng')}
+                  placeholder="36.2765"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button style={saveBtn} onClick={handleSaveGeneral}>
+            <IoSave size={16} /> حفظ التغييرات
+          </button>
+        </div>
+      )}
+
+      {/* ==================== التصميم ==================== */}
+      {activeTab === 'design' && (
+        <div>
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoColorPalette style={{ color: C.accent }} />
+              تخصيص التصميم
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+              {([
+                ['primaryColor', 'اللون الأساسي'],
+                ['secondaryColor', 'اللون الثانوي'],
+                ['backgroundColor', 'لون الخلفية'],
+                ['textColor', 'لون النص'],
+              ] as [keyof typeof designForm, string][]).map(([field, label]) => (
+                <div key={field}>
+                  <label style={labelStyle}>{label}</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="color"
+                      value={designForm[field]}
+                      onChange={(e) => setDesignForm({ ...designForm, [field]: e.target.value })}
+                      style={{ width: 44, height: 40, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer', background: 'none' }}
+                    />
+                    <input
+                      type="text"
+                      value={designForm[field]}
+                      onChange={(e) => setDesignForm({ ...designForm, [field]: e.target.value })}
+                      style={{ ...getInput(field), flex: 1 }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>نوع الخط</label>
+                <select
+                  value={designForm.fontFamily}
+                  onChange={(e) => setDesignForm({ ...designForm, fontFamily: e.target.value })}
+                  style={getInput('font')}
+                >
+                  <option value="Cairo">Cairo</option>
+                  <option value="Tajawal">Tajawal</option>
+                  <option value="Almarai">Almarai</option>
+                  <option value="Arial">Arial</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div style={{ ...sectionCard, backgroundColor: designForm.backgroundColor, color: designForm.textColor, fontFamily: designForm.fontFamily }}>
+            <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: designForm.primaryColor }}>معاينة التصميم</h3>
+            <p style={{ fontSize: 14 }}>هذا نص تجريبي لإظهار شكل الخط والألوان</p>
+            <button style={{ padding: '8px 16px', borderRadius: 8, border: 'none', color: '#fff', background: designForm.secondaryColor }}>
+              زر تجريبي
+            </button>
+          </div>
+
+          <button style={saveBtn} onClick={handleSaveDesign}>
+            <IoSave size={16} /> حفظ التصميم
+          </button>
+        </div>
+      )}
+
+      {/* ==================== الصور ==================== */}
+      {activeTab === 'images' && (
+        <div>
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoImage style={{ color: C.accent }} />
+              شعار المتجر
+            </h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 16 }}>
+              {store?.logo && (
+                <img
+                  src={getImageUrl(store.logo)}
+                  alt="Logo"
+                  style={{ width: 128, height: 128, objectFit: 'cover', borderRadius: 12, border: `1px solid ${C.border}` }}
+                />
+              )}
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ border: `2px dashed ${C.border}`, borderRadius: 12, background: C.surf, padding: 20, textAlign: 'center' }}>
+                  <p style={{ color: C.muted, fontSize: 13, marginBottom: 12 }}>يفضل صورة مربعة بحجم 200×200 بكسل</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    disabled={uploading}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoImage style={{ color: C.accent }} />
+              صورة الغلاف
+            </h2>
+            {store?.coverImage && (
+              <img
+                src={getImageUrl(store.coverImage)}
+                alt="Cover"
+                style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 16 }}
+              />
+            )}
+            <div style={{ border: `2px dashed ${C.border}`, borderRadius: 12, background: C.surf, padding: 20, textAlign: 'center' }}>
+              <p style={{ color: C.muted, fontSize: 13, marginBottom: 12 }}>يفضل صورة بحجم 1200×400 بكسل</p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleCoverUpload}
+                disabled={uploading}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== التوصيل ==================== */}
+      {activeTab === 'delivery' && (
+        <div>
+          <div style={{ ...sectionCard, background: `rgba(200,226,53,0.07)`, marginBottom: 16 }}>
+            <p style={{ color: C.text, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <IoWarning style={{ color: C.accent, flexShrink: 0 }} />
+              قم بتعيين أسعار التوصيل حسب المسافة.
+            </p>
+          </div>
+
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoCar style={{ color: C.accent }} />
+              إعدادات خدمة التوصيل
+            </h2>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 16px', background: C.surf, borderRadius: 10 }}>
+              <button
+                onClick={() => setDeliverySettings({ ...deliverySettings, enableDelivery: !deliverySettings.enableDelivery })}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  background: deliverySettings.enableDelivery ? C.accent : 'rgba(255,255,255,0.15)',
+                  position: 'relative',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 3,
+                  right: deliverySettings.enableDelivery ? 3 : undefined,
+                  left: deliverySettings.enableDelivery ? undefined : 3,
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                }} />
+              </button>
+              <span style={{ color: C.text, fontWeight: 600 }}>تفعيل خدمة التوصيل</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+              <div>
+                <label style={labelStyle}>سعر التوصيل الأساسي (ل.س)</label>
+                <input type="number" value={deliverySettings.baseFee} onChange={(e) => setDeliverySettings({ ...deliverySettings, baseFee: Number(e.target.value) })} style={getInput('baseFee')} />
+              </div>
+              <div>
+                <label style={labelStyle}>سعر الكيلومتر الإضافي (ل.س/كم)</label>
+                <input type="number" value={deliverySettings.feePerKm} onChange={(e) => setDeliverySettings({ ...deliverySettings, feePerKm: Number(e.target.value) })} style={getInput('feePerKm')} />
+              </div>
+              <div>
+                <label style={labelStyle}>الحد الأدنى للمسافة (كم)</label>
+                <input type="number" value={deliverySettings.minDistance} onChange={(e) => setDeliverySettings({ ...deliverySettings, minDistance: Number(e.target.value) })} style={getInput('minDist')} />
+              </div>
+              <div>
+                <label style={labelStyle}>أقصى مسافة للتوصيل (كم)</label>
+                <input type="number" value={deliverySettings.maxDistance} onChange={(e) => setDeliverySettings({ ...deliverySettings, maxDistance: Number(e.target.value) })} style={getInput('maxDist')} />
+              </div>
+              <div>
+                <label style={labelStyle}>توصيل مجاني للطلبات فوق (ل.س)</label>
+                <input type="number" value={deliverySettings.freeDeliveryAbove} onChange={(e) => setDeliverySettings({ ...deliverySettings, freeDeliveryAbove: Number(e.target.value) })} style={getInput('freeDel')} />
+              </div>
+              <div>
+                <label style={labelStyle}>الوقت التقديري للتوصيل (دقيقة)</label>
+                <input type="number" value={deliverySettings.estimatedTime} onChange={(e) => setDeliverySettings({ ...deliverySettings, estimatedTime: Number(e.target.value) })} style={getInput('estTime')} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ ...sectionCard, background: C.surfL }}>
+            <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoCalculator size={16} style={{ color: C.accent }} />
+              مثال لحساب سعر التوصيل (لمسافة 5 كم)
+            </h3>
+            <div style={{ fontSize: 13 }}>
+              <p>• السعر الأساسي: <strong>{deliverySettings.baseFee} ل.س</strong></p>
+              <p>• المسافة الأساسية: <strong>{deliverySettings.minDistance} كم</strong></p>
+              <p>• المسافة الإضافية: <strong>{Math.max(0, 5 - deliverySettings.minDistance)} كم</strong></p>
+              <p>• تكلفة المسافة الإضافية: <strong>{Math.max(0, 5 - deliverySettings.minDistance) * deliverySettings.feePerKm} ل.س</strong></p>
+              <p style={{ color: C.accent, fontWeight: 700, fontSize: 15, marginTop: 8 }}>الإجمالي: {calculateExampleFee()} ل.س</p>
+            </div>
+          </div>
+
+          <button style={saveBtn} onClick={handleSaveDeliverySettings}>
+            <IoSave size={16} /> حفظ إعدادات التوصيل
+          </button>
+        </div>
+      )}
+
+      {/* ==================== الدومين ==================== */}
+      {activeTab === 'domain' && (
+        <div>
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoGlobe style={{ color: C.accent }} />
+              إعدادات الدومين
+            </h2>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>الدومين الفرعي</label>
+              <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                <input
+                  type="text"
+                  value={domainForm.subdomain}
+                  onChange={(e) => setDomainForm({ ...domainForm, subdomain: e.target.value })}
+                  style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }}
+                  placeholder="my-store"
+                />
+                <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, borderRadius: '0 10px 10px 0' }}>
+                  .shamstores.com
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label style={labelStyle}>الدومين المخصص</label>
+              {hasCustomDomain || isSuperAdmin ? (
+                <input
+                  type="text"
+                  value={domainForm.customDomain}
+                  onChange={(e) => setDomainForm({ ...domainForm, customDomain: e.target.value })}
+                  style={getInput('customDomain')}
+                  placeholder="www.my-store.com"
+                />
+              ) : (
+                <div style={{ background: C.surf, padding: 16, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, marginBottom: 12 }}>
+                    <IoLockClosed />
+                    <span>الدومين المخصص متاح فقط في الخطة الاحترافية</span>
+                  </div>
+                  <button onClick={() => window.location.href = '/plans'} style={{ ...saveBtn, padding: '8px 16px', fontSize: 13 }}>
+                    ترقية الخطة
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button style={saveBtn} onClick={handleSaveDomain}>
+            <IoSave size={16} /> حفظ إعدادات الدومين
+          </button>
+        </div>
+      )}
     </div>
   );
 };

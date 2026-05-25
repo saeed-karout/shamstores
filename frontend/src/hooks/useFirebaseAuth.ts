@@ -38,26 +38,51 @@ export const useFirebaseAuth = () => {
       const user = result.user;
 
       if (user) {
-        // Get Firebase ID token
         const idToken = await user.getIdToken();
 
-        // Send to backend for authentication
-        const response = await api.post('/auth/firebase-signin', { idToken });
+        try {
+          // ✅ استخدم axios مباشرة لأن ApiService يعيد data.data فقط
+          const axios = (await import('axios')).default;
+          const response = await axios.post(
+            `${api.getApiBaseUrl()}/auth/firebase-signin`,
+            { idToken },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
 
-        if (response.data.success) {
-          const { token, user: userData } = response.data.data;
-          
-          // Store JWT token
-          localStorage.setItem('token', token);
-          
-          setState(prev => ({ ...prev, user }));
-          toast.success('تم تسجيل الدخول بنجاح');
-          
-          return { token, user: userData };
-        } else {
-          throw new Error(response.data.error || 'Failed to authenticate');
+          console.log('=== FULL RESPONSE ===');
+          console.log('Status:', response.status);
+          console.log('Data:', response.data);
+          console.log('=====================');
+
+          if (response.data && response.data.success === true) {
+            const responseData = response.data.data;
+            
+            if (!responseData) {
+              throw new Error('Missing data in response');
+            }
+            
+            const token = responseData.token;
+            const userData = responseData.user;
+            
+            if (!token) {
+              throw new Error('Missing token in response');
+            }
+            
+            localStorage.setItem('token', token);
+            setState(prev => ({ ...prev, user }));
+            toast.success('تم تسجيل الدخول بنجاح');
+            
+            return { token, user: userData };
+          } else {
+            throw new Error(response.data?.error || 'Authentication failed');
+          }
+        } catch (apiError: any) {
+          console.error('API Error:', apiError);
+          throw apiError;
         }
       }
+      
+      return null;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to sign in with Google';
       console.error('Firebase sign-in error:', error);
@@ -85,19 +110,32 @@ export const useFirebaseAuth = () => {
       if (user) {
         const idToken = await user.getIdToken();
 
-        // Send to backend to link account
-        const response = await api.post('/auth/link-firebase', { idToken }, {
-          headers: { Authorization: `Bearer ${jwtToken}` }
-        });
+        try {
+          // ✅ استخدم axios مباشرة أيضاً
+          const axios = (await import('axios')).default;
+          const response = await axios.post(
+            `${api.getApiBaseUrl()}/auth/link-firebase`,
+            { idToken },
+            { headers: { 
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${jwtToken}`
+            }}
+          );
 
-        if (response.data.success) {
-          setState(prev => ({ ...prev, user }));
-          toast.success('تم ربط حساب Google بنجاح');
-          return true;
-        } else {
-          throw new Error(response.data.error || 'Failed to link account');
+          if (response.data && response.data.success === true) {
+            setState(prev => ({ ...prev, user }));
+            toast.success('تم ربط حساب Google بنجاح');
+            return true;
+          } else {
+            throw new Error(response.data?.error || 'Failed to link account');
+          }
+        } catch (apiError: any) {
+          console.error('API error:', apiError);
+          throw apiError;
         }
       }
+      
+      return false;
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to link Firebase account';
       console.error('Firebase link error:', error);

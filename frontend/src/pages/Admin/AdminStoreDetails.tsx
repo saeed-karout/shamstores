@@ -105,63 +105,77 @@ const AdminStoreDetails: React.FC = () => {
     fetchStore();
   }, [id]);
 
-  const fetchStore = async () => {
-    try {
-      const response = await api.get(`/admin/stores/${id}`);
-      const storeData = response.data || response;
+  // pages/Admin/AdminStoreDetails.tsx - الجزء المصحح من fetchStore
 
-      console.log('✅ Store data received:', storeData);
-
-      setStore(storeData);
-
-      let parsedSettings = {
-        enableDelivery: true,
-        deliveryFee: 5,
-        freeDeliveryAbove: 100,
-        estimatedTime: 45
-      };
-
-      if (storeData.settings) {
-        try {
-          if (typeof storeData.settings === 'string') {
-            let cleanSettings = storeData.settings;
-            if (cleanSettings.includes('"0":"{"')) {
-              const match = cleanSettings.match(/(\{.*\})/);
-              if (match) {
-                cleanSettings = match[1];
-              }
-            }
-            parsedSettings = JSON.parse(cleanSettings);
-          } else {
-            parsedSettings = storeData.settings;
-          }
-        } catch (error) {
-          console.error('Error parsing settings:', error);
-        }
-      }
-
-      setFormData({
-        name: storeData.name || '',
-        slug: storeData.slug || '',
-        email: storeData.email || '',
-        phone: storeData.phone || '',
-        whatsapp: storeData.whatsapp || '',
-        address: storeData.address || '',
-        description: storeData.description || '',
-        latitude: storeData.latitude?.toString() || '',
-        longitude: storeData.longitude?.toString() || '',
-        primaryColor: storeData.primaryColor || '#3B82F6',
-        secondaryColor: storeData.secondaryColor || '#10B981',
-        isActive: storeData.isActive,
-        settings: parsedSettings
-      });
-    } catch (error) {
-      console.error('Error fetching store:', error);
-      toast.error('فشل تحميل بيانات المتجر');
-    } finally {
-      setLoading(false);
+const fetchStore = async () => {
+  try {
+    const response = await api.get(`/admin/stores/${id}`);
+    
+    // ✅ التصحيح: استخراج البيانات من response بشكل صحيح
+    let storeData;
+    
+    if (response?.data?.data) {
+      storeData = response.data.data;
+    } else if (response?.data) {
+      storeData = response.data;
+    } else {
+      storeData = response;
     }
-  };
+
+    console.log('✅ Store data received:', storeData);
+    console.log('✅ Store stats:', storeData.stats);
+    console.log('✅ Store owner:', storeData.owner);
+
+    setStore(storeData);
+
+    let parsedSettings = {
+      enableDelivery: true,
+      deliveryFee: 5,
+      freeDeliveryAbove: 100,
+      estimatedTime: 45
+    };
+
+    if (storeData.settings) {
+      try {
+        if (typeof storeData.settings === 'string') {
+          let cleanSettings = storeData.settings;
+          if (cleanSettings.includes('"0":"{')) {
+            const match = cleanSettings.match(/(\{.*\})/);
+            if (match) {
+              cleanSettings = match[1];
+            }
+          }
+          parsedSettings = JSON.parse(cleanSettings);
+        } else {
+          parsedSettings = storeData.settings;
+        }
+      } catch (error) {
+        console.error('Error parsing settings:', error);
+      }
+    }
+
+    setFormData({
+      name: storeData.name || '',
+      slug: storeData.slug || '',
+      email: storeData.email || '',
+      phone: storeData.phone || '',
+      whatsapp: storeData.whatsapp || '',
+      address: storeData.address || '',
+      description: storeData.description || '',
+      latitude: storeData.latitude?.toString() || '',
+      longitude: storeData.longitude?.toString() || '',
+      primaryColor: storeData.primaryColor || '#3B82F6',
+      secondaryColor: storeData.secondaryColor || '#10B981',
+      isActive: storeData.isActive ?? true,
+      settings: parsedSettings
+    });
+  } catch (error) {
+    console.error('Error fetching store:', error);
+    toast.error('فشل تحميل بيانات المتجر');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const checkSlugAvailability = async (slug: string) => {
     if (!slug || slug === store?.slug) {

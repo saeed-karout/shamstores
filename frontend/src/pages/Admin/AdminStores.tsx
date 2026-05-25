@@ -86,17 +86,29 @@ const AdminStores: React.FC = () => {
     };
 
    const fetchStoreDetails = async (storeId: string) => {
-    setStatsLoading(true);
-    try {
-      const response = await api.get(`/admin/stores/${storeId}`);
-      setStoreStats(response.data?.data || response.data || null);
-    } catch (error) {
-      console.error('Error fetching store details:', error);
-      toast.error('فشل تحميل تفاصيل المتجر');
-    } finally {
-      setStatsLoading(false);
+  setStatsLoading(true);
+  try {
+    const response = await api.get(`/admin/stores/${storeId}`);
+    
+    // ✅ استخراج البيانات بشكل صحيح
+    let detailsData;
+    if (response?.data?.data) {
+      detailsData = response.data.data;
+    } else if (response?.data) {
+      detailsData = response.data;
+    } else {
+      detailsData = response;
     }
-  };
+    
+    console.log('✅ Store details:', detailsData);
+    setStoreStats(detailsData);
+  } catch (error) {
+    console.error('Error fetching store details:', error);
+    toast.error('فشل تحميل تفاصيل المتجر');
+  } finally {
+    setStatsLoading(false);
+  }
+};
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {

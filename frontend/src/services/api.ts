@@ -324,6 +324,11 @@ class ApiService {
     }
   }
 
+  // في ApiService class
+getApiBaseUrl(): string {
+  return API_URL;
+}
+
  async getPublicBusiness(identifier?: string): Promise<any> {
   // استخدام المعرف الممرر، أو استخراج الـ subdomain من الـ URL
   const id = identifier || getCurrentSubdomain();

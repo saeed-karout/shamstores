@@ -1,7 +1,7 @@
 // frontend/src/services/firebaseConfig.ts
 
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getAuth, Auth } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
@@ -13,8 +13,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase only if config is complete
-let firebaseApp: any = null;
-let firebaseAuth: any = null;
+let firebaseApp: FirebaseApp | null = null;
+let firebaseAuth: Auth | null = null;
 
 if (firebaseConfig.apiKey && firebaseConfig.projectId) {
   firebaseApp = initializeApp(firebaseConfig);
