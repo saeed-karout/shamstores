@@ -79,6 +79,7 @@ import AdminMarketingIndex from './pages/Admin/AdminMarketingIndex';
 
 // ==================== مكونات ====================
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import PlanRoute from './components/auth/PlanRoute';
 import Layout from './components/layout/Layout';
 import { useAuth } from './hooks/useAuth';
 import PublicRouter from './components/PublicRouter';
@@ -196,30 +197,30 @@ const MainApp: React.FC = () => {
             
             {/* مسارات المطعم */}
             <Route path="/menu" element={<RestaurantMenuPage />} />
-            <Route path="/orders" element={<RestaurantOrdersPage />} />
-            <Route path="/tables" element={<RestaurantTablesPage />} />
-            <Route path="/qr-codes" element={<RestaurantQRCodesPage />} />
-            <Route path="/staff" element={<RestaurantStaffPage />} />
-            <Route path="/delivery" element={<RestaurantDeliveryDashboard />} />
-            <Route path="/drivers" element={<RestaurantDriversPage />} />
+            <Route path="/orders" element={<PlanRoute feature="onlineOrders"><RestaurantOrdersPage /></PlanRoute>} />
+            <Route path="/tables" element={<PlanRoute feature="tableQr"><RestaurantTablesPage /></PlanRoute>} />
+            <Route path="/qr-codes" element={<PlanRoute feature="tableQr"><RestaurantQRCodesPage /></PlanRoute>} />
+            <Route path="/staff" element={<PlanRoute feature="staff"><RestaurantStaffPage /></PlanRoute>} />
+            <Route path="/delivery" element={<PlanRoute feature="onlineOrders"><RestaurantDeliveryDashboard /></PlanRoute>} />
+            <Route path="/drivers" element={<PlanRoute feature="onlineOrders"><RestaurantDriversPage /></PlanRoute>} />
             <Route path="/settings" element={<RestaurantSettingsPage />} />
-            <Route path="/analytics" element={<RestaurantAnalyticsPage />} />
-            <Route path="/coupons" element={<RestaurantCouponsPage />} />
-            <Route path="/marketing" element={<BusinessMarketing />} />
+            <Route path="/analytics" element={<PlanRoute feature="analytics"><RestaurantAnalyticsPage /></PlanRoute>} />
+            <Route path="/coupons" element={<PlanRoute feature="coupons"><RestaurantCouponsPage /></PlanRoute>} />
+            <Route path="/marketing" element={<PlanRoute feature="marketing"><BusinessMarketing /></PlanRoute>} />
             <Route path="/plans" element={<RestaurantPlansPage />} />
             
             {/* مسارات المتجر */}
             <Route path="/store/products" element={<StoreProductsPage />} />
-            <Route path="/store/inventory" element={<StoreInventoryPage />} />
-            <Route path="/store/orders" element={<StoreOrdersPage />} />
-            <Route path="/store/staff" element={<StoreStaffPage />} />
-            <Route path="/store/coupons" element={<StoreCouponsPage />} />
-            <Route path="/store/delivery" element={<StoreDeliveryDashboard />} />
-            <Route path="/store/drivers" element={<StoreDriversPage />} />
-            <Route path="/store/analytics" element={<StoreAnalyticsPage />} />
+            <Route path="/store/inventory" element={<PlanRoute feature="inventory"><StoreInventoryPage /></PlanRoute>} />
+            <Route path="/store/orders" element={<PlanRoute feature="onlineOrders"><StoreOrdersPage /></PlanRoute>} />
+            <Route path="/store/staff" element={<PlanRoute feature="staff"><StoreStaffPage /></PlanRoute>} />
+            <Route path="/store/coupons" element={<PlanRoute feature="coupons"><StoreCouponsPage /></PlanRoute>} />
+            <Route path="/store/delivery" element={<PlanRoute feature="onlineOrders"><StoreDeliveryDashboard /></PlanRoute>} />
+            <Route path="/store/drivers" element={<PlanRoute feature="onlineOrders"><StoreDriversPage /></PlanRoute>} />
+            <Route path="/store/analytics" element={<PlanRoute feature="analytics"><StoreAnalyticsPage /></PlanRoute>} />
             <Route path="/store/settings" element={<StoreSettingsPage />} />
-            <Route path="/store/qr-codes" element={<StoreQRCodesPage />} />
-            <Route path="/store/marketing" element={<BusinessMarketing />} />
+            <Route path="/store/qr-codes" element={<PlanRoute feature="tableQr"><StoreQRCodesPage /></PlanRoute>} />
+            <Route path="/store/marketing" element={<PlanRoute feature="marketing"><BusinessMarketing /></PlanRoute>} />
             <Route path="/store/plans" element={<StorePlansPage />} />
           </Route>
         </Route>

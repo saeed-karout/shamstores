@@ -15,7 +15,6 @@ import {
   IoSettings,
   IoPricetag,
   IoRocket,
-  IoLockClosed,
   IoCar,
   IoNavigate,
   IoStorefront,
@@ -56,17 +55,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const { user, isSuperAdmin, isRestaurantOwner, isStoreOwner, isStaff, role, logout } = useAuth();
   const permissions = usePermissions();
-  const { currentPlan, loading: planLoading, isPro, hasFeature } = permissions;
+  const { currentPlan, loading: planLoading, isPro } = permissions;
 
   // حساب الميزات المتاحة (للمالكين)
-  const hasOnlineOrders = isPro || hasFeature('hasOnlineOrders');
-  const hasTableQr = isPro || hasFeature('hasTableQr');
-  const hasCoupons = isPro || hasFeature('hasCoupons');
-  const hasAnalytics = isPro || hasFeature('hasAnalytics');
-  const hasDelivery = isPro || hasFeature('hasDelivery');
-  const hasMarketing = isPro || hasFeature('hasMarketing');
-  const hasInventory = isPro || hasFeature('hasInventory');
-  const hasStaff = isPro || permissions.getMaxStaff() > 0;
+  const hasOnlineOrders = permissions.canViewOrders;
+  const hasTableQr = permissions.canViewTables;
+  const hasCoupons = permissions.canViewCoupons;
+  const hasAnalytics = permissions.canViewAnalytics;
+  const hasDelivery = permissions.canViewDelivery;
+  const hasMarketing = permissions.canViewMarketing;
+  const isPaidPlan = (currentPlan?.price || 0) > 0 && currentPlan?.name !== 'free' && currentPlan?.slug !== 'free';
+  const hasInventory = permissions.checkPermission('inventory') || isPaidPlan;
+  const hasStaff = permissions.canViewStaff;
 
   const handleLogout = () => {
     localStorage.clear();
@@ -86,26 +86,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const isExpiringSoon = daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0;
   const isPlatformStaff = isStaff && !user?.restaurantId && !user?.storeId;
 
-  const getLockTooltip = (feature: string, requiredPlan?: string): string => {
-    const featureNames: Record<string, string> = {
-      onlineOrders: 'طلبات أونلاين',
-      tableQr: 'رموز QR للطاولات',
-      coupons: 'كوبونات الخصم',
-      analytics: 'تحليلات متقدمة',
-      delivery: 'خدمة التوصيل',
-      marketing: 'التسويق',
-      inventory: 'إدارة المخزون',
-      staff: 'إدارة الموظفين',
-    };
-    const planNames: Record<string, string> = {
-      basic: 'الخطة الأساسية',
-      pro: 'الخطة الاحترافية',
-      enterprise: 'الخطة المؤسسية',
-    };
-    const featureName = featureNames[feature] || feature;
-    const planName = requiredPlan ? planNames[requiredPlan] || requiredPlan : 'الخطة المدفوعة';
-    return `🔒 هذه الميزة (${featureName}) غير متاحة في خطتك الحالية. قم بترقية اشتراكك إلى ${planName} للاستفادة منها.`;
-  };
 
   // ==================== قائمة السوبر أدمن ====================
   const getAdminMenuItems = () => {
@@ -131,67 +111,70 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const sp = user?.permissions || {};
     const items: any[] = [{ path: '/admin', icon: IoHome, label: 'الرئيسية' }];
     
-    items.push({ path: sp.canManageRestaurants ? '/admin/restaurants' : '#', icon: IoRestaurant, label: 'المطاعم', locked: !sp.canManageRestaurants });
-    items.push({ path: sp.canManageStores ? '/admin/stores' : '#', icon: IoStorefront, label: 'المتاجر', locked: !sp.canManageStores });
-    items.push({ path: sp.canManageUsers ? '/admin/users' : '#', icon: IoPeople, label: 'المستخدمين', locked: !sp.canManageUsers });
-    items.push({ path: sp.canManageDrivers ? '/admin/drivers' : '#', icon: IoCar, label: 'السائقين', locked: !sp.canManageDrivers });
-    items.push({ path: sp.canManagePlans ? '/admin/plans' : '#', icon: IoRocket, label: 'الخطط', locked: !sp.canManagePlans });
-    items.push({ path: sp.canManageSettings ? '/admin/platform-settings' : '#', icon: IoSettings, label: 'إعدادات المنصة', locked: !sp.canManageSettings });
-    items.push({ path: sp.canViewReports ? '/admin/reports' : '#', icon: IoDocumentText, label: 'التقارير', locked: !sp.canViewReports });
+    if (sp.canManageRestaurants) items.push({ path: '/admin/restaurants', icon: IoRestaurant, label: 'المطاعم' });
+    if (sp.canManageStores) items.push({ path: '/admin/stores', icon: IoStorefront, label: 'المتاجر' });
+    if (sp.canManageUsers) items.push({ path: '/admin/users', icon: IoPeople, label: 'المستخدمين' });
+    if (sp.canManageDrivers) items.push({ path: '/admin/drivers', icon: IoCar, label: 'السائقين' });
+    if (sp.canManagePlans) items.push({ path: '/admin/plans', icon: IoRocket, label: 'الخطط' });
+    if (sp.canManageSettings) items.push({ path: '/admin/platform-settings', icon: IoSettings, label: 'إعدادات المنصة' });
+    if (sp.canViewReports) items.push({ path: '/admin/reports', icon: IoDocumentText, label: 'التقارير' });
     items.push({ path: '/admin/orders', icon: IoReceipt, label: 'الطلبات' });
     items.push({ path: '/admin/qr-codes', icon: IoQrCode, label: 'رموز QR' });
     items.push({ path: '/admin/advertisements', icon: IoMegaphone, label: 'الإعلانات' });
     
-    return items;  // ✅ return مرة واحدة فقط في النهاية
+    return items;
   };
 
   // ==================== قائمة مالك المطعم ====================
   const getRestaurantOwnerMenuItems = () => {
-    return [
+    const items: any[] = [
       { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
       { path: '/menu', icon: IoFastFood, label: 'القائمة' },
-      { path: hasOnlineOrders ? '/orders' : '/plans', icon: IoReceipt, label: 'الطلبات', locked: !hasOnlineOrders, tooltip: getLockTooltip('onlineOrders', 'basic') },
-      { path: hasTableQr ? '/tables' : '/plans', icon: IoRestaurant, label: 'الطاولات', locked: !hasTableQr, tooltip: getLockTooltip('tableQr', 'basic') },
-      { path: hasTableQr ? '/qr-codes' : '/plans', icon: IoQrCode, label: 'رموز QR', locked: !hasTableQr, tooltip: getLockTooltip('tableQr', 'basic') },
-      { path: hasCoupons ? '/coupons' : '/plans', icon: IoPricetag, label: 'الكوبونات', locked: !hasCoupons, tooltip: getLockTooltip('coupons', 'basic') },
-      { path: hasStaff ? '/staff' : '/plans', icon: IoPeople, label: 'موظفي المطعم', locked: !hasStaff, tooltip: getLockTooltip('staff', 'basic') },
-      { path: hasAnalytics ? '/analytics' : '/plans', icon: IoStatsChart, label: 'الإحصائيات', locked: !hasAnalytics, tooltip: getLockTooltip('analytics', 'pro') },
-      { path: hasDelivery ? '/delivery' : '/plans', icon: IoNavigate, label: 'طلبات التوصيل', locked: !hasDelivery, tooltip: getLockTooltip('delivery', 'pro') },
-      { path: hasDelivery ? '/drivers' : '/plans', icon: IoCar, label: 'السائقين', locked: !hasDelivery, tooltip: getLockTooltip('delivery', 'pro') },
-      { path: hasMarketing ? '/marketing' : '/plans', icon: IoMegaphone, label: 'التسويق', badge: hasMarketing ? 'جديد' : undefined, locked: !hasMarketing, tooltip: getLockTooltip('marketing', 'pro') },
-      { path: '/plans', icon: IoRocket, label: 'خطط الأسعار' },
-      { path: '/settings', icon: IoSettings, label: 'الإعدادات' },
     ];
+    if (hasOnlineOrders) items.push({ path: '/orders', icon: IoReceipt, label: 'الطلبات' });
+    if (hasTableQr) items.push({ path: '/tables', icon: IoRestaurant, label: 'الطاولات' });
+    if (hasTableQr) items.push({ path: '/qr-codes', icon: IoQrCode, label: 'رموز QR' });
+    if (hasCoupons) items.push({ path: '/coupons', icon: IoPricetag, label: 'الكوبونات' });
+    if (hasStaff) items.push({ path: '/staff', icon: IoPeople, label: 'موظفي المطعم' });
+    if (hasAnalytics) items.push({ path: '/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
+    if (hasDelivery) items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
+    if (hasDelivery) items.push({ path: '/drivers', icon: IoCar, label: 'السائقين' });
+    if (hasMarketing) items.push({ path: '/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
+    items.push({ path: '/plans', icon: IoRocket, label: 'خطط الأسعار' });
+    items.push({ path: '/settings', icon: IoSettings, label: 'الإعدادات' });
+    return items;
   };
 
   // ==================== قائمة مالك المتجر ====================
   const getStoreOwnerMenuItems = () => {
-    return [
+    const items: any[] = [
       { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
       { path: '/store/products', icon: IoBagOutline, label: 'المنتجات' },
-      { path: hasInventory ? '/store/inventory' : '/store/plans', icon: IoStatsChart, label: 'المخزون', locked: !hasInventory, tooltip: getLockTooltip('inventory', 'basic') },
-      { path: hasOnlineOrders ? '/store/orders' : '/store/plans', icon: IoReceipt, label: 'الطلبات', locked: !hasOnlineOrders, tooltip: getLockTooltip('onlineOrders', 'basic') },
-      { path: hasCoupons ? '/store/coupons' : '/store/plans', icon: IoPricetag, label: 'الكوبونات', locked: !hasCoupons, tooltip: getLockTooltip('coupons', 'basic') },
-      { path: hasStaff ? '/store/staff' : '/store/plans', icon: IoPeople, label: 'موظفي المتجر', locked: !hasStaff, tooltip: getLockTooltip('staff', 'basic') },
-      { path: hasAnalytics ? '/store/analytics' : '/store/plans', icon: IoStatsChart, label: 'الإحصائيات', locked: !hasAnalytics, tooltip: getLockTooltip('analytics', 'pro') },
-      { path: hasOnlineOrders ? '/store/delivery' : '/store/plans', icon: IoNavigate, label: 'طلبات التوصيل', locked: !hasOnlineOrders, tooltip: getLockTooltip('onlineOrders', 'basic') },
-      { path: hasOnlineOrders ? '/store/drivers' : '/store/plans', icon: IoCar, label: 'السائقين', locked: !hasOnlineOrders, tooltip: getLockTooltip('onlineOrders', 'basic') },
-      { path: hasTableQr ? '/store/qr-codes' : '/store/plans', icon: IoQrCode, label: 'رموز QR', locked: !hasTableQr, tooltip: getLockTooltip('tableQr', 'basic') },
-      { path: hasMarketing ? '/store/marketing' : '/store/plans', icon: IoMegaphone, label: 'التسويق', badge: hasMarketing ? 'جديد' : undefined, locked: !hasMarketing, tooltip: getLockTooltip('marketing', 'pro') },
-      { path: '/store/plans', icon: IoRocket, label: 'خطط الأسعار' },
-      { path: '/store/settings', icon: IoSettings, label: 'الإعدادات' },
     ];
+    if (hasInventory) items.push({ path: '/store/inventory', icon: IoStatsChart, label: 'المخزون' });
+    if (hasOnlineOrders) items.push({ path: '/store/orders', icon: IoReceipt, label: 'الطلبات' });
+    if (hasCoupons) items.push({ path: '/store/coupons', icon: IoPricetag, label: 'الكوبونات' });
+    if (hasStaff) items.push({ path: '/store/staff', icon: IoPeople, label: 'موظفي المتجر' });
+    if (hasAnalytics) items.push({ path: '/store/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
+    if (hasOnlineOrders) items.push({ path: '/store/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
+    if (hasOnlineOrders) items.push({ path: '/store/drivers', icon: IoCar, label: 'السائقين' });
+    if (hasTableQr) items.push({ path: '/store/qr-codes', icon: IoQrCode, label: 'رموز QR' });
+    if (hasMarketing) items.push({ path: '/store/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
+    items.push({ path: '/store/plans', icon: IoRocket, label: 'خطط الأسعار' });
+    items.push({ path: '/store/settings', icon: IoSettings, label: 'الإعدادات' });
+    return items;
   };
 
   // ==================== قائمة موظف مطعم/متجر ====================
   const getStaffMenuItems = () => {
-    return [
+    const items: any[] = [
       { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
-      { path: permissions.canViewMenu ? '/menu' : '/plans', icon: IoFastFood, label: 'القائمة', locked: !permissions.canViewMenu },
-      { path: permissions.canViewOrders ? '/orders' : '/plans', icon: IoReceipt, label: 'الطلبات', locked: !permissions.canViewOrders },
-      { path: permissions.canViewTables ? '/tables' : '/plans', icon: IoRestaurant, label: 'الطاولات', locked: !permissions.canViewTables },
-      { path: permissions.canViewDelivery ? '/delivery' : '/plans', icon: IoNavigate, label: 'طلبات التوصيل', locked: !permissions.canViewDelivery },
     ];
+    if (permissions.canViewMenu) items.push({ path: '/menu', icon: IoFastFood, label: 'القائمة' });
+    if (permissions.canViewOrders) items.push({ path: '/orders', icon: IoReceipt, label: 'الطلبات' });
+    if (permissions.canViewTables) items.push({ path: '/tables', icon: IoRestaurant, label: 'الطاولات' });
+    if (permissions.canViewDelivery) items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
+    return items;
   };
 
   // تحديد القائمة حسب الدور
@@ -281,56 +264,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
-          {menuItems.map((item) => {
-            const locked = item.locked === true;
-            const targetPath = locked && item.path !== '#' ? (isStoreOwner ? '/store/plans' : '/plans') : item.path;
-            const isClickable = !locked || (locked && targetPath !== '#');
-            return (
-              <NavLink
-                key={item.path}
-                to={isClickable ? targetPath : '#'}
-                onClick={(e) => {
-                  if (!isClickable) e.preventDefault();
-                  onClose();
-                }}
-                title={item.tooltip || ''}
-              >
-                {({ isActive }) => (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    width: '100%',
-                    padding: '9px 10px',
-                    borderRadius: 8,
-                    marginBottom: 2,
-                    textDecoration: 'none',
-                    background: !locked && isActive ? C.accentBg : 'transparent',
-                    color: locked ? C.muted : (isActive ? C.accent : C.muted),
-                    borderRight: `3px solid ${!locked && isActive ? C.accent : 'transparent'}`,
-                    opacity: locked ? 0.6 : 1,
-                    transition: 'all 0.15s ease',
-                    boxSizing: 'border-box',
-                    cursor: isClickable ? 'pointer' : 'not-allowed',
-                  }}>
-                    <item.icon size={18} style={{ flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: isActive && !locked ? 600 : 400 }}>
-                      {item.label}
-                    </span>
-                    {item.badge === 'جديد' && !locked && (
-                      <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 20, background: C.accent, color: C.darkBg, fontWeight: 700, flexShrink: 0 }}>جديد</span>
-                    )}
-                    {locked && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                        <IoLockClosed size={12} style={{ color: C.muted }} />
-                        <span style={{ fontSize: 9, color: C.accent }}>مقفل</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </NavLink>
-            );
-          })}
+          {menuItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              onClick={onClose}
+            >
+              {({ isActive }) => (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  padding: '9px 10px',
+                  borderRadius: 8,
+                  marginBottom: 2,
+                  textDecoration: 'none',
+                  background: isActive ? C.accentBg : 'transparent',
+                  color: isActive ? C.accent : C.muted,
+                  borderRight: `3px solid ${isActive ? C.accent : 'transparent'}`,
+                  transition: 'all 0.15s ease',
+                  boxSizing: 'border-box',
+                  cursor: 'pointer',
+                }}>
+                  <item.icon size={18} style={{ flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: isActive ? 600 : 400 }}>
+                    {item.label}
+                  </span>
+                  {item.badge === 'جديد' && (
+                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 20, background: C.accent, color: C.darkBg, fontWeight: 700, flexShrink: 0 }}>جديد</span>
+                  )}
+                </div>
+              )}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Upgrade Banner */}

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
-import { useTheme } from '@/context/ThemeContext'; // ✅ إضافة استيراد useTheme
+import { useTheme } from '@/context/ThemeContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import Loader from '@/components/common/Loader';
 import toast from 'react-hot-toast';
 import {
@@ -118,15 +119,22 @@ const StoreSettingsPage: React.FC = () => {
   const { store, loading, updateStore, uploadLogo, uploadCover } = useStore();
   const { user, isSuperAdmin, isOwner } = useAuth();
   const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
-  const { setThemeColors } = useTheme(); // ✅ استخدام setThemeColors
+  const { setThemeColors } = useTheme();
+  const permissions = usePermissions();
   
   const [activeTab, setActiveTab] = useState('general');
   const [uploading, setUploading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
-  // ✅ التحقق من الميزات حسب الخطة
-  const hasCustomDomain = currentPlan?.hasCustomDomain === true || isSuperAdmin;
-  const hasOnlinePayment = currentPlan?.hasOnlineOrders === true || isSuperAdmin;
+  // ✅ التحقق من صلاحية التعديل
+  const canEdit = isSuperAdmin || isOwner;
+  
+  // ✅ التحقق من صلاحية تحديث الإعدادات (للموظفين)
+  const canUpdateSettings = canEdit || permissions.canUpdateSettings;
+  
+  // ✅ التحقق من صلاحية الدومين المخصص (من الخطة)
+  const hasCustomDomain = permissions.canUseCustomDomain || isSuperAdmin;
+  const hasOnlinePayment = permissions.hasOnlineOrders || isSuperAdmin;
 
   // ✅ بيانات النموذج العام
   const [generalForm, setGeneralForm] = useState({
@@ -218,6 +226,10 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ حفظ البيانات العامة
   const handleSaveGeneral = async () => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتحديث الإعدادات العامة');
+      return;
+    }
     try {
       await updateStore(generalForm);
       toast.success('تم تحديث البيانات العامة');
@@ -228,6 +240,10 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ حفظ التصميم (جميع الألوان) مع تحديث ThemeProvider
   const handleSaveDesign = async () => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتحديث التصميم');
+      return;
+    }
     try {
       await updateStore(designForm);
       
@@ -253,6 +269,10 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ حفظ إعدادات الدومين
   const handleSaveDomain = async () => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتحديث إعدادات الدومين');
+      return;
+    }
     if (!hasCustomDomain && !isSuperAdmin) {
       toast.error('الدومين المخصص متاح فقط في الخطة الاحترافية');
       return;
@@ -267,6 +287,10 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ حفظ إعدادات التوصيل
   const handleSaveDeliverySettings = async () => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتحديث إعدادات التوصيل');
+      return;
+    }
     try {
       await updateStore({ deliverySettings });
       toast.success('تم حفظ إعدادات التوصيل');
@@ -277,6 +301,10 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ رفع الشعار
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتغيير الشعار');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -292,6 +320,10 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ رفع صورة الغلاف
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتغيير صورة الغلاف');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -347,6 +379,11 @@ const StoreSettingsPage: React.FC = () => {
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>🎨 إعدادات المتجر</h1>
         <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المتجر وتخصيص الألوان</p>
+        {!canUpdateSettings && (
+          <p style={{ color: C.red, fontSize: 12, marginTop: 8 }}>
+            ⚠️ ليس لديك صلاحية التعديل. يمكنك فقط عرض الإعدادات.
+          </p>
+        )}
       </div>
 
       {/* Tabs */}
@@ -394,6 +431,7 @@ const StoreSettingsPage: React.FC = () => {
                   style={getInput('name')}
                   onFocus={() => setFocusedInput('name')}
                   onBlur={() => setFocusedInput(null)}
+                  disabled={!canUpdateSettings}
                 />
               </div>
               <div>
@@ -405,6 +443,7 @@ const StoreSettingsPage: React.FC = () => {
                   style={getInput('email')}
                   onFocus={() => setFocusedInput('email')}
                   onBlur={() => setFocusedInput(null)}
+                  disabled={!canUpdateSettings}
                 />
               </div>
               <div>
@@ -418,6 +457,7 @@ const StoreSettingsPage: React.FC = () => {
                   style={getInput('phone')}
                   onFocus={() => setFocusedInput('phone')}
                   onBlur={() => setFocusedInput(null)}
+                  disabled={!canUpdateSettings}
                 />
               </div>
               <div>
@@ -431,6 +471,7 @@ const StoreSettingsPage: React.FC = () => {
                   style={getInput('whatsapp')}
                   onFocus={() => setFocusedInput('whatsapp')}
                   onBlur={() => setFocusedInput(null)}
+                  disabled={!canUpdateSettings}
                 />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -444,6 +485,7 @@ const StoreSettingsPage: React.FC = () => {
                   style={getInput('address')}
                   onFocus={() => setFocusedInput('address')}
                   onBlur={() => setFocusedInput(null)}
+                  disabled={!canUpdateSettings}
                 />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
@@ -455,6 +497,7 @@ const StoreSettingsPage: React.FC = () => {
                   onFocus={() => setFocusedInput('description')}
                   onBlur={() => setFocusedInput(null)}
                   rows={4}
+                  disabled={!canUpdateSettings}
                 />
               </div>
             </div>
@@ -475,6 +518,7 @@ const StoreSettingsPage: React.FC = () => {
                   onFocus={() => setFocusedInput('instagram')}
                   onBlur={() => setFocusedInput(null)}
                   placeholder="username"
+                  disabled={!canUpdateSettings}
                 />
               </div>
               <div>
@@ -489,6 +533,7 @@ const StoreSettingsPage: React.FC = () => {
                   onFocus={() => setFocusedInput('facebook')}
                   onBlur={() => setFocusedInput(null)}
                   placeholder="pagename"
+                  disabled={!canUpdateSettings}
                 />
               </div>
             </div>
@@ -510,6 +555,7 @@ const StoreSettingsPage: React.FC = () => {
                   onFocus={() => setFocusedInput('lat')}
                   onBlur={() => setFocusedInput(null)}
                   placeholder="33.5138"
+                  disabled={!canUpdateSettings}
                 />
               </div>
               <div>
@@ -522,13 +568,14 @@ const StoreSettingsPage: React.FC = () => {
                   onFocus={() => setFocusedInput('lng')}
                   onBlur={() => setFocusedInput(null)}
                   placeholder="36.2765"
+                  disabled={!canUpdateSettings}
                 />
               </div>
             </div>
             <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>يمكنك الحصول على الإحداثيات من خرائط جوجل</p>
           </div>
 
-          <button style={saveBtn} onClick={handleSaveGeneral}>
+          <button style={saveBtn} onClick={handleSaveGeneral} disabled={!canUpdateSettings}>
             <IoSave size={16} /> حفظ التغييرات
           </button>
         </div>
@@ -556,6 +603,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.primaryColor}
                     onChange={(e) => setDesignForm({ ...designForm, primaryColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.primaryColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -563,6 +611,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, primaryColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#3B82F6"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للأزرار الرئيسية والعناوين البارزة</p>
@@ -579,6 +628,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.secondaryColor}
                     onChange={(e) => setDesignForm({ ...designForm, secondaryColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.secondaryColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -586,6 +636,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, secondaryColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#10B981"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للعناصر الثانوية والتفاصيل</p>
@@ -602,6 +653,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.backgroundColor}
                     onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.backgroundColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -609,6 +661,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#082E24"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الصفحة الرئيسية للمتجر</p>
@@ -625,6 +678,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.cardColor}
                     onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.cardColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -632,6 +686,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#112E23"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية البطاقات والقوائم الجانبية</p>
@@ -648,6 +703,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.surfaceColor}
                     onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.surfaceColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -655,6 +711,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#0F3D31"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الحقول والنماذج</p>
@@ -671,6 +728,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.textColor}
                     onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.textColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -678,6 +736,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#E8F5E9"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الرئيسية والعناوين</p>
@@ -694,6 +753,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.mutedColor}
                     onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.mutedColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -701,6 +761,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#9DC4AC"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الثانوية والوصف</p>
@@ -717,6 +778,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.accentColor}
                     onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
                     style={{ width: 60, height: 50, borderRadius: 10, cursor: 'pointer', background: designForm.accentColor, border: `1px solid ${C.border}` }}
+                    disabled={!canUpdateSettings}
                   />
                   <input
                     type="text"
@@ -724,6 +786,7 @@ const StoreSettingsPage: React.FC = () => {
                     onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
                     placeholder="#C8E235"
+                    disabled={!canUpdateSettings}
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون الإشعارات والتنبيهات والعناصر البارزة</p>
@@ -740,6 +803,7 @@ const StoreSettingsPage: React.FC = () => {
                   style={getInput('fontFamily')}
                   onFocus={() => setFocusedInput('fontFamily')}
                   onBlur={() => setFocusedInput(null)}
+                  disabled={!canUpdateSettings}
                 >
                   <option value="Cairo">Cairo</option>
                   <option value="Tajawal">Tajawal</option>
@@ -793,7 +857,7 @@ const StoreSettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <button style={saveBtn} onClick={handleSaveDesign}>
+          <button style={saveBtn} onClick={handleSaveDesign} disabled={!canUpdateSettings}>
             <IoSave size={16} /> حفظ التصميم والألوان
           </button>
         </div>
@@ -822,7 +886,7 @@ const StoreSettingsPage: React.FC = () => {
                     type="file"
                     accept="image/*"
                     onChange={handleLogoUpload}
-                    disabled={uploading}
+                    disabled={uploading || !canUpdateSettings}
                     style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}
                   />
                 </div>
@@ -848,7 +912,7 @@ const StoreSettingsPage: React.FC = () => {
                 type="file"
                 accept="image/*"
                 onChange={handleCoverUpload}
-                disabled={uploading}
+                disabled={uploading || !canUpdateSettings}
                 style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}
               />
             </div>
@@ -882,10 +946,12 @@ const StoreSettingsPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 16px', background: C.surf, borderRadius: 10, border: `1px solid ${C.border}` }}>
               <button
                 onClick={() => setDeliverySettings({ ...deliverySettings, enableDelivery: !deliverySettings.enableDelivery })}
+                disabled={!canUpdateSettings}
                 style={{
-                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: canUpdateSettings ? 'pointer' : 'not-allowed',
                   background: deliverySettings.enableDelivery ? C.accent : 'rgba(255,255,255,0.15)',
                   position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                  opacity: canUpdateSettings ? 1 : 0.6
                 }}
               >
                 <span style={{
@@ -909,6 +975,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, baseFee: Number(e.target.value) })}
                   style={getInput('baseFee')}
                   min={0} step={0.5}
+                  disabled={!canUpdateSettings}
                 />
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر الثابت للطلب (دون احتساب المسافة)</p>
               </div>
@@ -922,6 +989,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, feePerKm: Number(e.target.value) })}
                   style={getInput('feePerKm')}
                   min={0} step={0.5}
+                  disabled={!canUpdateSettings}
                 />
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر لكل كيلومتر إضافي بعد المسافة الأساسية</p>
               </div>
@@ -933,6 +1001,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, minDistance: Number(e.target.value) })}
                   style={getInput('minDist')}
                   min={0} step={0.5}
+                  disabled={!canUpdateSettings}
                 />
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>المسافة التي يتم احتساب السعر الأساسي خلالها</p>
               </div>
@@ -944,6 +1013,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, maxDistance: Number(e.target.value) })}
                   style={getInput('maxDist')}
                   min={0} step={0.5}
+                  disabled={!canUpdateSettings}
                 />
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>أقصى مسافة يمكن التوصيل إليها</p>
               </div>
@@ -955,6 +1025,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, freeDeliveryAbove: Number(e.target.value) })}
                   style={getInput('freeDel')}
                   min={0}
+                  disabled={!canUpdateSettings}
                 />
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>إذا كان الطلب أكبر من هذا المبلغ، يصبح التوصيل مجانياً</p>
               </div>
@@ -968,6 +1039,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDeliverySettings({ ...deliverySettings, estimatedTime: Number(e.target.value) })}
                   style={getInput('estTime')}
                   min={15} step={5}
+                  disabled={!canUpdateSettings}
                 />
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>الوقت المتوقع لإيصال الطلب</p>
               </div>
@@ -993,7 +1065,7 @@ const StoreSettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <button style={saveBtn} onClick={handleSaveDeliverySettings}>
+          <button style={saveBtn} onClick={handleSaveDeliverySettings} disabled={!canUpdateSettings}>
             <IoSave size={16} /> حفظ إعدادات التوصيل
           </button>
         </div>
@@ -1017,6 +1089,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDomainForm({ ...domainForm, subdomain: e.target.value })}
                   style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }}
                   placeholder="my-store"
+                  disabled={!canUpdateSettings}
                 />
                 <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, fontSize: 13, borderRadius: '0 10px 10px 0' }}>
                   .shamstores.com
@@ -1038,6 +1111,7 @@ const StoreSettingsPage: React.FC = () => {
                   onChange={(e) => setDomainForm({ ...domainForm, customDomain: e.target.value })}
                   style={getInput('customDomain')}
                   placeholder="www.my-store.com"
+                  disabled={!canUpdateSettings}
                 />
               ) : (
                 <div style={{ background: C.surf, padding: 16, borderRadius: 10, border: `1px solid ${C.border}` }}>
@@ -1061,7 +1135,7 @@ const StoreSettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <button style={saveBtn} onClick={handleSaveDomain}>
+          <button style={saveBtn} onClick={handleSaveDomain} disabled={!canUpdateSettings}>
             <IoSave size={16} /> حفظ إعدادات الدومين
           </button>
         </div>

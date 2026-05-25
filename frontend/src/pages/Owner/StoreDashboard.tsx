@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { usePermissions } from '../../hooks/usePermissions';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import {
@@ -13,11 +14,9 @@ import {
   IoPricetag,
   IoPeople,
   IoCar,
-  IoNavigate,
   IoWarning,
   IoAdd,
   IoSettings,
-  IoTrendingUp,
   IoCheckmarkCircle
 } from 'react-icons/io5';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -79,15 +78,17 @@ const getStatusBadgeStyle = (status: string): React.CSSProperties => {
 
 const StoreDashboard: React.FC = () => {
   const { user } = useAuth();
+  const permissions = usePermissions();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [storeData, setStoreData] = useState<any>(null);
   const [showQuickActions, setShowQuickActions] = useState(false);
 
   useEffect(() => {
+    if (permissions.loading) return;
     fetchDashboardData();
     fetchStoreData();
-  }, []);
+  }, [permissions.loading, permissions.canViewOrders, permissions.canViewAnalytics, permissions.canViewDelivery]);
 
   const fetchStoreData = async () => {
     try {
@@ -102,6 +103,9 @@ const StoreDashboard: React.FC = () => {
 
   const fetchDashboardData = async () => {
     try {
+      const paidPlan = (permissions.currentPlan?.price || 0) > 0 && permissions.currentPlan?.name !== 'free' && permissions.currentPlan?.slug !== 'free';
+      const canInventory = permissions.checkPermission('inventory') || paidPlan;
+
       const [
         ordersStatsRes,
         productsRes,
@@ -110,12 +114,12 @@ const StoreDashboard: React.FC = () => {
         salesHistoryRes,
         driversRes
       ] = await Promise.allSettled([
-        api.get('/store/orders/stats?period=today'),
+        permissions.canViewOrders ? api.get('/store/orders/stats?period=today') : Promise.resolve(null),
         api.get('/store/products'),
-        api.get('/store/inventory/stats'),
-        api.get('/store/orders?limit=5'),
-        api.get('/store/orders/stats?period=week'),
-        api.get('/store/drivers'),
+        canInventory ? api.get('/store/inventory/stats') : Promise.resolve(null),
+        permissions.canViewOrders ? api.get('/store/orders?limit=5') : Promise.resolve(null),
+        permissions.canViewOrders ? api.get('/store/orders/stats?period=week') : Promise.resolve(null),
+        permissions.canViewDelivery ? api.get('/store/drivers') : Promise.resolve(null),
       ]);
 
       const ordersStats = ordersStatsRes.status === 'fulfilled' ? extractData(ordersStatsRes.value) : null;
@@ -161,23 +165,26 @@ const StoreDashboard: React.FC = () => {
     }
   };
 
+  const paidPlan = (permissions.currentPlan?.price || 0) > 0 && permissions.currentPlan?.name !== 'free' && permissions.currentPlan?.slug !== 'free';
+  const canInventory = permissions.checkPermission('inventory') || paidPlan;
+
   const quickActions = [
     { label: 'إضافة منتج', icon: IoAdd, path: '/store/products' },
-    { label: 'عرض الطلبات', icon: IoReceipt, path: '/store/orders' },
-    { label: 'مراجعة المخزون', icon: IoStatsChart, path: '/store/inventory' },
-    { label: 'إنشاء كوبون', icon: IoPricetag, path: '/store/coupons' },
-    { label: 'إضافة سائق', icon: IoCar, path: '/store/drivers' },
+    ...(permissions.canViewOrders ? [{ label: 'عرض الطلبات', icon: IoReceipt, path: '/store/orders' }] : []),
+    ...(canInventory ? [{ label: 'مراجعة المخزون', icon: IoStatsChart, path: '/store/inventory' }] : []),
+    ...(permissions.canViewCoupons ? [{ label: 'إنشاء كوبون', icon: IoPricetag, path: '/store/coupons' }] : []),
+    ...(permissions.canViewDelivery ? [{ label: 'إضافة سائق', icon: IoCar, path: '/store/drivers' }] : []),
     { label: 'الإعدادات', icon: IoSettings, path: '/store/settings' },
   ];
 
   const statCards = [
-    { title: 'طلبات اليوم', value: stats?.todayOrders || 0, icon: IoReceipt, path: '/store/orders', highlight: false },
-    { title: 'مبيعات اليوم', value: `${stats?.todaySales?.toFixed(2) || 0} ر.س`, icon: IoPricetag, path: '/store/analytics', highlight: false },
+    ...(permissions.canViewOrders ? [{ title: 'طلبات اليوم', value: stats?.todayOrders || 0, icon: IoReceipt, path: '/store/orders', highlight: false }] : []),
+    ...(permissions.canViewAnalytics ? [{ title: 'مبيعات اليوم', value: `${stats?.todaySales?.toFixed(2) || 0} ر.س`, icon: IoPricetag, path: '/store/analytics', highlight: false }] : []),
     { title: 'المنتجات', value: stats?.totalProducts || 0, icon: IoCube, path: '/store/products', highlight: false },
-    { title: 'منتجات منخفضة', value: stats?.lowStock || 0, icon: IoWarning, path: '/store/inventory', highlight: true },
+    ...(canInventory ? [{ title: 'منتجات منخفضة', value: stats?.lowStock || 0, icon: IoWarning, path: '/store/inventory', highlight: true }] : []),
   ];
 
-  if (loading) return <Loader fullScreen />;
+  if (permissions.loading || loading) return <Loader fullScreen />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem', color: C.text }} dir="rtl">
@@ -313,75 +320,91 @@ const StoreDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ marginBottom: '2rem' }}>
 
         {/* الرسم البياني */}
-        <div className="lg:col-span-2" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, marginTop: 0, marginBottom: '1rem' }}>
-            المبيعات خلال آخر 7 أيام
-          </h2>
-          <div style={{ height: 256 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats?.salesData || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
-                <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 12 }} axisLine={{ stroke: C.border }} tickLine={false} />
-                <YAxis tick={{ fill: C.muted, fontSize: 12 }} axisLine={{ stroke: C.border }} tickLine={false} />
-                <Tooltip
-                  formatter={(value) => [`${value} ر.س`, 'المبيعات']}
-                  contentStyle={{ background: C.prim, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text }}
-                  labelStyle={{ color: C.muted }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="sales"
-                  stroke={C.accent}
-                  strokeWidth={2.5}
-                  dot={{ fill: C.accent, r: 4 }}
-                  activeDot={{ r: 6, fill: C.accent }}
-                  name="المبيعات"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        {permissions.canViewOrders && (
+          <div className="lg:col-span-2" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, marginTop: 0, marginBottom: '1rem' }}>
+              المبيعات خلال آخر 7 أيام
+            </h2>
+            <div style={{ height: 256 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={stats?.salesData || []}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+                  <XAxis dataKey="date" tick={{ fill: C.muted, fontSize: 12 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                  <YAxis tick={{ fill: C.muted, fontSize: 12 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                  <Tooltip
+                    formatter={(value) => [`${value} ر.س`, 'المبيعات']}
+                    contentStyle={{ background: C.prim, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text }}
+                    labelStyle={{ color: C.muted }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="sales"
+                    stroke={C.accent}
+                    strokeWidth={2.5}
+                    dot={{ fill: C.accent, r: 4 }}
+                    activeDot={{ r: 6, fill: C.accent }}
+                    name="المبيعات"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* نظرة سريعة */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, marginTop: 0, marginBottom: '1rem' }}>
-            📊 نظرة سريعة
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: C.muted, fontSize: '0.9rem' }}>طلبات معلقة</span>
-              <span style={{ fontWeight: 700, fontSize: '1.1rem', color: C.accent }}>{stats?.pendingOrders || 0}</span>
-            </div>
-            <div style={{ height: 1, background: C.border }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: C.muted, fontSize: '0.9rem' }}>السائقين</span>
-              <span style={{ fontWeight: 700, fontSize: '1.1rem', color: C.accent }}>{stats?.totalDrivers || 0}</span>
-            </div>
-            <div style={{ height: 1, background: C.border }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: C.muted, fontSize: '0.9rem' }}>منتجات منخفضة المخزون</span>
-              <span style={{
-                fontWeight: 700,
-                fontSize: '1.1rem',
-                color: (stats?.lowStock || 0) > 0 ? C.red : C.accent,
-              }}>
-                {stats?.lowStock || 0}
-              </span>
-            </div>
-            <div style={{ paddingTop: '0.5rem', borderTop: `1px solid ${C.border}` }}>
-              <Link
-                to="/store/inventory"
-                style={{ color: C.accent, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-              >
-                مراجعة المخزون <IoStatsChart style={{ fontSize: 16 }} />
-              </Link>
+        {(permissions.canViewOrders || permissions.canViewDelivery || canInventory) && (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, marginTop: 0, marginBottom: '1rem' }}>
+              📊 نظرة سريعة
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {permissions.canViewOrders && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: C.muted, fontSize: '0.9rem' }}>طلبات معلقة</span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: C.accent }}>{stats?.pendingOrders || 0}</span>
+                  </div>
+                  <div style={{ height: 1, background: C.border }} />
+                </>
+              )}
+              {permissions.canViewDelivery && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: C.muted, fontSize: '0.9rem' }}>السائقين</span>
+                    <span style={{ fontWeight: 700, fontSize: '1.1rem', color: C.accent }}>{stats?.totalDrivers || 0}</span>
+                  </div>
+                  <div style={{ height: 1, background: C.border }} />
+                </>
+              )}
+              {canInventory && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: C.muted, fontSize: '0.9rem' }}>منتجات منخفضة المخزون</span>
+                    <span style={{
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      color: (stats?.lowStock || 0) > 0 ? C.red : C.accent,
+                    }}>
+                      {stats?.lowStock || 0}
+                    </span>
+                  </div>
+                  <div style={{ paddingTop: '0.5rem', borderTop: `1px solid ${C.border}` }}>
+                    <Link
+                      to="/store/inventory"
+                      style={{ color: C.accent, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      مراجعة المخزون <IoStatsChart style={{ fontSize: 16 }} />
+                    </Link>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* تنبيه منتجات منخفضة المخزون */}
-      {(stats?.lowStock || 0) > 0 && (
+      {canInventory && (stats?.lowStock || 0) > 0 && (
         <div style={{ marginBottom: '2rem', background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.25)', borderRight: `4px solid ${C.red}`, borderRadius: 12, padding: '1rem 1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
             <IoWarning style={{ color: C.red, fontSize: 22, flexShrink: 0, marginTop: 2 }} />
@@ -401,67 +424,69 @@ const StoreDashboard: React.FC = () => {
       )}
 
       {/* آخر الطلبات */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', marginBottom: '2rem' }}>
-        <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, margin: 0 }}>🛒 آخر الطلبات</h2>
-          <Link to="/store/orders" style={{ color: C.accent, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
-            عرض الكل
-          </Link>
-        </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: C.surf }}>
-                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>رقم الطلب</th>
-                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>العميل</th>
-                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>الحالة</th>
-                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>المجموع</th>
-                <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>الوقت</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats?.recentOrders && stats.recentOrders.length > 0 ? (
-                stats.recentOrders.map((order: any) => (
-                  <tr
-                    key={order.id}
-                    style={{ borderTop: `1px solid ${C.border}`, transition: 'background 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = C.surfL)}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '1rem 1.5rem', color: C.text, fontWeight: 600, fontSize: '0.875rem' }}>
-                      #{order.orderNumber || order.id.slice(0, 8)}
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem', color: C.muted, fontSize: '0.875rem' }}>
-                      {order.customerName || 'عميل'}
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <span style={getStatusBadgeStyle(order.status)}>
-                        {order.status === 'pending' && 'قيد الانتظار'}
-                        {order.status === 'processing' && 'قيد التجهيز'}
-                        {order.status === 'shipped' && 'تم الشحن'}
-                        {order.status === 'delivered' && 'تم التوصيل'}
-                        {order.status === 'cancelled' && 'ملغي'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem', color: C.accent, fontWeight: 700, fontSize: '0.875rem' }}>
-                      {order.total || order.totalAmount || 0} ر.س
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem', color: C.muted, fontSize: '0.875rem' }}>
-                      {order.createdAt ? format(new Date(order.createdAt), 'hh:mm a', { locale: ar }) : '-'}
+      {permissions.canViewOrders && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', marginBottom: '2rem' }}>
+          <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: C.text, margin: 0 }}>🛒 آخر الطلبات</h2>
+            <Link to="/store/orders" style={{ color: C.accent, textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600 }}>
+              عرض الكل
+            </Link>
+          </div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: C.surf }}>
+                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>رقم الطلب</th>
+                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>العميل</th>
+                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>الحالة</th>
+                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>المجموع</th>
+                  <th style={{ padding: '0.75rem 1.5rem', textAlign: 'right', fontSize: '0.75rem', fontWeight: 600, color: C.muted }}>الوقت</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats?.recentOrders && stats.recentOrders.length > 0 ? (
+                  stats.recentOrders.map((order: any) => (
+                    <tr
+                      key={order.id}
+                      style={{ borderTop: `1px solid ${C.border}`, transition: 'background 0.15s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = C.surfL)}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '1rem 1.5rem', color: C.text, fontWeight: 600, fontSize: '0.875rem' }}>
+                        #{order.orderNumber || order.id.slice(0, 8)}
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem', color: C.muted, fontSize: '0.875rem' }}>
+                        {order.customerName || 'عميل'}
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        <span style={getStatusBadgeStyle(order.status)}>
+                          {order.status === 'pending' && 'قيد الانتظار'}
+                          {order.status === 'processing' && 'قيد التجهيز'}
+                          {order.status === 'shipped' && 'تم الشحن'}
+                          {order.status === 'delivered' && 'تم التوصيل'}
+                          {order.status === 'cancelled' && 'ملغي'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem', color: C.accent, fontWeight: 700, fontSize: '0.875rem' }}>
+                        {order.total || order.totalAmount || 0} ر.س
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem', color: C.muted, fontSize: '0.875rem' }}>
+                        {order.createdAt ? format(new Date(order.createdAt), 'hh:mm a', { locale: ar }) : '-'}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: C.muted, fontSize: '0.875rem' }}>
+                      لا توجد طلبات بعد
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: C.muted, fontSize: '0.875rem' }}>
-                    لا توجد طلبات بعد
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* نصائح سريعة للمتجر */}
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '1.5rem' }}>
