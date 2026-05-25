@@ -14,6 +14,7 @@ import {
   updateDeliveryOrderStatus
 } from '../controllers/orderController';
 import { authenticate, authorizeOwner, authorizeStaff, authorize } from '../middleware/auth';
+import { checkPlanFeature } from '../middleware/checkPlan';
 import { rateOrder } from '../controllers/deliveryController';
 
 const router = Router();
@@ -41,42 +42,42 @@ router.get('/my-orders', authenticate, getMyOrders);
  * @desc    الحصول على جميع الطلبات
  * @access  Private (Owner/Staff)
  */
-router.get('/', authenticate, authorizeStaff, getOrders);
+router.get('/', authenticate, checkPlanFeature('online_orders'), authorizeStaff, getOrders);
 
 /**
  * @route   GET /api/orders/today
  * @desc    الحصول على طلبات اليوم
  * @access  Private (Owner/Staff)
  */
-router.get('/today', authenticate, authorizeStaff, getTodayOrders);
+router.get('/today', authenticate, checkPlanFeature('online_orders'), authorizeStaff, getTodayOrders);
 
 /**
  * @route   GET /api/orders/stats
  * @desc    الحصول على إحصائيات الطلبات
  * @access  Private (Owner)
  */
-router.get('/stats', authenticate, authorizeOwner, getOrderStats);
+router.get('/stats', authenticate, checkPlanFeature('online_orders'), authorizeOwner, getOrderStats);
 
 /**
  * @route   GET /api/orders/:id
  * @desc    الحصول على طلب محدد
  * @access  Private (Owner/Staff)
  */
-router.get('/:id', authenticate, authorizeStaff, getOrder);
+router.get('/:id', authenticate, checkPlanFeature('online_orders'), authorizeStaff, getOrder);
 
 /**
  * @route   PATCH /api/orders/:id/status
  * @desc    تحديث حالة الطلب
  * @access  Private (Owner/Staff)
  */
-router.patch('/:id/status', authenticate, authorizeStaff, updateOrderStatus);
+router.patch('/:id/status', authenticate, checkPlanFeature('online_orders'), authorizeStaff, updateOrderStatus);
 
 /**
  * @route   PATCH /api/orders/:id/payment
  * @desc    تحديث حالة الدفع
  * @access  Private (Owner/Staff)
  */
-router.patch('/:id/payment', authenticate, authorizeStaff, updatePaymentStatus);
+router.patch('/:id/payment', authenticate, checkPlanFeature('online_orders'), authorizeStaff, updatePaymentStatus);
 
 // ==================== مسارات التوصيل الجديدة ====================
 
@@ -88,6 +89,7 @@ router.patch('/:id/payment', authenticate, authorizeStaff, updatePaymentStatus);
 router.get(
   '/restaurant/delivery',
   authenticate,
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin', 'staff']),
   getDeliveryOrdersForRestaurant
 );
@@ -112,6 +114,7 @@ router.get(
 router.post(
   '/:orderId/assign-driver',
   authenticate,
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']),
   assignDeliveryDriver
 );

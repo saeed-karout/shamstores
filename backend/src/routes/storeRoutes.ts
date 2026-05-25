@@ -2,7 +2,7 @@
 
 import { Router } from 'express';
 import { authenticate, authorizeOwner } from '../middleware/auth';
-import { requirePaidPlanForStaff } from '../middleware/checkPlan';
+import { checkPlanFeature, requirePaidPlanForStaff } from '../middleware/checkPlan';
 import { upload } from '../middleware/upload';
 import {
   getProfile,
@@ -74,6 +74,12 @@ router.get('/public/:slug/related-products/:productId', getPublicRelatedProducts
 router.use(authenticate);
 router.use(authorizeOwner);
 
+// ==================== قيود الخطة حسب الأقسام ====================
+router.use('/inventory', checkPlanFeature('inventory'));
+router.use('/orders', checkPlanFeature('online_orders'));
+router.use('/coupons', checkPlanFeature('coupons'));
+router.use('/drivers', checkPlanFeature('online_orders'));
+
 // ==================== ملف المتجر ====================
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
@@ -138,6 +144,7 @@ router.put('/settings/payment', updatePaymentSettings);
 router.put('/settings/notifications', updateNotificationSettings);
 
 // مسارات الدومين المخصص والـ subdomain
+router.use('/settings/domain', checkPlanFeature('custom_domain'));
 router.get('/settings/domain/dns', getDnsSettings);
 router.post('/settings/domain/verify', verifyCustomDomain);
 router.delete('/settings/domain', removeCustomDomain);
@@ -151,6 +158,7 @@ router.put('/settings/:storeId/delivery', updateDeliverySettings);
 router.put('/settings/:storeId/social', updateSocialSettings);
 router.put('/settings/:storeId/payment', updatePaymentSettings);
 router.put('/settings/:storeId/notifications', updateNotificationSettings);
+router.use('/settings/:storeId/domain', checkPlanFeature('custom_domain'));
 router.get('/settings/:storeId/domain/dns', getDnsSettings);
 router.post('/settings/:storeId/domain/verify', verifyCustomDomain);
 router.delete('/settings/:storeId/domain', removeCustomDomain);

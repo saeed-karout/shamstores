@@ -2,6 +2,7 @@
 
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
+import { checkPlanFeature } from '../middleware/checkPlan';
 import {
   createMarketingSection,
   deleteMarketingSection,
@@ -18,6 +19,7 @@ router.get('/public', getPublicMarketingData as any);
 
 // ==================== المسارات المحمية ====================
 router.use(authenticate);
+router.use(checkPlanFeature('promotions'));
 
 router.get('/', authorize(['super_admin', 'owner']), getMarketingSettings);
 router.put('/section-order', authorize(['super_admin', 'owner']), updateMarketingSectionOrder);

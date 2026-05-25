@@ -14,13 +14,13 @@ import {
   deleteStaff
 } from '../controllers/restaurantController';
 import { authenticate, authorizeOwner, authorizeAdmin } from '../middleware/auth';
-import { requirePaidPlanForStaff } from '../middleware/checkPlan';
+import { checkPlanFeature, requirePaidPlanForStaff } from '../middleware/checkPlan';
 import { upload } from '../middleware/upload';
 
 const router = Router();
 
 // ==================== مسارات إعدادات التوصيل ====================
-router.get('/delivery-settings', authenticate, getDeliverySettings);
+router.get('/delivery-settings', authenticate, checkPlanFeature('online_orders'), getDeliverySettings);
 
 // ==================== المسارات الخاصة ====================
 router.get('/profile', authenticate, getProfile);

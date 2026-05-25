@@ -9,11 +9,13 @@ import {
   generateAllTableQRs
 } from '../controllers/tableController';
 import { authenticate, authorizeOwner, authorizeStaff } from '../middleware/auth';
+import { checkPlanFeature } from '../middleware/checkPlan';
 
 const router = Router();
 
 // جميع المسارات تحتاج مصادقة
 router.use(authenticate);
+router.use(checkPlanFeature('table_qr'));
 
 /**
  * @route   GET /api/tables

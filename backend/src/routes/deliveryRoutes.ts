@@ -32,6 +32,7 @@ import {
 
 import { getDrivers, createDriver, updateDriverStatus, deleteDriver } from '../controllers/driverController';
 import { authenticate, authorize } from '../middleware/auth';
+import { checkPlanFeature } from '../middleware/checkPlan';
 
 const router = express.Router();
 
@@ -44,6 +45,7 @@ router.post('/calculate-fee', calculateDeliveryFee);
 // جلب طلبات التوصيل للمطعم/المتجر
 router.get('/orders', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin', 'staff']), 
   getDeliveryOrders
 );
@@ -51,6 +53,7 @@ router.get('/orders',
 // إحصائيات التوصيل
 router.get('/stats', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']), 
   getDeliveryStats
 );
@@ -58,6 +61,7 @@ router.get('/stats',
 // جلب قائمة السائقين
 router.get('/drivers', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']), 
   getDrivers
 );
@@ -65,6 +69,7 @@ router.get('/drivers',
 // إنشاء سائق جديد
 router.post('/drivers', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']), 
   createDriver
 );
@@ -72,6 +77,7 @@ router.post('/drivers',
 // تحديث حالة السائق
 router.patch('/drivers/:driverId/status', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']), 
   updateDriverStatus
 );
@@ -79,6 +85,7 @@ router.patch('/drivers/:driverId/status',
 // حذف سائق
 router.delete('/drivers/:driverId', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']), 
   deleteDriver
 );
@@ -86,6 +93,7 @@ router.delete('/drivers/:driverId',
 // تعيين سائق للطلب
 router.post('/orders/:orderId/assign-driver', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']), 
   assignDeliveryDriver
 );
@@ -100,6 +108,7 @@ router.get('/orders/:orderId/with-location',
 // جلب إثبات التسليم (للمالك فقط)
 router.get('/orders/:orderId/proof', 
   authenticate, 
+  checkPlanFeature('online_orders'),
   authorize(['owner', 'super_admin']), 
   getDeliveryProof
 );

@@ -9,11 +9,13 @@ import {
   validateCoupon
 } from '../controllers/couponController';
 import { authenticate, authorizeOwner, authorizeStaff } from '../middleware/auth';
+import { checkPlanFeature } from '../middleware/checkPlan';
 
 const router = Router();
 
 // جميع المسارات تتطلب مصادقة
 router.use(authenticate);
+router.use(checkPlanFeature('coupons'));
 
 /**
  * @route   GET /api/coupons

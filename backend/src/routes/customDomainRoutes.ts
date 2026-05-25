@@ -13,7 +13,7 @@ const router = Router();
 
 // كل هذه المسارات تتطلب توثيق ووجود خطة تدعم الدومينات المخصصة
 router.use(authenticate);
-router.use(checkPlanFeature('hasCustomDomain'));
+router.use(checkPlanFeature('custom_domain'));
 
 router.post('/verify-domain', verifyCustomDomain);
 router.delete('/remove-domain', removeCustomDomain);

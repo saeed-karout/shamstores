@@ -2,6 +2,7 @@
 
 import express from 'express';
 import { authenticate } from '../middleware/auth';  // ✅ استخدم authenticate
+import { checkPlanFeature } from '../middleware/checkPlan';
 import {
   getInventoryItems,
   getInventoryItem,
@@ -27,6 +28,7 @@ const router = express.Router();
 
 // ✅ تطبيق المصادقة على جميع مسارات المخزون
 router.use(authenticate);
+router.use(checkPlanFeature('inventory'));
 
 // ==================== مسارات المخزون ====================
 router.get('/', getInventoryItems);
