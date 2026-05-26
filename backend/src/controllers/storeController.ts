@@ -5,6 +5,7 @@ import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
+import slugify from '../utils/slugify';
 import fs from 'fs';
 import path from 'path';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
@@ -16,6 +17,37 @@ const deleteLegacyLocalImage = (imagePath?: string): void => {
   const cleanPath = imagePath.replace(/^\/+|\/+$/g, '').replace(/^uploads[\\\/]/, '');
   const fullPath = path.join(process.cwd(), 'uploads', cleanPath);
   if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+};
+
+const generateUniqueStoreSlug = async (baseSlug: string, excludeId?: string): Promise<string> => {
+  let slug = baseSlug
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  let counter = 1;
+  let uniqueSlug = slug;
+
+  while (true) {
+    const where: any = {
+      OR: [
+        { slug: uniqueSlug },
+        { subdomain: uniqueSlug },
+      ]
+    };
+
+    if (excludeId) {
+      where.id = { not: excludeId };
+    }
+
+    const existing = await prisma.store.findFirst({ where });
+    if (!existing) break;
+
+    uniqueSlug = `${slug}-${counter++}`;
+  }
+
+  return uniqueSlug;
 };
 
 const getStoreId = async (req: AuthRequest): Promise<string | null> => {
@@ -231,6 +263,89 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
   } catch (error) {
     console.error('Error getting store profile:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب بيانات المتجر' });
+  }
+};
+
+export const createStoreBranch = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const storeId = await getStoreId(req);
+    if (!storeId) {
+      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+      return;
+    }
+
+    const { name, email, phone } = req.body;
+
+    if (!name || !name.trim()) {
+      res.status(400).json({ success: false, error: 'اسم الفرع مطلوب' });
+      return;
+    }
+
+    const currentStore = await prisma.store.findUnique({
+      where: { id: storeId },
+      include: { plan: true }
+    });
+
+    if (!currentStore) {
+      res.status(404).json({ success: false, error: 'المتجر غير موجود' });
+      return;
+    }
+
+    const ownerUserId = currentStore.userId || req.user?.id;
+    if (!ownerUserId) {
+      res.status(400).json({ success: false, error: 'لا يمكن تحديد مالك المتجر' });
+      return;
+    }
+
+    const currentPlanLimit = currentStore.plan?.maxStores ?? 1;
+    const currentBranchesCount = await prisma.store.count({ where: { userId: ownerUserId } });
+
+    if (currentBranchesCount >= currentPlanLimit) {
+      res.status(403).json({
+        success: false,
+        error: `الخطة الحالية تسمح بإنشاء ${currentPlanLimit} فرع فقط. يرجى الترقية لإضافة فرع جديد`,
+        requiresUpgrade: true,
+        limitType: 'maxStores',
+        current: currentBranchesCount,
+        limit: currentPlanLimit
+      });
+      return;
+    }
+
+    const baseSlug = slugify(name);
+    const slug = await generateUniqueStoreSlug(baseSlug);
+    const subdomain = await generateUniqueStoreSlug(baseSlug);
+
+    const store = await prisma.store.create({
+      data: {
+        name: name.trim(),
+        email: email || null,
+        phone: phone || null,
+        slug,
+        subdomain,
+        planId: currentStore.planId,
+        userId: ownerUserId,
+        isActive: true,
+        primaryColor: currentStore.primaryColor,
+        secondaryColor: currentStore.secondaryColor,
+        backgroundColor: currentStore.backgroundColor,
+        cardColor: currentStore.cardColor,
+        surfaceColor: currentStore.surfaceColor,
+        textColor: currentStore.textColor,
+        mutedColor: currentStore.mutedColor,
+        accentColor: currentStore.accentColor,
+        fontFamily: currentStore.fontFamily,
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'تم إنشاء الفرع بنجاح',
+      data: store
+    });
+  } catch (error) {
+    console.error('Error creating store branch:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إنشاء الفرع' });
   }
 };
 

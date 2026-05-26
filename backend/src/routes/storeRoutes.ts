@@ -56,7 +56,8 @@ import {
   getPublicProduct,
   getPublicProducts,
   getPublicCategories,
-  getPublicRelatedProducts
+  getPublicRelatedProducts,
+  createStoreBranch
 } from '../controllers/storeController';
 
 const router = Router();
@@ -83,6 +84,7 @@ router.use('/drivers', checkPlanFeature('online_orders'));
 // ==================== ملف المتجر ====================
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
+router.post('/branches', createStoreBranch);
 
 // ==================== رفع الصور ====================
 router.post('/upload/logo', upload.single('logo'), uploadStoreLogo);

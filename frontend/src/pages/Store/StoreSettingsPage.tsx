@@ -7,6 +7,7 @@ import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 import { useTheme } from '@/context/ThemeContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import Loader from '@/components/common/Loader';
+import api from '@/services/api';
 import toast from 'react-hot-toast';
 import {
   IoStorefront,
@@ -32,6 +33,7 @@ import {
   IoText,
   IoAlbums,
   IoGitBranch,
+  IoAdd,
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 
@@ -117,7 +119,7 @@ const saveBtn: React.CSSProperties = {
 };
 
 const StoreSettingsPage: React.FC = () => {
-  const { store, loading, updateStore, uploadLogo, uploadCover } = useStore();
+  const { store, loading, updateStore, uploadLogo, uploadCover, fetchStore } = useStore();
   const { user, isSuperAdmin, isOwner } = useAuth();
   const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
   const { setThemeColors } = useTheme();
@@ -173,6 +175,8 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ إعدادات التوصيل
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(defaultDeliverySettings);
+  const [branchForm, setBranchForm] = useState({ name: '', email: '', phone: '' });
+  const [creatingBranch, setCreatingBranch] = useState(false);
 
   // ✅ تحميل بيانات المتجر
   useEffect(() => {
@@ -343,6 +347,36 @@ const StoreSettingsPage: React.FC = () => {
     const distance = 5;
     const extraKm = Math.max(0, distance - deliverySettings.minDistance);
     return deliverySettings.baseFee + (extraKm * deliverySettings.feePerKm);
+  };
+
+  const linkedBranches = store?.linkedBranches || [];
+
+  const handleCreateBranch = async () => {
+    if (!canEdit) {
+      toast.error('ليس لديك صلاحية لإنشاء فرع جديد');
+      return;
+    }
+
+    if (!branchForm.name.trim()) {
+      toast.error('اسم الفرع مطلوب');
+      return;
+    }
+
+    try {
+      setCreatingBranch(true);
+      await api.createStoreBranch({
+        name: branchForm.name,
+        email: branchForm.email || undefined,
+        phone: branchForm.phone || undefined,
+      });
+      toast.success('تم إنشاء الفرع بنجاح');
+      setBranchForm({ name: '', email: '', phone: '' });
+      await fetchStore();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'فشل إنشاء الفرع');
+    } finally {
+      setCreatingBranch(false);
+    }
   };
 
   // ✅ ستايل الحقول مع تأثير التركيز
@@ -1171,16 +1205,41 @@ const StoreSettingsPage: React.FC = () => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-          {(store?.linkedBranches || []).map((branch) => (
+          {linkedBranches.map((branch) => (
             <div key={branch.id} style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
               <div style={{ color: C.text, fontWeight: 700 }}>{branch.name}</div>
               <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{branch.linkLabel}</div>
               <div style={{ color: branch.isActive ? C.accent : C.red, fontSize: 12, marginTop: 8 }}>{branch.isActive ? 'نشط' : 'غير نشط'}</div>
             </div>
           ))}
-          {(store?.linkedBranches || []).length === 0 && (
+          {linkedBranches.length === 0 && (
             <div style={{ color: C.muted, fontSize: 13 }}>لا توجد فروع إضافية مرتبطة بهذا الحساب.</div>
           )}
+        </div>
+
+        <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginTop: 16 }}>
+          <h3 style={{ color: C.text, fontSize: 14, fontWeight: 700, marginBottom: 12 }}>إضافة فرع جديد</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>اسم الفرع</label>
+              <input value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>البريد الإلكتروني</label>
+              <input value={branchForm.email} onChange={(e) => setBranchForm({ ...branchForm, email: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
+              <label style={labelStyle}>الهاتف</label>
+              <input value={branchForm.phone} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} style={inputStyle} />
+            </div>
+          </div>
+          <button
+            onClick={handleCreateBranch}
+            disabled={creatingBranch || !canEdit}
+            style={{ ...saveBtn, marginTop: 14, opacity: creatingBranch || !canEdit ? 0.7 : 1, cursor: creatingBranch || !canEdit ? 'wait' : 'pointer' }}
+          >
+            <IoAdd size={16} /> {creatingBranch ? 'جاري الإنشاء...' : 'إنشاء فرع جديد'}
+          </button>
         </div>
       </div>
 

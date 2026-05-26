@@ -23,6 +23,8 @@ import {
   IoKey,
   IoBagOutline,
   IoMegaphone,
+  IoGitBranch,
+  IoChatbubbleEllipses,
   IoSparkles,
   IoDiamond,
   IoTrendingUp,
@@ -75,8 +77,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   };
 
   const getDaysRemaining = () => {
-    if (!currentPlan?.expiresAt) return null;
-    const end = new Date(currentPlan.expiresAt);
+    const planWithExpiry = currentPlan as any;
+    if (!planWithExpiry?.expiresAt) return null;
+    const end = new Date(planWithExpiry.expiresAt);
     const now = new Date();
     const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return diff > 0 ? diff : 0;
@@ -84,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const daysRemaining = getDaysRemaining();
   const isExpiringSoon = daysRemaining !== null && daysRemaining <= 7 && daysRemaining > 0;
-  const isPlatformStaff = isStaff && !user?.restaurantId && !user?.storeId;
+  const isPlatformStaff = isStaff && !(user as any)?.restaurantId && !(user as any)?.storeId;
 
 
   // ==================== قائمة السوبر أدمن ====================
@@ -92,7 +95,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     return [
       { path: '/admin', icon: IoHome, label: 'الرئيسية' },
       { path: '/admin/restaurants', icon: IoRestaurant, label: 'المطاعم' },
+      { path: '/admin/branches', icon: IoGitBranch, label: 'الفروع' },
       { path: '/admin/stores', icon: IoStorefront, label: 'المتاجر' },
+      { path: '/admin/contact-messages', icon: IoChatbubbleEllipses, label: 'رسائل التواصل' },
       { path: '/admin/features', icon: IoRocket, label: 'الميزات', badge: 'جديد' },
       { path: '/admin/platform-settings', icon: IoSettings, label: 'إعدادات المنصة', badge: 'جديد' },
       { path: '/admin/subscriptions', icon: IoDiamond, label: 'الاشتراكات', badge: 'جديد' },
@@ -108,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   // ==================== قائمة موظف المنصة ====================
   const getPlatformStaffMenuItems = () => {
-    const sp = user?.permissions || {};
+    const sp = (user as any)?.permissions || {};
     const items: any[] = [{ path: '/admin', icon: IoHome, label: 'الرئيسية' }];
     
     if (sp.canManageRestaurants) items.push({ path: '/admin/restaurants', icon: IoRestaurant, label: 'المطاعم' });

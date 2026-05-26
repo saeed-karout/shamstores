@@ -407,6 +407,9 @@ getApiBaseUrl(): string {
   async updateStoreProfile(data: any): Promise<any> {
     return this.put('/store/profile', data);
   }
+  async createStoreBranch(data: any): Promise<any> {
+    return this.post('/store/branches', data);
+  }
   async getStoreProducts(): Promise<any[]> {
     return this.get('/store/products');
   }
