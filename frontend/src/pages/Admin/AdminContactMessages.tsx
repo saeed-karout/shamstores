@@ -51,7 +51,7 @@ const AdminContactMessages: React.FC = () => {
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/admin/contact-messages', filter === 'all' ? undefined : { status: filter });
+      const response: any = await api.get('/admin/contact-messages', filter === 'all' ? undefined : { status: filter });
       const data = response?.data?.data || response?.data || response || [];
       setMessages(Array.isArray(data) ? data : []);
     } catch (error) {

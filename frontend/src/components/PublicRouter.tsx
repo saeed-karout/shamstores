@@ -37,13 +37,13 @@ const BusinessLoader: React.FC<{ children: (data: any) => React.ReactNode }> = (
       console.log('🔍 Fetching business data for identifier:', identifier);
       
       // ✅ استدعاء الـ API
-      const response = await api.get(`/public/${identifier}`);
+      const response: any = await api.get(`/public/${identifier}`);
       console.log('📦 API Response:', response);
       
+      const data = response?.data || response;
+
       // ✅ التحقق من التنسيق الصحيح (البيانات تأتي مباشرة، ليس داخل data)
-      if (response && response.id) {
-        // ✅ البيانات موجودة مباشرة في response
-        const data = response;
+      if (data && data.id) {
         
         const business = {
           id: data.id,
@@ -67,33 +67,6 @@ const BusinessLoader: React.FC<{ children: (data: any) => React.ReactNode }> = (
         };
         
         console.log('✅ Business data loaded:', business);
-        setBusinessData(business);
-      } else if (response && response.data && response.data.id) {
-        // ✅ إذا كانت البيانات داخل data (للتوافق)
-        const data = response.data;
-        
-        const business = {
-          id: data.id,
-          name: data.name,
-          slug: data.slug,
-          subdomain: data.subdomain,
-          type: data.type,
-          logo: data.logo,
-          coverImage: data.coverImage,
-          description: data.description,
-          phone: data.phone,
-          whatsapp: data.whatsapp,
-          primaryColor: data.primaryColor,
-          secondaryColor: data.secondaryColor,
-          address: data.address,
-          email: data.email,
-          isActive: data.isActive,
-          categories: data.categories || [],
-          menuItems: data.menuItems || [],
-          products: data.products || [],
-        };
-        
-        console.log('✅ Business data loaded (from data field):', business);
         setBusinessData(business);
       } else {
         console.error('❌ Invalid response format:', response);

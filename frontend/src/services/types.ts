@@ -110,7 +110,7 @@ export interface Plan {
   hasBulkImport: boolean;
   hasApiAccess: boolean;
   hasPrioritySupport: boolean;
-  hasBrandingRemoval?: boolean;
+  hasBrandingRemoval: boolean;
   
   // حالة الخطة
   isActive: boolean;
@@ -120,7 +120,6 @@ export interface Plan {
   createdAt: string;
   updatedAt: string;
 }
-  hasBrandingRemoval?: boolean;
   
   export interface Category {
     id: string;
@@ -269,7 +268,7 @@ export interface AuthResponse {
   }
 
 
-export interface Plan {
+export interface SubscriptionPlan {
   id: string;
   name: 'free' | 'basic' | 'pro' | 'enterprise';
   price: number;

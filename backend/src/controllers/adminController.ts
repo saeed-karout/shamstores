@@ -1,6 +1,7 @@
 // backend/src/controllers/adminController.ts
 
 import { NextFunction, Response } from 'express';
+import { ContactMessageStatus, Prisma } from '@prisma/client';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { DriverService } from '../services/driver.service';
@@ -148,7 +149,10 @@ export const getContactMessages = async (req: AuthRequest, res: Response): Promi
     }
 
     const { status } = req.query;
-    const where = status && typeof status === 'string' && status !== 'all' ? { status } : {};
+    const where: Prisma.ContactMessageWhereInput =
+      status && typeof status === 'string' && status !== 'all'
+        ? { status: status as ContactMessageStatus }
+        : {};
 
     const messages = await prisma.contactMessage.findMany({
       where,
@@ -179,7 +183,7 @@ export const updateContactMessageStatus = async (req: AuthRequest, res: Response
 
     const updatedMessage = await prisma.contactMessage.update({
       where: { id },
-      data: { status }
+      data: { status: status as ContactMessageStatus }
     });
 
     res.json({ success: true, message: 'تم تحديث حالة الرسالة', data: updatedMessage });
