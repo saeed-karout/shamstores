@@ -25,6 +25,7 @@ export interface Plan {
   hasMultiLanguage: boolean;
   hasPromotions: boolean;
   hasCoupons: boolean;
+  hasBrandingRemoval?: boolean;
   // Store specific features
   hasInventory: boolean;
   hasReturns: boolean;
@@ -192,6 +193,7 @@ const response = await api.get(`/plans/business/${currentSlug}`);
     hasMultiLanguage: false,
     hasPromotions: false,
     hasCoupons: false,
+    hasBrandingRemoval: false,
     hasInventory: false,
     hasReturns: false,
     hasReviews: false,

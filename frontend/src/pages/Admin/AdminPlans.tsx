@@ -45,6 +45,7 @@ interface Plan {
   hasMultiLanguage: boolean;
   hasPromotions: boolean;
   hasCoupons: boolean;
+  hasBrandingRemoval?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,7 +99,8 @@ const AdminPlans: React.FC = () => {
     hasTableQr: false,
     hasMultiLanguage: false,
     hasPromotions: false,
-    hasCoupons: false
+    hasCoupons: false,
+    hasBrandingRemoval: false
   });
 
   useEffect(() => {
@@ -160,7 +162,7 @@ const AdminPlans: React.FC = () => {
         position: 0, isPopular: false,
         hasWhatsapp: false, hasOnlineOrders: false, hasCustomDomain: false,
         hasAnalytics: false, hasTableQr: false, hasMultiLanguage: false,
-        hasPromotions: false, hasCoupons: false
+        hasPromotions: false, hasCoupons: false, hasBrandingRemoval: false
       });
       fetchPlans();
     } catch (error: any) {
@@ -387,7 +389,13 @@ const AdminPlans: React.FC = () => {
                       غير نشط
                     </span>
                   )}
-                  <h3 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>{plan.name}</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <h3 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>{plan.name}</h3>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(200,226,53,0.12)', color: C.accent, borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
+                      <span style={{ width: 18, height: 18, borderRadius: 5, background: C.accent, color: C.bg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>ش</span>
+                      شام ستورز
+                    </span>
+                  </div>
                   <p style={{ color: C.accent, fontSize: 28, fontWeight: 700, margin: '8px 0 0' }}>
                     {plan.price} ر.س <span style={{ fontSize: 13, color: C.muted }}>/ شهر</span>
                   </p>
@@ -428,6 +436,7 @@ const AdminPlans: React.FC = () => {
                     {plan.hasMultiLanguage && <span style={{ fontSize: 11, background: `${C.accent}20`, color: C.accent, padding: '2px 8px', borderRadius: 20 }}>✓ لغات متعددة</span>}
                     {plan.hasPromotions && <span style={{ fontSize: 11, background: `${C.accent}20`, color: C.accent, padding: '2px 8px', borderRadius: 20 }}>✓ عروض</span>}
                     {plan.hasCoupons && <span style={{ fontSize: 11, background: `${C.accent}20`, color: C.accent, padding: '2px 8px', borderRadius: 20 }}>✓ كوبونات</span>}
+                    {plan.hasBrandingRemoval && <span style={{ fontSize: 11, background: `${C.accent}20`, color: C.accent, padding: '2px 8px', borderRadius: 20 }}>✓ إزالة شعار شام ستورز</span>}
                   </div>
                   {plan.description && (
                     <p style={{ color: C.muted, fontSize: 12, marginTop: 12, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
@@ -705,6 +714,7 @@ const AdminPlans: React.FC = () => {
                 { key: 'hasMultiLanguage', label: 'دعم لغات متعددة' },
                 { key: 'hasPromotions', label: 'عروض ترويجية' },
                 { key: 'hasCoupons', label: 'كوبونات خصم' },
+                { key: 'hasBrandingRemoval', label: 'إزالة شعار شام ستورز' },
               ].map(({ key, label }) => (
                 <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: C.text, fontSize: 13 }}>
                   <input

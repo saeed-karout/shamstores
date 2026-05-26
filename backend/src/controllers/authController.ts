@@ -70,6 +70,7 @@ export const register = async (
           email: email,
           phone: phone || null,
           planId: '11111111-1111-1111-1111-111111111111',
+          userId: user.id,
           isActive: true
         }
       });

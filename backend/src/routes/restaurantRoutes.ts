@@ -27,7 +27,7 @@ router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, updateProfile);
 router.post('/logo', authenticate, upload.single('image'), uploadLogo);
 router.post('/cover', authenticate, upload.single('image'), uploadCover);
-router.post('/', authenticate, authorizeAdmin, createRestaurant);
+router.post('/', authenticate, authorizeOwner, createRestaurant);
 
 // ==================== مسارات الموظفين ====================
 router.get('/staff', authenticate, authorizeOwner, requirePaidPlanForStaff('restaurant'), getStaff);

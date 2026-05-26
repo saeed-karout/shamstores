@@ -6,12 +6,15 @@ import {
   getCategoriesBySlug,
   getMenuItemsBySlug,
   getProductsBySlug,
-  getMenuItemById
+  getMenuItemById,
+  createContactMessage
 } from '../controllers/publicController';
 
 const router = express.Router();
 
 // ==================== المسارات العامة (بدون مصادقة) ====================
+
+router.post('/contact-messages', createContactMessage);
 
 // ✅ هذا هو المسار المطلوب - جلب بيانات المطعم/المتجر (باستخدام slug أو subdomain)
 router.get('/:identifier', getBusinessBySlug);

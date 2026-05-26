@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api, { getApiBaseUrl } from '../services/api';
 import toast from 'react-hot-toast';
 import { useAuth } from './useAuth';
+import { BusinessBranchSummary } from '@/services/types';
 
 export interface StoreSettings {
   enableDelivery?: boolean;
@@ -28,6 +29,9 @@ export interface Store {
   address?: string;
   latitude?: number;
   longitude?: number;
+  subdomain?: string;
+  customDomain?: string;
+  deliverySettings?: StoreSettings;
   primaryColor: string;
   secondaryColor: string;
   backgroundColor?: string;
@@ -46,6 +50,14 @@ export interface Store {
   whatsapp?: string;
   createdAt: string;
   updatedAt: string;
+  branchLabel?: string;
+  branchLinkType?: 'custom_domain' | 'subdomain' | 'slug';
+  linkedBranches?: Array<{
+    id: string;
+    name: string;
+    linkLabel: string;
+    isActive: boolean;
+  }>;
   plan?: {
     id: string;
     name: string;
@@ -53,6 +65,9 @@ export interface Store {
     maxProducts: number;
     maxOrdersPerMonth: number;
   };
+  branchLabel?: string;
+  branchLinkType?: 'custom_domain' | 'subdomain' | 'slug';
+  linkedBranches?: BusinessBranchSummary[];
 }
 
 interface UseStoreReturn {
@@ -60,7 +75,7 @@ interface UseStoreReturn {
   loading: boolean;
   error: string | null;
   fetchStore: () => Promise<void>;
-  updateStore: (data: Partial<Store>) => Promise<void>;
+  updateStore: (data: Record<string, any>) => Promise<void>;
   uploadLogo: (file: File) => Promise<string | null>;
   uploadCover: (file: File) => Promise<string | null>;
   removeLogo: () => Promise<void>;
@@ -108,7 +123,7 @@ export const useStore = (): UseStoreReturn => {
   }, [isAuthenticated]);
 
   // ✅ إصلاح دالة updateStore - ترسل جميع البيانات وتحدث الحالة
-  const updateStore = useCallback(async (data: Partial<Store>) => {
+  const updateStore = useCallback(async (data: Record<string, any>) => {
     try {
       setLoading(true);
       

@@ -66,6 +66,7 @@ export interface Plan {
   hasMultiLanguage: boolean;
   hasPromotions: boolean;
   hasCoupons: boolean;
+  hasBrandingRemoval?: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -1,8 +1,9 @@
 // backend/src/controllers/publicController.ts
 
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { buildBranchSummary } from '../services/businessBranch.service';
 
 // ==================== جلب بيانات المطعم/المتجر (باستخدام slug) ====================
 
@@ -11,10 +12,20 @@ export const getBusinessBySlug = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { identifier } = req.params;
+     const { identifier } = req.params;
     
-    console.log('🔍 Looking for business with identifier:', identifier);
+    // ✅ قائمة المسارات التي يجب تجاهلها وتمريرها إلى React Router
+    const legalPaths = ['terms', 'privacy', 'about', 'faq', 'contact', 'favicon.ico'];
     
+    if (legalPaths.includes(identifier)) {
+      // ✅ بدلاً من 404، أعد 200 مع flag يخبر React Router بالتعامل مع الصفحة
+      res.status(200).json({ 
+        success: false, 
+        isLegalPage: true,
+        error: 'هذه صفحة قانونية، يرجى التعامل معها عبر React Router' 
+      });
+      return;
+    }
     // البحث في المطاعم أولاً (بـ slug أو subdomain)
     const restaurant = await prisma.restaurant.findFirst({
       where: {
@@ -80,6 +91,8 @@ export const getBusinessBySlug = async (
           createdAt: restaurant.createdAt,
           updatedAt: restaurant.updatedAt,
           plan: restaurant.plan,
+          branchLabel: buildBranchSummary(restaurant).linkLabel,
+          branchLinkType: buildBranchSummary(restaurant).linkType,
           categories,
           menuItems
         }
@@ -154,6 +167,8 @@ export const getBusinessBySlug = async (
           createdAt: store.createdAt,
           updatedAt: store.updatedAt,
           plan: store.plan,
+          branchLabel: buildBranchSummary(store).linkLabel,
+          branchLinkType: buildBranchSummary(store).linkType,
           categories,
           products
         }
@@ -166,6 +181,44 @@ export const getBusinessBySlug = async (
   } catch (error) {
     console.error('Error getting business:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب البيانات' });
+  }
+};
+
+export const createContactMessage = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
+    const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : '';
+    const message = typeof req.body?.message === 'string' ? req.body.message.trim() : '';
+
+    if (!name || !email || !message) {
+      res.status(400).json({ success: false, error: 'الاسم والبريد والرسالة مطلوبة' });
+      return;
+    }
+
+    const contactMessage = await prisma.contactMessage.create({
+      data: {
+        name,
+        email,
+        phone: phone || null,
+        subject: subject || 'رسالة تواصل جديدة',
+        message,
+        status: 'new'
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'تم إرسال رسالتك بنجاح',
+      data: contactMessage
+    });
+  } catch (error) {
+    console.error('Error creating contact message:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إرسال الرسالة' });
   }
 };
 

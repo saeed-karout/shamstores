@@ -1,4 +1,5 @@
 // frontend/src/App.tsx
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
@@ -46,6 +47,7 @@ import StoreQRCodesPage from './pages/Store/StoreQRCodesPage';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminRestaurants from './pages/Admin/AdminRestaurants';
 import AdminStores from './pages/Admin/AdminStores';
+import AdminBranches from './pages/Admin/AdminBranches';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminOrders from './pages/Admin/AdminOrders';
 import AdminDrivers from './pages/Admin/AdminDrivers';
@@ -64,6 +66,7 @@ import AdminFeatures from './pages/Admin/AdminFeatures';
 import AdminBusinessMarketing from './pages/Admin/AdminBusinessMarketing';
 import AdminAdvertisements from './pages/Admin/AdminAdvertisements';
 import AdminSubscriptions from './pages/Admin/AdminSubscriptions';
+import AdminContactMessages from './pages/Admin/AdminContactMessages';
 
 // ==================== صفحات عامة ====================
 import HomePage from './pages/HomePage';
@@ -76,6 +79,13 @@ import DeliveryTracking from './pages/DeliveryTracking';
 import DriverDashboard from './pages/DriverDashboard';
 import MaintenancePage from './pages/MaintenancePage';
 import AdminMarketingIndex from './pages/Admin/AdminMarketingIndex';
+
+// ==================== صفحات قانونية ====================
+import TermsPage from './pages/legal/TermsPage';
+import PrivacyPage from './pages/legal/PrivacyPage';
+import AboutPage from './pages/legal/AboutPage';
+import FaqPage from './pages/legal/FaqPage';
+import ContactPage from './pages/legal/ContactPage';
 
 // ==================== مكونات ====================
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -123,7 +133,9 @@ const DashboardRouter: React.FC = () => {
     return <RestaurantDashboard />;
   }
   
-  if (isStoreOwner && user?.storeId) {
+  const storeId = (user as any)?.storeId;
+
+  if (isStoreOwner && storeId) {
     return <StoreDashboard />;
   }
   
@@ -159,6 +171,22 @@ const NotFoundPage: React.FC = () => {
   );
 };
 
+// ==================== مكون Subdomain Router مع المسارات القانونية ====================
+const SubdomainApp: React.FC = () => {
+  return (
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            {/* ✅ جميع المسارات الأخرى تذهب إلى PublicRouter */}
+            <Route path="*" element={<PublicRouter />} />
+          </Routes>
+        </Router>
+      </QueryClientProvider>
+    </HelmetProvider>
+  );
+};
+
 // ==================== التطبيق الرئيسي للدومين الرئيسي ====================
 const MainApp: React.FC = () => {
   const { loading: isLoading } = useAuth();
@@ -186,6 +214,11 @@ const MainApp: React.FC = () => {
         <Route path="/auth/email-verification" element={<EmailVerification />} />
         <Route path="/user/login" element={<UserLogin />} />
         <Route path="/user/register" element={<UserRegister />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/faq" element={<FaqPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/delivery/login" element={<DeliveryLogin />} />
         <Route path="/orders/:orderId/track" element={<DeliveryTracking />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
@@ -251,6 +284,7 @@ const MainApp: React.FC = () => {
           <Route element={<Layout />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/restaurants" element={<AdminRestaurants />} />
+            <Route path="/admin/branches" element={<AdminBranches />} />
             <Route path="/admin/stores" element={<AdminStores />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
@@ -269,6 +303,7 @@ const MainApp: React.FC = () => {
             <Route path="/admin/business/:type/:id/features" element={<AdminBusinessFeatures />} />
             <Route path="/admin/advertisements" element={<AdminAdvertisements />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+            <Route path="/admin/contact-messages" element={<AdminContactMessages />} />
             <Route path="/admin/marketing" element={<AdminMarketingIndex />} />
             <Route path="/admin/business/:type/:id/marketing" element={<AdminBusinessMarketing />} />
           </Route>
@@ -294,16 +329,8 @@ const App: React.FC = () => {
   console.log('🔥 App - isSubdomain:', isSubdomain);
   
   if (isSubdomain) {
-    console.log('🚀 Rendering PublicRouter for subdomain:', currentSubdomain);
-    return (
-      <HelmetProvider>
-        <QueryClientProvider client={queryClient}>
-          <Router>
-            <PublicRouter />
-          </Router>
-        </QueryClientProvider>
-      </HelmetProvider>
-    );
+    console.log('🚀 Rendering SubdomainApp for subdomain:', currentSubdomain);
+    return <SubdomainApp />;
   }
   
   console.log('🏠 Rendering MainApp');

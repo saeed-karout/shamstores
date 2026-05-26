@@ -317,15 +317,16 @@ const HomePage: React.FC = () => {
               <div>
                 <h4 className="font-semibold mb-4">الدعم</h4>
                 <ul className="space-y-2 text-sm" style={{ color: '#9DC4AC' }}>
-                  <li><Link to="/">مركز المساعدة</Link></li>
-                  <li><Link to="/">تواصل معنا</Link></li>
+                  <li><Link to="/contact">تواصل معنا</Link></li>
+                  <li><Link to="/faq">الأسئلة الشائعة</Link></li>
                 </ul>
               </div>
               <div>
                 <h4 className="font-semibold mb-4">القانوني</h4>
                 <ul className="space-y-2 text-sm" style={{ color: '#9DC4AC' }}>
-                  <li><Link to="/">شروط الاستخدام</Link></li>
-                  <li><Link to="/">سياسة الخصوصية</Link></li>
+                  <li><Link to="/terms">شروط الاستخدام</Link></li>
+                  <li><Link to="/privacy">سياسة الخصوصية</Link></li>
+                  <li><Link to="/about">من نحن</Link></li>
                 </ul>
               </div>
             </div>

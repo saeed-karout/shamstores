@@ -1,6 +1,7 @@
 // pages/Admin/AdminDashboard.tsx
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   IoRestaurant, IoStorefront, IoPeople, IoReceipt,
   IoCar, IoRocket, IoSettings, IoTrendingUp, IoTime,
@@ -48,6 +49,7 @@ interface Stats {
 }
 
 const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -82,6 +84,39 @@ const AdminDashboard: React.FC = () => {
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24, color: C.text }}>
         لوحة تحكم المنصة
       </h1>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 20 }}>
+        <button
+          onClick={() => navigate('/admin/contact-messages')}
+          style={{
+            background: C.surf,
+            color: C.accent,
+            border: `1px solid ${C.border}`,
+            borderRadius: 12,
+            padding: '10px 16px',
+            cursor: 'pointer',
+            fontFamily: 'Cairo, sans-serif',
+            fontWeight: 700,
+          }}
+        >
+          رسائل التواصل
+        </button>
+        <button
+          onClick={() => navigate('/admin/branches')}
+          style={{
+            background: C.surf,
+            color: C.text,
+            border: `1px solid ${C.border}`,
+            borderRadius: 12,
+            padding: '10px 16px',
+            cursor: 'pointer',
+            fontFamily: 'Cairo, sans-serif',
+            fontWeight: 700,
+            marginLeft: 8,
+          }}
+        >
+          إدارة الفروع
+        </button>
+      </div>
 
       {/* بطاقات الإحصائيات */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>

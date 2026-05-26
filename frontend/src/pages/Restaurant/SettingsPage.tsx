@@ -30,6 +30,8 @@ import {
   IoText,
   IoAlbums,
   IoPricetag,
+  IoGitBranch,
+  IoAdd,
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 import api from '@/services/api';
@@ -145,7 +147,7 @@ const saveBtn: React.CSSProperties = {
 };
 
 export const SettingsPage: React.FC = () => {
-  const { restaurant, loading, updateRestaurant, uploadLogo, uploadCover } = useRestaurant();
+  const { restaurant, loading, updateRestaurant, uploadLogo, uploadCover, refresh } = useRestaurant();
   const permissions = usePermissions();
   const { user, isSuperAdmin, isOwner } = useAuth();
   const [activeTab, setActiveTab] = useState('general');
@@ -188,6 +190,8 @@ export const SettingsPage: React.FC = () => {
 
   const [openingHours, setOpeningHours] = useState<OpeningHours>(defaultOpeningHours);
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(defaultDeliverySettings);
+  const [branchForm, setBranchForm] = useState({ name: '', email: '', phone: '' });
+  const [creatingBranch, setCreatingBranch] = useState(false);
 
   useEffect(() => {
     if (restaurant) {
@@ -353,6 +357,31 @@ export const SettingsPage: React.FC = () => {
     const distance = 5;
     const extraKm = Math.max(0, distance - deliverySettings.minDistance);
     return deliverySettings.baseFee + (extraKm * deliverySettings.feePerKm);
+  };
+
+  const linkedBranches = restaurant?.linkedBranches || [];
+
+  const handleCreateBranch = async () => {
+    if (!branchForm.name.trim()) {
+      toast.error('اسم الفرع مطلوب');
+      return;
+    }
+
+    try {
+      setCreatingBranch(true);
+      await api.post('/restaurants', {
+        name: branchForm.name,
+        email: branchForm.email || undefined,
+        phone: branchForm.phone || undefined,
+      });
+      toast.success('تم إنشاء الفرع بنجاح');
+      setBranchForm({ name: '', email: '', phone: '' });
+      await refresh();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'فشل إنشاء الفرع');
+    } finally {
+      setCreatingBranch(false);
+    }
   };
 
   const tabs = [
@@ -1239,6 +1268,66 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       )}
+
+      <div style={sectionCard}>
+        <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <IoGitBranch style={{ color: C.accent }} />
+          الفروع المرتبطة
+        </h2>
+        <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>
+          هنا ترى الفروع المرتبطة بنفس الحساب، ويمكنك إضافة فرع جديد إذا كانت الخطة تسمح بذلك.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ color: C.muted, fontSize: 12 }}>الفرع الحالي</div>
+            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{restaurant?.name || '-'}</div>
+            <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{restaurant?.branchLabel || restaurant?.subdomain || restaurant?.slug || '-'}</div>
+          </div>
+          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ color: C.muted, fontSize: 12 }}>الفروع المرتبطة</div>
+            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{linkedBranches.length}</div>
+            <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>فروع إضافية تحت نفس المالك</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
+          {linkedBranches.length > 0 ? linkedBranches.map((branch) => (
+            <div key={branch.id} style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+              <div style={{ color: C.text, fontWeight: 700 }}>{branch.name}</div>
+              <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{branch.linkLabel}</div>
+              <div style={{ color: branch.isActive ? C.accent : C.red, fontSize: 12, marginTop: 8 }}>{branch.isActive ? 'نشط' : 'غير نشط'}</div>
+            </div>
+          )) : (
+            <div style={{ color: C.muted, fontSize: 13 }}>لا توجد فروع إضافية مرتبطة حتى الآن.</div>
+          )}
+        </div>
+
+        <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+          <h3 style={{ color: C.text, fontSize: 14, fontWeight: 700, marginBottom: 12 }}>إضافة فرع جديد</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>اسم الفرع</label>
+              <input value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} style={getInput('branchName')} />
+            </div>
+            <div>
+              <label style={labelStyle}>البريد الإلكتروني</label>
+              <input value={branchForm.email} onChange={(e) => setBranchForm({ ...branchForm, email: e.target.value })} style={getInput('branchEmail')} />
+            </div>
+            <div>
+              <label style={labelStyle}>الهاتف</label>
+              <input value={branchForm.phone} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} style={getInput('branchPhone')} />
+            </div>
+          </div>
+          <button
+            onClick={handleCreateBranch}
+            disabled={creatingBranch}
+            style={{ ...saveBtn, marginTop: 14, opacity: creatingBranch ? 0.7 : 1, cursor: creatingBranch ? 'wait' : 'pointer' }}
+          >
+            <IoAdd size={16} /> {creatingBranch ? 'جاري الإنشاء...' : 'إنشاء فرع جديد'}
+          </button>
+        </div>
+      </div>
 
       <style>{`
         @keyframes spin {

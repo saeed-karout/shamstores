@@ -12,6 +12,24 @@ export interface User {
   updatedAt: string;
   restaurant?: Restaurant;
 }
+
+export interface BusinessBranchSummary {
+  id: string;
+  name: string;
+  slug: string;
+  subdomain?: string | null;
+  customDomain?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  plan?: {
+    id: string;
+    name: string;
+    price: number;
+  } | null;
+  linkLabel: string;
+  linkType: 'custom_domain' | 'subdomain' | 'slug';
+}
   
   export interface Restaurant {
     id: string;
@@ -41,6 +59,12 @@ export interface User {
     createdAt: string;
     updatedAt: string;
     plan?: Plan;
+    userId?: string;
+    subdomain?: string;
+    customDomain?: string;
+    branchLabel?: string;
+    branchLinkType?: 'custom_domain' | 'subdomain' | 'slug';
+    linkedBranches?: BusinessBranchSummary[];
   }
   
   // frontend/src/services/types.ts
@@ -86,6 +110,7 @@ export interface Plan {
   hasBulkImport: boolean;
   hasApiAccess: boolean;
   hasPrioritySupport: boolean;
+  hasBrandingRemoval?: boolean;
   
   // حالة الخطة
   isActive: boolean;
@@ -95,6 +120,7 @@ export interface Plan {
   createdAt: string;
   updatedAt: string;
 }
+  hasBrandingRemoval?: boolean;
   
   export interface Category {
     id: string;
@@ -164,6 +190,7 @@ export interface CartItem {
   name: string;
   originalPrice: number; // السعر الأصلي لحساب الخصم
   price: number; // السعر المعروض (بعد خصم العنصر)
+  discountedPrice?: number;
   quantity: number;
   image?: string;
   notes?: string;

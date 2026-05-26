@@ -209,6 +209,7 @@ const seedPlans = async () => {
             maxOrders: 100,
             isActive: true,
             position: 1,
+            hasBrandingRemoval: false,
             description: 'مناسب للمطاعم والمتاجر الصغيرة للبدء'
           },
           {
@@ -224,6 +225,7 @@ const seedPlans = async () => {
             maxOrders: 1000,
             isActive: true,
             position: 2,
+            hasBrandingRemoval: false,
             description: 'مناسب للمطاعم والمتاجر المتوسطة'
           },
           {
@@ -239,6 +241,7 @@ const seedPlans = async () => {
             maxOrders: 10000,
             isActive: true,
             position: 3,
+            hasBrandingRemoval: true,
             description: 'مناسب للمطاعم والمتاجر الكبيرة'
           },
           {
@@ -254,6 +257,7 @@ const seedPlans = async () => {
             maxOrders: 999999,
             isActive: true,
             position: 4,
+            hasBrandingRemoval: true,
             description: 'غير محدود مع جميع الميزات والدعم الأولوية'
           }
         ]

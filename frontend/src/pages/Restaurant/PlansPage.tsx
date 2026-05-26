@@ -41,7 +41,7 @@ const PlansPage: React.FC = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
-  const [planForm, setPlanForm] = useState({ name: 'free', price: '', maxItems: '', maxTables: '', maxStaff: '', hasWhatsapp: false, hasOnlineOrders: false, hasCustomDomain: false, hasAnalytics: false, hasTableQr: false, hasMultiLanguage: false, hasPromotions: false, hasCoupons: false, description: '' });
+  const [planForm, setPlanForm] = useState({ name: 'free', price: '', maxItems: '', maxTables: '', maxStaff: '', hasWhatsapp: false, hasOnlineOrders: false, hasCustomDomain: false, hasAnalytics: false, hasTableQr: false, hasMultiLanguage: false, hasPromotions: false, hasCoupons: false, hasBrandingRemoval: false, description: '' });
 
   const { user, isAdmin } = useAuth();
   const isSuperAdminUser = user?.role === 'super_admin';
@@ -78,10 +78,10 @@ const PlansPage: React.FC = () => {
   const handleOpenPlanModal = (plan?: Plan) => {
     if (plan) {
       setEditingPlan(plan);
-      setPlanForm({ name: plan.name, price: plan.price.toString(), maxItems: plan.maxItems.toString(), maxTables: plan.maxTables.toString(), maxStaff: plan.maxStaff.toString(), hasWhatsapp: plan.hasWhatsapp, hasOnlineOrders: plan.hasOnlineOrders, hasCustomDomain: plan.hasCustomDomain, hasAnalytics: plan.hasAnalytics, hasTableQr: plan.hasTableQr, hasMultiLanguage: plan.hasMultiLanguage, hasPromotions: plan.hasPromotions, hasCoupons: plan.hasCoupons, description: plan.description || '' });
+      setPlanForm({ name: plan.name, price: plan.price.toString(), maxItems: plan.maxItems.toString(), maxTables: plan.maxTables.toString(), maxStaff: plan.maxStaff.toString(), hasWhatsapp: plan.hasWhatsapp, hasOnlineOrders: plan.hasOnlineOrders, hasCustomDomain: plan.hasCustomDomain, hasAnalytics: plan.hasAnalytics, hasTableQr: plan.hasTableQr, hasMultiLanguage: plan.hasMultiLanguage, hasPromotions: plan.hasPromotions, hasCoupons: plan.hasCoupons, hasBrandingRemoval: (plan as any).hasBrandingRemoval || false, description: plan.description || '' });
     } else {
       setEditingPlan(null);
-      setPlanForm({ name: 'free', price: '', maxItems: '', maxTables: '', maxStaff: '', hasWhatsapp: false, hasOnlineOrders: false, hasCustomDomain: false, hasAnalytics: false, hasTableQr: false, hasMultiLanguage: false, hasPromotions: false, hasCoupons: false, description: '' });
+      setPlanForm({ name: 'free', price: '', maxItems: '', maxTables: '', maxStaff: '', hasWhatsapp: false, hasOnlineOrders: false, hasCustomDomain: false, hasAnalytics: false, hasTableQr: false, hasMultiLanguage: false, hasPromotions: false, hasCoupons: false, hasBrandingRemoval: false, description: '' });
     }
     setShowPlanModal(true);
   };
@@ -155,6 +155,7 @@ const PlansPage: React.FC = () => {
     { key: 'hasCustomDomain', label: 'دومين خاص' }, { key: 'hasAnalytics', label: 'إحصائيات متقدمة' },
     { key: 'hasTableQr', label: 'QR للطاولات' }, { key: 'hasMultiLanguage', label: 'لغات متعددة' },
     { key: 'hasPromotions', label: 'عروض وخصومات' }, { key: 'hasCoupons', label: 'كوبونات' },
+    { key: 'hasBrandingRemoval', label: 'إزالة شعار شام ستورز' },
   ];
 
   if (loading) return <Loader fullScreen />;
@@ -245,6 +246,12 @@ const PlansPage: React.FC = () => {
                       </li>
                     );
                   })}
+                  {(plan as any).hasBrandingRemoval && (
+                    <li style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text, fontSize: 13, marginBottom: 8 }}>
+                      <IoCheckmark size={16} style={{ color: C.accent, flexShrink: 0 }} />
+                      إزالة شعار شام ستورز
+                    </li>
+                  )}
                 </ul>
                 {plan.description && <p style={{ color: C.muted, fontSize: 12, borderTop: `1px solid ${C.border}`, paddingTop: 12, marginBottom: 16 }}>{plan.description}</p>}
                 {!isSuperAdminUser && (

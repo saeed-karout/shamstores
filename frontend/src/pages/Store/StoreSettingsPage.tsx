@@ -31,6 +31,7 @@ import {
   IoBrush,
   IoText,
   IoAlbums,
+  IoGitBranch,
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 
@@ -371,6 +372,7 @@ const StoreSettingsPage: React.FC = () => {
     text: designForm.textColor,
     muted: designForm.mutedColor,
     accent: designForm.accentColor,
+    border: C.border,
   };
 
   return (
@@ -1140,6 +1142,47 @@ const StoreSettingsPage: React.FC = () => {
           </button>
         </div>
       )}
+
+      <div style={sectionCard}>
+        <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <IoGitBranch style={{ color: C.accent }} />
+          معلومات الفرع
+        </h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
+          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ color: C.muted, fontSize: 12 }}>اسم الفرع الحالي</div>
+            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{store?.name || '-'}</div>
+            <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{store?.branchLabel || store?.subdomain || store?.slug || '-'}</div>
+          </div>
+          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ color: C.muted, fontSize: 12 }}>نوع الرابط</div>
+            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>
+              {store?.branchLinkType === 'custom_domain'
+                ? 'دومين مخصص'
+                : store?.branchLinkType === 'subdomain'
+                  ? 'دومين فرعي'
+                  : 'رابط افتراضي'}
+            </div>
+          </div>
+          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ color: C.muted, fontSize: 12 }}>الفروع المرتبطة</div>
+            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{store?.linkedBranches?.length || 0}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          {(store?.linkedBranches || []).map((branch) => (
+            <div key={branch.id} style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+              <div style={{ color: C.text, fontWeight: 700 }}>{branch.name}</div>
+              <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{branch.linkLabel}</div>
+              <div style={{ color: branch.isActive ? C.accent : C.red, fontSize: 12, marginTop: 8 }}>{branch.isActive ? 'نشط' : 'غير نشط'}</div>
+            </div>
+          ))}
+          {(store?.linkedBranches || []).length === 0 && (
+            <div style={{ color: C.muted, fontSize: 13 }}>لا توجد فروع إضافية مرتبطة بهذا الحساب.</div>
+          )}
+        </div>
+      </div>
 
       {/* Footer */}
       <div style={{ marginTop: 32, textAlign: 'center', padding: '16px 0' }}>

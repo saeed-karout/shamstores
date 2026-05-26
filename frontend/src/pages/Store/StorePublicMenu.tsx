@@ -25,11 +25,12 @@ import { getImageUrl } from '@/utils/imageHelpers';
 import { openWhatsApp } from '@/utils/helpers';
 import { DeliveryLocation } from '@/models/order';
 import { calculateDistance } from '@/utils/distance';
-import PublicMarketingSections, { PublicMarketingData } from '@/components/public/PublicMarketingSections';
+import PublicMarketingSections, { MarketingData } from '@/components/public/PublicMarketingSections';
 import PublicAdvertisements from '@/components/public/PublicAdvertisements';
 import PublicOffers from '@/components/public/PublicOffers';
 import { useTheme } from '@/context/ThemeContext';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
+import PublicFooter from '@/components/public/PublicFooter';
 
 interface StorePublicMenuProps {
   businessId?: string;
@@ -82,7 +83,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [store, setStore] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [marketing, setMarketing] = useState<PublicMarketingData | undefined>(undefined);
+  const [marketing, setMarketing] = useState<MarketingData | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -139,8 +140,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const fetchStoreData = async () => {
     try {
       const identifier = currentSlug;
-      const response = await api.get(`/public/${identifier}`);
-      const businessData = response.data || response;
+      const response: any = await api.get(`/public/${identifier}`);
+      const businessData = response?.data || response;
       
       // ✅ تحديث ألوان ThemeProvider ديناميكياً
       const storeColors = {
@@ -172,6 +173,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         description: propBusinessDescription,
         phone: propBusinessPhone,
         whatsapp: propBusinessWhatsapp,
+        branchLabel: currentSlug,
         primaryColor: propBusinessPrimaryColor || '#3B82F6',
         secondaryColor: propBusinessSecondaryColor || '#10B981',
         backgroundColor: '#082E24',
@@ -238,7 +240,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       id: product.id,
       name: product.name,
       originalPrice: product.price,
-      price: product.discountedPrice || product.price,
+      price:  product.price,
+      discountedPrice: product.discountedPrice,
       quantity: 1,
       image: product.imageUrl,
       notes: '',
@@ -271,7 +274,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         return;
       }
 
-      const response = await api.get(`/coupons/validate/${code}?orderTotal=${subtotal}`);
+      const response: any = await api.get(`/coupons/validate/${code}?orderTotal=${subtotal}`);
 
       setAppliedCoupon(response);
       setDiscountAmount(response.discountAmount || 0);
@@ -363,11 +366,11 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         deliveryDistance: deliveryDistance,
       };
 
-      const response = await api.post('/orders', orderData);
+      const response: any = await api.post('/orders', orderData);
       toast.success('تم إرسال الطلب بنجاح');
 
       if (store?.whatsapp) {
-        let message = `🆕 طلب جديد #${response.orderNumber || 'N/A'}\n`;
+        let message = `🆕 طلب جديد #${response?.orderNumber || 'N/A'}\n`;
         message += `👤 ${customerInfo.name}\n📞 ${customerInfo.phone}\n`;
         message += `💰 ${total} ر.س\n📦 توصيل\n`;
         message += `📍 ${customerLocation?.address}\n`;
@@ -490,6 +493,11 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               )}
               <div style={{ flex: 1 }}>
                 <h1 style={{ fontSize: 26, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>{store.name}</h1>
+                {store.branchLabel && (
+                  <div style={{ display: 'inline-flex', marginTop: 8, padding: '4px 10px', borderRadius: 999, background: 'rgba(200,226,53,0.12)', color: dynamicColors.accent, fontSize: 12, fontWeight: 700 }}>
+                    الفرع: {store.branchLabel}
+                  </div>
+                )}
                 {store.description && (
                   <p style={{ color: dynamicColors.muted, fontSize: 14, marginTop: 4 }}>{store.description}</p>
                 )}
@@ -894,7 +902,33 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           onCustomerLocationChange={setCustomerLocation}
         />
       </div>
-
+        <PublicFooter
+  businessName={store.name}
+  businessType="store"
+  businessLogo={store.logo}
+  businessSlug={store.slug}
+  description={store.description}
+  socialLinks={{
+    facebook: store.facebook,
+    instagram: store.instagram,
+    whatsapp: store.whatsapp,
+    tiktok: store.tiktok,
+  }}
+  contactInfo={{
+    phone: store.phone,
+    email: store.email,
+    address: store.address,
+    openingHours: store.openingHours,
+  }}
+  primaryColor={store.primaryColor}
+  secondaryColor={store.secondaryColor}
+  backgroundColor={store.backgroundColor}
+  textColor={store.textColor}
+  mutedColor={store.mutedColor}
+  accentColor={store.accentColor}
+  showNewsletter={false}
+  showQuickLinks={true}
+/>
       <style>{`
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

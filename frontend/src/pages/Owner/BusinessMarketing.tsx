@@ -138,29 +138,48 @@ const BusinessMarketing: React.FC = () => {
     if (businessInfo?.id) fetchMarketingData();
   }, [businessInfo]);
 
-  const fetchMarketingData = async () => {
-    if (!businessInfo) return;
-    try {
-      setLoading(true);
-      const data = await marketingService.getSettings(businessInfo.type, businessInfo.id);
-      const sectionsData = data.sections || [];
-      setSections(sectionsData);
+  // frontend/src/pages/Owner/BusinessMarketing.tsx
 
-      const activeCount = sectionsData.filter((s: MarketingSection) => s.isActive).length;
-      setStats({
-        totalViews: sectionsData.reduce((sum: number, s: MarketingSection) => sum + (s.viewsCount || 0), 0),
-        activeCount,
-        totalCount: sectionsData.length
-      });
-    } catch (error) {
-      console.error('Error fetching marketing data:', error);
-      toast.error('حدث خطأ في جلب بيانات التسويق');
-      setSections([]);
-    } finally {
-      setLoading(false);
+const fetchMarketingData = async () => {
+  if (!businessInfo) return;
+  try {
+    setLoading(true);
+    const response = await marketingService.getSettings(businessInfo.type, businessInfo.id);
+    
+    // ✅ تصحيح استخراج البيانات - أضف console.log للتحقق
+    console.log('📦 Full API Response:', response);
+    
+    // ✅ استخراج sections بشكل صحيح
+    let sectionsData = [];
+    
+    if (response?.data?.sections) {
+      sectionsData = response.data.sections;
+    } else if (response?.sections) {
+      sectionsData = response.sections;
+    } else if (Array.isArray(response)) {
+      sectionsData = response;
+    } else if (response?.data?.data?.sections) {
+      sectionsData = response.data.data.sections;
     }
-  };
+    
+    console.log('✅ Extracted sections:', sectionsData);
+    
+    setSections(sectionsData);
 
+    const activeCount = sectionsData.filter((s: MarketingSection) => s.isActive).length;
+    setStats({
+      totalViews: sectionsData.reduce((sum: number, s: MarketingSection) => sum + (s.viewsCount || 0), 0),
+      activeCount,
+      totalCount: sectionsData.length
+    });
+  } catch (error) {
+    console.error('Error fetching marketing data:', error);
+    toast.error('حدث خطأ في جلب بيانات التسويق');
+    setSections([]);
+  } finally {
+    setLoading(false);
+  }
+};
   const handleCreateSection = async (data: any) => {
     if (!businessInfo) return;
     try {

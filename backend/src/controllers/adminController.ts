@@ -5,6 +5,7 @@ import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { DriverService } from '../services/driver.service';
 import bcrypt from 'bcrypt';
+import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -134,6 +135,57 @@ export const getPlatformStats = async (req: AuthRequest, res: Response): Promise
         lastUpdated: new Date()
       }
     });
+  }
+};
+
+// ==================== رسائل التواصل ====================
+
+export const getContactMessages = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.role !== 'super_admin') {
+      res.status(403).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const { status } = req.query;
+    const where = status && typeof status === 'string' && status !== 'all' ? { status } : {};
+
+    const messages = await prisma.contactMessage.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json({ success: true, data: messages });
+  } catch (error) {
+    console.error('Error getting contact messages:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب الرسائل' });
+  }
+};
+
+export const updateContactMessageStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (req.user?.role !== 'super_admin') {
+      res.status(403).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status || !['new', 'read', 'replied', 'archived'].includes(status)) {
+      res.status(400).json({ success: false, error: 'حالة غير صالحة' });
+      return;
+    }
+
+    const updatedMessage = await prisma.contactMessage.update({
+      where: { id },
+      data: { status }
+    });
+
+    res.json({ success: true, message: 'تم تحديث حالة الرسالة', data: updatedMessage });
+  } catch (error) {
+    console.error('Error updating contact message:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث الرسالة' });
   }
 };
 
@@ -777,13 +829,17 @@ export const getAllRestaurants = async (
         where: { id: restaurant.planId },
         select: { id: true, name: true, price: true }
       });
+
+      const linkedBranches = await getLinkedBranches('restaurant', restaurant.userId || owner?.id, restaurant.id);
       
       return {
         ...restaurant,
         owner,
         plan,
         productsCount,
-        ordersCount
+        ordersCount,
+        linkedBranches,
+        ...buildBranchSummary(restaurant)
       };
     }));
     
@@ -829,6 +885,8 @@ export const getRestaurantDetails = async (req: AuthRequest, res: Response): Pro
       where: { id: restaurant.planId },
       select: { id: true, name: true, price: true }
     });
+
+    const linkedBranches = await getLinkedBranches('restaurant', restaurant.userId || owner?.id, restaurant.id);
     
     const [productsCount, ordersCount, totalSales] = await Promise.all([
       prisma.menuItem.count({ where: { restaurantId: id } }),
@@ -848,6 +906,8 @@ export const getRestaurantDetails = async (req: AuthRequest, res: Response): Pro
         ...restaurant,
         owner,
         plan,
+        linkedBranches,
+        ...buildBranchSummary(restaurant),
         stats: {
           productsCount: productsCount || 0,
           ordersCount: ordersCount || 0,
@@ -1029,13 +1089,17 @@ export const getAllStores = async (
         where: { id: store.planId },
         select: { id: true, name: true, price: true }
       });
+
+      const linkedBranches = await getLinkedBranches('store', store.userId || owner?.id, store.id);
       
       return {
         ...store,
         owner,
         plan,
         productsCount,
-        ordersCount
+        ordersCount,
+        linkedBranches,
+        ...buildBranchSummary(store)
       };
     }));
     
@@ -1080,6 +1144,8 @@ export const getStoreDetails = async (req: AuthRequest, res: Response): Promise<
       where: { id: store.planId },
       select: { id: true, name: true, price: true }
     });
+
+    const linkedBranches = await getLinkedBranches('store', store.userId || owner?.id, store.id);
     
     const [productsCount, ordersCount, totalSales] = await Promise.all([
       prisma.product.count({ where: { storeId: id } }),
@@ -1093,6 +1159,8 @@ export const getStoreDetails = async (req: AuthRequest, res: Response): Promise<
         ...store,
         owner,
         plan,
+        linkedBranches,
+        ...buildBranchSummary(store),
         stats: {
           productsCount: productsCount || 0,
           ordersCount: ordersCount || 0,

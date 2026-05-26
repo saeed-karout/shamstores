@@ -23,9 +23,10 @@ import { useFavorites } from '@/hooks/useFavorites';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { openWhatsApp } from '@/utils/helpers';
-import PublicMarketingSections, { PublicMarketingData } from '@/components/public/PublicMarketingSections';
+import PublicMarketingSections, { MarketingData } from '@/components/public/PublicMarketingSections';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 import { useTheme } from '@/context/ThemeContext'; // ✅ استيراد useTheme
+import PublicFooter from '@/components/public/PublicFooter';
 
 interface Category {
   id: string;
@@ -90,7 +91,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const { setThemeColors } = useTheme(); // ✅ استخدام setThemeColors لتحديث الألوان
 
   // State
-  const [data, setData] = useState<{ restaurant: any; categories: Category[]; marketing?: PublicMarketingData } | null>(null);
+  const [data, setData] = useState<{ restaurant: any; categories: Category[]; marketing?: MarketingData } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,10 +150,10 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       }
       
       console.log('🔍 Fetching restaurant data for identifier:', identifier);
-      const response = await api.get(`/public/${identifier}`);
+      const response: any = await api.get(`/public/${identifier}`);
       console.log('📦 Restaurant data response:', response);
       
-      const businessData = response.data || response;
+      const businessData = response?.data || response;
       
       // ✅ تحديث ألوان ThemeProvider ديناميكياً
       const restaurantColors = {
@@ -178,6 +179,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           description: businessData.description || propBusinessDescription,
           phone: businessData.phone || propBusinessPhone,
           whatsapp: businessData.whatsapp || propBusinessWhatsapp,
+            branchLabel: businessData.branchLabel || businessData.subdomain || businessData.slug,
           primaryColor: businessData.primaryColor || propBusinessPrimaryColor || '#3B82F6',
           secondaryColor: businessData.secondaryColor || propBusinessSecondaryColor || '#10B981',
           backgroundColor: businessData.backgroundColor || '#082E24',
@@ -212,6 +214,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           description: propBusinessDescription,
           phone: propBusinessPhone,
           whatsapp: propBusinessWhatsapp,
+            branchLabel: propBusinessSlug || getCurrentSubdomain() || 'الفرع الحالي',
           primaryColor: propBusinessPrimaryColor || '#3B82F6',
           secondaryColor: propBusinessSecondaryColor || '#10B981',
           backgroundColor: '#082E24',
@@ -235,8 +238,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     if (!isAuthenticated) return;
     setLoadingOrders(true);
     try {
-      const orders = await api.get('/orders/my-orders');
-      setMyOrders(orders);
+      const ordersResponse: any = await api.get('/orders/my-orders');
+      const orders = ordersResponse?.data || ordersResponse || [];
+      setMyOrders(Array.isArray(orders) ? orders : []);
     } catch (error) {
       console.error('Error fetching my orders:', error);
     } finally {
@@ -438,6 +442,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
               )}
               <div style={{ flex: 1 }}>
                 <h1 style={{ fontSize: 24, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>{restaurant.name}</h1>
+                {restaurant.branchLabel && (
+                  <div style={{ display: 'inline-flex', marginTop: 8, padding: '4px 10px', borderRadius: 999, background: 'rgba(200,226,53,0.12)', color: dynamicColors.accent, fontSize: 12, fontWeight: 700 }}>
+                    الفرع: {restaurant.branchLabel}
+                  </div>
+                )}
                 {restaurant.description && (
                   <p style={{ color: dynamicColors.muted, fontSize: 14, marginTop: 4 }}>{restaurant.description}</p>
                 )}
@@ -714,11 +723,17 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
               {filteredItems.map((item, index) => (
                 <MenuItemCard
                   key={item.id}
-                  item={item}
+                  item={item as any}
                   index={index}
                   isFavorite={favorites.has(item.id)}
                   slug={currentSlug || ''}
-                  onToggleFavorite={toggleFavorite}
+                  onToggleFavorite={() => toggleFavorite({
+                    id: item.id,
+                    type: 'product',
+                    name: item.name,
+                    price: item.discountedPrice || item.price,
+                    image: item.image,
+                  })}
                   onAddToCart={handleAddToCart}
                   onNavigate={navigate}
                   viewMode={viewMode}
@@ -794,6 +809,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           onRemoveFromCart={removeFromCart}
           subtotal={getCartSubtotal()}
           formatPrice={(price) => price.toLocaleString()}
+          getCartCount={getCartCount}
           submitting={submitting}
         />
 
@@ -820,6 +836,32 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           position="bottom"
         />
       </div>
+
+     <PublicFooter
+  businessName={restaurant.name}
+  businessType="restaurant"
+  businessLogo={restaurant.logo}
+  businessSlug={restaurant.slug}
+  description={restaurant.description}
+  socialLinks={{
+    facebook: restaurant.facebook,
+    instagram: restaurant.instagram,
+    whatsapp: restaurant.whatsapp,
+    tiktok: restaurant.tiktok,
+  }}
+  contactInfo={{
+    phone: restaurant.phone,
+    email: restaurant.email,
+    address: restaurant.address,
+    openingHours: restaurant.openingHours,
+  }}
+  primaryColor={restaurant.primaryColor}
+  secondaryColor={restaurant.secondaryColor}
+  backgroundColor={restaurant.backgroundColor}
+  textColor={restaurant.textColor}
+  mutedColor={restaurant.mutedColor}
+  accentColor={restaurant.accentColor}
+/>
 
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {

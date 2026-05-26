@@ -55,6 +55,10 @@ import {
   // إعدادات المنصة
   getPlatformSettings,
   updatePlatformSettings,
+
+  // رسائل التواصل
+  getContactMessages,
+  updateContactMessageStatus,
   
   // طلبات الترقية
   getUpgradeRequests,
@@ -218,6 +222,10 @@ router.put('/platform-staff/:staffId', authorize(['super_admin']), updatePlatfor
 router.patch('/platform-staff/:staffId/toggle', authorize(['super_admin']), togglePlatformStaffStatus);
 router.delete('/platform-staff/:staffId', authorize(['super_admin']), deletePlatformStaff);
 router.put('/platform-staff/:id/permissions', authorize(['super_admin']), updatePlatformStaffPermissions);
+
+// -------------------- رسائل التواصل --------------------
+router.get('/contact-messages', authorize(['super_admin']), getContactMessages);
+router.patch('/contact-messages/:id/status', authorize(['super_admin']), updateContactMessageStatus);
 
 // -------------------- إدارة المستخدمين العامين --------------------
 router.get('/users', (req, res, next) => {

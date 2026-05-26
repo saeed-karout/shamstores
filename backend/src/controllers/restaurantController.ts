@@ -7,6 +7,7 @@ import path from 'path';
 import slugify from '../utils/slugify';
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
+import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 
 // دالة مساعدة لإنشاء subdomain فريد
 const generateUniqueSubdomain = async (baseSubdomain: string, excludeId?: string): Promise<string> => {
@@ -73,6 +74,34 @@ export const createRestaurant = async (
     while (await prisma.restaurant.findFirst({ where: { slug } })) {
       slug = `${baseSlug}-${counter++}`;
     }
+
+    const ownerUserId = req.user?.role === 'super_admin' ? (req.body.userId || undefined) : req.user?.id;
+    if (req.user?.role !== 'super_admin' && ownerUserId) {
+      const currentRestaurant = req.user?.restaurantId
+        ? await prisma.restaurant.findUnique({
+            where: { id: req.user.restaurantId },
+            select: { userId: true, plan: { select: { maxRestaurants: true } } }
+          })
+        : null;
+
+      const branchOwnerId = currentRestaurant?.userId || ownerUserId;
+      if (branchOwnerId) {
+        const currentPlanLimit = currentRestaurant?.plan?.maxRestaurants ?? 1;
+        const currentBranchesCount = await prisma.restaurant.count({ where: { userId: branchOwnerId } });
+
+        if (currentBranchesCount >= currentPlanLimit) {
+          res.status(403).json({
+            success: false,
+            error: `الخطة الحالية تسمح بإنشاء ${currentPlanLimit} فرع فقط. يرجى الترقية لإضافة فرع جديد`,
+            requiresUpgrade: true,
+            limitType: 'maxRestaurants',
+            current: currentBranchesCount,
+            limit: currentPlanLimit
+          });
+          return;
+        }
+      }
+    }
     
     const subdomain = await generateUniqueSubdomain(baseSlug);
     
@@ -84,6 +113,7 @@ export const createRestaurant = async (
         slug,
         subdomain,
         planId: '11111111-1111-1111-1111-111111111111',
+        userId: ownerUserId,
         isActive: true,
         ...otherData
       }
@@ -167,11 +197,13 @@ export const getProfile = async (
       });
     }
 
+    const linkedBranches = await getLinkedBranches('restaurant', restaurant.userId || req.user?.id, restaurant.id);
+
     console.log('✅ Restaurant found:', restaurant.id);
 
     res.json({
       success: true,
-      data: { ...restaurant, plan }
+      data: { ...restaurant, plan, linkedBranches, ...buildBranchSummary(restaurant) }
     });
   } catch (error) {
     console.error('خطأ في جلب بيانات المطعم:', error);
@@ -213,9 +245,11 @@ export const getRestaurantById = async (
       });
     }
 
+    const linkedBranches = await getLinkedBranches('restaurant', restaurant.userId || req.user?.id, restaurant.id);
+
     res.json({
       success: true,
-      data: { ...restaurant, plan }
+      data: { ...restaurant, plan, linkedBranches, ...buildBranchSummary(restaurant) }
     });
   } catch (error) {
     console.error('خطأ في جلب المطعم:', error);

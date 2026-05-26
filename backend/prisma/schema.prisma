@@ -72,6 +72,13 @@ enum SettingGroup {
   seo
 }
 
+enum ContactMessageStatus {
+  new
+  read
+  replied
+  archived
+}
+
 // ==================== MODELS ====================
 
 model User {
@@ -171,6 +178,7 @@ model Plan {
   hasMultiLanguage Boolean  @default(false)
   hasPromotions    Boolean  @default(false)
   hasCoupons       Boolean  @default(false)
+  hasBrandingRemoval Boolean @default(false)
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -789,6 +797,22 @@ model ExtendedPlatformSetting {
   @@index([keyName])
   @@index([settingGroup])
   @@index([settingGroup, keyName])
+}
+
+model ContactMessage {
+  id        String               @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String               @db.Text
+  status    ContactMessageStatus @default(new)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
 }
 
 // Auth Configuration Settings stored in ExtendedPlatformSetting table

@@ -1,5 +1,3 @@
-// backend/src/middleware/subdomain.ts
-
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../server';
 
@@ -19,8 +17,25 @@ const RESERVED_SUBDOMAINS = [
   'static', 'assets', 'auth', 'dashboard', 'app'
 ];
 
+// ✅ قائمة المسارات المحجوزة (لا تتعامل معها كـ business)
+const RESERVED_PATHS = [
+  'terms', 'privacy', 'about', 'faq', 'contact',
+  'login', 'register', 'dashboard', 'admin'
+];
+
 const isReservedSubdomain = (subdomain: string): boolean => {
   return RESERVED_SUBDOMAINS.includes(subdomain.toLowerCase());
+};
+
+const isReservedPath = (path: string): boolean => {
+  // تجاهل المسارات الفارغة أو الرئيسية
+  if (!path || path === '/' || path === '') return false;
+  
+  // إزالة الـ slash البداية
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  const firstSegment = cleanPath.split('/')[0];
+  
+  return RESERVED_PATHS.includes(firstSegment.toLowerCase());
 };
 
 export const extractSubdomain = async (
@@ -29,6 +44,14 @@ export const extractSubdomain = async (
   next: NextFunction
 ) => {
   try {
+    // ✅ إذا كان المسار محجوزاً، لا تتعامل معه كـ business
+    if (isReservedPath(req.path)) {
+      console.log('🚫 Reserved path, skipping business lookup:', req.path);
+      req.subdomain = undefined;
+      req.business = undefined;
+      return next();
+    }
+
     let subdomain: string | null = null;
 
     // 1. من X-Subdomain header
@@ -42,7 +65,7 @@ export const extractSubdomain = async (
       const hostWithoutPort = host.split(':')[0];
       const parts = hostWithoutPort.split('.');
 
-      // دعم localhost مع subdomain (al-hamraa.localhost)
+      // دعم localhost مع subdomain
       if (hostWithoutPort.includes('localhost') || hostWithoutPort.includes('127.0.0.1')) {
         if (parts.length >= 2 && parts[0] !== 'localhost' && parts[0] !== 'www') {
           subdomain = parts[0];
@@ -72,7 +95,6 @@ export const extractSubdomain = async (
     req.subdomain = subdomain;
     console.log('🌐 Looking for business with subdomain:', subdomain);
 
-    // ✅ استخدام Prisma للبحث
     // البحث في المتاجر أولاً
     const store = await prisma.store.findFirst({
       where: {

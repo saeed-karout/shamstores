@@ -122,6 +122,7 @@ const RestaurantPlansPage: React.FC = () => {
     if (plan.hasMultiLanguage) features.push({ icon: IoLanguage, label: 'دعم لغات متعددة' });
     if (plan.hasPromotions) features.push({ icon: IoMegaphone, label: 'عروض ترويجية' });
     if (plan.hasCoupons) features.push({ icon: IoTicket, label: 'كوبونات خصم' });
+    if (plan.hasBrandingRemoval) features.push({ icon: IoBusiness, label: 'إزالة شعار شام ستورز' });
     return features;
   };
 
@@ -286,6 +287,10 @@ const RestaurantPlansPage: React.FC = () => {
                 >
                   {isCurrentPlan ? 'الخطة الحالية' : (canUpgrade ? 'ترقية' : 'غير متاح')}
                 </button>
+                <div style={{ position: 'absolute', top: 12, right: 12, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(8,46,36,0.7)', border: `1px solid ${C.border}`, borderRadius: 999, padding: '4px 10px' }}>
+                  <span style={{ width: 18, height: 18, borderRadius: 5, background: C.accent, color: C.bg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>ش</span>
+                  <span style={{ color: C.text, fontSize: 11, fontWeight: 700 }}>شام ستورز</span>
+                </div>
               </div>
             </div>
           );

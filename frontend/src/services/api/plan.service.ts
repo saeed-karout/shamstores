@@ -7,10 +7,43 @@ export interface Plan {
   name: string;
   displayName: string;
   displayNameEn: string;
+  slug?: string;
   price: number;
   duration: number;
   features: Record<string, any>;
+  description?: string;
+  maxRestaurants?: number;
+  maxStores?: number;
+  maxUsers?: number;
+  maxMenuItems?: number;
+  maxProducts?: number;
+  maxOrders?: number;
+  maxTables?: number;
+  maxStaff?: number;
+  position?: number;
+  isPopular?: boolean;
   isActive: boolean;
+  hasWhatsapp?: boolean;
+  hasOnlineOrders?: boolean;
+  hasCustomDomain?: boolean;
+  hasAnalytics?: boolean;
+  hasTableQr?: boolean;
+  hasMultiLanguage?: boolean;
+  hasPromotions?: boolean;
+  hasCoupons?: boolean;
+  hasMarketing?: boolean;
+  hasInventory?: boolean;
+  hasReturns?: boolean;
+  hasReviews?: boolean;
+  hasWishlist?: boolean;
+  hasCompare?: boolean;
+  hasSeo?: boolean;
+  hasEmailMarketing?: boolean;
+  hasAbandonedCart?: boolean;
+  hasBulkImport?: boolean;
+  hasApiAccess?: boolean;
+  hasPrioritySupport?: boolean;
+  hasBrandingRemoval?: boolean;
 }
 
 export interface UpgradeRequest {

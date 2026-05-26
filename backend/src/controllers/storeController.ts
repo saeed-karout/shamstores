@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
 import fs from 'fs';
 import path from 'path';
+import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -225,7 +226,8 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
       res.status(404).json({ success: false, error: 'المتجر غير موجود' });
       return;
     }
-    res.json({ success: true, data: store });
+    const linkedBranches = await getLinkedBranches('store', store.userId, store.id);
+    res.json({ success: true, data: { ...store, linkedBranches, ...buildBranchSummary(store) } });
   } catch (error) {
     console.error('Error getting store profile:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب بيانات المتجر' });
@@ -295,6 +297,8 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       data: updateData,
       include: { plan: true }
     });
+
+    const linkedBranches = await getLinkedBranches('store', updatedStore.userId, updatedStore.id);
     
     console.log('✅ Store updated with colors:', {
       primaryColor: updatedStore.primaryColor,
@@ -302,7 +306,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       cardColor: updatedStore.cardColor
     });
     
-    res.json({ success: true, message: 'تم تحديث المتجر بنجاح', data: updatedStore });
+    res.json({ success: true, message: 'تم تحديث المتجر بنجاح', data: { ...updatedStore, linkedBranches, ...buildBranchSummary(updatedStore) } });
   } catch (error) {
     console.error('Error updating store profile:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في تحديث المتجر' });

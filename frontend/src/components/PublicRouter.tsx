@@ -131,6 +131,12 @@ const PublicRouter: React.FC = () => {
   
   return (
     <Routes>
+      <Route path="/terms" element={<Navigate to="/" replace />} />
+      <Route path="/privacy" element={<Navigate to="/" replace />} />
+      <Route path="/about" element={<Navigate to="/" replace />} />
+      <Route path="/faq" element={<Navigate to="/" replace />} />
+      <Route path="/contact" element={<Navigate to="/" replace />} />
+
       {/* مسارات المصادقة */}
       <Route path="/user/login" element={<UserLogin />} />
       <Route path="/user/register" element={<UserRegister />} />
