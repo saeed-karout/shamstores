@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMenu } from '../../hooks/useMenu';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
+import { useRestaurant } from '../../hooks/useRestaurant';
 import { Category, MenuItem } from '../../services/types';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
@@ -58,6 +59,38 @@ const labelStyle: React.CSSProperties = {
 };
 
 const MenuPage: React.FC = () => {
+  const { restaurant, loading: restaurantLoading } = useRestaurant();
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>('');
+
+  const branchOptions = useMemo(() => {
+    if (!restaurant) return [];
+
+    return [
+      {
+        id: restaurant.id,
+        name: restaurant.name,
+        label: restaurant.branchLabel || restaurant.subdomain || restaurant.slug || restaurant.name,
+      },
+      ...(restaurant.linkedBranches || []).map((branch) => ({
+        id: branch.id,
+        name: branch.name,
+        label: branch.linkLabel || branch.name,
+      })),
+    ];
+  }, [restaurant]);
+
+  useEffect(() => {
+    if (restaurant && !selectedRestaurantId) {
+      setSelectedRestaurantId(restaurant.id);
+    }
+  }, [restaurant, selectedRestaurantId]);
+
+  const restaurantIdsForMenu = useMemo(() => {
+    if (!selectedRestaurantId) return [];
+    if (selectedRestaurantId === 'all') return branchOptions.map((branch) => branch.id);
+    return [selectedRestaurantId];
+  }, [selectedRestaurantId, branchOptions]);
+
   const {
     categories,
     menuItems,
@@ -70,7 +103,7 @@ const MenuPage: React.FC = () => {
     deleteMenuItem,
     toggleAvailability,
     refresh
-  } = useMenu();
+  } = useMenu({ restaurantIds: restaurantIdsForMenu });
 
   const permissions = usePermissions();
   const { isSuperAdmin, isOwner, isStaff } = useAuth();
@@ -92,6 +125,7 @@ const MenuPage: React.FC = () => {
   const [newAddonPrice, setNewAddonPrice] = useState('');
 
   const [categoryForm, setCategoryForm] = useState({
+    restaurantId: '',
     name: '',
     nameEn: '',
     description: '',
@@ -100,6 +134,7 @@ const MenuPage: React.FC = () => {
   });
 
   const [itemForm, setItemForm] = useState({
+    restaurantId: '',
     categoryId: '',
     name: '',
     nameEn: '',
@@ -115,12 +150,13 @@ const MenuPage: React.FC = () => {
   });
 
   const resetCategoryForm = () => {
-    setCategoryForm({ name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
+    setCategoryForm({ restaurantId: selectedRestaurantId === 'all' ? (restaurant?.id || '') : selectedRestaurantId, name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
     setSelectedCategory(null);
   };
 
   const resetItemForm = () => {
     setItemForm({
+      restaurantId: selectedRestaurantId === 'all' ? (restaurant?.id || '') : selectedRestaurantId,
       categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '',
       price: '', discountedPrice: '', image: '', preparationTime: '', calories: '',
       hasSizes: false, hasAddons: false,
@@ -165,6 +201,7 @@ const MenuPage: React.FC = () => {
     if (category) {
       setSelectedCategory(category);
       setCategoryForm({
+        restaurantId: category.restaurantId,
         name: category.name, nameEn: category.nameEn || '',
         description: category.description || '', descriptionEn: category.descriptionEn || '',
         image: category.image || '',
@@ -178,6 +215,7 @@ const MenuPage: React.FC = () => {
     if (item) {
       setSelectedItem(item);
       setItemForm({
+        restaurantId: item.restaurantId,
         categoryId: item.categoryId, name: item.name, nameEn: item.nameEn || '',
         description: item.description || '', descriptionEn: item.descriptionEn || '',
         price: item.price.toString(), discountedPrice: item.discountedPrice?.toString() || '',
@@ -249,6 +287,7 @@ const MenuPage: React.FC = () => {
       }
       const data = {
         ...itemForm,
+        restaurantId: itemForm.restaurantId || selectedRestaurantId,
         price: basePrice,
         discountedPrice: itemForm.discountedPrice ? parseFloat(itemForm.discountedPrice) : null,
         preparationTime: itemForm.preparationTime ? parseInt(itemForm.preparationTime) : null,
@@ -278,7 +317,8 @@ const MenuPage: React.FC = () => {
     if (isStaff) { toast.error('ليس لديك صلاحية لحذف الفئات'); return; }
     if (window.confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
       try {
-        await deleteCategory(id);
+        const category = categories.find((cat) => cat.id === id);
+        await deleteCategory(id, category?.restaurantId);
         toast.success('تم حذف الفئة بنجاح');
       } catch (error: any) {
         toast.error(error.response?.data?.error || 'حدث خطأ');
@@ -290,7 +330,8 @@ const MenuPage: React.FC = () => {
     if (isStaff) { toast.error('ليس لديك صلاحية لحذف العناصر'); return; }
     if (window.confirm('هل أنت متأكد من حذف هذا العنصر؟')) {
       try {
-        await deleteMenuItem(id);
+        const item = menuItems.find((menuItem) => menuItem.id === id);
+        await deleteMenuItem(id, item?.restaurantId);
         toast.success('تم حذف العنصر بنجاح');
       } catch (error: any) {
         toast.error(error.response?.data?.error || 'حدث خطأ');
@@ -314,29 +355,52 @@ const MenuPage: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  const getBranchLabel = (restaurantId?: string) => {
+    if (!restaurantId || !restaurant) return '';
+    if (restaurantId === restaurant.id) return restaurant.branchLabel || restaurant.subdomain || restaurant.slug || restaurant.name;
+    return restaurant.linkedBranches?.find((branch) => branch.id === restaurantId)?.linkLabel || '';
+  };
+
+  if (loading || restaurantLoading) return <Loader fullScreen />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>إدارة القائمة</h1>
-        {(isSuperAdmin || isOwner) && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => handleOpenCategoryModal()}
-              style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {branchOptions.length > 0 && (
+            <select
+              value={selectedRestaurantId}
+              onChange={(e) => setSelectedRestaurantId(e.target.value)}
+              style={{ background: C.card, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 12px', minWidth: 220 }}
             >
-              <IoAdd /> إضافة فئة
-            </button>
-            <button
-              onClick={() => handleOpenItemModal()}
-              style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none' }}
-            >
-              <IoAdd /> إضافة عنصر
-            </button>
-          </div>
-        )}
+              <option value={restaurant?.id || ''}>الفرع الحالي: {restaurant?.name || ''}</option>
+              <option value="all">كل الفروع</option>
+              {restaurant?.linkedBranches?.map((branch) => (
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
+              ))}
+            </select>
+          )}
+          {(isSuperAdmin || isOwner) && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => selectedRestaurantId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة فئة') : handleOpenCategoryModal()}
+                disabled={selectedRestaurantId === 'all'}
+                style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: 10, cursor: selectedRestaurantId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, opacity: selectedRestaurantId === 'all' ? 0.6 : 1 }}
+              >
+                <IoAdd /> إضافة فئة
+              </button>
+              <button
+                onClick={() => selectedRestaurantId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة عنصر') : handleOpenItemModal()}
+                disabled={selectedRestaurantId === 'all'}
+                style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, cursor: selectedRestaurantId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none', opacity: selectedRestaurantId === 'all' ? 0.7 : 1 }}
+              >
+                <IoAdd /> إضافة عنصر
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Categories */}
@@ -349,6 +413,7 @@ const MenuPage: React.FC = () => {
                 <div>
                   <h3 style={{ fontWeight: 600, color: C.text, margin: 0 }}>{cat.name}</h3>
                   {cat.nameEn && <p style={{ fontSize: 13, color: C.muted, margin: '4px 0 0' }}>{cat.nameEn}</p>}
+                  {getBranchLabel(cat.restaurantId) && <p style={{ fontSize: 12, color: C.accent, margin: '4px 0 0' }}>{getBranchLabel(cat.restaurantId)}</p>}
                 </div>
                 {(isSuperAdmin || isOwner) && (
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -389,10 +454,11 @@ const MenuPage: React.FC = () => {
                       <div>
                         <h3 style={{ fontWeight: 600, color: C.text, margin: 0 }}>{item.name}</h3>
                         {item.nameEn && <p style={{ fontSize: 13, color: C.muted, margin: '4px 0 0' }}>{item.nameEn}</p>}
+                        {getBranchLabel(item.restaurantId) && <p style={{ fontSize: 12, color: C.accent, margin: '4px 0 0' }}>{getBranchLabel(item.restaurantId)}</p>}
                       </div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
-                          onClick={() => toggleAvailability(item.id)}
+                          onClick={() => toggleAvailability(item.id, item.restaurantId)}
                           style={{ background: 'none', border: 'none', color: item.isAvailable ? C.accent : C.muted, cursor: 'pointer', padding: 4 }}
                           title={item.isAvailable ? 'إخفاء' : 'إظهار'}
                         >
@@ -532,7 +598,7 @@ const MenuPage: React.FC = () => {
             <label style={labelStyle}>الفئة</label>
             <select value={itemForm.categoryId} onChange={(e) => setItemForm({ ...itemForm, categoryId: e.target.value })} style={{ ...inputStyle, appearance: 'none' }} required>
               <option value="" style={{ background: C.surf }}>اختر الفئة</option>
-              {categories.map(cat => <option key={cat.id} value={cat.id} style={{ background: C.surf }}>{cat.name}</option>)}
+              {categories.map(cat => <option key={cat.id} value={cat.id} style={{ background: C.surf }}>{cat.name}{getBranchLabel(cat.restaurantId) ? ` • ${getBranchLabel(cat.restaurantId)}` : ''}</option>)}
             </select>
           </div>
           <div>

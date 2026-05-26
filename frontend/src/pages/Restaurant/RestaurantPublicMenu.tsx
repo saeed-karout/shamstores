@@ -114,6 +114,8 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const categoriesRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const currentSlug = propBusinessSlug || urlSlug || getCurrentSubdomain();
+  const [identifier, setIdentifier] = useState(currentSlug);
+  const [branches, setBranches] = useState<any[]>([]);
 
   // Effects
   useEffect(() => {
@@ -136,23 +138,24 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   }, [isAuthenticated, user]);
 
   useEffect(() => {
-    fetchRestaurantData();
-  }, [currentSlug]);
+    // fetch when identifier (slug/subdomain) changes
+    fetchRestaurantData(identifier);
+  }, [identifier]);
 
   // API Calls
-  const fetchRestaurantData = async () => {
+  const fetchRestaurantData = async (ident?: string) => {
     try {
       setLoading(true);
       
-      const identifier = currentSlug;
-      if (!identifier) {
+      const idToUse = ident || identifier || currentSlug;
+      if (!idToUse) {
         throw new Error('No business identifier found');
       }
-      
-      console.log('🔍 Fetching restaurant data for identifier:', identifier);
-      const response: any = await api.get(`/public/${identifier}`);
+
+      console.log('🔍 Fetching restaurant data for identifier:', idToUse);
+      const response: any = await api.get(`/public/${idToUse}`);
       console.log('📦 Restaurant data response:', response);
-      
+
       const businessData = response?.data || response;
       
       // ✅ تحديث ألوان ThemeProvider ديناميكياً
@@ -193,6 +196,13 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         categories: businessData.categories || [],
         marketing: businessData.marketing || undefined
       });
+
+      // linked branches (if any)
+      const linked = businessData.linkedBranches || [];
+      setBranches(linked);
+
+      // set active identifier if different
+      setIdentifier(businessData.slug || businessData.subdomain || idToUse);
 
       const primary = businessData.primaryColor || propBusinessPrimaryColor;
       if (primary) {
@@ -443,8 +453,31 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
               <div style={{ flex: 1 }}>
                 <h1 style={{ fontSize: 24, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>{restaurant.name}</h1>
                 {restaurant.branchLabel && (
-                  <div style={{ display: 'inline-flex', marginTop: 8, padding: '4px 10px', borderRadius: 999, background: 'rgba(200,226,53,0.12)', color: dynamicColors.accent, fontSize: 12, fontWeight: 700 }}>
-                    الفرع: {restaurant.branchLabel}
+                  <div style={{ display: 'inline-flex', marginTop: 8, gap: 8, alignItems: 'center' }}>
+                    <div style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(200,226,53,0.12)', color: dynamicColors.accent, fontSize: 12, fontWeight: 700 }}>
+                      الفرع: {restaurant.branchLabel}
+                    </div>
+
+                    {(branches && branches.length > 0) && (
+                      <select
+                        value={identifier}
+                        onChange={(e) => {
+                          const newId = e.target.value;
+                          setIdentifier(newId);
+                        }}
+                        style={{
+                          padding: '6px 10px', borderRadius: 8, border: `1px solid ${dynamicColors.border}`, background: dynamicColors.surf, color: dynamicColors.text, cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif'
+                        }}
+                      >
+                        {/* current branch */}
+                        <option value={restaurant.slug || restaurant.subdomain || ''}>{restaurant.branchLabel}</option>
+                        {branches.map((b) => (
+                          <option key={b.id} value={b.subdomain || b.slug}>
+                            {b.linkLabel}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 )}
                 {restaurant.description && (

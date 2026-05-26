@@ -6,12 +6,22 @@ import crypto from 'crypto';
 
 // دالة مساعدة للحصول على restaurantId
 const getRestaurantId = async (req: AuthRequest): Promise<string | null> => {
+  const targetRestaurantId = req.query.restaurantId as string || req.body.restaurantId;
+
   if (req.user?.role === 'super_admin') {
-    const targetRestaurantId = req.query.restaurantId as string || req.body.restaurantId;
     if (targetRestaurantId) return targetRestaurantId;
     const restaurants = await prisma.restaurant.findMany({ take: 1 });
     return restaurants.length > 0 ? restaurants[0].id : null;
   }
+
+  if (req.user?.role === 'owner' && req.user?.id && targetRestaurantId) {
+    const ownedRestaurant = await prisma.restaurant.findFirst({
+      where: { id: targetRestaurantId, userId: req.user.id },
+      select: { id: true }
+    });
+    if (ownedRestaurant) return ownedRestaurant.id;
+  }
+
   return req.user?.restaurantId || null;
 };
 

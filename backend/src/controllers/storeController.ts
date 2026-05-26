@@ -2,6 +2,7 @@
 
 import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
+import { UserService } from '../services/user.service';
 import prisma from '../services/prisma';
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
@@ -57,12 +58,29 @@ const getStoreId = async (req: AuthRequest): Promise<string | null> => {
       if (req.user?.role === 'super_admin') return storeIdFromParams;
       if (req.user?.storeId === storeIdFromParams) return storeIdFromParams;
       if (req.user?.role === 'staff' && req.user?.storeId === storeIdFromParams) return storeIdFromParams;
+      if (req.user?.role === 'owner' && req.user?.id) {
+        const ownedStore = await prisma.store.findFirst({
+          where: { id: storeIdFromParams, userId: req.user.id },
+          select: { id: true }
+        });
+        if (ownedStore) return ownedStore.id;
+      }
     }
     if (req.user?.role === 'super_admin') {
       const targetStoreId = req.query.storeId as string || req.body.storeId;
       if (targetStoreId) return targetStoreId;
       const stores = await prisma.store.findMany({ take: 1 });
       return stores.length > 0 ? stores[0].id : null;
+    }
+    if (req.user?.role === 'owner' && req.user?.id) {
+      const targetStoreId = req.query.storeId as string || req.body.storeId;
+      if (targetStoreId && targetStoreId !== req.user.storeId) {
+        const ownedStore = await prisma.store.findFirst({
+          where: { id: targetStoreId, userId: req.user.id },
+          select: { id: true }
+        });
+        if (ownedStore) return ownedStore.id;
+      }
     }
     return req.user?.storeId || null;
   } catch (error) {
@@ -274,10 +292,26 @@ export const createStoreBranch = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const { name, email, phone } = req.body;
+    const { name, email, password, phone } = req.body;
 
     if (!name || !name.trim()) {
       res.status(400).json({ success: false, error: 'اسم الفرع مطلوب' });
+      return;
+    }
+
+    if (!email || !email.trim()) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني مطلوب' });
+      return;
+    }
+
+    if (!password || !password.trim()) {
+      res.status(400).json({ success: false, error: 'كلمة المرور مطلوبة' });
+      return;
+    }
+
+    const existingUser = await UserService.findByEmail(email.trim());
+    if (existingUser) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني مستخدم بالفعل' });
       return;
     }
 
@@ -316,32 +350,59 @@ export const createStoreBranch = async (req: AuthRequest, res: Response): Promis
     const slug = await generateUniqueStoreSlug(baseSlug);
     const subdomain = await generateUniqueStoreSlug(baseSlug);
 
-    const store = await prisma.store.create({
-      data: {
-        name: name.trim(),
-        email: email || null,
-        phone: phone || null,
-        slug,
-        subdomain,
-        planId: currentStore.planId,
-        userId: ownerUserId,
-        isActive: true,
-        primaryColor: currentStore.primaryColor,
-        secondaryColor: currentStore.secondaryColor,
-        backgroundColor: currentStore.backgroundColor,
-        cardColor: currentStore.cardColor,
-        surfaceColor: currentStore.surfaceColor,
-        textColor: currentStore.textColor,
-        mutedColor: currentStore.mutedColor,
-        accentColor: currentStore.accentColor,
-        fontFamily: currentStore.fontFamily,
-      }
+    const branchPasswordHash = await bcrypt.hash(password, 10);
+
+    const { store, branchUser } = await prisma.$transaction(async (tx) => {
+      const createdStore = await tx.store.create({
+        data: {
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone || null,
+          slug,
+          subdomain,
+          planId: currentStore.planId,
+          userId: ownerUserId,
+          isActive: true,
+          primaryColor: currentStore.primaryColor,
+          secondaryColor: currentStore.secondaryColor,
+          backgroundColor: currentStore.backgroundColor,
+          cardColor: currentStore.cardColor,
+          surfaceColor: currentStore.surfaceColor,
+          textColor: currentStore.textColor,
+          mutedColor: currentStore.mutedColor,
+          accentColor: currentStore.accentColor,
+          fontFamily: currentStore.fontFamily,
+        }
+      });
+
+      const createdUser = await tx.user.create({
+        data: {
+          name: name.trim(),
+          email: email.trim(),
+          password: branchPasswordHash,
+          phone: phone || null,
+          role: 'owner',
+          storeId: createdStore.id,
+          isEmailVerified: true,
+        }
+      });
+
+      return { store: createdStore, branchUser: createdUser };
     });
 
     res.status(201).json({
       success: true,
       message: 'تم إنشاء الفرع بنجاح',
-      data: store
+      data: {
+        ...store,
+        branchUser: {
+          id: branchUser.id,
+          name: branchUser.name,
+          email: branchUser.email,
+          role: branchUser.role,
+          storeId: branchUser.storeId,
+        }
+      }
     });
   } catch (error) {
     if (error instanceof Error && (error as any)?.code === 'P2002') {

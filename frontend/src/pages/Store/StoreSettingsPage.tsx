@@ -175,7 +175,7 @@ const StoreSettingsPage: React.FC = () => {
 
   // ✅ إعدادات التوصيل
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(defaultDeliverySettings);
-  const [branchForm, setBranchForm] = useState({ name: '', email: '', phone: '' });
+  const [branchForm, setBranchForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [creatingBranch, setCreatingBranch] = useState(false);
 
   // ✅ تحميل بيانات المتجر
@@ -367,10 +367,11 @@ const StoreSettingsPage: React.FC = () => {
       await api.createStoreBranch({
         name: branchForm.name,
         email: branchForm.email || undefined,
+        password: branchForm.password || undefined,
         phone: branchForm.phone || undefined,
       });
       toast.success('تم إنشاء الفرع بنجاح');
-      setBranchForm({ name: '', email: '', phone: '' });
+      setBranchForm({ name: '', email: '', password: '', phone: '' });
       await fetchStore();
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'فشل إنشاء الفرع');
@@ -1229,10 +1230,15 @@ const StoreSettingsPage: React.FC = () => {
               <input value={branchForm.email} onChange={(e) => setBranchForm({ ...branchForm, email: e.target.value })} style={inputStyle} />
             </div>
             <div>
+              <label style={labelStyle}>كلمة المرور</label>
+              <input type="password" value={branchForm.password} onChange={(e) => setBranchForm({ ...branchForm, password: e.target.value })} style={inputStyle} />
+            </div>
+            <div>
               <label style={labelStyle}>الهاتف</label>
               <input value={branchForm.phone} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} style={inputStyle} />
             </div>
           </div>
+          <div style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>سيتم إنشاء حساب دخول لهذا الفرع باستخدام البريد الإلكتروني وكلمة المرور التي تدخلها هنا.</div>
           <button
             onClick={handleCreateBranch}
             disabled={creatingBranch || !canEdit}

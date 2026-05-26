@@ -124,6 +124,8 @@ export interface Plan {
   export interface Category {
     id: string;
     restaurantId: string;
+    branchId?: string;
+    branchLabel?: string;
     name: string;
     nameEn?: string;
     description?: string;
@@ -139,6 +141,8 @@ export interface Plan {
   export interface MenuItem {
     id: string;
     restaurantId: string;
+    branchId?: string;
+    branchLabel?: string;
     categoryId: string;
     name: string;
     nameEn?: string;

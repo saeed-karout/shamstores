@@ -24,6 +24,8 @@ const staticColors = {
 interface Product {
   id: string;
   storeId: string;
+  branchName?: string;
+  branchLabel?: string;
   name: string;
   nameEn?: string;
   description?: string;
@@ -43,9 +45,12 @@ interface Product {
 interface Category {
   id: string;
   storeId: string;
+  branchName?: string;
+  branchLabel?: string;
   name: string;
   nameEn?: string;
   description?: string;
+  descriptionEn?: string;
   image?: string;
   sortOrder: number;
   isActive: boolean;
@@ -82,6 +87,7 @@ const StoreProductsPage: React.FC = () => {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
@@ -91,6 +97,7 @@ const StoreProductsPage: React.FC = () => {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const [categoryForm, setCategoryForm] = useState({
+    storeId: '',
     name: '',
     nameEn: '',
     description: '',
@@ -99,6 +106,7 @@ const StoreProductsPage: React.FC = () => {
   });
 
   const [productForm, setProductForm] = useState({
+    storeId: '',
     categoryId: '',
     name: '',
     nameEn: '',
@@ -113,33 +121,68 @@ const StoreProductsPage: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (store?.id && !selectedBranchId) {
+      setSelectedBranchId(store.id);
+    }
+  }, [store, selectedBranchId]);
+
+  useEffect(() => {
+    if (store) {
+      fetchData();
+    }
+  }, [store, selectedBranchId]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [categoriesResponse, productsResponse] = await Promise.all([
-        api.get('/store/categories'),
-        api.get('/store/products')
-      ]);
+      const branchOptions = store
+        ? [
+            {
+              id: store.id,
+              name: store.name,
+              label: store.branchLabel || store.subdomain || store.slug || store.name,
+            },
+            ...(store.linkedBranches || []).map((branch) => ({
+              id: branch.id,
+              name: branch.name,
+              label: branch.linkLabel || branch.name,
+            })),
+          ]
+        : [];
 
-      console.log('Categories response:', categoriesResponse);
-      console.log('Products response:', productsResponse);
+      const branchesToLoad = selectedBranchId === 'all'
+        ? branchOptions
+        : branchOptions.filter((branch) => branch.id === selectedBranchId);
 
-      const categoriesData = extractData(categoriesResponse);
-      setCategories(categoriesData);
+      const branchResults = await Promise.all(branchesToLoad.map(async (branch) => {
+        const [categoriesResponse, productsResponse] = await Promise.all([
+          api.get(`/store/categories?storeId=${branch.id}`),
+          api.get(`/store/products?storeId=${branch.id}`)
+        ]);
 
-      let productsData = extractData(productsResponse);
-      
-      const processedProducts = productsData.map((product: any) => ({
-        ...product,
-        price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
-        discountedPrice: product.discountedPrice ? (typeof product.discountedPrice === 'string' ? parseFloat(product.discountedPrice) : product.discountedPrice) : null,
-        stock: typeof product.stock === 'string' ? parseInt(product.stock) : product.stock,
+        const categoriesData = extractData(categoriesResponse).map((category: any) => ({
+          ...category,
+          branchName: branch.name,
+          branchLabel: branch.label,
+        }));
+
+        const productsData = extractData(productsResponse).map((product: any) => ({
+          ...product,
+          branchName: branch.name,
+          branchLabel: branch.label,
+          price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
+          discountedPrice: product.discountedPrice ? (typeof product.discountedPrice === 'string' ? parseFloat(product.discountedPrice) : product.discountedPrice) : null,
+          stock: typeof product.stock === 'string' ? parseInt(product.stock) : product.stock,
+        }));
+
+        return { branch, categoriesData, productsData };
       }));
 
-      setProducts(processedProducts);
+      const combinedCategories = branchResults.flatMap((result) => result.categoriesData);
+      const combinedProducts = branchResults.flatMap((result) => result.productsData);
+
+      setCategories(combinedCategories);
+      setProducts(combinedProducts);
     } catch (error: any) {
       console.error('Error fetching data:', error);
       toast.error(error?.response?.data?.error || 'حدث خطأ في جلب البيانات');
@@ -149,29 +192,32 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const resetCategoryForm = () => {
-    setCategoryForm({ name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
+    setCategoryForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
     setSelectedCategory(null);
   };
 
   const resetProductForm = () => {
-    setProductForm({ categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', discountedPrice: '', imageUrl: '', stock: '', sku: '', isAvailable: true });
+    setProductForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', discountedPrice: '', imageUrl: '', stock: '', sku: '', isAvailable: true });
     setSelectedProduct(null);
   };
 
   const handleOpenCategoryModal = (category?: Category) => {
     if (isStaff) { toast.error('ليس لديك صلاحية لإدارة الفئات'); return; }
+    if (selectedBranchId === 'all') { toast.error('اختر فرعاً محدداً لإدارة الفئات'); return; }
     if (category) {
       setSelectedCategory(category);
-      setCategoryForm({ name: category.name, nameEn: category.nameEn || '', description: category.description || '', descriptionEn: category.descriptionEn || '', image: category.image || '' });
+      setCategoryForm({ storeId: category.storeId, name: category.name, nameEn: category.nameEn || '', description: category.description || '', descriptionEn: category.descriptionEn || '', image: category.image || '' });
     } else { resetCategoryForm(); }
     setShowCategoryModal(true);
   };
 
   const handleOpenProductModal = (product?: Product) => {
     if (isStaff) { toast.error('ليس لديك صلاحية لإدارة المنتجات'); return; }
+    if (selectedBranchId === 'all') { toast.error('اختر فرعاً محدداً لإدارة المنتجات'); return; }
     if (product) {
       setSelectedProduct(product);
       setProductForm({
+        storeId: product.storeId,
         categoryId: product.categoryId || '',
         name: product.name,
         nameEn: product.nameEn || '',
@@ -191,11 +237,12 @@ const StoreProductsPage: React.FC = () => {
   const handleSaveCategory = async () => {
     try {
       if (!categoryForm.name) { toast.error('اسم الفئة مطلوب'); return; }
+      const payload = { ...categoryForm, storeId: categoryForm.storeId || selectedBranchId };
       if (selectedCategory) {
-        await api.put(`/store/categories/${selectedCategory.id}`, categoryForm);
+        await api.put(`/store/categories/${selectedCategory.id}`, payload);
         toast.success('تم تحديث الفئة بنجاح');
       } else {
-        await api.post('/store/categories', categoryForm);
+        await api.post('/store/categories', payload);
         toast.success('تم إنشاء الفئة بنجاح');
       }
       setShowCategoryModal(false);
@@ -212,7 +259,7 @@ const StoreProductsPage: React.FC = () => {
       if (!productForm.price || parseFloat(productForm.price) <= 0) { toast.error('السعر مطلوب ويجب أن يكون أكبر من 0'); return; }
       const price = parseFloat(productForm.price);
       if (isNaN(price) || price <= 0) { toast.error('السعر يجب أن يكون رقماً صحيحاً أكبر من 0'); return; }
-      const data = { ...productForm, price, discountedPrice: productForm.discountedPrice ? parseFloat(productForm.discountedPrice) : null, stock: parseInt(productForm.stock) || 0 };
+      const data = { ...productForm, storeId: productForm.storeId || selectedBranchId, price, discountedPrice: productForm.discountedPrice ? parseFloat(productForm.discountedPrice) : null, stock: parseInt(productForm.stock) || 0 };
       if (selectedProduct) {
         await api.put(`/store/products/${selectedProduct.id}`, data);
         toast.success('تم تحديث المنتج بنجاح');
@@ -228,13 +275,13 @@ const StoreProductsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteCategory = async (id: string) => {
+  const handleDeleteCategory = async (id: string, storeId?: string) => {
     if (isStaff) { toast.error('ليس لديك صلاحية لحذف الفئات'); return; }
     const productsInCategory = products.filter(p => p.categoryId === id);
     if (productsInCategory.length > 0) { toast.error(`لا يمكن حذف الفئة لأنها تحتوي على ${productsInCategory.length} منتج`); return; }
     if (window.confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
       try {
-        await api.delete(`/store/categories/${id}`);
+        await api.delete(`/store/categories/${id}${storeId ? `?storeId=${storeId}` : ''}`);
         toast.success('تم حذف الفئة بنجاح');
         fetchData();
       } catch (error: any) {
@@ -243,12 +290,12 @@ const StoreProductsPage: React.FC = () => {
     }
   };
 
-  const handleDeleteProduct = async (id: string) => {
+  const handleDeleteProduct = async (id: string, storeId?: string) => {
     if (isStaff) { toast.error('ليس لديك صلاحية لحذف المنتجات'); return; }
     if (window.confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
       setDeleting(id);
       try {
-        await api.delete(`/store/products/${id}`);
+        await api.delete(`/store/products/${id}${storeId ? `?storeId=${storeId}` : ''}`);
         toast.success('تم حذف المنتج بنجاح');
         fetchData();
       } catch (error: any) {
@@ -259,9 +306,9 @@ const StoreProductsPage: React.FC = () => {
     }
   };
 
-  const handleToggleAvailability = async (id: string, currentStatus: boolean) => {
+  const handleToggleAvailability = async (id: string, currentStatus: boolean, storeId?: string) => {
     try {
-      await api.patch(`/store/products/${id}`, { isAvailable: !currentStatus });
+      await api.patch(`/store/products/${id}`, { isAvailable: !currentStatus, storeId: storeId || (selectedBranchId === 'all' ? (store?.id || undefined) : selectedBranchId) });
       toast.success(currentStatus ? 'تم إخفاء المنتج' : 'تم إظهار المنتج');
       fetchData();
     } catch (error) {
@@ -304,7 +351,8 @@ const StoreProductsPage: React.FC = () => {
 
   const getCategoryName = (categoryId: string) => {
     const category = categories.find(c => c.id === categoryId);
-    return category?.name || 'بدون فئة';
+    if (!category) return 'بدون فئة';
+    return category.branchLabel ? `${category.name} • ${category.branchLabel}` : category.name;
   };
 
   // ✅ ستايل الحقول مع الألوان الديناميكية
@@ -336,22 +384,39 @@ const StoreProductsPage: React.FC = () => {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>🛍️ إدارة منتجات المتجر</h1>
           <p style={{ fontSize: 13, color: dynamicColors.muted, marginTop: 4 }}>إدارة الفئات والمنتجات في متجرك</p>
         </div>
-        {(isSuperAdmin || isStoreOwner) && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => handleOpenCategoryModal()}
-              style={{ background: dynamicColors.surf, border: `1px solid ${dynamicColors.border}`, color: dynamicColors.accent, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600 }}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {(store && (store.linkedBranches?.length || 0) > 0) && (
+            <select
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              style={{ background: dynamicColors.card, color: dynamicColors.text, border: `1px solid ${dynamicColors.border}`, borderRadius: 10, padding: '8px 12px', minWidth: 220 }}
             >
-              <IoAdd size={18} /> إضافة فئة
-            </button>
-            <button
-              onClick={() => handleOpenProductModal()}
-              style={{ background: dynamicColors.accent, color: dynamicColors.bg, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none' }}
-            >
-              <IoAdd size={18} /> إضافة منتج
-            </button>
-          </div>
-        )}
+              <option value={store.id}>الفرع الحالي: {store.name}</option>
+              <option value="all">كل الفروع</option>
+              {(store.linkedBranches || []).map((branch) => (
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
+              ))}
+            </select>
+          )}
+          {(isSuperAdmin || isStoreOwner) && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => selectedBranchId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة فئة') : handleOpenCategoryModal()}
+                disabled={selectedBranchId === 'all'}
+                style={{ background: dynamicColors.surf, border: `1px solid ${dynamicColors.border}`, color: dynamicColors.accent, padding: '8px 16px', borderRadius: 10, cursor: selectedBranchId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, opacity: selectedBranchId === 'all' ? 0.6 : 1 }}
+              >
+                <IoAdd size={18} /> إضافة فئة
+              </button>
+              <button
+                onClick={() => selectedBranchId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة منتج') : handleOpenProductModal()}
+                disabled={selectedBranchId === 'all'}
+                style={{ background: dynamicColors.accent, color: dynamicColors.bg, padding: '8px 16px', borderRadius: 10, cursor: selectedBranchId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none', opacity: selectedBranchId === 'all' ? 0.7 : 1 }}
+              >
+                <IoAdd size={18} /> إضافة منتج
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* إحصائيات سريعة */}
@@ -395,13 +460,14 @@ const StoreProductsPage: React.FC = () => {
                   <div style={{ flex: 1 }}>
                     <h3 style={{ fontWeight: 600, color: dynamicColors.text, margin: 0, fontSize: 14 }}>{cat.name}</h3>
                     {cat.nameEn && <p style={{ color: dynamicColors.muted, fontSize: 11, margin: '2px 0 0' }}>{cat.nameEn}</p>}
+                    {cat.branchLabel && <p style={{ color: dynamicColors.accent, fontSize: 11, margin: '4px 0 0' }}>{cat.branchLabel}</p>}
                   </div>
                   {(isSuperAdmin || isStoreOwner) && (
                     <div style={{ display: 'flex', gap: 4 }}>
                       <button onClick={() => handleOpenCategoryModal(cat)} style={{ padding: 6, background: 'transparent', border: 'none', color: dynamicColors.accent, cursor: 'pointer', borderRadius: 8 }}>
                         <IoPencil size={15} />
                       </button>
-                      <button onClick={() => handleDeleteCategory(cat.id)} style={{ padding: 6, background: 'transparent', border: 'none', color: staticColors.red, cursor: 'pointer', borderRadius: 8 }}>
+                      <button onClick={() => handleDeleteCategory(cat.id, cat.storeId)} style={{ padding: 6, background: 'transparent', border: 'none', color: staticColors.red, cursor: 'pointer', borderRadius: 8 }}>
                         <IoTrash size={15} />
                       </button>
                     </div>
@@ -460,7 +526,7 @@ const StoreProductsPage: React.FC = () => {
                       </div>
                     )}
                     <button
-                      onClick={() => handleToggleAvailability(product.id, product.isAvailable)}
+                      onClick={() => handleToggleAvailability(product.id, product.isAvailable, product.storeId)}
                       style={{ position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: '50%', border: 'none', cursor: 'pointer', background: product.isAvailable ? dynamicColors.accent : dynamicColors.muted, color: dynamicColors.bg }}
                     >
                       {product.isAvailable ? <IoEye size={13} /> : <IoEyeOff size={13} />}
@@ -477,7 +543,7 @@ const StoreProductsPage: React.FC = () => {
                         <button onClick={() => handleOpenProductModal(product)} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: dynamicColors.prim, cursor: 'pointer' }}>
                           <IoPencil size={15} />
                         </button>
-                        <button onClick={() => handleDeleteProduct(product.id)} disabled={deleting === product.id} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: staticColors.red, cursor: 'pointer' }}>
+                        <button onClick={() => handleDeleteProduct(product.id, product.storeId)} disabled={deleting === product.id} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: staticColors.red, cursor: 'pointer' }}>
                           {deleting === product.id ? <div style={{ width: 15, height: 15, border: `2px solid ${staticColors.red}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <IoTrash size={15} />}
                         </button>
                       </div>
@@ -488,6 +554,7 @@ const StoreProductsPage: React.FC = () => {
                   <div style={{ padding: 12 }}>
                     <h3 style={{ fontWeight: 600, color: dynamicColors.text, margin: 0, fontSize: 13 }}>{product.name}</h3>
                     {product.nameEn && <p style={{ color: dynamicColors.muted, fontSize: 11, margin: '2px 0 0' }}>{product.nameEn}</p>}
+                    {product.branchLabel && <p style={{ color: dynamicColors.accent, fontSize: 11, margin: '4px 0 0' }}>{product.branchLabel}</p>}
                     <div style={{ marginTop: 6 }}>
                       <span style={{ background: dynamicColors.surf, color: dynamicColors.muted, fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>
                         {getCategoryName(product.categoryId || '')}

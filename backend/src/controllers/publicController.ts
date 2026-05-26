@@ -3,7 +3,7 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
-import { buildBranchSummary } from '../services/businessBranch.service';
+import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 
 // ==================== جلب بيانات المطعم/المتجر (باستخدام slug) ====================
 
@@ -52,6 +52,8 @@ export const getBusinessBySlug = async (
         })
       ]);
       
+      const linkedBranches = await getLinkedBranches('restaurant', restaurant.userId, restaurant.id);
+
       res.json({
         success: true,
         data: {
@@ -93,6 +95,7 @@ export const getBusinessBySlug = async (
           plan: restaurant.plan,
           branchLabel: buildBranchSummary(restaurant).linkLabel,
           branchLinkType: buildBranchSummary(restaurant).linkType,
+          linkedBranches,
           categories,
           menuItems
         }
@@ -126,6 +129,8 @@ export const getBusinessBySlug = async (
         })
       ]);
       
+      const linkedBranches = await getLinkedBranches('store', store.userId, store.id);
+
       res.json({
         success: true,
         data: {
@@ -169,6 +174,7 @@ export const getBusinessBySlug = async (
           plan: store.plan,
           branchLabel: buildBranchSummary(store).linkLabel,
           branchLinkType: buildBranchSummary(store).linkType,
+          linkedBranches,
           categories,
           products
         }
