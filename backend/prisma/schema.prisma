@@ -107,7 +107,7 @@ model User {
   updatedAt            DateTime  @updatedAt
 
   // Relations
-  ownedStore   Store?    @relation("StoreOwner")
+  ownedStores  Store[]   @relation("StoreOwner")
   ownedRestaurants Restaurant[] @relation("RestaurantOwner")
   restaurant   Restaurant? @relation("RestaurantUsers", fields: [restaurantId], references: [id])
   stores       Store[]   @relation("StoreUsers")
@@ -257,7 +257,7 @@ model Store {
   slug        String   @unique
   email       String?
   phone       String?
-  userId      String?  @unique   // ✅ أضف @unique هنا
+  userId      String?   // owner can have multiple stores
   address     String?
   description String?
   logo        String?

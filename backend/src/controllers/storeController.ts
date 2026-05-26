@@ -344,6 +344,13 @@ export const createStoreBranch = async (req: AuthRequest, res: Response): Promis
       data: store
     });
   } catch (error) {
+    if (error instanceof Error && (error as any)?.code === 'P2002') {
+      res.status(409).json({
+        success: false,
+        error: 'لا يمكن إنشاء فرع جديد قبل إزالة قيد التفرد من قاعدة البيانات',
+      });
+      return;
+    }
     console.error('Error creating store branch:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في إنشاء الفرع' });
   }
