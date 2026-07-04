@@ -8,7 +8,8 @@ import {
   cancelSubscription,
   getExpiringSubscriptions,
   sendRenewalReminders,
-  checkExpiredSubscriptions
+  checkExpiredSubscriptions,
+  getAllSubscriptions 
 } from '../controllers/subscriptionController';
 
 const router = Router();
@@ -43,7 +44,12 @@ router.post('/', authenticate, authorizeOwner, createSubscription);
  */
 router.post('/:id/cancel', authenticate, authorizeOwner, cancelSubscription);
 
-// ==================== مسارات السوبر أدمن ====================
+/**
+ * @route   GET /api/subscriptions/admin/all
+ * @desc    جلب جميع الاشتراكات (للسوبر أدمن)
+ * @access  Private (Super Admin)
+ */
+router.get('/admin/all', authenticate, authorizeAdmin, getAllSubscriptions);
 
 /**
  * @route   GET /api/subscriptions/admin/expiring

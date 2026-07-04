@@ -407,6 +407,218 @@ export const updateProfile = async (
   }
 };
 
+
+
+// backend/src/controllers/restaurantController.ts
+
+// أضف هذه الدوال في نهاية الملف (قبل التصدير)
+
+// ==================== دوال الفروع للمطاعم ====================
+
+// جلب جميع منتجات الفروع المرتبطة
+export const getAllBranchesMenuItems = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const restaurantId = await getRestaurantId(req);
+    if (!restaurantId) {
+      res.status(400).json({ success: false, error: 'معرف المطعم غير موجود' });
+      return;
+    }
+
+    const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
+    if (!restaurant) {
+      res.status(404).json({ success: false, error: 'المطعم غير موجود' });
+      return;
+    }
+
+    // جلب جميع المطاعم المرتبطة بنفس المالك
+    const linkedRestaurants = await prisma.restaurant.findMany({
+      where: { userId: restaurant.userId, id: { not: restaurantId } }
+    });
+
+    const allMenuItems: any[] = [];
+
+    // جلب أطباق المطعم الحالي
+    const currentMenuItems = await prisma.menuItem.findMany({
+      where: { restaurantId, isAvailable: true }
+    });
+    allMenuItems.push(...currentMenuItems.map(item => ({ ...item, branchName: restaurant.name, branchId: restaurant.id })));
+
+    // جلب أطباق الفروع الأخرى
+    for (const branch of linkedRestaurants) {
+      const menuItems = await prisma.menuItem.findMany({
+        where: { restaurantId: branch.id, isAvailable: true }
+      });
+      allMenuItems.push(...menuItems.map(item => ({ ...item, branchName: branch.name, branchId: branch.id })));
+    }
+
+    res.json({ success: true, menuItems: allMenuItems });
+  } catch (error) {
+    console.error('Error fetching all branches menu items:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب الأطباق' });
+  }
+};
+
+// تحديث إعداد عرض جميع أطباق الفروع
+export const updateShowAllBranchesMenuItems = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const restaurantId = await getRestaurantId(req);
+    if (!restaurantId) {
+      res.status(400).json({ success: false, error: 'معرف المطعم غير موجود' });
+      return;
+    }
+
+    const { showAllBranchesMenuItems } = req.body;
+    
+    const updatedRestaurant = await prisma.restaurant.update({
+      where: { id: restaurantId },
+      data: { showAllBranchesMenuItems: showAllBranchesMenuItems === true }
+    });
+
+    res.json({ success: true, data: { showAllBranchesMenuItems: updatedRestaurant.showAllBranchesMenuItems } });
+  } catch (error) {
+    console.error('Error updating show all branches menu items:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث الإعداد' });
+  }
+};
+
+// إنشاء فرع مطعم جديد
+export const createRestaurantBranch = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const parentRestaurantId = await getRestaurantId(req);
+    if (!parentRestaurantId) {
+      res.status(400).json({ success: false, error: 'معرف المطعم الرئيسي غير موجود' });
+      return;
+    }
+
+    const parentRestaurant = await prisma.restaurant.findUnique({ 
+      where: { id: parentRestaurantId },
+      include: { plan: true }
+    });
+    if (!parentRestaurant) {
+      res.status(404).json({ success: false, error: 'المطعم الرئيسي غير موجود' });
+      return;
+    }
+
+    const { name, email, password, phone } = req.body;
+    
+    if (!name || !name.trim()) {
+      res.status(400).json({ success: false, error: 'اسم الفرع مطلوب' });
+      return;
+    }
+
+    if (!email || !email.trim()) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني مطلوب' });
+      return;
+    }
+
+    if (!password || !password.trim()) {
+      res.status(400).json({ success: false, error: 'كلمة المرور مطلوبة' });
+      return;
+    }
+
+    if (password.length < 6) {
+      res.status(400).json({ success: false, error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: email.trim() } });
+    if (existingUser) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني مستخدم بالفعل' });
+      return;
+    }
+
+    const ownerUserId = parentRestaurant.userId;
+    if (!ownerUserId) {
+      res.status(400).json({ success: false, error: 'لا يمكن تحديد مالك المطعم' });
+      return;
+    }
+
+    const currentPlanLimit = parentRestaurant.plan?.maxRestaurants ?? 1;
+    const currentBranchesCount = await prisma.restaurant.count({ where: { userId: ownerUserId } });
+
+    if (currentBranchesCount >= currentPlanLimit) {
+      res.status(403).json({
+        success: false,
+        error: `الخطة الحالية تسمح بإنشاء ${currentPlanLimit} فرع فقط. يرجى الترقية لإضافة فرع جديد`,
+        requiresUpgrade: true,
+        limitType: 'maxRestaurants',
+        current: currentBranchesCount,
+        limit: currentPlanLimit
+      });
+      return;
+    }
+
+    const baseSlug = slugify(name);
+    let slug = baseSlug;
+    let counter = 1;
+    while (await prisma.restaurant.findFirst({ where: { slug } })) {
+      slug = `${baseSlug}-${counter++}`;
+    }
+
+    let subdomain = baseSlug;
+    let subdomainCounter = 1;
+    while (await prisma.restaurant.findFirst({ where: { subdomain } })) {
+      subdomain = `${baseSlug}-${subdomainCounter++}`;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const branchUser = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.trim(),
+        password: hashedPassword,
+        phone: phone || null,
+        role: 'owner',
+        isEmailVerified: true,
+      }
+    });
+
+    const branchRestaurant = await prisma.restaurant.create({
+      data: {
+        name: name.trim(),
+        slug,
+        subdomain,
+        email: email.trim(),
+        phone: phone || null,
+        userId: branchUser.id,
+        planId: parentRestaurant.planId,
+        primaryColor: parentRestaurant.primaryColor,
+        secondaryColor: parentRestaurant.secondaryColor,
+        backgroundColor: parentRestaurant.backgroundColor,
+        cardColor: parentRestaurant.cardColor,
+        surfaceColor: parentRestaurant.surfaceColor,
+        textColor: parentRestaurant.textColor,
+        mutedColor: parentRestaurant.mutedColor,
+        accentColor: parentRestaurant.accentColor,
+        fontFamily: parentRestaurant.fontFamily,
+        isActive: true
+      }
+    });
+
+    await prisma.user.update({
+      where: { id: branchUser.id },
+      data: { restaurantId: branchRestaurant.id }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'تم إنشاء فرع المطعم بنجاح',
+      data: branchRestaurant
+    });
+  } catch (error) {
+    if (error instanceof Error && (error as any)?.code === 'P2002') {
+      res.status(409).json({
+        success: false,
+        error: 'لا يمكن إنشاء فرع جديد قبل إزالة قيد التفرد من قاعدة البيانات',
+      });
+      return;
+    }
+    console.error('Error creating restaurant branch:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إنشاء الفرع' });
+  }
+};
+
 export const getDeliverySettings = async (
   req: AuthRequest,
   res: Response

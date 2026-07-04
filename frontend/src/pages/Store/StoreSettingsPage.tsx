@@ -34,10 +34,13 @@ import {
   IoAlbums,
   IoGitBranch,
   IoAdd,
+  IoCopy,
+  IoCheckmarkCircle,
+  IoCloseCircle,
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 
-// ==================== ثوابت التصميم الأساسية (للخلفية فقط) ====================
+// ==================== ثوابت التصميم الأساسية ====================
 const C = {
   bg: '#082E24',
   card: '#112E23',
@@ -63,6 +66,16 @@ interface DeliverySettings {
   maxDistance: number;
   freeDeliveryAbove: number;
   estimatedTime: number;
+}
+
+interface Branch {
+  id: string;
+  name: string;
+  linkLabel: string;
+  isActive: boolean;
+  slug?: string;
+  subdomain?: string;
+  customDomain?: string;
 }
 
 const defaultDeliverySettings: DeliverySettings = {
@@ -128,16 +141,10 @@ const StoreSettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [uploading, setUploading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
-
-  // ✅ التحقق من صلاحية التعديل
-  const canEdit = isSuperAdmin || isOwner;
-  
-  // ✅ التحقق من صلاحية تحديث الإعدادات (للموظفين)
-  const canUpdateSettings = canEdit || permissions.canUpdateSettings;
-  
-  // ✅ التحقق من صلاحية الدومين المخصص (من الخطة)
-  const hasCustomDomain = permissions.canUseCustomDomain || isSuperAdmin;
-  const hasOnlinePayment = permissions.hasOnlineOrders || isSuperAdmin;
+  const [creatingBranch, setCreatingBranch] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState<any[]>([]);
+  const [showAllProductsModal, setShowAllProductsModal] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   // ✅ بيانات النموذج العام
   const [generalForm, setGeneralForm] = useState({
@@ -173,10 +180,24 @@ const StoreSettingsPage: React.FC = () => {
     customDomain: '',
   });
 
+  // ✅ بيانات الفرع الجديد
+  const [branchForm, setBranchForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: '',
+  });
+
   // ✅ إعدادات التوصيل
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(defaultDeliverySettings);
-  const [branchForm, setBranchForm] = useState({ name: '', email: '', password: '', phone: '' });
-  const [creatingBranch, setCreatingBranch] = useState(false);
+
+  // ✅ التحقق من صلاحية التعديل
+  const canEdit = isSuperAdmin || isOwner;
+  const canUpdateSettings = canEdit || permissions.canUpdateSettings;
+  const hasCustomDomain = permissions.canUseCustomDomain || isSuperAdmin;
+
+  // ✅ الفروع المرتبطة
+  const linkedBranches: Branch[] = store?.linkedBranches || [];
 
   // ✅ تحميل بيانات المتجر
   useEffect(() => {
@@ -197,7 +218,6 @@ const StoreSettingsPage: React.FC = () => {
         longitude: store.longitude?.toString() || '',
       });
 
-      // ✅ تحميل جميع ألوان المتجر
       setDesignForm({
         primaryColor: store.primaryColor || '#3B82F6',
         secondaryColor: store.secondaryColor || '#10B981',
@@ -243,7 +263,7 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
-  // ✅ حفظ التصميم (جميع الألوان) مع تحديث ThemeProvider
+  // ✅ حفظ التصميم
   const handleSaveDesign = async () => {
     if (!canUpdateSettings) {
       toast.error('ليس لديك صلاحية لتحديث التصميم');
@@ -252,7 +272,6 @@ const StoreSettingsPage: React.FC = () => {
     try {
       await updateStore(designForm);
       
-      // ✅ تحديث ألوان ThemeProvider فوراً بعد الحفظ
       const updatedColors = {
         primaryColor: designForm.primaryColor,
         secondaryColor: designForm.secondaryColor,
@@ -342,15 +361,7 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
-  // ✅ حساب مثال للتوصيل
-  const calculateExampleFee = () => {
-    const distance = 5;
-    const extraKm = Math.max(0, distance - deliverySettings.minDistance);
-    return deliverySettings.baseFee + (extraKm * deliverySettings.feePerKm);
-  };
-
-  const linkedBranches = store?.linkedBranches || [];
-
+  // ✅ إنشاء فرع جديد
   const handleCreateBranch = async () => {
     if (!canEdit) {
       toast.error('ليس لديك صلاحية لإنشاء فرع جديد');
@@ -362,25 +373,88 @@ const StoreSettingsPage: React.FC = () => {
       return;
     }
 
+    if (!branchForm.email.trim()) {
+      toast.error('البريد الإلكتروني للفرع مطلوب');
+      return;
+    }
+
+    if (!branchForm.password.trim()) {
+      toast.error('كلمة المرور للفرع مطلوبة');
+      return;
+    }
+
+    if (branchForm.password.length < 6) {
+      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return;
+    }
+
     try {
       setCreatingBranch(true);
-      await api.createStoreBranch({
-        name: branchForm.name,
-        email: branchForm.email || undefined,
-        password: branchForm.password || undefined,
+      await api.post('/store/branches', {
+        name: branchForm.name.trim(),
+        email: branchForm.email.trim(),
+        password: branchForm.password,
         phone: branchForm.phone || undefined,
       });
       toast.success('تم إنشاء الفرع بنجاح');
       setBranchForm({ name: '', email: '', password: '', phone: '' });
       await fetchStore();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'فشل إنشاء الفرع');
+      console.error('Error creating branch:', error);
+      const errorMsg = error.response?.data?.error || 'فشل إنشاء الفرع';
+      toast.error(errorMsg);
+      
+      if (error.response?.data?.requiresUpgrade) {
+        toast.error('يمكنك ترقية خطتك لإضافة المزيد من الفروع', { duration: 5000 });
+      }
     } finally {
       setCreatingBranch(false);
     }
   };
 
-  // ✅ ستايل الحقول مع تأثير التركيز
+  // ✅ نسخ الرابط
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('تم نسخ الرابط');
+  };
+
+  // ✅ جلب جميع منتجات الفروع
+  const fetchAllBranchesProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const response = await api.get(`/store/branches/all-products`);
+      const products = response?.data?.products || response?.products || [];
+      setShowAllProducts(products);
+      setShowAllProductsModal(true);
+      toast.success(`تم العثور على ${products.length} منتج من جميع الفروع`);
+    } catch (error) {
+      console.error('Error fetching all products:', error);
+      toast.error('فشل جلب المنتجات من الفروع');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // ✅ تفعيل/تعطيل عرض جميع المنتجات
+  const toggleShowAllProducts = async (checked: boolean) => {
+    try {
+      await api.patch(`/store/branches/show-all-products`, { showAllBranchesProducts: checked });
+      await fetchStore();
+      toast.success(checked ? 'تم تفعيل عرض منتجات جميع الفروع' : 'تم تعطيل عرض منتجات جميع الفروع');
+    } catch (error) {
+      console.error('Error toggling show all products:', error);
+      toast.error('فشل تحديث الإعداد');
+    }
+  };
+
+  // ✅ حساب مثال للتوصيل
+  const calculateExampleFee = () => {
+    const distance = 5;
+    const extraKm = Math.max(0, distance - deliverySettings.minDistance);
+    return deliverySettings.baseFee + (extraKm * deliverySettings.feePerKm);
+  };
+
+  // ✅ ستايل الحقول
   const getInput = (id: string) => ({
     ...inputStyle,
     border: focusedInput === id ? `1px solid ${C.accent}` : inputStyle.border,
@@ -393,11 +467,11 @@ const StoreSettingsPage: React.FC = () => {
     { id: 'images', label: 'الصور', icon: IoImage },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
     { id: 'domain', label: 'الدومين', icon: IoGlobe },
+    { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
 
   if (loading || planLoading) return <Loader fullScreen />;
 
-  // ✅ معاينة الألوان الديناميكية
   const previewColors = {
     bg: designForm.backgroundColor,
     card: designForm.cardColor,
@@ -407,7 +481,6 @@ const StoreSettingsPage: React.FC = () => {
     text: designForm.textColor,
     muted: designForm.mutedColor,
     accent: designForm.accentColor,
-    border: C.border,
   };
 
   return (
@@ -415,7 +488,7 @@ const StoreSettingsPage: React.FC = () => {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ color: C.text, fontSize: 24, fontWeight: 800, margin: 0 }}>🎨 إعدادات المتجر</h1>
-        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المتجر وتخصيص الألوان</p>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إدارة بيانات ومظهر المتجر وتخصيص الألوان والفروع</p>
         {!canUpdateSettings && (
           <p style={{ color: C.red, fontSize: 12, marginTop: 8 }}>
             ⚠️ ليس لديك صلاحية التعديل. يمكنك فقط عرض الإعدادات.
@@ -629,7 +702,6 @@ const StoreSettingsPage: React.FC = () => {
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
               
-              {/* اللون الأساسي */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoPricetag size={14} /> اللون الأساسي
@@ -651,10 +723,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للأزرار الرئيسية والعناوين البارزة</p>
               </div>
 
-              {/* اللون الثانوي */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoBrush size={14} /> اللون الثانوي
@@ -676,10 +746,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>يستخدم للعناصر الثانوية والتفاصيل</p>
               </div>
 
-              {/* لون الخلفية */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoAlbums size={14} /> لون خلفية الصفحة
@@ -701,10 +769,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الصفحة الرئيسية للمتجر</p>
               </div>
 
-              {/* لون البطاقات */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoAlbums size={14} /> لون البطاقات والقوائم
@@ -726,10 +792,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية البطاقات والقوائم الجانبية</p>
               </div>
 
-              {/* لون الأسطح */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoAlbums size={14} /> لون الأسطح والحقول
@@ -751,10 +815,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الحقول والنماذج</p>
               </div>
 
-              {/* لون النص الرئيسي */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoText size={14} /> لون النص الرئيسي
@@ -776,10 +838,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الرئيسية والعناوين</p>
               </div>
 
-              {/* لون النص الثانوي */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoText size={14} /> لون النص الثانوي
@@ -801,10 +861,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الثانوية والوصف</p>
               </div>
 
-              {/* لون الأكسن */}
               <div>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoBrush size={14} /> لون الأكسن
@@ -826,10 +884,8 @@ const StoreSettingsPage: React.FC = () => {
                     disabled={!canUpdateSettings}
                   />
                 </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون الإشعارات والتنبيهات والعناصر البارزة</p>
               </div>
 
-              {/* نوع الخط */}
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <IoText size={14} /> نوع الخط
@@ -852,7 +908,6 @@ const StoreSettingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* معاينة التصميم */}
           <div style={{ 
             ...sectionCard, 
             background: previewColors.bg, 
@@ -860,23 +915,13 @@ const StoreSettingsPage: React.FC = () => {
             fontFamily: designForm.fontFamily,
             border: `1px solid ${previewColors.accent}40`
           }}>
-            <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: previewColors.primary }}>
-              معاينة التصميم
-            </h3>
-            <p style={{ fontSize: 14, color: previewColors.muted, marginBottom: 16 }}>
-              هذا نص تجريبي لإظهار شكل الخط والألوان التي اخترتها
-            </p>
+            <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 8, color: previewColors.primary }}>معاينة التصميم</h3>
+            <p style={{ fontSize: 14, color: previewColors.muted, marginBottom: 16 }}>هذا نص تجريبي لإظهار شكل الخط والألوان التي اخترتها</p>
             
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.primary, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>
-                زر رئيسي
-              </button>
-              <button style={{ padding: '10px 20px', borderRadius: 10, border: `1px solid ${previewColors.secondary}`, background: 'transparent', color: previewColors.secondary, cursor: 'pointer' }}>
-                زر ثانوي
-              </button>
-              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.accent, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>
-                زر أكسن
-              </button>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.primary, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>زر رئيسي</button>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: `1px solid ${previewColors.secondary}`, background: 'transparent', color: previewColors.secondary, cursor: 'pointer' }}>زر ثانوي</button>
+              <button style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: previewColors.accent, color: previewColors.bg, cursor: 'pointer', fontWeight: 600 }}>زر أكسن</button>
             </div>
             
             <div style={{ marginTop: 16, padding: 16, background: previewColors.card, borderRadius: 12, border: `1px solid ${previewColors.border || C.border}` }}>
@@ -885,12 +930,7 @@ const StoreSettingsPage: React.FC = () => {
             </div>
 
             <div style={{ marginTop: 12, padding: 12, background: previewColors.surf, borderRadius: 10 }}>
-              <input
-                type="text"
-                placeholder="مثال لحقل إدخال"
-                style={{ width: '100%', padding: 10, borderRadius: 8, border: `1px solid ${previewColors.accent}40`, background: previewColors.bg, color: previewColors.text }}
-                readOnly
-              />
+              <input type="text" placeholder="مثال لحقل إدخال" style={{ width: '100%', padding: 10, borderRadius: 8, border: `1px solid ${previewColors.accent}40`, background: previewColors.bg, color: previewColors.text }} readOnly />
             </div>
           </div>
 
@@ -905,27 +945,16 @@ const StoreSettingsPage: React.FC = () => {
         <div>
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoImage style={{ color: C.accent }} />
-              شعار المتجر
+              <IoImage style={{ color: C.accent }} /> شعار المتجر
             </h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: 16 }}>
               {store?.logo && (
-                <img
-                  src={getImageUrl(store.logo)}
-                  alt="Logo"
-                  style={{ width: 128, height: 128, objectFit: 'cover', borderRadius: 12, border: `1px solid ${C.border}` }}
-                />
+                <img src={getImageUrl(store.logo)} alt="Logo" style={{ width: 128, height: 128, objectFit: 'cover', borderRadius: 12, border: `1px solid ${C.border}` }} />
               )}
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ border: `2px dashed ${C.border}`, borderRadius: 12, background: C.surf, padding: 20, textAlign: 'center' }}>
                   <p style={{ color: C.muted, fontSize: 13, marginBottom: 12 }}>يفضل صورة مربعة بحجم 200×200 بكسل</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    disabled={uploading || !canUpdateSettings}
-                    style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}
-                  />
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploading || !canUpdateSettings} style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }} />
                 </div>
               </div>
             </div>
@@ -933,25 +962,14 @@ const StoreSettingsPage: React.FC = () => {
 
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoImage style={{ color: C.accent }} />
-              صورة الغلاف
+              <IoImage style={{ color: C.accent }} /> صورة الغلاف
             </h2>
             {store?.coverImage && (
-              <img
-                src={getImageUrl(store.coverImage)}
-                alt="Cover"
-                style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 16 }}
-              />
+              <img src={getImageUrl(store.coverImage)} alt="Cover" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 16 }} />
             )}
             <div style={{ border: `2px dashed ${C.border}`, borderRadius: 12, background: C.surf, padding: 20, textAlign: 'center' }}>
               <p style={{ color: C.muted, fontSize: 13, marginBottom: 12 }}>يفضل صورة بحجم 1200×400 بكسل</p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverUpload}
-                disabled={uploading || !canUpdateSettings}
-                style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}
-              />
+              <input type="file" accept="image/*" onChange={handleCoverUpload} disabled={uploading || !canUpdateSettings} style={{ color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 13 }} />
             </div>
             {uploading && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, color: C.accent }}>
@@ -968,18 +986,15 @@ const StoreSettingsPage: React.FC = () => {
         <div>
           <div style={{ ...sectionCard, background: `rgba(200,226,53,0.07)`, marginBottom: 16 }}>
             <p style={{ color: C.text, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-              <IoWarning style={{ color: C.accent, flexShrink: 0 }} />
-              قم بتعيين أسعار التوصيل حسب المسافة. سيتم حساب سعر التوصيل تلقائياً بناءً على موقع العميل.
+              <IoWarning style={{ color: C.accent, flexShrink: 0 }} /> قم بتعيين أسعار التوصيل حسب المسافة. سيتم حساب سعر التوصيل تلقائياً بناءً على موقع العميل.
             </p>
           </div>
 
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoCar style={{ color: C.accent }} />
-              إعدادات خدمة التوصيل
+              <IoCar style={{ color: C.accent }} /> إعدادات خدمة التوصيل
             </h2>
 
-            {/* تفعيل التوصيل */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 16px', background: C.surf, borderRadius: 10, border: `1px solid ${C.border}` }}>
               <button
                 onClick={() => setDeliverySettings({ ...deliverySettings, enableDelivery: !deliverySettings.enableDelivery })}
@@ -991,103 +1006,42 @@ const StoreSettingsPage: React.FC = () => {
                   opacity: canUpdateSettings ? 1 : 0.6
                 }}
               >
-                <span style={{
-                  position: 'absolute', top: 3,
-                  right: deliverySettings.enableDelivery ? 3 : undefined,
-                  left: deliverySettings.enableDelivery ? undefined : 3,
-                  width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'all 0.2s',
-                }} />
+                <span style={{ position: 'absolute', top: 3, right: deliverySettings.enableDelivery ? 3 : undefined, left: deliverySettings.enableDelivery ? undefined : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'all 0.2s' }} />
               </button>
               <span style={{ color: C.text, fontWeight: 600, fontSize: 14 }}>تفعيل خدمة التوصيل</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
               <div>
-                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <IoCash size={13} /> سعر التوصيل الأساسي (ل.س)
-                </label>
-                <input
-                  type="number"
-                  value={deliverySettings.baseFee}
-                  onChange={(e) => setDeliverySettings({ ...deliverySettings, baseFee: Number(e.target.value) })}
-                  style={getInput('baseFee')}
-                  min={0} step={0.5}
-                  disabled={!canUpdateSettings}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر الثابت للطلب (دون احتساب المسافة)</p>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}><IoCash size={13} /> سعر التوصيل الأساسي (ل.س)</label>
+                <input type="number" value={deliverySettings.baseFee} onChange={(e) => setDeliverySettings({ ...deliverySettings, baseFee: Number(e.target.value) })} style={getInput('baseFee')} min={0} step={0.5} disabled={!canUpdateSettings} />
               </div>
               <div>
-                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <IoCar size={13} /> سعر الكيلومتر الإضافي (ل.س/كم)
-                </label>
-                <input
-                  type="number"
-                  value={deliverySettings.feePerKm}
-                  onChange={(e) => setDeliverySettings({ ...deliverySettings, feePerKm: Number(e.target.value) })}
-                  style={getInput('feePerKm')}
-                  min={0} step={0.5}
-                  disabled={!canUpdateSettings}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>السعر لكل كيلومتر إضافي بعد المسافة الأساسية</p>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}><IoCar size={13} /> سعر الكيلومتر الإضافي (ل.س/كم)</label>
+                <input type="number" value={deliverySettings.feePerKm} onChange={(e) => setDeliverySettings({ ...deliverySettings, feePerKm: Number(e.target.value) })} style={getInput('feePerKm')} min={0} step={0.5} disabled={!canUpdateSettings} />
               </div>
               <div>
                 <label style={labelStyle}>الحد الأدنى للمسافة (كم)</label>
-                <input
-                  type="number"
-                  value={deliverySettings.minDistance}
-                  onChange={(e) => setDeliverySettings({ ...deliverySettings, minDistance: Number(e.target.value) })}
-                  style={getInput('minDist')}
-                  min={0} step={0.5}
-                  disabled={!canUpdateSettings}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>المسافة التي يتم احتساب السعر الأساسي خلالها</p>
+                <input type="number" value={deliverySettings.minDistance} onChange={(e) => setDeliverySettings({ ...deliverySettings, minDistance: Number(e.target.value) })} style={getInput('minDist')} min={0} step={0.5} disabled={!canUpdateSettings} />
               </div>
               <div>
                 <label style={labelStyle}>أقصى مسافة للتوصيل (كم)</label>
-                <input
-                  type="number"
-                  value={deliverySettings.maxDistance}
-                  onChange={(e) => setDeliverySettings({ ...deliverySettings, maxDistance: Number(e.target.value) })}
-                  style={getInput('maxDist')}
-                  min={0} step={0.5}
-                  disabled={!canUpdateSettings}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>أقصى مسافة يمكن التوصيل إليها</p>
+                <input type="number" value={deliverySettings.maxDistance} onChange={(e) => setDeliverySettings({ ...deliverySettings, maxDistance: Number(e.target.value) })} style={getInput('maxDist')} min={0} step={0.5} disabled={!canUpdateSettings} />
               </div>
               <div>
                 <label style={labelStyle}>توصيل مجاني للطلبات فوق (ل.س)</label>
-                <input
-                  type="number"
-                  value={deliverySettings.freeDeliveryAbove}
-                  onChange={(e) => setDeliverySettings({ ...deliverySettings, freeDeliveryAbove: Number(e.target.value) })}
-                  style={getInput('freeDel')}
-                  min={0}
-                  disabled={!canUpdateSettings}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>إذا كان الطلب أكبر من هذا المبلغ، يصبح التوصيل مجانياً</p>
+                <input type="number" value={deliverySettings.freeDeliveryAbove} onChange={(e) => setDeliverySettings({ ...deliverySettings, freeDeliveryAbove: Number(e.target.value) })} style={getInput('freeDel')} min={0} disabled={!canUpdateSettings} />
               </div>
               <div>
-                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <IoTime size={13} /> الوقت التقديري للتوصيل (دقيقة)
-                </label>
-                <input
-                  type="number"
-                  value={deliverySettings.estimatedTime}
-                  onChange={(e) => setDeliverySettings({ ...deliverySettings, estimatedTime: Number(e.target.value) })}
-                  style={getInput('estTime')}
-                  min={15} step={5}
-                  disabled={!canUpdateSettings}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>الوقت المتوقع لإيصال الطلب</p>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}><IoTime size={13} /> الوقت التقديري للتوصيل (دقيقة)</label>
+                <input type="number" value={deliverySettings.estimatedTime} onChange={(e) => setDeliverySettings({ ...deliverySettings, estimatedTime: Number(e.target.value) })} style={getInput('estTime')} min={15} step={5} disabled={!canUpdateSettings} />
               </div>
             </div>
           </div>
 
-          {/* مثال حساب سعر التوصيل */}
           <div style={{ ...sectionCard, background: C.surfL }}>
             <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoCalculator size={16} style={{ color: C.accent }} />
-              مثال لحساب سعر التوصيل (لمسافة 5 كم)
+              <IoCalculator size={16} style={{ color: C.accent }} /> مثال لحساب سعر التوصيل (لمسافة 5 كم)
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
               <p style={{ color: C.muted }}>• السعر الأساسي: <span style={{ color: C.text, fontWeight: 600 }}>{deliverySettings.baseFee} ل.س</span></p>
@@ -1095,9 +1049,7 @@ const StoreSettingsPage: React.FC = () => {
               <p style={{ color: C.muted }}>• المسافة الإضافية: <span style={{ color: C.text, fontWeight: 600 }}>{Math.max(0, 5 - deliverySettings.minDistance)} كم</span></p>
               <p style={{ color: C.muted }}>• تكلفة المسافة الإضافية: <span style={{ color: C.text, fontWeight: 600 }}>{Math.max(0, 5 - deliverySettings.minDistance) * deliverySettings.feePerKm} ل.س</span></p>
               <div style={{ paddingTop: 8, borderTop: `1px solid ${C.border}`, marginTop: 4 }}>
-                <p style={{ color: C.accent, fontWeight: 700, fontSize: 15 }}>
-                  إجمالي سعر التوصيل: {calculateExampleFee()} ل.س
-                </p>
+                <p style={{ color: C.accent, fontWeight: 700, fontSize: 15 }}>إجمالي سعر التوصيل: {calculateExampleFee()} ل.س</p>
               </div>
             </div>
           </div>
@@ -1113,62 +1065,29 @@ const StoreSettingsPage: React.FC = () => {
         <div>
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoGlobe style={{ color: C.accent }} />
-              إعدادات الدومين
+              <IoGlobe style={{ color: C.accent }} /> إعدادات الدومين
             </h2>
 
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>الدومين الفرعي</label>
               <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                <input
-                  type="text"
-                  value={domainForm.subdomain}
-                  onChange={(e) => setDomainForm({ ...domainForm, subdomain: e.target.value })}
-                  style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }}
-                  placeholder="my-store"
-                  disabled={!canUpdateSettings}
-                />
-                <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, fontSize: 13, borderRadius: '0 10px 10px 0' }}>
-                  .shamstores.com
-                </span>
+                <input type="text" value={domainForm.subdomain} onChange={(e) => setDomainForm({ ...domainForm, subdomain: e.target.value })} style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }} placeholder="my-store" disabled={!canUpdateSettings} />
+                <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, fontSize: 13, borderRadius: '0 10px 10px 0' }}>.shamstores.com</span>
               </div>
-              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
-                سيكون رابط متجرك: {domainForm.subdomain || 'my-store'}.shamstores.com
-              </p>
+              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>سيكون رابط متجرك: {domainForm.subdomain || 'my-store'}.shamstores.com</p>
             </div>
 
             <div>
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
-                <IoLink size={13} /> الدومين المخصص
-              </label>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}><IoLink size={13} /> الدومين المخصص</label>
               {hasCustomDomain || isSuperAdmin ? (
-                <input
-                  type="text"
-                  value={domainForm.customDomain}
-                  onChange={(e) => setDomainForm({ ...domainForm, customDomain: e.target.value })}
-                  style={getInput('customDomain')}
-                  placeholder="www.my-store.com"
-                  disabled={!canUpdateSettings}
-                />
+                <input type="text" value={domainForm.customDomain} onChange={(e) => setDomainForm({ ...domainForm, customDomain: e.target.value })} style={getInput('customDomain')} placeholder="www.my-store.com" disabled={!canUpdateSettings} />
               ) : (
                 <div style={{ background: C.surf, padding: 16, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, marginBottom: 12 }}>
-                    <IoLockClosed />
-                    <span style={{ fontSize: 13 }}>الدومين المخصص متاح فقط في الخطة الاحترافية</span>
-                  </div>
-                  <button
-                    onClick={() => window.location.href = '/plans'}
-                    style={{ ...saveBtn, padding: '8px 16px', fontSize: 13 }}
-                  >
-                    ترقية الخطة
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, marginBottom: 12 }}><IoLockClosed /><span style={{ fontSize: 13 }}>الدومين المخصص متاح فقط في الخطة الاحترافية</span></div>
+                  <button onClick={() => window.location.href = '/plans'} style={{ ...saveBtn, padding: '8px 16px', fontSize: 13 }}>ترقية الخطة</button>
                 </div>
               )}
-              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
-                {hasCustomDomain || isSuperAdmin
-                  ? 'أدخل الدومين الخاص بك (مثال: www.my-store.com)'
-                  : 'قم بترقية خطتك لاستخدام دومين خاص'}
-              </p>
+              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{hasCustomDomain || isSuperAdmin ? 'أدخل الدومين الخاص بك (مثال: www.my-store.com)' : 'قم بترقية خطتك لاستخدام دومين خاص'}</p>
             </div>
           </div>
 
@@ -1178,94 +1097,180 @@ const StoreSettingsPage: React.FC = () => {
         </div>
       )}
 
-      <div style={sectionCard}>
-        <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <IoGitBranch style={{ color: C.accent }} />
-          معلومات الفرع
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 16 }}>
-          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
-            <div style={{ color: C.muted, fontSize: 12 }}>اسم الفرع الحالي</div>
-            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{store?.name || '-'}</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{store?.branchLabel || store?.subdomain || store?.slug || '-'}</div>
-          </div>
-          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
-            <div style={{ color: C.muted, fontSize: 12 }}>نوع الرابط</div>
-            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>
-              {store?.branchLinkType === 'custom_domain'
-                ? 'دومين مخصص'
-                : store?.branchLinkType === 'subdomain'
-                  ? 'دومين فرعي'
-                  : 'رابط افتراضي'}
+      {/* ==================== تبويب الفروع ==================== */}
+      {activeTab === 'branches' && (
+        <div>
+          {/* معلومات الفرع الحالي */}
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoStorefront style={{ color: C.accent }} /> الفرع الحالي (الرئيسي)
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+              <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+                <div style={{ color: C.muted, fontSize: 12 }}>اسم الفرع</div>
+                <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{store?.name || '-'}</div>
+                <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{store?.branchLabel || store?.subdomain || store?.slug || '-'}</div>
+              </div>
+              <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+                <div style={{ color: C.muted, fontSize: 12 }}>نوع الرابط</div>
+                <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>
+                  {store?.branchLinkType === 'custom_domain' ? '🌐 دومين مخصص' : store?.branchLinkType === 'subdomain' ? '🔗 دومين فرعي' : '📁 رابط افتراضي'}
+                </div>
+              </div>
+              <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+                <div style={{ color: C.muted, fontSize: 12 }}>الفروع المرتبطة</div>
+                <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{linkedBranches.length}</div>
+              </div>
             </div>
           </div>
-          <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
-            <div style={{ color: C.muted, fontSize: 12 }}>الفروع المرتبطة</div>
-            <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{store?.linkedBranches?.length || 0}</div>
-          </div>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-          {linkedBranches.map((branch) => (
-            <div key={branch.id} style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
-              <div style={{ color: C.text, fontWeight: 700 }}>{branch.name}</div>
-              <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{branch.linkLabel}</div>
-              <div style={{ color: branch.isActive ? C.accent : C.red, fontSize: 12, marginTop: 8 }}>{branch.isActive ? 'نشط' : 'غير نشط'}</div>
-            </div>
-          ))}
-          {linkedBranches.length === 0 && (
-            <div style={{ color: C.muted, fontSize: 13 }}>لا توجد فروع إضافية مرتبطة بهذا الحساب.</div>
-          )}
-        </div>
+          {/* قائمة الفروع المرتبطة */}
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoGitBranch style={{ color: C.accent }} /> الفروع المرتبطة بحسابك
+            </h2>
+            <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>يمكنك إنشاء فروع إضافية لنفس المتجر. كل فرع سيكون له دومين فرعي مستقل (مثل: فرعك.shamstores.com)</p>
 
-        <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, marginTop: 16 }}>
-          <h3 style={{ color: C.text, fontSize: 14, fontWeight: 700, marginBottom: 12 }}>إضافة فرع جديد</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>اسم الفرع</label>
-              <input value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} style={inputStyle} />
+            {linkedBranches.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+                {linkedBranches.map((branch) => (
+                  <div key={branch.id} style={{ background: C.surf, border: `1px solid ${branch.isActive ? C.accent : C.border}`, borderRadius: 16, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>{branch.name}</h3>
+                        <code style={{ color: C.accent, fontSize: 12, display: 'block', marginTop: 4 }}>{branch.linkLabel}</code>
+                      </div>
+                      <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: branch.isActive ? `${C.accent}20` : `${C.red}20`, color: branch.isActive ? C.accent : C.red }}>
+                        {branch.isActive ? '✅ نشط' : '⛔ غير نشط'}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', gap: 8 }}>
+                      <button onClick={() => copyToClipboard(branch.linkLabel)} style={{ background: 'none', border: 'none', color: C.accent, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <IoCopy size={12} /> نسخ الرابط
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px', background: C.surf, borderRadius: 16 }}>
+                <p style={{ color: C.muted }}>لا توجد فروع إضافية. يمكنك إنشاء فرع جديد أدناه.</p>
+              </div>
+            )}
+          </div>
+
+          {/* إنشاء فرع جديد */}
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoAdd style={{ color: C.accent }} /> إضافة فرع جديد
+            </h2>
+            <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>سيتم إنشاء حساب دخول مستقل للفرع الجديد.</p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={labelStyle}>اسم الفرع *</label>
+                <input type="text" value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} style={inputStyle} placeholder="مثال: فرع الرياض" disabled={!canEdit} />
+              </div>
+              <div>
+                <label style={labelStyle}>البريد الإلكتروني *</label>
+                <input type="email" value={branchForm.email} onChange={(e) => setBranchForm({ ...branchForm, email: e.target.value })} style={inputStyle} placeholder="branch@example.com" disabled={!canEdit} />
+              </div>
+              <div>
+                <label style={labelStyle}>كلمة المرور *</label>
+                <input type="password" value={branchForm.password} onChange={(e) => setBranchForm({ ...branchForm, password: e.target.value })} style={inputStyle} placeholder="********" disabled={!canEdit} />
+              </div>
+              <div>
+                <label style={labelStyle}>رقم الهاتف</label>
+                <input type="tel" value={branchForm.phone} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} style={inputStyle} placeholder="05XXXXXXXX" disabled={!canEdit} />
+              </div>
             </div>
-            <div>
-              <label style={labelStyle}>البريد الإلكتروني</label>
-              <input value={branchForm.email} onChange={(e) => setBranchForm({ ...branchForm, email: e.target.value })} style={inputStyle} />
+
+            <div style={{ background: `${C.accent}10`, borderRadius: 12, padding: 12, marginBottom: 16 }}>
+              <p style={{ color: C.muted, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoWarning size={16} style={{ color: C.accent }} />
+                سيتم إنشاء حساب دخول لهذا الفرع باستخدام البريد الإلكتروني وكلمة المرور التي تدخلها هنا. سيكون للفرع دومين فرعي خاص به: <strong style={{ color: C.accent }}>اسم-الفرع.shamstores.com</strong>
+              </p>
             </div>
-            <div>
-              <label style={labelStyle}>كلمة المرور</label>
-              <input type="password" value={branchForm.password} onChange={(e) => setBranchForm({ ...branchForm, password: e.target.value })} style={inputStyle} />
+
+            <button
+              onClick={handleCreateBranch}
+              disabled={creatingBranch || !canEdit}
+              style={{ ...saveBtn, width: '100%', justifyContent: 'center', opacity: creatingBranch || !canEdit ? 0.7 : 1, cursor: creatingBranch || !canEdit ? 'not-allowed' : 'pointer' }}
+            >
+              {creatingBranch ? <><div className="animate-spin" style={{ width: 16, height: 16, border: `2px solid ${C.bg}`, borderTopColor: 'transparent', borderRadius: '50%' }} /> جاري إنشاء الفرع...</> : <><IoAdd size={18} /> إنشاء فرع جديد</>}
+            </button>
+          </div>
+
+          {/* إعدادات عرض منتجات جميع الفروع */}
+          <div style={sectionCard}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoGlobe style={{ color: C.accent }} /> عرض منتجات جميع الفروع
+            </h2>
+            <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>عند تفعيل هذا الخيار، سيتم عرض منتجات جميع فروعك في الصفحة الرئيسية للمتجر (الفرع الرئيسي).</p>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                <span style={{ color: C.text }}>تفعيل عرض جميع المنتجات</span>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="checkbox"
+                    checked={store?.showAllBranchesProducts || false}
+                    onChange={(e) => toggleShowAllProducts(e.target.checked)}
+                    style={{ width: 44, height: 22, appearance: 'none', background: store?.showAllBranchesProducts ? C.accent : C.muted, borderRadius: 22, cursor: 'pointer', transition: '0.2s' }}
+                  />
+                  <span style={{ position: 'absolute', top: 2, right: store?.showAllBranchesProducts ? 24 : 2, width: 18, height: 18, background: '#fff', borderRadius: '50%', transition: '0.2s' }} />
+                </div>
+              </label>
+
+              {store?.showAllBranchesProducts && linkedBranches.length > 0 && (
+                <button onClick={fetchAllBranchesProducts} style={{ padding: '8px 16px', background: C.accent, color: C.bg, border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>معاينة المنتجات</button>
+              )}
             </div>
-            <div>
-              <label style={labelStyle}>الهاتف</label>
-              <input value={branchForm.phone} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} style={inputStyle} />
+
+            {linkedBranches.length > 0 && (
+              <div style={{ marginTop: 16, padding: 12, background: C.surf, borderRadius: 12 }}>
+                <p style={{ color: C.muted, fontSize: 12 }}>📌 ملاحظة: عند تفعيل هذا الخيار، سيتم عرض منتجات الفروع التالية في صفحة الفرع الرئيسي:</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                  {linkedBranches.map(branch => (<span key={branch.id} style={{ fontSize: 12, background: `${C.accent}15`, padding: '2px 8px', borderRadius: 20 }}>{branch.name}</span>))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ==================== مودال عرض جميع المنتجات ==================== */}
+      {showAllProductsModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: C.card, borderRadius: 20, maxWidth: 1000, width: '100%', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ color: C.text, margin: 0 }}>📦 منتجات جميع الفروع</h3>
+              <button onClick={() => setShowAllProductsModal(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 24 }}>×</button>
+            </div>
+            <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
+              {loadingProducts ? <Loader /> : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                  {showAllProducts.map((product, idx) => (
+                    <div key={idx} style={{ background: C.surf, borderRadius: 10, padding: 12 }}>
+                      {product.imageUrl && <img src={getImageUrl(product.imageUrl)} alt={product.name} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />}
+                      <h4 style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{product.name}</h4>
+                      <p style={{ color: C.accent, fontSize: 12, fontWeight: 700 }}>{product.price} ر.س</p>
+                      <p style={{ color: C.muted, fontSize: 10 }}>الفرع: {product.branchName || '-'}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-          <div style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>سيتم إنشاء حساب دخول لهذا الفرع باستخدام البريد الإلكتروني وكلمة المرور التي تدخلها هنا.</div>
-          <button
-            onClick={handleCreateBranch}
-            disabled={creatingBranch || !canEdit}
-            style={{ ...saveBtn, marginTop: 14, opacity: creatingBranch || !canEdit ? 0.7 : 1, cursor: creatingBranch || !canEdit ? 'wait' : 'pointer' }}
-          >
-            <IoAdd size={16} /> {creatingBranch ? 'جاري الإنشاء...' : 'إنشاء فرع جديد'}
-          </button>
         </div>
-      </div>
+      )}
 
       {/* Footer */}
       <div style={{ marginTop: 32, textAlign: 'center', padding: '16px 0' }}>
-        <p style={{ color: C.muted, fontSize: 12 }}>
-          آخر تحديث: {store?.updatedAt ? new Date(store.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}
-        </p>
+        <p style={{ color: C.muted, fontSize: 12 }}>آخر تحديث: {store?.updatedAt ? new Date(store.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}</p>
       </div>
 
-      {/* أنماط CSS إضافية */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .animate-spin { animation: spin 1s linear infinite; }`}</style>
     </div>
   );
 };

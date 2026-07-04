@@ -112,7 +112,6 @@ export const uploadStoreLogo = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    // حذف الصورة القديمة من R2
     if (store.logo) {
       try {
         await r2ImagesService.deleteImageByUrl(store.logo);
@@ -121,14 +120,12 @@ export const uploadStoreLogo = async (req: AuthRequest, res: Response): Promise<
       }
     }
 
-    // رفع الصورة الجديدة إلى R2
     const uploadedImage = await r2ImagesService.uploadImage(req.file, {
       entity: 'stores',
       entityId: store.id,
       subType: 'logo'
     });
 
-    // تحديث قاعدة البيانات
     await prisma.store.update({
       where: { id: store.id },
       data: { logo: uploadedImage.url }
@@ -166,7 +163,6 @@ export const uploadStoreCover = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    // حذف الصورة القديمة من R2
     if (store.coverImage) {
       try {
         await r2ImagesService.deleteImageByUrl(store.coverImage);
@@ -175,14 +171,12 @@ export const uploadStoreCover = async (req: AuthRequest, res: Response): Promise
       }
     }
 
-    // رفع الصورة الجديدة إلى R2
     const uploadedImage = await r2ImagesService.uploadImage(req.file, {
       entity: 'stores',
       entityId: store.id,
       subType: 'cover'
     });
 
-    // تحديث قاعدة البيانات
     await prisma.store.update({
       where: { id: store.id },
       data: { coverImage: uploadedImage.url }
@@ -284,7 +278,10 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
-export const createStoreBranch = async (req: AuthRequest, res: Response): Promise<void> => {
+// ==================== دوال الفروع ====================
+
+// جلب جميع منتجات الفروع المرتبطة
+export const getAllBranchesProducts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
     if (!storeId) {
@@ -292,8 +289,77 @@ export const createStoreBranch = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
-    const { name, email, password, phone } = req.body;
+    const store = await prisma.store.findUnique({ where: { id: storeId } });
+    if (!store) {
+      res.status(404).json({ success: false, error: 'المتجر غير موجود' });
+      return;
+    }
 
+    const linkedStores = await prisma.store.findMany({
+      where: { userId: store.userId, id: { not: storeId } }
+    });
+
+    const allProducts: any[] = [];
+
+    const currentProducts = await prisma.product.findMany({
+      where: { storeId, isAvailable: true }
+    });
+    allProducts.push(...currentProducts.map(p => ({ ...p, branchName: store.name, branchId: store.id })));
+
+    for (const branch of linkedStores) {
+      const products = await prisma.product.findMany({
+        where: { storeId: branch.id, isAvailable: true }
+      });
+      allProducts.push(...products.map(p => ({ ...p, branchName: branch.name, branchId: branch.id })));
+    }
+
+    res.json({ success: true, products: allProducts });
+  } catch (error) {
+    console.error('Error fetching all branches products:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب المنتجات' });
+  }
+};
+
+// تحديث إعداد عرض جميع المنتجات
+export const updateShowAllBranchesProducts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const storeId = await getStoreId(req);
+    if (!storeId) {
+      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+      return;
+    }
+
+    const { showAllBranchesProducts } = req.body;
+    
+    const updatedStore = await prisma.store.update({
+      where: { id: storeId },
+      data: { showAllBranchesProducts: showAllBranchesProducts === true }
+    });
+
+    res.json({ success: true, data: { showAllBranchesProducts: updatedStore.showAllBranchesProducts } });
+  } catch (error) {
+    console.error('Error updating show all branches products:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث الإعداد' });
+  }
+};
+
+// إنشاء فرع جديد
+export const createStoreBranch = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const parentStoreId = await getStoreId(req);
+    if (!parentStoreId) {
+      res.status(400).json({ success: false, error: 'معرف المتجر الرئيسي غير موجود' });
+      return;
+    }
+
+    const parentStore = await prisma.store.findUnique({ where: { id: parentStoreId } });
+    if (!parentStore) {
+      res.status(404).json({ success: false, error: 'المتجر الرئيسي غير موجود' });
+      return;
+    }
+
+    const { name, email, password, phone } = req.body;
+    
     if (!name || !name.trim()) {
       res.status(400).json({ success: false, error: 'اسم الفرع مطلوب' });
       return;
@@ -309,6 +375,11 @@ export const createStoreBranch = async (req: AuthRequest, res: Response): Promis
       return;
     }
 
+    if (password.length < 6) {
+      res.status(400).json({ success: false, error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+      return;
+    }
+
     const existingUser = await UserService.findByEmail(email.trim());
     if (existingUser) {
       res.status(400).json({ success: false, error: 'البريد الإلكتروني مستخدم بالفعل' });
@@ -316,16 +387,16 @@ export const createStoreBranch = async (req: AuthRequest, res: Response): Promis
     }
 
     const currentStore = await prisma.store.findUnique({
-      where: { id: storeId },
+      where: { id: parentStoreId },
       include: { plan: true }
     });
 
     if (!currentStore) {
-      res.status(404).json({ success: false, error: 'المتجر غير موجود' });
+      res.status(404).json({ success: false, error: 'المتجر الرئيسي غير موجود' });
       return;
     }
 
-    const ownerUserId = currentStore.userId || req.user?.id;
+    const ownerUserId = currentStore.userId;
     if (!ownerUserId) {
       res.status(400).json({ success: false, error: 'لا يمكن تحديد مالك المتجر' });
       return;
@@ -349,60 +420,50 @@ export const createStoreBranch = async (req: AuthRequest, res: Response): Promis
     const baseSlug = slugify(name);
     const slug = await generateUniqueStoreSlug(baseSlug);
     const subdomain = await generateUniqueStoreSlug(baseSlug);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const branchPasswordHash = await bcrypt.hash(password, 10);
+    const branchUser = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.trim(),
+        password: hashedPassword,
+        phone: phone || null,
+        role: 'owner',
+        isEmailVerified: true,
+      }
+    });
 
-    const { store, branchUser } = await prisma.$transaction(async (tx) => {
-      const createdStore = await tx.store.create({
-        data: {
-          name: name.trim(),
-          email: email.trim(),
-          phone: phone || null,
-          slug,
-          subdomain,
-          planId: currentStore.planId,
-          userId: ownerUserId,
-          isActive: true,
-          primaryColor: currentStore.primaryColor,
-          secondaryColor: currentStore.secondaryColor,
-          backgroundColor: currentStore.backgroundColor,
-          cardColor: currentStore.cardColor,
-          surfaceColor: currentStore.surfaceColor,
-          textColor: currentStore.textColor,
-          mutedColor: currentStore.mutedColor,
-          accentColor: currentStore.accentColor,
-          fontFamily: currentStore.fontFamily,
-        }
-      });
+    const branchStore = await prisma.store.create({
+      data: {
+        name: name.trim(),
+        slug,
+        subdomain,
+        email: email.trim(),
+        phone: phone || null,
+        userId: branchUser.id,
+        planId: currentStore.planId,
+        primaryColor: currentStore.primaryColor,
+        secondaryColor: currentStore.secondaryColor,
+        backgroundColor: currentStore.backgroundColor,
+        textColor: currentStore.textColor,
+        cardColor: currentStore.cardColor,
+        surfaceColor: currentStore.surfaceColor,
+        mutedColor: currentStore.mutedColor,
+        accentColor: currentStore.accentColor,
+        fontFamily: currentStore.fontFamily,
+        isActive: true
+      }
+    });
 
-      const createdUser = await tx.user.create({
-        data: {
-          name: name.trim(),
-          email: email.trim(),
-          password: branchPasswordHash,
-          phone: phone || null,
-          role: 'owner',
-          storeId: createdStore.id,
-          isEmailVerified: true,
-        }
-      });
-
-      return { store: createdStore, branchUser: createdUser };
+    await prisma.user.update({
+      where: { id: branchUser.id },
+      data: { storeId: branchStore.id }
     });
 
     res.status(201).json({
       success: true,
       message: 'تم إنشاء الفرع بنجاح',
-      data: {
-        ...store,
-        branchUser: {
-          id: branchUser.id,
-          name: branchUser.name,
-          email: branchUser.email,
-          role: branchUser.role,
-          storeId: branchUser.storeId,
-        }
-      }
+      data: branchStore
     });
   } catch (error) {
     if (error instanceof Error && (error as any)?.code === 'P2002') {
@@ -450,7 +511,6 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (address !== undefined) updateData.address = address;
     if (description !== undefined) updateData.description = description;
     
-    // ✅ جميع ألوان المتجر
     if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
     if (secondaryColor !== undefined) updateData.secondaryColor = secondaryColor;
     if (backgroundColor !== undefined) updateData.backgroundColor = backgroundColor;
@@ -868,7 +928,6 @@ export const updateInventory = async (req: AuthRequest, res: Response): Promise<
       data: { stock: newStock, isAvailable: newStock > 0 } 
     });
     
-    // تسجيل حركة المخزون
     if (newStock !== oldStock) {
       await prisma.inventoryMovement.create({
         data: {
@@ -1282,7 +1341,6 @@ export const verifyCustomDomain = async (req: AuthRequest, res: Response): Promi
       return;
     }
     
-    // تحديث الدومين كـ مفعل (في بيئة التطوير، نفعله مباشرة)
     const updatedStore = await prisma.store.update({
       where: { id: storeId },
       data: {
@@ -1630,7 +1688,6 @@ export const getPublicStore = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, error: 'المتجر غير موجود' });
     }
     
-    // ✅ إرجاع جميع حقول المتجر بما فيها الألوان
     res.json({ 
       success: true, 
       data: {
@@ -1651,7 +1708,6 @@ export const getPublicStore = async (req: Request, res: Response) => {
         tiktok: store.tiktok,
         latitude: store.latitude,
         longitude: store.longitude,
-        // ✅ جميع ألوان المتجر
         primaryColor: store.primaryColor,
         secondaryColor: store.secondaryColor,
         backgroundColor: store.backgroundColor,
@@ -1661,7 +1717,6 @@ export const getPublicStore = async (req: Request, res: Response) => {
         mutedColor: store.mutedColor,
         accentColor: store.accentColor,
         fontFamily: store.fontFamily,
-        // ✅ إعدادات أخرى
         deliverySettings: store.deliverySettings,
         paymentSettings: store.paymentSettings,
         notificationSettings: store.notificationSettings,
@@ -1671,7 +1726,6 @@ export const getPublicStore = async (req: Request, res: Response) => {
         isActive: store.isActive,
         createdAt: store.createdAt,
         updatedAt: store.updatedAt,
-        // ✅ الفئات والمنتجات
         categories: store.categories,
         products: store.products,
         plan: store.plan
@@ -1810,5 +1864,8 @@ export default {
   updateStoreStaff,
   toggleStoreStaffStatus,
   deleteStoreStaff,
-  updateStoreStaffPermissions
+  updateStoreStaffPermissions,
+  getAllBranchesProducts,
+  updateShowAllBranchesProducts,
+  createStoreBranch,
 };

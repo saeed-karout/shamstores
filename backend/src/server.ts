@@ -31,6 +31,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes';
 import { extractSubdomain } from './middleware/subdomain';
 import advertisementRoutes from './routes/advertisementRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
+import { startSchedulers } from './schedulers';
 
 dotenv.config();
 
@@ -398,6 +399,7 @@ const startServer = async () => {
     await seedPlans();
     await seedPlatformSettings();
 
+     startSchedulers();
     // تشغيل Socket.IO
     initializeSocket(httpServer);
 

@@ -391,6 +391,7 @@ export const SettingsPage: React.FC = () => {
     { id: 'hours', label: 'أوقات العمل', icon: IoTimer },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
     { id: 'seo', label: 'SEO & الدومين', icon: IoGlobe },
+     { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
 
   const getInput = (id: string) => ({
@@ -1268,6 +1269,129 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       )}
+
+
+      {activeTab === 'branches' && (
+  <div>
+    {/* معلومات الفرع الحالي */}
+    <div style={sectionCard}>
+      <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <IoRestaurant style={{ color: C.accent }} /> الفرع الحالي (الرئيسي)
+      </h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+        <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+          <div style={{ color: C.muted, fontSize: 12 }}>اسم الفرع</div>
+          <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{restaurant?.name || '-'}</div>
+          <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>{restaurant?.branchLabel || restaurant?.subdomain || restaurant?.slug || '-'}</div>
+        </div>
+        <div style={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+          <div style={{ color: C.muted, fontSize: 12 }}>الفروع المرتبطة</div>
+          <div style={{ color: C.text, fontWeight: 700, marginTop: 6 }}>{linkedBranches.length}</div>
+        </div>
+      </div>
+    </div>
+
+    {/* قائمة الفروع المرتبطة */}
+    <div style={sectionCard}>
+      <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <IoGitBranch style={{ color: C.accent }} /> الفروع المرتبطة بحسابك
+      </h2>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>يمكنك إنشاء فروع إضافية لنفس المطعم.</p>
+
+      {linkedBranches.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          {linkedBranches.map((branch: any) => (
+            <div key={branch.id} style={{ background: C.surf, border: `1px solid ${branch.isActive ? C.accent : C.border}`, borderRadius: 16, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h3 style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>{branch.name}</h3>
+                  <code style={{ color: C.accent, fontSize: 12, display: 'block', marginTop: 4 }}>{branch.linkLabel}</code>
+                </div>
+                <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: branch.isActive ? `${C.accent}20` : `${C.red}20`, color: branch.isActive ? C.accent : C.red }}>
+                  {branch.isActive ? '✅ نشط' : '⛔ غير نشط'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '32px', background: C.surf, borderRadius: 16 }}>
+          <p style={{ color: C.muted }}>لا توجد فروع إضافية. يمكنك إنشاء فرع جديد أدناه.</p>
+        </div>
+      )}
+    </div>
+
+    {/* إنشاء فرع جديد */}
+    <div style={sectionCard}>
+      <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <IoAdd style={{ color: C.accent }} /> إضافة فرع جديد
+      </h2>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <div>
+          <label style={labelStyle}>اسم الفرع *</label>
+          <input type="text" value={branchForm.name} onChange={(e) => setBranchForm({ ...branchForm, name: e.target.value })} style={inputStyle} placeholder="مثال: فرع الرياض" />
+        </div>
+        <div>
+          <label style={labelStyle}>البريد الإلكتروني *</label>
+          <input type="email" value={branchForm.email} onChange={(e) => setBranchForm({ ...branchForm, email: e.target.value })} style={inputStyle} placeholder="branch@example.com" />
+        </div>
+        <div>
+          <label style={labelStyle}>رقم الهاتف</label>
+          <input type="tel" value={branchForm.phone} onChange={(e) => setBranchForm({ ...branchForm, phone: e.target.value })} style={inputStyle} placeholder="05XXXXXXXX" />
+        </div>
+      </div>
+
+      <div style={{ background: `${C.accent}10`, borderRadius: 12, padding: 12, marginBottom: 16 }}>
+        <p style={{ color: C.muted, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <IoWarning size={16} style={{ color: C.accent }} />
+          سيتم إنشاء حساب دخول لهذا الفرع باستخدام البريد الإلكتروني وكلمة المرور. سيتم إنشاء كلمة مرور عشوائية وسيتم إرسالها إلى البريد الإلكتروني.
+        </p>
+      </div>
+
+      <button
+        onClick={handleCreateBranch}
+        disabled={creatingBranch}
+        style={{ ...saveBtn, width: '100%', justifyContent: 'center', opacity: creatingBranch ? 0.7 : 1, cursor: creatingBranch ? 'not-allowed' : 'pointer' }}
+      >
+        {creatingBranch ? <><div className="animate-spin" style={{ width: 16, height: 16, border: `2px solid ${C.bg}`, borderTopColor: 'transparent', borderRadius: '50%' }} /> جاري إنشاء الفرع...</> : <><IoAdd size={18} /> إنشاء فرع جديد</>}
+      </button>
+    </div>
+
+    {/* إعدادات عرض جميع أطباق الفروع */}
+    <div style={sectionCard}>
+      <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <IoGlobe style={{ color: C.accent }} /> عرض أطباق جميع الفروع
+      </h2>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>
+        عند تفعيل هذا الخيار، سيتم عرض أطباق جميع فروعك في الصفحة الرئيسية للمطعم (الفرع الرئيسي).
+      </p>
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+          <span style={{ color: C.text }}>تفعيل عرض جميع الأطباق</span>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="checkbox"
+              checked={restaurant?.showAllBranchesMenuItems || false}
+              onChange={async (e) => {
+                try {
+                  await api.patch(`/restaurants/branches/show-all-menu-items`, { showAllBranchesMenuItems: e.target.checked });
+                  await refresh();
+                  toast.success(e.target.checked ? 'تم تفعيل عرض أطباق جميع الفروع' : 'تم تعطيل عرض أطباق جميع الفروع');
+                } catch (error) {
+                  toast.error('فشل تحديث الإعداد');
+                }
+              }}
+              style={{ width: 44, height: 22, appearance: 'none', background: restaurant?.showAllBranchesMenuItems ? C.accent : C.muted, borderRadius: 22, cursor: 'pointer', transition: '0.2s' }}
+            />
+            <span style={{ position: 'absolute', top: 2, right: restaurant?.showAllBranchesMenuItems ? 24 : 2, width: 18, height: 18, background: '#fff', borderRadius: '50%', transition: '0.2s' }} />
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+)}
 
       <div style={sectionCard}>
         <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>

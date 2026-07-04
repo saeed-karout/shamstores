@@ -57,7 +57,9 @@ import {
   getPublicProducts,
   getPublicCategories,
   getPublicRelatedProducts,
-  createStoreBranch
+  createStoreBranch,
+  getAllBranchesProducts,
+  updateShowAllBranchesProducts
 } from '../controllers/storeController';
 
 const router = Router();
@@ -81,10 +83,12 @@ router.use('/orders', checkPlanFeature('online_orders'));
 router.use('/coupons', checkPlanFeature('coupons'));
 router.use('/drivers', checkPlanFeature('online_orders'));
 
+
+
 // ==================== ملف المتجر ====================
 router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
-router.post('/branches', createStoreBranch);
+
 
 // ==================== رفع الصور ====================
 router.post('/upload/logo', upload.single('logo'), uploadStoreLogo);
@@ -165,5 +169,11 @@ router.get('/settings/:storeId/domain/dns', getDnsSettings);
 router.post('/settings/:storeId/domain/verify', verifyCustomDomain);
 router.delete('/settings/:storeId/domain', removeCustomDomain);
 router.put('/settings/:storeId/subdomain', updateSubdomain);
+
+
+
+router.post('/branches', createStoreBranch);
+router.get('/branches/all-products', getAllBranchesProducts);
+router.patch('/branches/show-all-products', updateShowAllBranchesProducts);
 
 export default router;

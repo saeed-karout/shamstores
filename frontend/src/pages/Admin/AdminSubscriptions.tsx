@@ -23,24 +23,41 @@ const C = {
 
 const AdminSubscriptions: React.FC = () => {
   const { 
-    subscriptions, 
+    allSubscriptions, 
     expiringSubscriptions, 
     loading, 
     refreshing, 
-    fetchSubscriptions,
-    fetchExpiringSubscriptions,
+    refreshAll,
     sendReminders,
     checkExpired
   } = useSubscription();
 
   const [activeTab, setActiveTab] = useState<'all' | 'expiring'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // ✅ التأكد من أن subscriptions و expiringSubscriptions هي مصفوفات
-  const subscriptionsList = Array.isArray(subscriptions) ? subscriptions : [];
+  // ✅ التأكد من أن البيانات هي مصفوفات
+  const subscriptionsList = Array.isArray(allSubscriptions) ? allSubscriptions : [];
   const expiringList = Array.isArray(expiringSubscriptions) ? expiringSubscriptions : [];
 
+  // ✅ فلترة البيانات
+  const filteredSubscriptions = subscriptionsList.filter(sub => {
+    if (!searchTerm) return true;
+    const businessName = sub.business?.name || sub.businessId || '';
+    return businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           sub.planName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const filteredExpiring = expiringList.filter(sub => {
+    if (!searchTerm) return true;
+    const businessName = sub.business?.name || sub.businessId || '';
+    return businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           sub.planName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const displayedSubscriptions = activeTab === 'all' ? filteredSubscriptions : filteredExpiring;
+
   const handleRefresh = async () => {
-    await Promise.all([fetchSubscriptions(), fetchExpiringSubscriptions()]);
+    await refreshAll();
     toast.success('تم تحديث البيانات');
   };
 
@@ -57,9 +74,14 @@ const AdminSubscriptions: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  const getDaysRemaining = (endDate: string) => {
+    const now = new Date();
+    const end = new Date(endDate);
+    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  };
 
-  const displayedSubscriptions = activeTab === 'all' ? subscriptionsList : expiringList;
+  if (loading) return <Loader fullScreen />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
@@ -69,7 +91,7 @@ const AdminSubscriptions: React.FC = () => {
           <h1 style={{ color: C.text, fontSize: 22, fontWeight: 800, marginBottom: 4 }}>📋 إدارة الاشتراكات</h1>
           <p style={{ color: C.muted, fontSize: 13 }}>مراقبة وإدارة اشتراكات المطاعم والمتاجر</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
             <IoRefresh size={16} /> تحديث
           </Button>
@@ -119,36 +141,57 @@ const AdminSubscriptions: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: `1px solid ${C.border}`, paddingBottom: 12 }}>
-        <button
-          onClick={() => setActiveTab('all')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: 10,
-            border: 'none',
-            background: activeTab === 'all' ? C.accent : C.surf,
-            color: activeTab === 'all' ? C.bg : C.muted,
-            cursor: 'pointer',
-            fontWeight: activeTab === 'all' ? 700 : 400,
-          }}
-        >
-          جميع الاشتراكات ({subscriptionsList.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('expiring')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: 10,
-            border: 'none',
-            background: activeTab === 'expiring' ? C.accent : C.surf,
-            color: activeTab === 'expiring' ? C.bg : C.muted,
-            cursor: 'pointer',
-            fontWeight: activeTab === 'expiring' ? 700 : 400,
-          }}
-        >
-          تنتهي قريباً ({expiringList.length})
-        </button>
+      {/* Search & Tabs */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setActiveTab('all')}
+            style={{
+              padding: '8px 20px',
+              borderRadius: 10,
+              border: 'none',
+              background: activeTab === 'all' ? C.accent : C.surf,
+              color: activeTab === 'all' ? C.bg : C.muted,
+              cursor: 'pointer',
+              fontWeight: activeTab === 'all' ? 700 : 400,
+            }}
+          >
+            جميع الاشتراكات ({subscriptionsList.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('expiring')}
+            style={{
+              padding: '8px 20px',
+              borderRadius: 10,
+              border: 'none',
+              background: activeTab === 'expiring' ? C.accent : C.surf,
+              color: activeTab === 'expiring' ? C.bg : C.muted,
+              cursor: 'pointer',
+              fontWeight: activeTab === 'expiring' ? 700 : 400,
+            }}
+          >
+            تنتهي قريباً ({expiringList.length})
+          </button>
+        </div>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="بحث باسم النشاط أو الخطة..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              background: C.surf,
+              border: `1px solid ${C.border}`,
+              borderRadius: 10,
+              color: C.text,
+              padding: '8px 36px 8px 12px',
+              fontSize: 14,
+              outline: 'none',
+              width: 250,
+            }}
+          />
+          <IoSearch style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: C.muted }} />
+        </div>
       </div>
 
       {/* Subscriptions Table */}
@@ -156,7 +199,7 @@ const AdminSubscriptions: React.FC = () => {
         {displayedSubscriptions.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted }}>
             <IoDiamond size={48} style={{ color: C.border, marginBottom: 12 }} />
-            <p>لا توجد اشتراكات</p>
+            <p>{activeTab === 'all' ? 'لا توجد اشتراكات' : 'لا توجد اشتراكات تنتهي قريباً'}</p>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -166,49 +209,74 @@ const AdminSubscriptions: React.FC = () => {
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>النشاط التجاري</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>الخطة</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>المبلغ</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>المدة</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>تاريخ البدء</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>تاريخ الانتهاء</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>الأيام المتبقية</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>الحالة</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>التذكير</th>
                 </tr>
               </thead>
               <tbody>
-                {displayedSubscriptions.map((sub) => (
-                  <tr key={sub.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <IoBusiness size={16} color={sub.businessType === 'restaurant' ? C.blue : C.purple} />
-                        <span style={{ color: C.text }}>
-                          {(sub as any).business?.name || sub.businessId}
+                {displayedSubscriptions.map((sub) => {
+                  const daysRemaining = getDaysRemaining(sub.endDate);
+                  const isExpired = daysRemaining < 0;
+                  const isExpiring = daysRemaining >= 0 && daysRemaining <= 3;
+
+                  return (
+                    <tr key={sub.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <IoBusiness size={16} color={sub.businessType === 'restaurant' ? C.blue : C.purple} />
+                          <span style={{ color: C.text }}>
+                            {sub.business?.name || sub.businessId}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 11, color: C.muted }}>
+                          {sub.businessType === 'restaurant' ? '🍽️ مطعم' : '🛍️ متجر'}
+                          {sub.business && !sub.business.isActive && (
+                            <span style={{ color: C.red, marginLeft: 6 }}>(غير نشط)</span>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 600 }}>{sub.planName}</td>
+                      <td style={{ padding: '12px 16px', color: C.text }}>
+                        {sub.totalPaid} ر.س
+                        {sub.discount > 0 && (
+                          <div style={{ fontSize: 10, color: C.accent }}>خصم {sub.discount}%</div>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>{sub.months} شهر</td>
+                      <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>
+                        {new Date(sub.startDate).toLocaleDateString('ar-SA')}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ 
+                          color: isExpired ? C.red : isExpiring ? C.yellow : C.muted
+                        }}>
+                          {new Date(sub.endDate).toLocaleDateString('ar-SA')}
                         </span>
-                      </div>
-                      <div style={{ fontSize: 11, color: C.muted }}>
-                        {sub.businessType === 'restaurant' ? '🍽️ مطعم' : '🛍️ متجر'}
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 600 }}>{sub.planName}</td>
-                    <td style={{ padding: '12px 16px', color: C.text }}>{sub.totalPaid} ر.س</td>
-                    <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>
-                      {new Date(sub.startDate).toLocaleDateString('ar-SA')}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ 
-                        color: new Date(sub.endDate) < new Date() ? C.red : 
-                               new Date(sub.endDate) < new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) ? C.yellow : C.muted
-                      }}>
-                        {new Date(sub.endDate).toLocaleDateString('ar-SA')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>{getStatusBadge(sub.status)}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      {sub.reminderSent ? (
-                        <span style={{ color: C.accent, fontSize: 12 }}>✓ تم الإرسال</span>
-                      ) : (
-                        <span style={{ color: C.muted, fontSize: 12 }}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {isExpired ? (
+                          <span style={{ color: C.red, fontWeight: 600 }}>منتهي</span>
+                        ) : isExpiring ? (
+                          <span style={{ color: C.yellow, fontWeight: 600 }}>{daysRemaining} أيام</span>
+                        ) : (
+                          <span style={{ color: C.muted }}>{daysRemaining} يوم</span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>{getStatusBadge(sub.status)}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {sub.reminderSent ? (
+                          <span style={{ color: C.accent, fontSize: 12 }}>✓ تم الإرسال</span>
+                        ) : (
+                          <span style={{ color: C.muted, fontSize: 12 }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

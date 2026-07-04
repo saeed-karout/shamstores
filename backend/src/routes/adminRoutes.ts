@@ -91,7 +91,17 @@ import {
   // صلاحيات الموظفين
   updateRestaurantStaffPermissions,
   getRestaurantStaffPermissions,
-  updateStoreStaffPermissions as updateStoreStaffPermissionsController
+  updateStoreStaffPermissions as updateStoreStaffPermissionsController,
+  getAllProductsFromAllBranches,
+  toggleGlobalProducts,
+  getGlobalProductsSetting,
+
+
+  getAllBranches,
+  getBranchById,
+  toggleBranchStatus,
+  updateBranchPlan,
+  deleteBranch,
 } from '../controllers/adminController';
 
 import { 
@@ -156,6 +166,13 @@ const checkPlatformStaffPermission = (req: any, res: any, next: any, permission:
   
   return res.status(403).json({ success: false, error: 'لا تملك صلاحية الوصول' });
 };
+
+
+// أضف هذه المسارات
+router.get('/global-products', authorize(['super_admin']), getGlobalProductsSetting);
+router.post('/global-products', authorize(['super_admin']), toggleGlobalProducts);
+router.get('/restaurants/all-products', authorize(['super_admin']), getAllProductsFromAllBranches);
+router.get('/stores/all-products', authorize(['super_admin']), getAllProductsFromAllBranches);
 
 // ==================== مسارات السوبر أدمن وموظفي المنصة ====================
 router.use(authenticate);
@@ -319,4 +336,25 @@ router.get('/stores/:storeId/stats', authorize(['super_admin']), getStoreStats);
 // -------------------- إدارة صلاحيات موظفي المتاجر (سوبر أدمن) --------------------
 router.put('/stores/:storeId/staff/:staffId/permissions', authorize(['super_admin']), updateStoreStaffPermissionsController);
 
+
+
+// ==================== إدارة الفروع (Branches) ====================
+// جلب جميع الفروع
+router.get('/branches', (req, res, next) => {
+  checkPlatformStaffPermission(req, res, next, 'manage_restaurants');
+}, getAllBranches);
+
+// جلب فرع محدد
+router.get('/branches/:id', (req, res, next) => {
+  checkPlatformStaffPermission(req, res, next, 'manage_restaurants');
+}, getBranchById);
+
+// تحديث حالة الفرع (تفعيل/تعطيل)
+router.patch('/branches/:id/toggle', authorize(['super_admin']), toggleBranchStatus);
+
+// تحديث خطة الفرع
+router.patch('/branches/:id/plan', authorize(['super_admin']), updateBranchPlan);
+
+// حذف فرع
+router.delete('/branches/:id', authorize(['super_admin']), deleteBranch);
 export default router;

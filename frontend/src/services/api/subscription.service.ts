@@ -6,38 +6,115 @@ import { Subscription, CreateSubscriptionDto, SubscriptionWithBusiness } from '.
 class SubscriptionService {
   // ==================== مسارات المالك ====================
   
+  /**
+   * جلب اشتراكات المستخدم الحالي
+   */
   async getSubscriptions(): Promise<Subscription[]> {
-    const response = await apiClient.get('/subscriptions');
-    // ✅ التأكد من إرجاع مصفوفة
-    return response?.data || response || [];
+    try {
+      const response = await apiClient.get('/subscriptions');
+      // ✅ التأكد من إرجاع مصفوفة
+      const data = response?.data?.data || response?.data || response || [];
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error in getSubscriptions:', error);
+      return [];
+    }
   }
 
+  /**
+   * جلب الاشتراك الحالي النشط
+   */
   async getCurrentSubscription(): Promise<Subscription | null> {
-    const response = await apiClient.get('/subscriptions/current');
-    return response?.data || response || null;
+    try {
+      const response = await apiClient.get('/subscriptions/current');
+      const data = response?.data?.data || response?.data || response || null;
+      return data;
+    } catch (error) {
+      console.error('Error in getCurrentSubscription:', error);
+      return null;
+    }
   }
 
+  /**
+   * إنشاء اشتراك جديد
+   */
   async createSubscription(data: CreateSubscriptionDto): Promise<Subscription> {
-    return apiClient.post('/subscriptions', data);
+    try {
+      const response = await apiClient.post('/subscriptions', data);
+      return response?.data?.data || response?.data || response;
+    } catch (error) {
+      console.error('Error in createSubscription:', error);
+      throw error;
+    }
   }
 
+  /**
+   * إلغاء اشتراك
+   */
   async cancelSubscription(subscriptionId: string): Promise<Subscription> {
-    return apiClient.post(`/subscriptions/${subscriptionId}/cancel`);
+    try {
+      const response = await apiClient.post(`/subscriptions/${subscriptionId}/cancel`);
+      return response?.data?.data || response?.data || response;
+    } catch (error) {
+      console.error('Error in cancelSubscription:', error);
+      throw error;
+    }
   }
 
   // ==================== مسارات السوبر أدمن ====================
   
+  /**
+   * جلب جميع الاشتراكات (للسوبر أدمن)
+   */
+  async getAllSubscriptions(): Promise<SubscriptionWithBusiness[]> {
+    try {
+      const response = await apiClient.get('/subscriptions/admin/all');
+      const data = response?.data?.data || response?.data || response || [];
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error in getAllSubscriptions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * جلب الاشتراكات المنتهية قريباً (للسوبر أدمن)
+   */
   async getExpiringSubscriptions(): Promise<SubscriptionWithBusiness[]> {
-    const response = await apiClient.get('/subscriptions/admin/expiring');
-    return response?.data || response || [];
+    try {
+      const response = await apiClient.get('/subscriptions/admin/expiring');
+      const data = response?.data?.data || response?.data || response || [];
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('Error in getExpiringSubscriptions:', error);
+      return [];
+    }
   }
 
+  /**
+   * إرسال تذكيرات التجديد (للسوبر أدمن)
+   */
   async sendRenewalReminders(): Promise<{ sentCount: number; reminders: any[] }> {
-    return apiClient.post('/subscriptions/admin/send-reminders');
+    try {
+      const response = await apiClient.post('/subscriptions/admin/send-reminders');
+      return response?.data?.data || response?.data || { sentCount: 0, reminders: [] };
+    } catch (error) {
+      console.error('Error in sendRenewalReminders:', error);
+      return { sentCount: 0, reminders: [] };
+    }
   }
 
+  /**
+   * التحقق من الاشتراكات المنتهية (للسوبر أدمن)
+   */
   async checkExpiredSubscriptions(): Promise<{ expiredCount: number }> {
-    return apiClient.post('/subscriptions/admin/check-expired');
+    try {
+      const response = await apiClient.post('/subscriptions/admin/check-expired');
+      return response?.data?.data || response?.data || { expiredCount: 0 };
+    } catch (error) {
+      console.error('Error in checkExpiredSubscriptions:', error);
+      return { expiredCount: 0 };
+    }
   }
 }
 

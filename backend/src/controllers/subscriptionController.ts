@@ -457,6 +457,9 @@ export const sendRenewalReminders = async (
 
 // ==================== التحقق من الاشتراكات المنتهية (للسوبر أدمن) ====================
 
+// backend/src/controllers/subscriptionController.ts
+
+// تحديث دالة checkExpiredSubscriptions
 export const checkExpiredSubscriptions = async (
   req: AuthRequest,
   res: Response
@@ -472,7 +475,7 @@ export const checkExpiredSubscriptions = async (
 
     const now = new Date();
 
-    // الاشتراكات المنتهية
+    // جلب الاشتراكات النشطة التي انتهت
     const expiredSubscriptions = await prisma.subscription.findMany({
       where: {
         status: 'active',
@@ -512,6 +515,9 @@ export const checkExpiredSubscriptions = async (
       expiredCount++;
     }
 
+    // ✅ تحديث حالة الاشتراكات في قاعدة البيانات
+    // يمكننا أيضاً تحديث الاشتراكات التي انتهت ولكن حالتها expired بالفعل
+
     res.json({
       success: true,
       message: `تم إنهاء ${expiredCount} اشتراك منتهي`,
@@ -522,6 +528,58 @@ export const checkExpiredSubscriptions = async (
     res.status(500).json({ 
       success: false,
       error: 'حدث خطأ في التحقق من الاشتراكات' 
+    });
+  }
+};
+
+
+// backend/src/controllers/subscriptionController.ts
+
+// أضف هذه الدالة للحصول على جميع الاشتراكات (للسوبر أدمن)
+export const getAllSubscriptions = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (req.user?.role !== 'super_admin') {
+      res.status(403).json({ 
+        success: false,
+        error: 'غير مصرح' 
+      });
+      return;
+    }
+
+    // جلب جميع الاشتراكات
+    const subscriptions = await prisma.subscription.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // جلب أسماء المطاعم/المتاجر لكل اشتراك
+    const subscriptionsWithBusiness = await Promise.all(subscriptions.map(async (sub) => {
+      if (sub.businessType === 'restaurant') {
+        const restaurant = await prisma.restaurant.findUnique({
+          where: { id: sub.businessId },
+          select: { name: true, phone: true, email: true, isActive: true }
+        });
+        return { ...sub, business: restaurant };
+      } else {
+        const store = await prisma.store.findUnique({
+          where: { id: sub.businessId },
+          select: { name: true, phone: true, email: true, isActive: true }
+        });
+        return { ...sub, business: store };
+      }
+    }));
+
+    res.json({
+      success: true,
+      data: subscriptionsWithBusiness
+    });
+  } catch (error) {
+    console.error('Error getting all subscriptions:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'حدث خطأ في جلب الاشتراكات' 
     });
   }
 };

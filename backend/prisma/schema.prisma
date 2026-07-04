@@ -208,6 +208,7 @@ model Restaurant {
   tiktok         String?
   latitude       Float?
   longitude      Float?
+  showAllBranchesMenuItems Boolean  @default(false)
   primaryColor   String   @default("#3B82F6")
   secondaryColor String   @default("#10B981")
   backgroundColor String  @default("#082E24")
@@ -264,6 +265,7 @@ model Store {
   coverImage  String?
   latitude    Float?
   longitude   Float?
+  showAllBranchesProducts Boolean  @default(false)
   primaryColor   String   @default("#3B82F6")
   secondaryColor String   @default("#10B981")
   backgroundColor String  @default("#FFFFFF")
@@ -723,6 +725,10 @@ model Subscription {
   reminderSentAt   DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  // ✅ أضف هذه العلاقات
+  // restaurant       Restaurant? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  // store            Store?      @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([businessType, businessId])
   @@index([status])

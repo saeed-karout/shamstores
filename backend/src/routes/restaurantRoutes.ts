@@ -11,7 +11,10 @@ import {
   getStaff,
   addStaff,
   updateStaff,
-  deleteStaff
+  deleteStaff,
+  createRestaurantBranch,
+  getAllBranchesMenuItems,
+  updateShowAllBranchesMenuItems
 } from '../controllers/restaurantController';
 import { authenticate, authorizeOwner, authorizeAdmin } from '../middleware/auth';
 import { checkPlanFeature, requirePaidPlanForStaff } from '../middleware/checkPlan';
@@ -37,5 +40,13 @@ router.delete('/staff/:id', authenticate, authorizeOwner, requirePaidPlanForStaf
 
 // ==================== المسارات العامة ====================
 router.get('/:identifier', getRestaurantById);
+
+
+
+
+// ==================== مسارات الفروع ====================
+router.post('/branches', authenticate, createRestaurantBranch);
+router.get('/branches/all-menu-items', authenticate, getAllBranchesMenuItems);
+router.patch('/branches/show-all-menu-items', authenticate, updateShowAllBranchesMenuItems);
 
 export default router;

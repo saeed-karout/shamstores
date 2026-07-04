@@ -10,6 +10,60 @@ import { buildBranchSummary, getLinkedBranches } from '../services/businessBranc
 
 // ==================== دوال مساعدة ====================
 
+
+// إعدادات عرض جميع المنتجات
+let globalProductsEnabled = false;
+
+export const getGlobalProductsSetting = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    res.json({ success: true, data: { enabled: globalProductsEnabled } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'حدث خطأ' });
+  }
+};
+
+export const toggleGlobalProducts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { enabled } = req.body;
+    globalProductsEnabled = enabled;
+    res.json({ success: true, message: 'تم تحديث الإعداد', data: { enabled: globalProductsEnabled } });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'حدث خطأ' });
+  }
+};
+
+export const getAllProductsFromAllBranches = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const restaurants = await prisma.restaurant.findMany({ select: { id: true, name: true } });
+    const stores = await prisma.store.findMany({ select: { id: true, name: true } });
+    
+    const allProducts: any[] = [];
+    
+    for (const restaurant of restaurants) {
+      const products = await prisma.menuItem.findMany({
+        where: { restaurantId: restaurant.id, isAvailable: true },
+        select: { id: true, name: true, price: true, image: true }
+      });
+      allProducts.push(...products.map(p => ({ ...p, branchName: restaurant.name, branchType: 'restaurant' })));
+    }
+    
+    for (const store of stores) {
+      const products = await prisma.product.findMany({
+        where: { storeId: store.id, isAvailable: true },
+        select: { id: true, name: true, price: true, imageUrl: true }
+      });
+      allProducts.push(...products.map(p => ({ ...p, branchName: store.name, branchType: 'store', image: p.imageUrl })));
+    }
+    
+    res.json({ success: true, data: allProducts });
+  } catch (error) {
+    console.error('Error fetching all products:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب المنتجات' });
+  }
+};
+
+
+
 const generateUniqueStoreSubdomain = async (baseSubdomain: string, excludeId?: string): Promise<string> => {
   let subdomain = baseSubdomain
     .toLowerCase()
@@ -2535,6 +2589,314 @@ export const deletePlatformStaff = async (
     res.status(500).json({ 
       success: false, 
       error: 'حدث خطأ في حذف موظف المنصة' 
+    });
+  }
+};
+
+
+// backend/src/controllers/adminController.ts
+
+// ==================== إدارة الفروع (Branches) ====================
+
+/**
+ * جلب جميع الفروع (المطاعم)
+ */
+export const getAllBranches = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const branches = await prisma.restaurant.findMany({
+      include: {
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            maxRestaurants: true,
+            maxUsers: true,
+            maxMenuItems: true,
+          }
+        },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+          }
+        },
+        _count: {
+          select: {
+            menuItems: true,
+            orders: true,
+            tables: true,
+            users: true,
+            categories: true,
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: branches,
+      count: branches.length
+    });
+  } catch (error) {
+    console.error('Error fetching branches:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في جلب الفروع'
+    });
+  }
+};
+
+/**
+ * جلب فرع محدد بالمعرف
+ */
+export const getBranchById = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const branch = await prisma.restaurant.findUnique({
+      where: { id },
+      include: {
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            maxRestaurants: true,
+            maxUsers: true,
+            maxMenuItems: true,
+          }
+        },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+          }
+        },
+        _count: {
+          select: {
+            menuItems: true,
+            orders: true,
+            tables: true,
+            users: true,
+            categories: true,
+          }
+        }
+      }
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        success: false,
+        error: 'الفرع غير موجود'
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: branch
+    });
+  } catch (error) {
+    console.error('Error fetching branch:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في جلب بيانات الفرع'
+    });
+  }
+};
+
+/**
+ * تحديث حالة الفرع (تفعيل/تعطيل)
+ */
+export const toggleBranchStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== 'boolean') {
+      res.status(400).json({
+        success: false,
+        error: 'يجب إرسال قيمة isActive من نوع boolean'
+      });
+      return;
+    }
+
+    const branch = await prisma.restaurant.findUnique({
+      where: { id }
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        success: false,
+        error: 'الفرع غير موجود'
+      });
+      return;
+    }
+
+    const updatedBranch = await prisma.restaurant.update({
+      where: { id },
+      data: { isActive }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `تم ${isActive ? 'تفعيل' : 'تعطيل'} الفرع بنجاح`,
+      data: updatedBranch
+    });
+  } catch (error) {
+    console.error('Error toggling branch status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في تحديث حالة الفرع'
+    });
+  }
+};
+
+/**
+ * تحديث خطة الفرع
+ */
+export const updateBranchPlan = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { planId } = req.body;
+
+    if (!planId) {
+      res.status(400).json({
+        success: false,
+        error: 'معرف الخطة مطلوب'
+      });
+      return;
+    }
+
+    // التحقق من وجود الفرع
+    const branch = await prisma.restaurant.findUnique({
+      where: { id }
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        success: false,
+        error: 'الفرع غير موجود'
+      });
+      return;
+    }
+
+    // التحقق من وجود الخطة
+    const plan = await prisma.plan.findUnique({
+      where: { id: planId }
+    });
+
+    if (!plan) {
+      res.status(404).json({
+        success: false,
+        error: 'الخطة غير موجودة'
+      });
+      return;
+    }
+
+    const updatedBranch = await prisma.restaurant.update({
+      where: { id },
+      data: { planId },
+      include: {
+        plan: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            maxRestaurants: true,
+          }
+        }
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'تم تحديث خطة الفرع بنجاح',
+      data: updatedBranch
+    });
+  } catch (error) {
+    console.error('Error updating branch plan:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في تحديث خطة الفرع'
+    });
+  }
+};
+
+/**
+ * حذف فرع
+ */
+export const deleteBranch = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // التحقق من وجود الفرع
+    const branch = await prisma.restaurant.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            menuItems: true,
+            orders: true,
+            tables: true,
+            users: true,
+          }
+        }
+      }
+    });
+
+    if (!branch) {
+      res.status(404).json({
+        success: false,
+        error: 'الفرع غير موجود'
+      });
+      return;
+    }
+
+    // التحقق من وجود بيانات مرتبطة
+    const hasRelatedData = branch._count.menuItems > 0 || 
+                          branch._count.orders > 0 || 
+                          branch._count.tables > 0 ||
+                          branch._count.users > 0;
+
+    if (hasRelatedData) {
+      res.status(400).json({
+        success: false,
+        error: 'لا يمكن حذف الفرع لأنه يحتوي على بيانات مرتبطة',
+        data: {
+          menuItems: branch._count.menuItems,
+          orders: branch._count.orders,
+          tables: branch._count.tables,
+          users: branch._count.users,
+        }
+      });
+      return;
+    }
+
+    // حذف الفرع
+    await prisma.restaurant.delete({
+      where: { id }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'تم حذف الفرع بنجاح'
+    });
+  } catch (error) {
+    console.error('Error deleting branch:', error);
+    res.status(500).json({
+      success: false,
+      error: 'حدث خطأ في حذف الفرع'
     });
   }
 };
