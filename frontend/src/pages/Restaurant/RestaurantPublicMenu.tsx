@@ -1,32 +1,48 @@
-// src/pages/RestaurantPublicMenu.tsx
+// frontend/src/pages/Restaurant/RestaurantPublicMenu.tsx
+//
+// واجهة المطعم العامة — مبنية على مكونات storefront المشتركة.
+// المبادئ: الجوال أولاً، ألوان التاجر عبر متغيرات CSS، والطلب كضيف بلا تسجيل دخول.
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
-  IoRestaurant, IoCart, IoSearch, IoFilter, IoChevronDown, IoChevronUp,
-  IoTime, IoFlame, IoPerson, IoLogOut, IoCall, IoLogoWhatsapp, IoArrowUp,
-  IoHeart, IoHeartOutline, IoClose, IoMenu, IoGrid, IoList,
+  IoSearchOutline,
+  IoClose,
+  IoSwapVerticalOutline,
+  IoPersonCircleOutline,
+  IoReceiptOutline,
+  IoCheckmark
 } from 'react-icons/io5';
+
 import PublicAdvertisements from '@/components/public/PublicAdvertisements';
 import PublicOffers from '@/components/public/PublicOffers';
-
-import Loader from '@/components/common/Loader';
-import MenuItemCard from '@/components/MenuItemCard';
-import CartModal from '@/components/CartModal';
+import PublicMarketingSections from '@/components/public/PublicMarketingSections';
+import PublicFooter from '@/components/public/PublicFooter';
 import OrderTrackingModal from '@/components/OrderTrackingModal';
+
+import StorefrontLayout from '@/components/storefront/StorefrontLayout';
+import StickyCategoryNav from '@/components/storefront/StickyCategoryNav';
+import MenuItemListCard, { StorefrontMenuItem } from '@/components/storefront/MenuItemListCard';
+import ItemOptionsSheet, { SelectedOptions } from '@/components/storefront/ItemOptionsSheet';
+import CartSheet, { StorefrontOrderType, cartLineKey } from '@/components/storefront/CartSheet';
+import BottomCartBar from '@/components/storefront/BottomCartBar';
+import BottomSheet from '@/components/storefront/BottomSheet';
+import StorefrontSkeleton from '@/components/storefront/StorefrontSkeleton';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { useFavorites } from '@/hooks/useFavorites';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { openWhatsApp } from '@/utils/helpers';
-import PublicMarketingSections, { MarketingData } from '@/components/public/PublicMarketingSections';
-import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
-import { useTheme } from '@/context/ThemeContext'; // ✅ استيراد useTheme
-import PublicFooter from '@/components/public/PublicFooter';
+import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
+import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import type { CartItem } from '@/services/types';
+
+// ==================== الأنواع ====================
 
 interface Category {
   id: string;
@@ -34,26 +50,8 @@ interface Category {
   nameEn?: string;
   description?: string;
   image?: string;
-  menuItems?: MenuItem[];
-}
-
-interface MenuItem {
-  id: string;
-  name: string;
-  nameEn?: string;
-  description?: string;
-  descriptionEn?: string;
-  price: number;
-  discountedPrice?: number;
-  image?: string;
-  categoryId?: string;
-  isAvailable: boolean;
-  isPopular?: boolean;
-  isNew?: boolean;
-  preparationTime?: number;
-  calories?: number;
-  sizes?: { name: string; price: number }[];
-  addons?: { name: string; price: number }[];
+  position?: number;
+  menuItems?: StorefrontMenuItem[];
 }
 
 interface RestaurantPublicMenuProps {
@@ -70,6 +68,19 @@ interface RestaurantPublicMenuProps {
   businessSecondaryColor?: string;
 }
 
+type SortKey = 'popular' | 'price-low' | 'price-high' | 'newest';
+
+const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: 'popular', label: 'الأكثر طلباً' },
+  { key: 'price-low', label: 'السعر: من الأقل' },
+  { key: 'price-high', label: 'السعر: من الأعلى' },
+  { key: 'newest', label: 'الأحدث' }
+];
+
+const MINI_HEADER_OFFSET = 56;
+
+// ==================== المكوّن ====================
+
 const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   businessId: propBusinessId,
   businessName: propBusinessName,
@@ -78,169 +89,336 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   businessCoverImage: propBusinessCoverImage,
   businessDescription: propBusinessDescription,
   businessPhone: propBusinessPhone,
-  businessWhatsapp: propBusinessWhatsapp,
-  businessPrimaryColor: propBusinessPrimaryColor,
-  businessSecondaryColor: propBusinessSecondaryColor,
+  businessWhatsapp: propBusinessWhatsapp
 }) => {
   const { slug: urlSlug, tableId } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartSubtotal, getCartCount } = useCart();
-  const { favorites, toggleFavorite, getFavoritesCount } = useFavorites();
-  const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
-  const { setThemeColors } = useTheme(); // ✅ استخدام setThemeColors لتحديث الألوان
 
-  // State
-  const [data, setData] = useState<{ restaurant: any; categories: Category[]; marketing?: MarketingData } | null>(null);
+  const { user, isAuthenticated, logout } = useAuth();
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart();
+  const { favorites, toggleFavorite } = useFavorites();
+
+  // ---------- الحالة ----------
+  const [restaurant, setRestaurant] = useState<any | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<'popular' | 'price-low' | 'price-high' | 'newest'>('popular');
-  const [showCartModal, setShowCartModal] = useState(false);
-  const [showOrderTracking, setShowOrderTracking] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Order State
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', notes: '' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('popular');
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+
+  const [optionsItem, setOptionsItem] = useState<StorefrontMenuItem | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+
+  const [orderType, setOrderType] = useState<StorefrontOrderType>(tableId ? 'dine_in' : 'takeaway');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [address, setAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [showOrderTracking, setShowOrderTracking] = useState(false);
   const [myOrders, setMyOrders] = useState<any[]>([]);
   const [trackingOrder, setTrackingOrder] = useState<any>(null);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
-  const categoriesRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
   const currentSlug = propBusinessSlug || urlSlug || getCurrentSubdomain();
-  const [identifier, setIdentifier] = useState(currentSlug);
-  const [branches, setBranches] = useState<any[]>([]);
+  const [identifier, setIdentifier] = useState<string | null | undefined>(currentSlug);
 
-  // Effects
+  const currency = restaurant?.currency || DEFAULT_CURRENCY;
+
+  // ---------- تحميل البيانات ----------
   useEffect(() => {
-    const handleScroll = () => setShowScrollTop(window.scrollY > 400);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    let cancelled = false;
 
+    const load = async () => {
+      const idToUse = identifier || currentSlug;
+      if (!idToUse) {
+        setLoading(false);
+        setLoadError('لا يوجد معرّف للمطعم');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setLoadError(null);
+
+        const response: any = await api.get(`/public/${encodeURIComponent(idToUse)}`);
+        const business = response?.data || response;
+
+        if (cancelled) return;
+
+        if (!business?.id) throw new Error('بيانات غير صالحة');
+
+        setRestaurant({
+          ...business,
+          name: business.name || propBusinessName,
+          logo: business.logo || propBusinessLogo,
+          coverImage: business.coverImage || propBusinessCoverImage,
+          description: business.description || propBusinessDescription,
+          phone: business.phone || propBusinessPhone,
+          whatsapp: business.whatsapp || propBusinessWhatsapp,
+          branchLabel: business.branchLabel || business.subdomain || business.slug
+        });
+
+        // ربط الأصناف بأقسامها: الخادم يُرجعها في مصفوفتين منفصلتين
+        const rawCategories: Category[] = business.categories || [];
+        const items: StorefrontMenuItem[] = business.menuItems || [];
+
+        const grouped = rawCategories.map((category) => ({
+          ...category,
+          menuItems: items.filter((item: any) => item.categoryId === category.id)
+        }));
+
+        const uncategorized = items.filter(
+          (item: any) => !item.categoryId || !rawCategories.some((c) => c.id === item.categoryId)
+        );
+        if (uncategorized.length > 0) {
+          grouped.push({ id: '__other__', name: 'أصناف أخرى', menuItems: uncategorized });
+        }
+
+        setCategories(grouped.filter((c) => (c.menuItems?.length || 0) > 0));
+        setBranches(business.linkedBranches || []);
+        setIdentifier(business.slug || business.subdomain || idToUse);
+      } catch (error: any) {
+        if (cancelled) return;
+        console.error('Error fetching restaurant data:', error);
+        setLoadError(
+          error?.response?.status === 404
+            ? 'هذا المطعم غير موجود أو تم إيقافه'
+            : 'تعذّر تحميل بيانات المطعم'
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identifier]);
+
+  // ---------- تطبيق ألوان التاجر ----------
   useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [showSearch]);
+    if (!restaurant) return;
+    return applyStorefrontTheme(restaurant);
+  }, [restaurant]);
 
+  // ---------- تعبئة بيانات المستخدم إن كان مسجلاً (اختياري) ----------
   useEffect(() => {
     if (isAuthenticated && user) {
-      fetchMyOrders();
-      setCustomerInfo(prev => ({ ...prev, name: user.name || '', phone: user.phone || '' }));
+      setCustomerName((prev) => prev || user.name || '');
+      setCustomerPhone((prev) => prev || (user as any).phone || '');
     }
   }, [isAuthenticated, user]);
 
   useEffect(() => {
-    // fetch when identifier (slug/subdomain) changes
-    fetchRestaurantData(identifier);
-  }, [identifier]);
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
 
-  // API Calls
-  const fetchRestaurantData = async (ident?: string) => {
+  // ---------- الأصناف المعروضة ----------
+  const allItems = useMemo(
+    () => categories.flatMap((category) => category.menuItems || []),
+    [categories]
+  );
+
+  const isSearching = searchQuery.trim().length > 0;
+
+  const searchResults = useMemo(() => {
+    if (!isSearching) return [];
+    const query = searchQuery.trim().toLowerCase();
+    return allItems.filter(
+      (item) =>
+        item.name?.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query)
+    );
+  }, [allItems, searchQuery, isSearching]);
+
+  const sortItems = useCallback(
+    (items: StorefrontMenuItem[]): StorefrontMenuItem[] => {
+      const priceOf = (item: StorefrontMenuItem) =>
+        item.discountedPrice && item.discountedPrice > 0 ? item.discountedPrice : item.price;
+
+      const sorted = [...items];
+      switch (sortBy) {
+        case 'price-low':
+          return sorted.sort((a, b) => priceOf(a) - priceOf(b));
+        case 'price-high':
+          return sorted.sort((a, b) => priceOf(b) - priceOf(a));
+        case 'newest':
+          return sorted.sort((a, b) => Number(!!b.isNew) - Number(!!a.isNew));
+        case 'popular':
+        default:
+          return sorted.sort((a, b) => Number(!!b.isPopular) - Number(!!a.isPopular));
+      }
+    },
+    [sortBy]
+  );
+
+  const navCategories = useMemo(
+    () =>
+      categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        count: category.menuItems?.length || 0
+      })),
+    [categories]
+  );
+
+  // ---------- السلة ----------
+  const cartCount = getCartCount();
+
+  const cartTotal = useMemo(
+    () => cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0),
+    [cart]
+  );
+
+  /** الكمية الإجمالية لصنف في السلة عبر كل صيَغه */
+  const quantityByItemId = useMemo(() => {
+    const map = new Map<string, number>();
+    cart.forEach((item) => {
+      map.set(item.id, (map.get(item.id) || 0) + (Number(item.quantity) || 0));
+    });
+    return map;
+  }, [cart]);
+
+  const hasOptions = (item: StorefrontMenuItem) =>
+    (item.sizes?.length || 0) > 0 || (item.addons?.length || 0) > 0;
+
+  const handleAdd = (item: StorefrontMenuItem) => {
+    if (hasOptions(item)) {
+      setOptionsItem(item);
+      setOptionsOpen(true);
+      return;
+    }
+
+    const price = item.discountedPrice && item.discountedPrice > 0 ? item.discountedPrice : item.price;
+    addToCart({
+      id: item.id,
+      name: item.name,
+      originalPrice: Number(item.price) || 0,
+      price: Number(price) || 0,
+      quantity: 1,
+      image: item.image,
+      notes: ''
+    });
+  };
+
+  const handleConfirmOptions = (item: StorefrontMenuItem, options: SelectedOptions) => {
+    addToCart({
+      id: item.id,
+      name: item.name,
+      originalPrice: Number(item.price) || 0,
+      price: options.unitPrice,
+      quantity: options.quantity,
+      image: item.image,
+      notes: options.notes,
+      size: options.size?.name,
+      addons: options.addons.map((a) => a.name)
+    });
+    setOptionsOpen(false);
+    setOptionsItem(null);
+  };
+
+  /** تعديل كمية صنف بلا خيارات مباشرة من البطاقة */
+  const handleCardQuantityChange = (item: StorefrontMenuItem, next: number) => {
+    const line = cart.find((c) => c.id === item.id && !c.size);
+    if (!line) return;
+    if (next < 1) removeFromCart(item.id, line.size);
+    else updateQuantity(item.id, next, line.size);
+  };
+
+  const handleCartQuantityChange = (item: CartItem, next: number) => {
+    if (next < 1) removeFromCart(item.id, item.size);
+    else updateQuantity(item.id, next, item.size);
+  };
+
+  // ---------- إرسال الطلب ----------
+  const submitOrder = async () => {
+    if (cart.length === 0) {
+      toast.error('السلة فارغة');
+      return;
+    }
+
+    const isDineInAtTable = orderType === 'dine_in' && !!tableId;
+    if (!isDineInAtTable && (!customerName.trim() || !customerPhone.trim())) {
+      toast.error('الاسم ورقم الهاتف مطلوبان');
+      return;
+    }
+    if (orderType === 'delivery' && !address.trim()) {
+      toast.error('عنوان التوصيل مطلوب');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      setLoading(true);
-      
-      const idToUse = ident || identifier || currentSlug;
-      if (!idToUse) {
-        throw new Error('No business identifier found');
-      }
+      const subtotal = cartTotal;
 
-      console.log('🔍 Fetching restaurant data for identifier:', idToUse);
-      const response: any = await api.get(`/public/${idToUse}`);
-      console.log('📦 Restaurant data response:', response);
-
-      const businessData = response?.data || response;
-      
-      // ✅ تحديث ألوان ThemeProvider ديناميكياً
-      const restaurantColors = {
-        primaryColor: businessData.primaryColor || propBusinessPrimaryColor || '#3B82F6',
-        secondaryColor: businessData.secondaryColor || propBusinessSecondaryColor || '#10B981',
-        backgroundColor: businessData.backgroundColor || '#082E24',
-        cardBgColor: businessData.cardColor || '#112E23',
-        surfaceColor: businessData.surfaceColor || '#0F3D31',
-        textColor: businessData.textColor || '#E8F5E9',
-        mutedColor: businessData.mutedColor || '#9DC4AC',
-        accentColor: businessData.accentColor || '#C8E235',
-        fontFamily: businessData.fontFamily || 'Cairo, sans-serif',
+      // الطلب كضيف — لا نطلب تسجيل دخول. الواجهة الخلفية تقبل POST /api/orders علناً.
+      const orderData = {
+        restaurantId: restaurant?.id,
+        tableId: tableId || null,
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        customerAddress: orderType === 'delivery' ? address.trim() : undefined,
+        notes: orderNotes.trim() || undefined,
+        items: cart.map((item) => ({
+          menuItemId: item.id,
+          quantity: item.quantity,
+          price: item.originalPrice,
+          finalPrice: item.price,
+          size: item.size,
+          addons: item.addons,
+          notes: item.notes
+        })),
+        subtotal,
+        total: subtotal,
+        paymentMethod: 'cash',
+        orderType
       };
-      
-      setThemeColors(restaurantColors);
-      
-      setData({
-        restaurant: {
-          id: businessData.id || propBusinessId,
-          name: businessData.name || propBusinessName,
-          logo: businessData.logo || propBusinessLogo,
-          coverImage: businessData.coverImage || propBusinessCoverImage,
-          description: businessData.description || propBusinessDescription,
-          phone: businessData.phone || propBusinessPhone,
-          whatsapp: businessData.whatsapp || propBusinessWhatsapp,
-            branchLabel: businessData.branchLabel || businessData.subdomain || businessData.slug,
-          primaryColor: businessData.primaryColor || propBusinessPrimaryColor || '#3B82F6',
-          secondaryColor: businessData.secondaryColor || propBusinessSecondaryColor || '#10B981',
-          backgroundColor: businessData.backgroundColor || '#082E24',
-          cardColor: businessData.cardColor || '#112E23',
-          surfaceColor: businessData.surfaceColor || '#0F3D31',
-          textColor: businessData.textColor || '#E8F5E9',
-          mutedColor: businessData.mutedColor || '#9DC4AC',
-          accentColor: businessData.accentColor || '#C8E235',
-          fontFamily: businessData.fontFamily || 'Cairo',
-        },
-        categories: businessData.categories || [],
-        marketing: businessData.marketing || undefined
-      });
 
-      // linked branches (if any)
-      const linked = businessData.linkedBranches || [];
-      setBranches(linked);
+      await api.post('/orders', orderData);
 
-      // set active identifier if different
-      setIdentifier(businessData.slug || businessData.subdomain || idToUse);
+      toast.success('تم إرسال طلبك بنجاح 🎉');
+      clearCart();
+      setCartOpen(false);
+      setOrderNotes('');
 
-      const primary = businessData.primaryColor || propBusinessPrimaryColor;
-      if (primary) {
-        document.documentElement.style.setProperty('--primary-color', primary);
+      if (isAuthenticated) fetchMyOrders();
+
+      if (restaurant?.whatsapp) {
+        const lines = [
+          '🆕 طلب جديد',
+          `🏪 ${restaurant.name}`,
+          customerName ? `👤 ${customerName}` : '',
+          customerPhone ? `📞 ${customerPhone}` : '',
+          tableId ? `🪑 طاولة ${tableId}` : '',
+          '',
+          ...cart.map(
+            (item) =>
+              `• ${item.name}${item.size ? ` (${item.size})` : ''} × ${item.quantity} — ${formatPrice(
+                item.price * item.quantity,
+                currency
+              )}`
+          ),
+          '',
+          `💰 الإجمالي: ${formatPrice(subtotal, currency)}`
+        ].filter(Boolean);
+        openWhatsApp(restaurant.whatsapp, lines.join('\n'));
       }
-      const secondary = businessData.secondaryColor || propBusinessSecondaryColor;
-      if (secondary) {
-        document.documentElement.style.setProperty('--secondary-color', secondary);
-      }
-    } catch (error) {
-      console.error('Error fetching restaurant data:', error);
-      
-      setData({
-        restaurant: {
-          id: propBusinessId,
-          name: propBusinessName || 'المطعم',
-          logo: propBusinessLogo,
-          coverImage: propBusinessCoverImage,
-          description: propBusinessDescription,
-          phone: propBusinessPhone,
-          whatsapp: propBusinessWhatsapp,
-            branchLabel: propBusinessSlug || getCurrentSubdomain() || 'الفرع الحالي',
-          primaryColor: propBusinessPrimaryColor || '#3B82F6',
-          secondaryColor: propBusinessSecondaryColor || '#10B981',
-          backgroundColor: '#082E24',
-          cardColor: '#112E23',
-          surfaceColor: '#0F3D31',
-          textColor: '#E8F5E9',
-          mutedColor: '#9DC4AC',
-          accentColor: '#C8E235',
-          fontFamily: 'Cairo',
-        },
-        categories: [],
-        marketing: undefined
-      });
-      toast.error('فشل تحميل البيانات، يتم عرض بيانات افتراضية');
+    } catch (error: any) {
+      console.error('Error submitting order:', error);
+      toast.error(error?.response?.data?.error || 'تعذّر إرسال الطلب، حاول مجدداً');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -248,665 +426,556 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     if (!isAuthenticated) return;
     setLoadingOrders(true);
     try {
-      const ordersResponse: any = await api.get('/orders/my-orders');
-      const orders = ordersResponse?.data || ordersResponse || [];
+      const response: any = await api.get('/orders/my-orders');
+      const orders = response?.data || response || [];
       setMyOrders(Array.isArray(orders) ? orders : []);
-    } catch (error) {
-      console.error('Error fetching my orders:', error);
+    } catch {
+      /* غير حرج */
     } finally {
       setLoadingOrders(false);
     }
   };
 
-  // Filter and Sort Items
-  const getFilteredItems = useCallback(() => {
-    if (!data) return [];
-    let items: MenuItem[] = [];
+  // ---------- شاشات الحالة ----------
+  if (loading) return <StorefrontSkeleton />;
 
-    data.categories.forEach(cat => {
-      if (selectedCategory === 'all' || cat.id === selectedCategory) {
-        items = [...items, ...(cat.menuItems || [])];
-      }
-    });
+  if (loadError || !restaurant) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: sf.bg,
+          color: sf.text,
+          padding: 24,
+          textAlign: 'center',
+          fontFamily: sf.font
+        }}
+        dir="rtl"
+      >
+        <div style={{ maxWidth: 380 }}>
+          <div style={{ fontSize: 52, marginBottom: 14 }}>🍽️</div>
+          <h1 style={{ fontSize: 19, fontWeight: 800, marginBottom: 8 }}>{loadError}</h1>
+          <p style={{ color: sf.muted, fontSize: 13.5, lineHeight: 1.9 }}>
+            تأكد من صحة الرابط أو تواصل مع المطعم.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-    if (searchQuery) {
-      items = items.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.nameEn?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+  const displayCategories = isSearching ? [] : categories;
 
-    items = items.filter(item => item.isAvailable !== false);
-
-    switch (sortBy) {
-      case 'popular':
-        items.sort((a, b) => (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0));
-        break;
-      case 'price-low':
-        items.sort((a, b) => (a.discountedPrice || a.price) - (b.discountedPrice || b.price));
-        break;
-      case 'price-high':
-        items.sort((a, b) => (b.discountedPrice || b.price) - (a.discountedPrice || a.price));
-        break;
-      case 'newest':
-        items.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-        break;
-    }
-
-    return items;
-  }, [data, selectedCategory, searchQuery, sortBy]);
-
-  const handleAddToCart = (item: MenuItem) => {
-    addToCart({
-      id: item.id,
-      name: item.name,
-      originalPrice: Number(item.price),
-      price: item.discountedPrice ? Number(item.discountedPrice) : Number(item.price),
-      quantity: 1,
-      image: item.image,
-      notes: '',
-    });
-    toast.success('تمت الإضافة إلى السلة');
-  };
-
-  const submitOrder = async () => {
-    if (cart.length === 0) {
-      toast.error('السلة فارغة');
-      return;
-    }
-
-    if (!isAuthenticated || !user) {
-      localStorage.setItem('redirectAfterLogin', window.location.pathname);
-      navigate('/user/login');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const subtotal = getCartSubtotal();
-      const orderData = {
-        tableId: tableId || null,
-        customerName: customerInfo.name || user.name,
-        customerPhone: customerInfo.phone || user.phone,
-        notes: customerInfo.notes,
-        items: cart.map(item => ({
-          menuItemId: item.id,
-          quantity: item.quantity,
-          price: item.originalPrice,
-          finalPrice: item.price,
-          notes: item.notes,
-        })),
-        subtotal,
-        total: subtotal,
-        paymentMethod: 'cash',
-        orderType: tableId ? 'dine_in' : 'takeaway',
-      };
-
-      await api.post('/orders', orderData);
-      toast.success('تم إرسال الطلب بنجاح');
-      clearCart();
-      setShowCartModal(false);
-      setCustomerInfo(prev => ({ ...prev, notes: '' }));
-      fetchMyOrders();
-
-      if (data?.restaurant.whatsapp) {
-        const message = `🆕 طلب جديد\n👤 ${customerInfo.name || user.name}\n📞 ${customerInfo.phone || user.phone}\n💰 ${subtotal} ر.س`;
-        openWhatsApp(data.restaurant.whatsapp, message);
-      }
-    } catch (error: any) {
-      console.error('Error submitting order:', error);
-      toast.error(error.response?.data?.error || 'فشل إرسال الطلب');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const filteredItems = getFilteredItems();
-  const categories = data?.categories || [];
-  const restaurant = data?.restaurant || {};
-
-  // ✅ إنشاء ألوان ديناميكية من بيانات المطعم
-  const dynamicColors = {
-    bg: restaurant.backgroundColor || '#082E24',
-    card: restaurant.cardColor || '#112E23',
-    surf: restaurant.surfaceColor || '#0F3D31',
-    primary: restaurant.primaryColor || '#C8E235',
-    secondary: restaurant.secondaryColor || '#10B981',
-    text: restaurant.textColor || '#E8F5E9',
-    muted: restaurant.mutedColor || '#9DC4AC',
-    accent: restaurant.accentColor || '#C8E235',
-    red: '#FF6B6B',
-    blue: '#60A5FA',
-    purple: '#A78BFA',
-    orange: '#FB923C',
-    border: `rgba(200,226,53,0.15)`,
-  };
-
-  const primaryColor = restaurant.primaryColor || dynamicColors.primary;
-
-  // دمج حالة التحميل
-  if (loading || authLoading || planLoading) return <Loader fullScreen />;
+  // ---------- إجراءات الرأس المصغّر ----------
+  const headerActions = (
+    <>
+      <button
+        type="button"
+        onClick={() => setSearchOpen(true)}
+        aria-label="بحث"
+        style={iconButtonStyle}
+      >
+        <IoSearchOutline size={19} />
+      </button>
+      <button
+        type="button"
+        onClick={() => setSortSheetOpen(true)}
+        aria-label="ترتيب"
+        style={iconButtonStyle}
+      >
+        <IoSwapVerticalOutline size={19} />
+      </button>
+    </>
+  );
 
   return (
     <>
       <Helmet>
-        <title>{restaurant.name || 'المطعم'} - القائمة الرقمية</title>
-        <meta name="description" content={restaurant.description} />
+        <title>{restaurant.name} — القائمة الرقمية</title>
+        {restaurant.description && <meta name="description" content={restaurant.description} />}
+        <meta property="og:title" content={restaurant.name} />
+        {restaurant.description && <meta property="og:description" content={restaurant.description} />}
         {restaurant.logo && <meta property="og:image" content={getImageUrl(restaurant.logo)} />}
+        <meta name="theme-color" content={restaurant.backgroundColor || '#082E24'} />
       </Helmet>
 
-      <div style={{ background: dynamicColors.bg, minHeight: '100vh', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif' }} dir="rtl">
-        {/* Cover Image */}
-        {restaurant.coverImage && (
-          <div
+      <StorefrontLayout
+        name={restaurant.name}
+        description={restaurant.description}
+        logo={restaurant.logo}
+        coverImage={restaurant.coverImage}
+        phone={restaurant.phone}
+        whatsapp={restaurant.whatsapp}
+        address={restaurant.address}
+        branchLabel={restaurant.branchLabel}
+        branches={branches.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          url: b.url,
+          label: b.linkLabel,
+          isCurrent: b.id === restaurant.id
+        }))}
+        headerActions={headerActions}
+        cartCount={cartCount}
+        onCartClick={() => setCartOpen(true)}
+        stickyNav={
+          !isSearching && navCategories.length > 0 ? (
+            <StickyCategoryNav
+              categories={navCategories}
+              offsetTop={MINI_HEADER_OFFSET}
+              sectionIdPrefix="cat-"
+              scrollSpy
+            />
+          ) : null
+        }
+        footer={
+          <PublicFooter
+            businessName={restaurant.name}
+            businessType="restaurant"
+            businessLogo={restaurant.logo}
+            businessSlug={restaurant.slug}
+            description={restaurant.description}
+            socialLinks={{
+              facebook: restaurant.facebook,
+              instagram: restaurant.instagram,
+              whatsapp: restaurant.whatsapp,
+              tiktok: restaurant.tiktok
+            }}
+            contactInfo={{
+              phone: restaurant.phone,
+              email: restaurant.email,
+              address: restaurant.address,
+              openingHours: restaurant.openingHours
+            }}
+            primaryColor={restaurant.primaryColor}
+            secondaryColor={restaurant.secondaryColor}
+            backgroundColor={restaurant.backgroundColor}
+            textColor={restaurant.textColor}
+            mutedColor={restaurant.mutedColor}
+            accentColor={restaurant.accentColor}
+          />
+        }
+      >
+        {/* شريط أدوات: بحث + ترتيب + حساب */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 16,
+            marginBottom: 4
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
             style={{
-              height: 224,
-              backgroundImage: `url(${getImageUrl(restaurant.coverImage)})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              position: 'relative'
+              flex: 1,
+              minHeight: 44,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 9,
+              padding: '0 14px',
+              borderRadius: 13,
+              border: `1px solid ${sf.border}`,
+              background: sf.card,
+              color: sf.muted,
+              fontSize: 13,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              textAlign: 'start'
             }}
           >
-            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${dynamicColors.bg} 0%, transparent 60%)` }} />
-          </div>
-        )}
+            <IoSearchOutline size={17} />
+            {isSearching ? searchQuery : 'ابحث في القائمة...'}
+          </button>
 
-        {/* Mobile Header */}
-        <div style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 20,
-          background: dynamicColors.card,
-          borderBottom: `1px solid ${dynamicColors.border}`,
-          display: 'none'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16 }}>
-            <button onClick={() => setShowMobileMenu(!showMobileMenu)} style={{ background: 'none', border: 'none', color: dynamicColors.text, cursor: 'pointer' }}>
-              <IoMenu size={24} />
-            </button>
-            <h2 style={{ fontWeight: 700, fontSize: 17, color: dynamicColors.text, margin: 0 }}>{restaurant.name}</h2>
-            <div style={{ position: 'relative' }}>
-              <button onClick={() => setShowCartModal(true)} style={{ background: 'none', border: 'none', color: dynamicColors.text, cursor: 'pointer' }}>
-                <IoCart size={24} />
-                {getCartCount() > 0 && (
-                  <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {getCartCount()}
-                  </span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+          <button type="button" onClick={() => setSortSheetOpen(true)} style={iconButtonStyle} aria-label="ترتيب">
+            <IoSwapVerticalOutline size={19} />
+          </button>
 
-        {/* Business Info */}
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', marginTop: restaurant.coverImage ? -64 : 16, position: 'relative', zIndex: 10 }}>
-          <div style={{ background: dynamicColors.card, borderRadius: 16, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', padding: '16px 24px', border: `1px solid ${dynamicColors.border}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              {restaurant.logo && (
-                <img
-                  src={getImageUrl(restaurant.logo)}
-                  alt={restaurant.name}
-                  style={{ width: 72, height: 72, borderRadius: 12, objectFit: 'cover', border: `2px solid ${dynamicColors.primary}` }}
-                />
-              )}
-              <div style={{ flex: 1 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>{restaurant.name}</h1>
-                {restaurant.branchLabel && (
-                  <div style={{ display: 'inline-flex', marginTop: 8, gap: 8, alignItems: 'center' }}>
-                    <div style={{ padding: '4px 10px', borderRadius: 999, background: 'rgba(200,226,53,0.12)', color: dynamicColors.accent, fontSize: 12, fontWeight: 700 }}>
-                      الفرع: {restaurant.branchLabel}
-                    </div>
-
-                    {(branches && branches.length > 0) && (
-                      <select
-                        value={identifier}
-                        onChange={(e) => {
-                          const newId = e.target.value;
-                          setIdentifier(newId);
-                        }}
-                        style={{
-                          padding: '6px 10px', borderRadius: 8, border: `1px solid ${dynamicColors.border}`, background: dynamicColors.surf, color: dynamicColors.text, cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif'
-                        }}
-                      >
-                        {/* current branch */}
-                        <option value={restaurant.slug || restaurant.subdomain || ''}>{restaurant.branchLabel}</option>
-                        {branches.map((b) => (
-                          <option key={b.id} value={b.subdomain || b.slug}>
-                            {b.linkLabel}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                )}
-                {restaurant.description && (
-                  <p style={{ color: dynamicColors.muted, fontSize: 14, marginTop: 4 }}>{restaurant.description}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ==================== الأقسام التسويقية (بانرات وعروض) ==================== */}
-        <PublicMarketingSections 
-          businessId={restaurant.id}
-          businessType="restaurant"
-          className="mt-6"
-          limitPerSection={10}
-        />
-
-        {/* ==================== العروض الخاصة ==================== */}
-        <PublicOffers 
-          businessId={restaurant.id}
-          businessType="restaurant"
-          className="max-w-7xl mx-auto px-4 mt-4"
-          limit={5}
-        />
-
-        {/* Controls Bar */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: dynamicColors.card, borderBottom: `1px solid ${dynamicColors.border}`, marginTop: 16 }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => setShowSearch(!showSearch)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 16px',
-                    background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${dynamicColors.border}`,
-                    borderRadius: 9999,
-                    color: dynamicColors.text,
-                    cursor: 'pointer',
-                    fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
-                    fontSize: 14
-                  }}
-                >
-                  <IoSearch size={18} />
-                  <span>بحث</span>
-                </button>
-
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '8px 16px',
-                    background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${dynamicColors.border}`,
-                    borderRadius: 9999,
-                    color: dynamicColors.text,
-                    cursor: 'pointer',
-                    fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
-                    fontSize: 14
-                  }}
-                >
-                  <IoFilter size={18} />
-                  <span>ترتيب</span>
-                  {showFilters ? <IoChevronUp size={14} /> : <IoChevronDown size={14} />}
-                </button>
-
-                <div style={{ display: 'flex', gap: 4, background: 'rgba(200,226,53,0.08)', borderRadius: 9999, padding: 4, border: `1px solid ${dynamicColors.border}` }}>
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    style={{ padding: 8, borderRadius: 9999, border: 'none', cursor: 'pointer', background: viewMode === 'grid' ? dynamicColors.surf : 'transparent', color: viewMode === 'grid' ? dynamicColors.accent : dynamicColors.muted, transition: 'all 0.2s' }}
-                  >
-                    <IoGrid size={18} />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    style={{ padding: 8, borderRadius: 9999, border: 'none', cursor: 'pointer', background: viewMode === 'list' ? dynamicColors.surf : 'transparent', color: viewMode === 'list' ? dynamicColors.accent : dynamicColors.muted, transition: 'all 0.2s' }}
-                  >
-                    <IoList size={18} />
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                {isAuthenticated ? (
-                  <>
-                    <button
-                      onClick={() => setShowOrderTracking(true)}
-                      style={{ padding: '8px 16px', background: dynamicColors.purple, color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                    >
-                      طلباتي
-                    </button>
-                    <button
-                      onClick={logout}
-                      style={{ padding: '8px 16px', background: dynamicColors.red, color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                    >
-                      <IoLogOut style={{ display: 'inline', marginLeft: 4 }} />
-                      خروج
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    to="/user/login"
-                    style={{ padding: '8px 16px', background: dynamicColors.blue, color: '#fff', borderRadius: 8, textDecoration: 'none', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                  >
-                    <IoPerson style={{ display: 'inline', marginLeft: 4 }} />
-                    دخول
-                  </Link>
-                )}
-
-                {restaurant.phone && (
-                  <a
-                    href={`tel:${restaurant.phone}`}
-                    style={{ padding: '8px 16px', background: 'rgba(200,226,53,0.08)', border: `1px solid ${dynamicColors.border}`, borderRadius: 8, color: dynamicColors.text, textDecoration: 'none', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                  >
-                    <IoCall style={{ display: 'inline', marginLeft: 4 }} />
-                    اتصال
-                  </a>
-                )}
-
-                {restaurant.whatsapp && (
-                  <button
-                    onClick={() => openWhatsApp(restaurant.whatsapp, `مرحباً، أود الاستفسار عن ${restaurant.name}`)}
-                    style={{ padding: '8px 16px', background: '#16A34A', color: '#fff', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                  >
-                    <IoLogoWhatsapp style={{ display: 'inline', marginLeft: 4 }} />
-                    واتساب
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Search Input */}
-            <AnimatePresence>
-              {showSearch && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  style={{ overflow: 'hidden', marginTop: 12 }}
-                >
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="ابحث عن طعامك المفضل..."
-                    style={{
-                      width: '100%',
-                      padding: 12,
-                      background: dynamicColors.surf,
-                      border: `1px solid ${dynamicColors.border}`,
-                      borderRadius: 12,
-                      color: dynamicColors.text,
-                      outline: 'none',
-                      fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
-                      fontSize: 14,
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Filters */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  style={{ overflow: 'hidden', marginTop: 12 }}
-                >
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {[
-                      { value: 'popular', label: 'الأكثر طلباً', icon: IoFlame },
-                      { value: 'price-low', label: 'السعر: من الأقل', icon: IoChevronDown },
-                      { value: 'price-high', label: 'السعر: من الأعلى', icon: IoChevronUp },
-                      { value: 'newest', label: 'الأحدث', icon: IoTime },
-                    ].map(option => (
-                      <button
-                        key={option.value}
-                        onClick={() => setSortBy(option.value as any)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          padding: '8px 16px',
-                          borderRadius: 9999,
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
-                          fontSize: 13,
-                          transition: 'all 0.2s',
-                          background: sortBy === option.value ? primaryColor : 'rgba(200,226,53,0.08)',
-                          color: sortBy === option.value ? dynamicColors.bg : dynamicColors.text
-                        }}
-                      >
-                        <option.icon size={16} />
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Categories */}
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 16px' }} ref={categoriesRef}>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12 }}>
+          {isAuthenticated ? (
             <button
-              onClick={() => setSelectedCategory('all')}
+              type="button"
+              onClick={() => {
+                fetchMyOrders();
+                setShowOrderTracking(true);
+              }}
+              style={iconButtonStyle}
+              aria-label="طلباتي"
+            >
+              <IoReceiptOutline size={19} />
+            </button>
+          ) : (
+            <Link
+              to="/user/login"
+              style={{ ...iconButtonStyle, textDecoration: 'none' }}
+              aria-label="تسجيل الدخول (اختياري)"
+            >
+              <IoPersonCircleOutline size={19} />
+            </Link>
+          )}
+        </div>
+
+        {/* نتائج البحث */}
+        {isSearching ? (
+          <section style={{ marginTop: 16 }}>
+            <h2 style={sectionHeading}>
+              نتائج البحث
+              <span style={{ color: sf.muted, fontWeight: 600, fontSize: 12.5 }}>
+                {searchResults.length} صنف
+              </span>
+            </h2>
+
+            {searchResults.length === 0 ? (
+              <EmptyState text="لا توجد أصناف تطابق بحثك" />
+            ) : (
+              <div style={itemListStyle}>
+                {sortItems(searchResults).map((item) => (
+                  <MenuItemListCard
+                    key={item.id}
+                    item={item}
+                    currency={currency}
+                    quantityInCart={quantityByItemId.get(item.id) || 0}
+                    onAdd={handleAdd}
+                    onQuantityChange={handleCardQuantityChange}
+                    onOpenDetails={(it) => {
+                      setOptionsItem(it);
+                      setOptionsOpen(true);
+                    }}
+                    isFavorite={favorites.has(item.id)}
+                    onToggleFavorite={(it) =>
+                      toggleFavorite({
+                        id: it.id,
+                        type: 'menuItem',
+                        name: it.name,
+                        price: it.price,
+                        image: it.image
+                      } as any)
+                    }
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        ) : (
+          <>
+            {displayCategories.length === 0 ? (
+              <EmptyState text="لا توجد أصناف متاحة حالياً" />
+            ) : (
+              displayCategories.map((category, index) => (
+                <React.Fragment key={category.id}>
+                  <section id={`cat-${category.id}`} style={{ marginTop: index === 0 ? 18 : 26, scrollMarginTop: 120 }}>
+                    <h2 style={sectionHeading}>
+                      {category.name}
+                      <span style={{ color: sf.muted, fontWeight: 600, fontSize: 12.5 }}>
+                        {category.menuItems?.length || 0}
+                      </span>
+                    </h2>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: '-40px' }}
+                      transition={{ duration: 0.22 }}
+                      style={itemListStyle}
+                    >
+                      {sortItems(category.menuItems || []).map((item) => (
+                        <MenuItemListCard
+                          key={item.id}
+                          item={item}
+                          currency={currency}
+                          quantityInCart={quantityByItemId.get(item.id) || 0}
+                          onAdd={handleAdd}
+                          onQuantityChange={handleCardQuantityChange}
+                          onOpenDetails={(it) => {
+                            setOptionsItem(it);
+                            setOptionsOpen(true);
+                          }}
+                          isFavorite={favorites.has(item.id)}
+                          onToggleFavorite={(it) =>
+                            toggleFavorite({
+                              id: it.id,
+                              type: 'menuItem',
+                              name: it.name,
+                              price: it.price,
+                              image: it.image
+                            } as any)
+                          }
+                        />
+                      ))}
+                    </motion.div>
+                  </section>
+
+                  {/* المحتوى التسويقي بعد أول قسمين — لا يزاحم القائمة */}
+                  {index === 1 && (
+                    <div style={{ marginTop: 24 }}>
+                      <PublicMarketingSections
+                        businessId={restaurant.id}
+                        businessType="restaurant"
+                        limitPerSection={6}
+                      />
+                      <PublicOffers businessId={restaurant.id} businessType="restaurant" limit={4} />
+                    </div>
+                  )}
+                </React.Fragment>
+              ))
+            )}
+
+            {/* إن كان هناك قسم واحد فقط، يُعرض المحتوى التسويقي في النهاية */}
+            {displayCategories.length === 1 && (
+              <div style={{ marginTop: 24 }}>
+                <PublicMarketingSections
+                  businessId={restaurant.id}
+                  businessType="restaurant"
+                  limitPerSection={6}
+                />
+                <PublicOffers businessId={restaurant.id} businessType="restaurant" limit={4} />
+              </div>
+            )}
+
+            <div style={{ marginTop: 24 }}>
+              <PublicAdvertisements
+                businessId={restaurant.id}
+                businessType="restaurant"
+                currentPlan={restaurant.plan}
+                limit={2}
+                position="bottom"
+              />
+            </div>
+          </>
+        )}
+      </StorefrontLayout>
+
+      {/* ==================== شريط السلة ==================== */}
+      <BottomCartBar
+        itemCount={cartCount}
+        total={cartTotal}
+        currency={currency}
+        onOpen={() => setCartOpen(true)}
+        hidden={cartOpen || optionsOpen || sortSheetOpen || searchOpen}
+      />
+
+      {/* ==================== لوح البحث ==================== */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 200,
+              background: sf.bg,
+              fontFamily: sf.font,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            dir="rtl"
+          >
+            <div
               style={{
-                padding: '10px 20px',
-                borderRadius: 9999,
-                whiteSpace: 'nowrap',
-                fontWeight: 500,
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
-                fontSize: 14,
-                transition: 'all 0.2s',
-                background: selectedCategory === 'all' ? primaryColor : dynamicColors.card,
-                color: selectedCategory === 'all' ? dynamicColors.bg : dynamicColors.text,
-                boxShadow: selectedCategory === 'all' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                display: 'flex',
+                alignItems: 'center',
+                gap: 9,
+                padding: '12px 14px',
+                borderBottom: `1px solid ${sf.border}`,
+                background: sf.card
               }}
             >
-              الجميع
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
+              <IoSearchOutline size={19} style={{ color: sf.muted, flexShrink: 0 }} />
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث عن صنف..."
                 style={{
-                  padding: '10px 20px',
-                  borderRadius: 9999,
-                  whiteSpace: 'nowrap',
-                  fontWeight: 500,
+                  flex: 1,
+                  minWidth: 0,
+                  background: 'transparent',
                   border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: restaurant.fontFamily || 'Cairo, sans-serif',
-                  fontSize: 14,
-                  transition: 'all 0.2s',
-                  background: selectedCategory === cat.id ? primaryColor : dynamicColors.card,
-                  color: selectedCategory === cat.id ? dynamicColors.bg : dynamicColors.text,
-                  boxShadow: selectedCategory === cat.id ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
+                  outline: 'none',
+                  color: sf.text,
+                  fontSize: 15,
+                  fontFamily: 'inherit'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(false);
+                  if (!searchQuery.trim()) setSearchQuery('');
+                }}
+                style={{ ...iconButtonStyle, flexShrink: 0 }}
+                aria-label="إغلاق البحث"
+              >
+                <IoClose size={19} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+              {!isSearching ? (
+                <EmptyState text="اكتب اسم الصنف الذي تبحث عنه" />
+              ) : searchResults.length === 0 ? (
+                <EmptyState text="لا توجد نتائج" />
+              ) : (
+                <div style={itemListStyle}>
+                  {sortItems(searchResults).map((item) => (
+                    <MenuItemListCard
+                      key={item.id}
+                      item={item}
+                      currency={currency}
+                      quantityInCart={quantityByItemId.get(item.id) || 0}
+                      onAdd={handleAdd}
+                      onQuantityChange={handleCardQuantityChange}
+                      isFavorite={favorites.has(item.id)}
+                      onToggleFavorite={(it) =>
+                        toggleFavorite({
+                          id: it.id,
+                          type: 'menuItem',
+                          name: it.name,
+                          price: it.price,
+                          image: it.image
+                        } as any)
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ==================== لوح الترتيب ==================== */}
+      <BottomSheet open={sortSheetOpen} onClose={() => setSortSheetOpen(false)} title="ترتيب حسب">
+        <div style={{ display: 'grid', gap: 8 }}>
+          {SORT_OPTIONS.map((option) => {
+            const active = sortBy === option.key;
+            return (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => {
+                  setSortBy(option.key);
+                  setSortSheetOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  minHeight: 50,
+                  padding: '0 14px',
+                  borderRadius: 12,
+                  border: `1.5px solid ${active ? sf.accent : sf.border}`,
+                  background: sf.surface,
+                  color: active ? sf.accent : sf.text,
+                  fontSize: 13.5,
+                  fontWeight: active ? 800 : 600,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer'
                 }}
               >
-                {cat.name}
+                {option.label}
+                {active && <IoCheckmark size={18} />}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
+      </BottomSheet>
 
-        {/* Menu Items Grid/List */}
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 32px' }}>
-          {filteredItems.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '64px 16px' }}>
-              <IoRestaurant style={{ fontSize: 64, color: dynamicColors.muted, opacity: 0.3, display: 'block', margin: '0 auto 16px' }} />
-              <p style={{ color: dynamicColors.muted, fontSize: 17 }}>لا توجد عناصر في هذه الفئة</p>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  style={{ marginTop: 16, color: primaryColor, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: restaurant.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                >
-                  مسح البحث
-                </button>
-              )}
-            </div>
-          ) : (
-            <div style={viewMode === 'grid'
-              ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }
-              : { display: 'flex', flexDirection: 'column', gap: 16 }
-            }>
-              {filteredItems.map((item, index) => (
-                <MenuItemCard
-                  key={item.id}
-                  item={item as any}
-                  index={index}
-                  isFavorite={favorites.has(item.id)}
-                  slug={currentSlug || ''}
-                  onToggleFavorite={() => toggleFavorite({
-                    id: item.id,
-                    type: 'product',
-                    name: item.name,
-                    price: item.discountedPrice || item.price,
-                    image: item.image,
-                  })}
-                  onAddToCart={handleAddToCart}
-                  onNavigate={navigate}
-                  viewMode={viewMode}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+      {/* ==================== لوح خيارات الصنف ==================== */}
+      <ItemOptionsSheet
+        item={optionsItem}
+        open={optionsOpen}
+        currency={currency}
+        onClose={() => {
+          setOptionsOpen(false);
+          setOptionsItem(null);
+        }}
+        onConfirm={handleConfirmOptions}
+      />
 
-        {/* Scroll to Top */}
-        <AnimatePresence>
-          {showScrollTop && (
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              style={{
-                position: 'fixed', bottom: 96, right: 16, zIndex: 30,
-                width: 44, height: 44,
-                background: primaryColor,
-                color: dynamicColors.bg,
-                borderRadius: '50%',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
-              }}
-            >
-              <IoArrowUp size={20} />
-            </motion.button>
-          )}
-        </AnimatePresence>
+      {/* ==================== السلة ==================== */}
+      <CartSheet
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={cart}
+        currency={currency}
+        onQuantityChange={handleCartQuantityChange}
+        onRemove={(item) => removeFromCart(item.id, item.size)}
+        onClear={clearCart}
+        tableNumber={tableId || null}
+        availableOrderTypes={tableId ? ['dine_in'] : ['takeaway', 'delivery']}
+        orderType={orderType}
+        onOrderTypeChange={setOrderType}
+        customerName={customerName}
+        customerPhone={customerPhone}
+        notes={orderNotes}
+        onCustomerNameChange={setCustomerName}
+        onCustomerPhoneChange={setCustomerPhone}
+        onNotesChange={setOrderNotes}
+        address={address}
+        onAddressChange={setAddress}
+        deliveryFee={Number(restaurant?.deliverySettings?.deliveryFee) || 0}
+        submitting={submitting}
+        onSubmit={submitOrder}
+      />
 
-        {/* Floating Cart Button */}
-        {cart.length > 0 && (
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            onClick={() => setShowCartModal(true)}
-            style={{
-              position: 'fixed', bottom: 24, left: 16, zIndex: 30,
-              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
-              color: dynamicColors.bg,
-              padding: 16,
-              borderRadius: '50%',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
-            }}
-          >
-            <div style={{ position: 'relative' }}>
-              <IoCart size={24} />
-              <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                {getCartCount()}
-              </span>
-            </div>
-          </motion.button>
-        )}
-
-        {/* Modals */}
-        <CartModal
-          isOpen={showCartModal}
-          onClose={() => setShowCartModal(false)}
-          cart={cart}
-          isOutside={!tableId}
-          tableId={tableId}
-          customerInfo={customerInfo}
-          onCustomerInfoChange={setCustomerInfo}
-          onSubmit={submitOrder}
-          onUpdateQuantity={updateQuantity}
-          onRemoveFromCart={removeFromCart}
-          subtotal={getCartSubtotal()}
-          formatPrice={(price) => price.toLocaleString()}
-          getCartCount={getCartCount}
-          submitting={submitting}
-        />
-
-        <OrderTrackingModal
-          isOpen={showOrderTracking}
-          onClose={() => {
-            setShowOrderTracking(false);
-            setTrackingOrder(null);
-          }}
-          trackingOrder={trackingOrder}
-          orders={myOrders}
-          onSelectOrder={setTrackingOrder}
-          formatPrice={(price) => price.toLocaleString()}
-          loading={loadingOrders}
-        />
-
-        {/* ==================== إعلانات أسفل الصفحة ==================== */}
-        <PublicAdvertisements 
-          businessId={restaurant.id}
-          businessType="restaurant"
-          currentPlan={currentPlan}
-          className="max-w-7xl mx-auto px-4 mt-8 mb-8"
-          limit={2}
-          position="bottom"
-        />
-      </div>
-
-     <PublicFooter
-  businessName={restaurant.name}
-  businessType="restaurant"
-  businessLogo={restaurant.logo}
-  businessSlug={restaurant.slug}
-  description={restaurant.description}
-  socialLinks={{
-    facebook: restaurant.facebook,
-    instagram: restaurant.instagram,
-    whatsapp: restaurant.whatsapp,
-    tiktok: restaurant.tiktok,
-  }}
-  contactInfo={{
-    phone: restaurant.phone,
-    email: restaurant.email,
-    address: restaurant.address,
-    openingHours: restaurant.openingHours,
-  }}
-  primaryColor={restaurant.primaryColor}
-  secondaryColor={restaurant.secondaryColor}
-  backgroundColor={restaurant.backgroundColor}
-  textColor={restaurant.textColor}
-  mutedColor={restaurant.mutedColor}
-  accentColor={restaurant.accentColor}
-/>
-
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-      `}</style>
+      {/* ==================== تتبّع الطلبات (للمسجّلين فقط) ==================== */}
+      <OrderTrackingModal
+        isOpen={showOrderTracking}
+        onClose={() => {
+          setShowOrderTracking(false);
+          setTrackingOrder(null);
+        }}
+        trackingOrder={trackingOrder}
+        orders={myOrders}
+        onSelectOrder={setTrackingOrder}
+        formatPrice={(price: number) => formatPrice(price, currency)}
+        loading={loadingOrders}
+      />
     </>
   );
+};
+
+// ==================== عناصر مساعدة ====================
+
+const EmptyState: React.FC<{ text: string }> = ({ text }) => (
+  <div style={{ textAlign: 'center', padding: '52px 20px', color: sf.muted, fontSize: 13.5 }}>{text}</div>
+);
+
+const sectionHeading: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 9,
+  margin: '0 0 12px',
+  fontSize: 16,
+  fontWeight: 800,
+  color: sf.text
+};
+
+const itemListStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 11
+};
+
+const iconButtonStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  display: 'grid',
+  placeItems: 'center',
+  borderRadius: 13,
+  border: `1px solid ${sf.border}`,
+  background: sf.card,
+  color: sf.text,
+  cursor: 'pointer',
+  flexShrink: 0,
+  padding: 0
 };
 
 export default RestaurantPublicMenu;

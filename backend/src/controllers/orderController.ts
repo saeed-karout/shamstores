@@ -228,15 +228,13 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       subtotal, couponCode, discountAmount, total,
       orderSource = 'restaurant',
       storeId: providedStoreId,
+      restaurantId: providedRestaurantId,
       orderType = 'dine_in',
       deliveryAddress, deliveryLat, deliveryLng,
       deliveryFee: providedDeliveryFee,
       deliveryDistance: providedDeliveryDistance
     } = req.body;
 
-    console.log('📦 Creating order:', { 
-      customerName, customerPhone, itemsCount: orderItemsData?.length, subtotal, total, orderType
-    });
 
     if (!orderItemsData || !Array.isArray(orderItemsData) || orderItemsData.length === 0) {
       res.status(400).json({ success: false, error: 'الطلب يجب أن يحتوي على عناصر على الأقل' });
@@ -261,12 +259,27 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
   restaurantId = table.restaurantId;
 }
     else if (providedStoreId) {
-      const store = await prisma.store.findUnique({ where: { id: providedStoreId } });
+      const store = await prisma.store.findFirst({
+        where: { id: providedStoreId, isActive: true },
+        select: { id: true }
+      });
       if (!store) {
         res.status(404).json({ success: false, error: 'المتجر غير موجود' });
         return;
       }
       storeId = providedStoreId;
+    }
+    // زائر يطلب من واجهة مطعم بلا طاولة (استلام/توصيل) — كان هذا يفشل دائماً
+    else if (providedRestaurantId) {
+      const restaurant = await prisma.restaurant.findFirst({
+        where: { id: providedRestaurantId, isActive: true },
+        select: { id: true }
+      });
+      if (!restaurant) {
+        res.status(404).json({ success: false, error: 'المطعم غير موجود' });
+        return;
+      }
+      restaurantId = providedRestaurantId;
     }
     else if (userId) {
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -282,27 +295,25 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     // التحقق من الكوبون
     let coupon = null;
     if (couponCode) {
+      // ملاحظة: كان الاستعلام يستخدم أعمدة غير موجودة (validUntil / usedCount)
+      // فيرمي Prisma ويعود الطلب بخطأ 500 عند تطبيق أي كوبون.
+      const now = new Date();
       const couponWhere: any = {
-        code: couponCode.toUpperCase(),
+        code: String(couponCode).toUpperCase(),
         isActive: true,
-       startDate: { lte: new Date() },
-        validUntil: { gte: new Date() }
+        startDate: { lte: now },
+        OR: [{ endDate: null }, { endDate: { gte: now } }]
       };
       if (restaurantId) couponWhere.restaurantId = restaurantId;
       else if (storeId) couponWhere.storeId = storeId;
-      
+
       coupon = await prisma.coupon.findFirst({ where: couponWhere });
       if (!coupon) {
         res.status(400).json({ success: false, error: 'الكوبون غير صالح' });
         return;
       }
-      // التحقق من الحد الأقصى للاستخدام (usageLimit)
-      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+      if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
         res.status(400).json({ success: false, error: 'تم استنفاذ عدد استخدامات الكوبون' });
-        return;
-      }
-      if (subtotal < (coupon.minOrderAmount || 0)) {
-        res.status(400).json({ success: false, error: `الحد الأدنى للطلب هو ${coupon.minOrderAmount} ر.س` });
         return;
       }
     }
@@ -316,6 +327,13 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
         res.status(400).json({ success: false, error: 'بيانات العنصر غير مكتملة' });
         return;
       }
+
+      const quantity = Math.floor(Number(item.quantity));
+      if (!Number.isFinite(quantity) || quantity < 1 || quantity > 500) {
+        res.status(400).json({ success: false, error: 'الكمية غير صالحة' });
+        return;
+      }
+      item.quantity = quantity;
 
       let price = item.price || 0;
 
@@ -333,7 +351,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           res.status(400).json({ success: false, error: 'العنصر لا ينتمي لهذا المطعم' });
           return;
         }
-        price = item.price || Number(menuItem.price);
+        // ⚠️ السعر يُحسب من قاعدة البيانات فقط. هذا مسار عام بلا مصادقة،
+        // وقبول السعر من العميل كان يسمح بشراء أي صنف بأي مبلغ.
+        price = Number(menuItem.price) || 0;
       }
       else if (item.productId) {
         const product = await prisma.product.findUnique({ where: { id: item.productId } });
@@ -353,7 +373,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           res.status(400).json({ success: false, error: 'المنتج لا ينتمي لهذا المتجر' });
           return;
         }
-        price = item.price || Number(product.price);
+        price = Number(product.price) || 0;
       }
 
       const itemTotal = price * item.quantity;
@@ -370,9 +390,31 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       });
     }
 
-    const finalTotal = total !== undefined ? total : calculatedTotal;
-    const finalDeliveryFee = providedDeliveryFee || 0;
-    const finalDeliveryDistance = providedDeliveryDistance || 0;
+    // ⚠️ المجاميع تُحسب على الخادم. كانت تُؤخذ من جسم الطلب مباشرة، فكان
+    // بإمكان أي زائر إرسال total = 0 لطلب بأي قيمة.
+    const computedSubtotal = Math.round(calculatedTotal * 100) / 100;
+
+    let computedDiscount = 0;
+    if (coupon) {
+      if (computedSubtotal < (coupon.minOrderAmount || 0)) {
+        res.status(400).json({
+          success: false,
+          error: `الحد الأدنى لاستخدام هذا الكوبون هو ${coupon.minOrderAmount}`
+        });
+        return;
+      }
+      const value = Number(coupon.discountValue) || 0;
+      computedDiscount =
+        String(coupon.discountType).toLowerCase() === 'percentage'
+          ? (computedSubtotal * value) / 100
+          : value;
+      computedDiscount = Math.min(Math.max(computedDiscount, 0), computedSubtotal);
+      computedDiscount = Math.round(computedDiscount * 100) / 100;
+    }
+
+    const finalDeliveryFee = Math.max(0, Number(providedDeliveryFee) || 0);
+    const finalDeliveryDistance = Math.max(0, Number(providedDeliveryDistance) || 0);
+    const finalTotal = Math.max(0, computedSubtotal - computedDiscount);
 
     const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 99).toString().padStart(2, '0')}`;
 
@@ -383,10 +425,10 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       tableId: tableId || null,
       customerName: customerName || null,
       customerPhone: customerPhone || null,
-      subtotal: subtotal || calculatedTotal,
-      discountAmount: discountAmount || 0,
-      couponCode: couponCode || null,
-      total: finalTotal + finalDeliveryFee,
+      subtotal: computedSubtotal,
+      discountAmount: computedDiscount,
+      couponCode: coupon ? coupon.code : null,
+      total: Math.round((finalTotal + finalDeliveryFee) * 100) / 100,
       notes: notes || null,
       paymentMethod,
       orderType: orderType,

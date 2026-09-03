@@ -235,6 +235,24 @@ export const createCoupon = async (
       business
     });
 
+    if (!code || !String(code).trim()) {
+      res.status(400).json({ success: false, error: 'رمز الكوبون مطلوب' });
+      return;
+    }
+    if (!['percentage', 'fixed'].includes(String(discountType))) {
+      res.status(400).json({ success: false, error: 'نوع الخصم غير صالح' });
+      return;
+    }
+    const numericValue = Number(discountValue);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      res.status(400).json({ success: false, error: 'قيمة الخصم غير صالحة' });
+      return;
+    }
+    if (String(discountType) === 'percentage' && numericValue > 100) {
+      res.status(400).json({ success: false, error: 'نسبة الخصم لا يمكن أن تتجاوز 100%' });
+      return;
+    }
+
     // التحقق من وجود كوبون بنفس الكود
     let existingCoupon;
     if (business.type === 'restaurant') {
@@ -261,28 +279,24 @@ export const createCoupon = async (
       return;
     }
 
+    // ملاحظة: كانت هذه الدالة تكتب أعمدة غير موجودة في المخطط
+    // (description / usedCount / validFrom / validUntil / createdBy /
+    // isStoreOnly / isRestaurantOnly) فيرمي Prisma ويفشل إنشاء أي كوبون.
     const couponData: any = {
-      code: code.toUpperCase(),
-      description: description || null,
+      code: String(code).toUpperCase(),
       discountType,
       discountValue: Number(discountValue),
       minOrderAmount: minOrderAmount ? Number(minOrderAmount) : 0,
-      usageLimit: usageLimit ? Number(usageLimit) : 1,
-      usedCount: 0,
-      validFrom: validFrom ? new Date(validFrom) : new Date(),
-      validUntil: validUntil ? new Date(validUntil) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      isActive: true,
-      createdBy: req.user?.id
+      usageLimit: usageLimit ? Number(usageLimit) : null,
+      startDate: validFrom ? new Date(validFrom) : new Date(),
+      endDate: validUntil ? new Date(validUntil) : null,
+      isActive: true
     };
 
     if (business.type === 'restaurant') {
       couponData.restaurantId = business.id;
-      couponData.isRestaurantOnly = true;
-      couponData.isStoreOnly = false;
     } else {
       couponData.storeId = business.id;
-      couponData.isStoreOnly = true;
-      couponData.isRestaurantOnly = false;
     }
 
     const coupon = await prisma.coupon.create({ data: couponData });
@@ -376,13 +390,12 @@ export const updateCoupon = async (
 
     const updateData: any = {};
     if (code !== undefined) updateData.code = code.toUpperCase();
-    if (description !== undefined) updateData.description = description;
     if (discountType !== undefined) updateData.discountType = discountType;
     if (discountValue !== undefined) updateData.discountValue = Number(discountValue);
     if (minOrderAmount !== undefined) updateData.minOrderAmount = Number(minOrderAmount);
-    if (usageLimit !== undefined) updateData.usageLimit = Number(usageLimit);
-    if (validFrom !== undefined) updateData.validFrom = new Date(validFrom);
-    if (validUntil !== undefined) updateData.validUntil = new Date(validUntil);
+    if (usageLimit !== undefined) updateData.usageLimit = usageLimit ? Number(usageLimit) : null;
+    if (validFrom !== undefined) updateData.startDate = new Date(validFrom);
+    if (validUntil !== undefined) updateData.endDate = validUntil ? new Date(validUntil) : null;
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const updatedCoupon = await prisma.coupon.update({
@@ -533,7 +546,8 @@ export const validateCoupon = async (
           restaurantId: business.id,
           isActive: true,
           startDate: { lte: new Date() },
-          endDate: { gte: new Date() }
+          // كوبون بلا تاريخ انتهاء يجب أن يبقى صالحاً
+          OR: [{ endDate: null }, { endDate: { gte: new Date() } }]
         }
       });
     } else {
@@ -543,7 +557,8 @@ export const validateCoupon = async (
           storeId: business.id,
           isActive: true,
           startDate: { lte: new Date() },
-          endDate: { gte: new Date() }
+          // كوبون بلا تاريخ انتهاء يجب أن يبقى صالحاً
+          OR: [{ endDate: null }, { endDate: { gte: new Date() } }]
         }
       });
     }
@@ -556,7 +571,7 @@ export const validateCoupon = async (
       return;
     }
 
-    if (coupon.usedCount >= coupon.usageLimit) {
+    if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
       res.status(400).json({ 
         success: false,
         error: 'تم استنفاذ عدد استخدامات هذا الكوبون' 
