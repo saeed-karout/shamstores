@@ -1,6 +1,8 @@
 import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { verifyToken } from '../config/auth';
+import prisma from '../services/prisma';
+import env, { isProduction } from '../config/env';
 import { UserPayload } from '../types';
 
 const SOCKET_EVENTS = {
@@ -78,23 +80,26 @@ const extractToken = (socket: Socket): string | null => {
   return rawToken.startsWith('Bearer ') ? rawToken.replace('Bearer ', '') : rawToken;
 };
 
-const getSocketCorsOrigin = (): string | string[] => {
-  const allowedOrigins = process.env.SOCKET_CORS_ORIGIN || process.env.CLIENT_URL;
-
-  if (!allowedOrigins) {
-    return '*';
-  }
-
-  const normalized = allowedOrigins
+const getSocketCorsOrigin = (): string[] | boolean => {
+  const configured = (process.env.SOCKET_CORS_ORIGIN || process.env.CLIENT_URL || '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-  if (normalized.length === 0) {
-    return '*';
+  const origins = new Set<string>([
+    ...configured,
+    ...env.ALLOWED_ORIGINS,
+    'https://' + env.APP_DOMAIN,
+    'https://www.' + env.APP_DOMAIN
+  ]);
+
+  if (!isProduction) {
+    origins.add('http://localhost:3000');
+    origins.add('http://localhost:5173');
   }
 
-  return normalized.length === 1 ? normalized[0] : normalized;
+  // لا نعيد '*' أبداً: مع credentials يعني ذلك السماح لأي موقع بفتح اتصال باسم المستخدم
+  return Array.from(origins);
 };
 
 const addRoomIfValid = (
@@ -147,6 +152,37 @@ const safeAcknowledge = (
   }
 };
 
+/**
+ * يحدد ما إذا كان المستخدم مخوّلاً بمتابعة طلب معيّن في الزمن الحقيقي.
+ */
+const canAccessOrder = async (user: UserPayload, orderId: string): Promise<boolean> => {
+  try {
+    if (user.role === 'super_admin') return true;
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: {
+        restaurantId: true,
+        storeId: true,
+        createdBy: true,
+        assignedDriverId: true
+      }
+    });
+
+    if (!order) return false;
+
+    if (order.createdBy && order.createdBy === user.id) return true;
+    if (order.assignedDriverId && order.assignedDriverId === user.id) return true;
+    if (user.restaurantId && order.restaurantId === user.restaurantId) return true;
+    if (user.storeId && order.storeId === user.storeId) return true;
+
+    return false;
+  } catch (error) {
+    console.error('Error checking order access for socket:', error);
+    return false;
+  }
+};
+
 const bindConnectionHandlers = (socket: RealtimeSocket): void => {
   const user = socket.data.user;
   if (!user) {
@@ -168,9 +204,17 @@ const bindConnectionHandlers = (socket: RealtimeSocket): void => {
     socket.join(getDriverRoom(user.id));
   }
 
-  socket.on('subscribe:order', (orderId: unknown, acknowledge?: (response: { success: boolean; message?: string; error?: string }) => void) => {
+  socket.on('subscribe:order', async (orderId: unknown, acknowledge?: (response: { success: boolean; message?: string; error?: string }) => void) => {
     if (typeof orderId !== 'string' || orderId.trim().length === 0) {
       safeAcknowledge(acknowledge, { success: false, error: 'معرف الطلب غير صالح' });
+      return;
+    }
+
+    // بدون هذا الفحص يستطيع أي مستخدم موثّق الاشتراك في غرفة أي طلب
+    // ويتلقى تحديثات طلبات نشاط تجاري لا يخصه.
+    const allowed = await canAccessOrder(user, orderId.trim());
+    if (!allowed) {
+      safeAcknowledge(acknowledge, { success: false, error: 'غير مصرح بمتابعة هذا الطلب' });
       return;
     }
 
@@ -200,7 +244,7 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     cors: {
       origin: corsOrigin,
       methods: ['GET', 'POST', 'PATCH'],
-      credentials: corsOrigin !== '*'
+      credentials: true
     }
   });
 

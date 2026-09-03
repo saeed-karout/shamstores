@@ -23,19 +23,24 @@ const storage = multer.diskStorage({
 
 // فلترة الملفات
 const fileFilter = (req: any, file: any, cb: any) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-  
-  if (allowedTypes.includes(file.mimetype)) {
+  // ملاحظة أمنية: SVG محذوف عمداً — ملف SVG يمكن أن يحتوي على <script>
+  // ويصبح ثغرة XSS مخزّنة عند فتحه مباشرة من نطاق المنصة.
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
+  const allowedExtensions = /\.(jpe?g|png|gif|webp|avif)$/i;
+
+  if (allowedTypes.includes(file.mimetype) && allowedExtensions.test(file.originalname || '')) {
     cb(null, true);
   } else {
-    cb(new Error('نوع الملف غير مدعوم. يرجى رفع صورة بصيغة JPEG, PNG, GIF, WEBP أو SVG'), false);
+    cb(new Error('نوع الملف غير مدعوم. يرجى رفع صورة بصيغة JPEG أو PNG أو GIF أو WEBP'), false);
   }
 };
 
 export const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 8 * 1024 * 1024, // 8MB
+    files: 10,
+    fields: 20
   },
   fileFilter: fileFilter
 });

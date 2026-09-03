@@ -4,6 +4,11 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
+import {
+  normalizeDomain,
+  resolveBusinessByCustomDomain,
+  extractSubdomainFromHost
+} from '../services/domain.service';
 
 // ==================== جلب بيانات المطعم/المتجر (باستخدام slug) ====================
 
@@ -12,12 +17,12 @@ export const getBusinessBySlug = async (
   res: Response
 ): Promise<void> => {
   try {
-     const { identifier } = req.params;
+     const rawIdentifier = req.params.identifier;
     
     // ✅ قائمة المسارات التي يجب تجاهلها وتمريرها إلى React Router
     const legalPaths = ['terms', 'privacy', 'about', 'faq', 'contact', 'favicon.ico'];
     
-    if (legalPaths.includes(identifier)) {
+    if (legalPaths.includes(rawIdentifier)) {
       // ✅ بدلاً من 404، أعد 200 مع flag يخبر React Router بالتعامل مع الصفحة
       res.status(200).json({ 
         success: false, 
@@ -26,7 +31,19 @@ export const getBusinessBySlug = async (
       });
       return;
     }
-    // البحث في المطاعم أولاً (بـ slug أو subdomain)
+    // إذا كان المعرّف نطاقاً كاملاً (زائر قادم من دومين مخصص) نحوّله إلى slug
+    let identifier = rawIdentifier;
+    if (rawIdentifier.includes('.')) {
+      const byDomain = await resolveBusinessByCustomDomain(rawIdentifier);
+      if (byDomain) {
+        identifier = byDomain.slug;
+      } else {
+        const sub = extractSubdomainFromHost(rawIdentifier);
+        if (sub) identifier = sub;
+      }
+    }
+
+    // البحث في المطاعم أولاً (بـ slug أو subdomain أو دومين مخصص موثّق)
     const restaurant = await prisma.restaurant.findFirst({
       where: {
         OR: [
@@ -61,6 +78,7 @@ export const getBusinessBySlug = async (
           name: restaurant.name,
           slug: restaurant.slug,
           subdomain: restaurant.subdomain,
+          customDomain: restaurant.customDomainVerified ? restaurant.customDomain : null,
           type: 'restaurant',
           logo: restaurant.logo,
           coverImage: restaurant.coverImage,
@@ -138,6 +156,7 @@ export const getBusinessBySlug = async (
           name: store.name,
           slug: store.slug,
           subdomain: store.subdomain,
+          customDomain: store.customDomainVerified ? store.customDomain : null,
           type: 'store',
           logo: store.logo,
           coverImage: store.coverImage,
@@ -181,8 +200,6 @@ export const getBusinessBySlug = async (
       });
       return;
     }
-    
-    console.log('❌ No business found for identifier:', identifier);
     res.status(404).json({ success: false, error: 'النشاط التجاري غير موجود' });
   } catch (error) {
     console.error('Error getting business:', error);
@@ -598,5 +615,56 @@ export const getMenuItemByShareToken = async (
   } catch (error) {
     console.error('Error getting menu item by token:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب بيانات العنصر' });
+  }
+};
+
+// ==================== حل النطاق المخصص إلى معرّف نشاط تجاري ====================
+
+/**
+ * GET /api/public/resolve-host?host=mystore.com
+ *
+ * تستخدمه الواجهة عندما يصل زائر عبر نطاق مخصص: لا يوجد slug في الرابط
+ * ولا subdomain يمكن استخراجه، فنسأل الخادم عن النشاط التجاري لهذا المضيف.
+ * يقرأ بيانات عامة فقط ولا يكشف أي نشاط غير موثّق أو غير نشط.
+ */
+export const resolveHost = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const queryHost = typeof req.query.host === 'string' ? req.query.host : '';
+    const headerHost = (req.headers['x-forwarded-host'] as string) || req.headers.host || '';
+    const host = normalizeDomain(queryHost || headerHost);
+
+    if (!host) {
+      res.status(400).json({ success: false, error: 'المضيف غير محدد' });
+      return;
+    }
+
+    const business = await resolveBusinessByCustomDomain(host);
+    if (business) {
+      res.json({
+        success: true,
+        data: {
+          identifier: business.slug,
+          slug: business.slug,
+          subdomain: business.subdomain,
+          type: business.type,
+          source: 'custom_domain'
+        }
+      });
+      return;
+    }
+
+    const subdomain = extractSubdomainFromHost(host);
+    if (subdomain) {
+      res.json({
+        success: true,
+        data: { identifier: subdomain, slug: null, subdomain, type: null, source: 'subdomain' }
+      });
+      return;
+    }
+
+    res.status(404).json({ success: false, error: 'لا يوجد نشاط تجاري مرتبط بهذا النطاق' });
+  } catch (error) {
+    console.error('Error resolving host:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديد النطاق' });
   }
 };

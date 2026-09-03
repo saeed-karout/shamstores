@@ -10,6 +10,8 @@ import slugify from '../utils/slugify';
 import fs from 'fs';
 import path from 'path';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
+import { isReservedSubdomain, invalidateDomainCache } from '../services/domain.service';
+import env from '../config/env';
 
 // ==================== دوال مساعدة ====================
 
@@ -1137,6 +1139,8 @@ export const getStoreSettings = async (req: AuthRequest, res: Response): Promise
   }
 };
 
+const SUBDOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$/;
+
 export const updateSubdomain = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
@@ -1144,25 +1148,52 @@ export const updateSubdomain = async (req: AuthRequest, res: Response): Promise<
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
     }
-    const { subdomain } = req.body;
-    if (!subdomain) {
-      res.status(400).json({ success: false, error: 'الـ subdomain مطلوب' });
+
+    const subdomain = String(req.body?.subdomain || '').trim().toLowerCase();
+
+    if (!SUBDOMAIN_PATTERN.test(subdomain) || subdomain.length < 3 || subdomain.length > 63) {
+      res.status(400).json({
+        success: false,
+        error: 'الـ subdomain يجب أن يكون بين 3 و63 حرفاً، أحرف إنجليزية وأرقام وشرطات فقط'
+      });
       return;
     }
-    
-    const existingStore = await prisma.store.findFirst({
-      where: { subdomain: subdomain.toLowerCase(), id: { not: storeId } }
-    });
-    if (existingStore) {
-      res.status(400).json({ success: false, error: 'هذا الـ subdomain مستخدم بالفعل' });
+
+    // الأسماء المحجوزة تخص المنصة (api, admin, www...) ولا يجوز حجزها
+    if (isReservedSubdomain(subdomain)) {
+      res.status(400).json({ success: false, error: 'هذا الاسم محجوز، اختر اسماً آخر' });
       return;
     }
-    
-    const updatedStore = await prisma.store.update({ 
-      where: { id: storeId }, 
-      data: { subdomain: subdomain.toLowerCase() } 
+
+    // التعارض يجب أن يُفحص عبر المتاجر والمطاعم معاً — كلاهما يتشارك مساحة الأسماء
+    const [existingStore, existingRestaurant] = await Promise.all([
+      prisma.store.findFirst({
+        where: { OR: [{ subdomain }, { slug: subdomain }], id: { not: storeId } },
+        select: { id: true }
+      }),
+      prisma.restaurant.findFirst({
+        where: { OR: [{ subdomain }, { slug: subdomain }] },
+        select: { id: true }
+      })
+    ]);
+
+    if (existingStore || existingRestaurant) {
+      res.status(409).json({ success: false, error: 'هذا الـ subdomain مستخدم بالفعل' });
+      return;
+    }
+
+    const updatedStore = await prisma.store.update({
+      where: { id: storeId },
+      data: { subdomain }
     });
-    res.json({ success: true, message: 'تم تحديث الـ subdomain بنجاح', data: { subdomain: updatedStore.subdomain } });
+
+    invalidateDomainCache();
+
+    res.json({
+      success: true,
+      message: 'تم تحديث الـ subdomain بنجاح',
+      data: { subdomain: updatedStore.subdomain, url: `https://${updatedStore.subdomain}.${env.APP_DOMAIN}` }
+    });
   } catch (error) {
     console.error('Error updating subdomain:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في تحديث الـ subdomain' });
@@ -1298,86 +1329,16 @@ export const updateNotificationSettings = async (req: AuthRequest, res: Response
 
 // ==================== إعدادات الدومين ====================
 
-export const getDnsSettings = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const storeId = await getStoreId(req);
-    if (!storeId) {
-      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
-      return;
-    }
-    const store = await prisma.store.findUnique({ where: { id: storeId } });
-    const verificationCode = store?.customDomainVerificationCode || `verify-${Math.random().toString(36).substring(2, 15)}`;
-    
-    if (!store?.customDomainVerificationCode) {
-      await prisma.store.update({
-        where: { id: storeId },
-        data: { customDomainVerificationCode: verificationCode }
-      });
-    }
-    
-    res.json({
-      success: true,
-      data: {
-        targetDomain: `${store?.subdomain}.shamstores.com`,
-        verificationCode: verificationCode,
-        instructions: {
-          cname: { name: 'www', value: `${store?.subdomain}.shamstores.com`, ttl: 3600 },
-          txt: { name: '@', value: `verification=${verificationCode}`, ttl: 3600 }
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error getting DNS settings:', error);
-    res.status(500).json({ success: false, error: 'حدث خطأ في جلب إعدادات DNS' });
-  }
-};
+// ==================== النطاق المخصص ====================
+// ملاحظة: هذه الدوال كانت تعلّم أي دومين كـ "موثّق" دون أي فحص DNS إطلاقاً،
+// ما كان يسمح لأي تاجر بالمطالبة بنطاق لا يملكه. صارت الآن تفوّض المنطق
+// إلى customDomainController الذي يجري تحققاً حقيقياً من سجلات DNS.
 
-export const verifyCustomDomain = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const storeId = await getStoreId(req);
-    const { customDomain } = req.body;
-    if (!storeId || !customDomain) {
-      res.status(400).json({ success: false, error: 'بيانات غير مكتملة' });
-      return;
-    }
-    
-    const updatedStore = await prisma.store.update({
-      where: { id: storeId },
-      data: {
-        customDomain: customDomain,
-        customDomainVerified: true,
-        customDomainVerifiedAt: new Date()
-      }
-    });
-    
-    res.json({ success: true, verified: true, message: 'تم التحقق من الدومين وتفعيله بنجاح', data: { customDomain: updatedStore.customDomain } });
-  } catch (error) {
-    console.error('Error verifying custom domain:', error);
-    res.status(500).json({ success: false, error: 'حدث خطأ في التحقق من الدومين' });
-  }
-};
-
-export const removeCustomDomain = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const storeId = await getStoreId(req);
-    if (!storeId) {
-      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
-      return;
-    }
-    const updatedStore = await prisma.store.update({
-      where: { id: storeId },
-      data: {
-        customDomain: null,
-        customDomainVerified: false,
-        customDomainVerifiedAt: null
-      }
-    });
-    res.json({ success: true, message: 'تم إزالة الدومين المخصص بنجاح', data: updatedStore });
-  } catch (error) {
-    console.error('Error removing custom domain:', error);
-    res.status(500).json({ success: false, error: 'حدث خطأ في إزالة الدومين' });
-  }
-};
+export {
+  getDnsSettings,
+  verifyCustomDomain,
+  removeCustomDomain
+} from './customDomainController';
 
 // ==================== دوال السائقين والموظفين والكوبونات ====================
 
@@ -1850,9 +1811,6 @@ export default {
   updateSocialSettings,
   updatePaymentSettings,
   updateNotificationSettings,
-  getDnsSettings,
-  verifyCustomDomain,
-  removeCustomDomain,
   getStoreDrivers,
   createStoreDriver,
   getStoreCoupons,

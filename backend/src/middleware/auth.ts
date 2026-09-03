@@ -13,48 +13,59 @@ export const authenticate = async (
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    console.log('🔑 Auth header received:', authHeader ? 'Yes' : 'No');
-    
-    if (authHeader) {
-      console.log('🔑 Auth header value:', authHeader.substring(0, 30) + '...');
-    }
-    
-    const token = authHeader?.replace('Bearer ', '');
-    
+    // لا نسجّل قيمة الترويسة إطلاقاً — التوكن بيانات اعتماد كاملة
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : undefined;
+
     if (!token) {
-      console.log('❌ No token provided');
       res.status(401).json({ success: false, error: 'لا يوجد صلاحية دخول' });
       return;
     }
 
     const decoded = verifyToken(token);
     if (!decoded) {
-      console.log('❌ Invalid token');
       res.status(401).json({ success: false, error: 'انتهت صلاحية الدخول' });
       return;
     }
 
-    // جلب صلاحيات المستخدم من قاعدة البيانات إذا كان موظفاً
-    let permissions = decoded.permissions;
-    if (decoded.role === 'staff') {
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.id },
-        select: { permissions: true }
-      });
-      if (user && user.permissions) {
-        permissions = user.permissions as any;
+    // التحقق من أن الحساب ما يزال موجوداً ونشطاً — التوكن وحده لا يكفي:
+    // تعطيل حساب أو تغيير دوره يجب أن يسري فوراً وليس بعد انتهاء صلاحية التوكن.
+    const dbUser = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        role: true,
+        isActive: true,
+        permissions: true,
+        restaurantId: true,
+        storeId: true
       }
+    });
+
+    if (!dbUser) {
+      res.status(401).json({ success: false, error: 'الحساب غير موجود' });
+      return;
     }
 
-    req.user = { 
-      ...decoded, 
-      permissions: permissions || decoded.permissions 
+    if (dbUser.isActive === false) {
+      res.status(403).json({ success: false, error: 'الحساب غير مفعل' });
+      return;
+    }
+
+    // المصدر الموثوق للدور والانتماء هو قاعدة البيانات، لا حمولة التوكن
+    req.user = {
+      ...decoded,
+      id: dbUser.id,
+      role: dbUser.role || decoded.role,
+      restaurantId: dbUser.restaurantId ?? undefined,
+      storeId: dbUser.storeId ?? undefined,
+      permissions: (dbUser.permissions as any) || decoded.permissions
     };
-    
-    console.log('✅ Token verified for user:', decoded.id, 'role:', decoded.role);
+
     next();
   } catch (error) {
-    console.error('❌ Auth error:', error);
+    console.error('❌ Auth error:', error instanceof Error ? error.message : error);
     res.status(401).json({ success: false, error: 'خطأ في التحقق من الصلاحية' });
   }
 };
@@ -498,4 +509,78 @@ export const getUserPermissions = async (userId: string): Promise<any> => {
     select: { permissions: true, role: true, restaurantId: true, storeId: true }
   });
   return user?.permissions || {};
+};
+// ==================== حراسة ملكية المستأجر (Tenant Ownership) ====================
+
+/**
+ * يمنع الوصول العابر بين المستأجرين (IDOR).
+ *
+ * بعض مسارات الإدارة تسمح بدور `owner` وتأخذ معرّف المتجر/المطعم من الـ URL.
+ * بدون هذا الفحص يستطيع مالك المتجر (أ) قراءة موظفي المتجر (ب) — بل وإنشاء
+ * حساب موظف بكلمة مرور يختارها داخل متجر لا يملكه.
+ */
+export const requireBusinessOwnership = (
+  businessType: 'store' | 'restaurant',
+  paramName: string
+) => {
+  return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({ success: false, error: 'غير مصرح' });
+        return;
+      }
+
+      // السوبر أدمن يمر
+      if (req.user.role === 'super_admin') {
+        next();
+        return;
+      }
+
+      // موظف المنصة صاحب الصلاحية المناسبة يمر
+      const platformPermission =
+        businessType === 'store' ? 'manage_stores' : 'manage_restaurants';
+      if (checkPlatformStaffPermission(req, platformPermission)) {
+        next();
+        return;
+      }
+
+      const targetId = req.params[paramName];
+      if (!targetId) {
+        res.status(400).json({ success: false, error: 'معرّف النشاط التجاري مفقود' });
+        return;
+      }
+
+      const linkedId =
+        businessType === 'store' ? req.user.storeId : req.user.restaurantId;
+
+      if (linkedId && linkedId === targetId) {
+        next();
+        return;
+      }
+
+      // فحص إضافي: قد يملك المستخدم النشاط دون أن يكون مرتبطاً به في التوكن
+      if (req.user.role === 'owner') {
+        const owned =
+          businessType === 'store'
+            ? await prisma.store.findFirst({
+                where: { id: targetId, userId: req.user.id },
+                select: { id: true }
+              })
+            : await prisma.restaurant.findFirst({
+                where: { id: targetId, userId: req.user.id },
+                select: { id: true }
+              });
+
+        if (owned) {
+          next();
+          return;
+        }
+      }
+
+      res.status(403).json({ success: false, error: 'لا تملك صلاحية الوصول لهذا النشاط التجاري' });
+    } catch (error) {
+      console.error('Error verifying business ownership:', error);
+      res.status(500).json({ success: false, error: 'حدث خطأ في التحقق من الصلاحية' });
+    }
+  };
 };

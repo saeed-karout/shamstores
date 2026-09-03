@@ -1,6 +1,6 @@
 // backend/src/routes/adminRoutes.ts
 import { Router, Request, Response, NextFunction } from 'express';
-import { authenticate, authorize } from '../middleware/auth';
+import { authenticate, authorize, requireBusinessOwnership } from '../middleware/auth';
 import { 
   // إحصائيات عامة
   getPlatformStats,
@@ -169,10 +169,10 @@ const checkPlatformStaffPermission = (req: any, res: any, next: any, permission:
 
 
 // أضف هذه المسارات
-router.get('/global-products', authorize(['super_admin']), getGlobalProductsSetting);
-router.post('/global-products', authorize(['super_admin']), toggleGlobalProducts);
-router.get('/restaurants/all-products', authorize(['super_admin']), getAllProductsFromAllBranches);
-router.get('/stores/all-products', authorize(['super_admin']), getAllProductsFromAllBranches);
+router.get('/global-products', authenticate, authorize(['super_admin']), getGlobalProductsSetting);
+router.post('/global-products', authenticate, authorize(['super_admin']), toggleGlobalProducts);
+router.get('/restaurants/all-products', authenticate, authorize(['super_admin']), getAllProductsFromAllBranches);
+router.get('/stores/all-products', authenticate, authorize(['super_admin']), getAllProductsFromAllBranches);
 
 // ==================== مسارات السوبر أدمن وموظفي المنصة ====================
 router.use(authenticate);
@@ -214,13 +214,13 @@ router.delete('/stores/:id', authorize(['super_admin']), deleteStore);
 router.post('/stores/:id/reset-password', authorize(['super_admin']), resetStorePassword);
 
 // -------------------- إدارة موظفي المتجر --------------------
-router.get('/stores/:storeId/staff', authorize(['super_admin', 'owner']), getStoreStaff);
-router.get('/stores/:storeId/staff/:staffId', authorize(['super_admin', 'owner']), getStoreStaffDetails);
-router.post('/stores/:storeId/staff', authorize(['super_admin', 'owner']), createStoreStaff);
-router.put('/stores/:storeId/staff/:staffId', authorize(['super_admin', 'owner']), updateStoreStaff);
-router.patch('/stores/:storeId/staff/:staffId/toggle', authorize(['super_admin', 'owner']), toggleStoreStaffStatus);
-router.put('/stores/:storeId/staff/:staffId/permissions', authorize(['super_admin', 'owner']), updateStoreStaffPermissions);
-router.delete('/stores/:storeId/staff/:staffId', authorize(['super_admin', 'owner']), deleteStoreStaff);
+router.get('/stores/:storeId/staff', authorize(['super_admin', 'owner']), requireBusinessOwnership('store', 'storeId'), getStoreStaff);
+router.get('/stores/:storeId/staff/:staffId', authorize(['super_admin', 'owner']), requireBusinessOwnership('store', 'storeId'), getStoreStaffDetails);
+router.post('/stores/:storeId/staff', authorize(['super_admin', 'owner']), requireBusinessOwnership('store', 'storeId'), createStoreStaff);
+router.put('/stores/:storeId/staff/:staffId', authorize(['super_admin', 'owner']), requireBusinessOwnership('store', 'storeId'), updateStoreStaff);
+router.patch('/stores/:storeId/staff/:staffId/toggle', authorize(['super_admin', 'owner']), requireBusinessOwnership('store', 'storeId'), toggleStoreStaffStatus);
+router.put('/stores/:storeId/staff/:staffId/permissions', authorize(['super_admin', 'owner']), requireBusinessOwnership('store', 'storeId'), updateStoreStaffPermissions);
+router.delete('/stores/:storeId/staff/:staffId', authorize(['super_admin', 'owner']), requireBusinessOwnership('store', 'storeId'), deleteStoreStaff);
 
 // -------------------- إدارة موظفي المنصة (سوبر أدمن فقط) --------------------
 // Legacy aliases: keep /staff for backward compatibility with frontend

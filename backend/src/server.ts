@@ -3,10 +3,26 @@
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import http from 'http';
-import dotenv from 'dotenv';
+import helmet from 'helmet';
+import compression from 'compression';
+import hpp from 'hpp';
 import { PrismaClient } from '@prisma/client';
 import { initializeSocket } from './realtime/socket';
+import env, { isProduction } from './config/env';
+import {
+  generalLimiter,
+  authLimiter,
+  registerLimiter,
+  publicOrderLimiter,
+  uploadLimiter,
+  emailLimiter,
+  errorHandler,
+  apiNotFound
+} from './middleware/security';
+import { isVerifiedCustomDomain } from './services/domain.service';
+import { configureLogging } from './utils/logger';
 
 // استيراد المسارات
 import authRoutes from './routes/authRoutes';
@@ -26,55 +42,115 @@ import featureRoutes from './routes/featureRoutes';
 import platformSettingsRoutes from './routes/platformSettingsRoutes';
 import publicRoutes from './routes/publicRoutes';
 import marketingRoutes from './routes/marketingRoutes';
-import subscriptionRoutes from './routes/subscriptionRoutes'; 
+import subscriptionRoutes from './routes/subscriptionRoutes';
+import customDomainRoutes from './routes/customDomainRoutes';
 
 import { extractSubdomain } from './middleware/subdomain';
 import advertisementRoutes from './routes/advertisementRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
 import { startSchedulers } from './schedulers';
 
-dotenv.config();
+// إسكات السجلات المطوّلة في الإنتاج (كانت تطبع حمولات التوكن)
+configureLogging();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = env.PORT;
 const httpServer = http.createServer(app);
+
+// خلف موازن تحميل (Heroku) — ضروري ليعمل rate limiting بشكل صحيح
+if (env.TRUST_PROXY !== 'false') {
+  app.set('trust proxy', Number(env.TRUST_PROXY) || 1);
+}
+app.disable('x-powered-by');
 
 // إنشاء Prisma Client
 const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+  log: isProduction ? ['error'] : ['warn', 'error'],
 });
 
 // ==============================================
-// ✅ إعدادات CORS المتقدمة
+// ✅ ترويسات الأمان (Helmet)
 // ==============================================
-const corsOptions = {
-  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    if (!origin) {
-      return callback(null, true);
+app.use(
+  helmet({
+    contentSecurityPolicy: isProduction
+      ? {
+          useDefaults: true,
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: [
+              "'self'",
+              "'unsafe-inline'",
+              'https://www.googletagmanager.com',
+              'https://www.google-analytics.com',
+              'https://apis.google.com'
+            ],
+            styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+            fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+            imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            connectSrc: ["'self'", 'https:', 'wss:'],
+            frameSrc: ["'self'", 'https://www.google.com', 'https://shamstores.firebaseapp.com'],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            frameAncestors: ["'none'"],
+            upgradeInsecureRequests: []
+          }
+        }
+      : false,
+    crossOriginEmbedderPolicy: false,
+    // الصور تأتي من R2/Cloudflare على نطاق مختلف
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: isProduction ? { maxAge: 15552000, includeSubDomains: true, preload: false } : false
+  })
+);
+
+app.use(compression());
+
+// ==============================================
+// ✅ إعدادات CORS
+// ==============================================
+const STATIC_ALLOWED_ORIGINS = new Set(
+  [
+    env.CLIENT_URL,
+    'https://' + env.APP_DOMAIN,
+    'https://www.' + env.APP_DOMAIN,
+    ...env.ALLOWED_ORIGINS
+  ].filter(Boolean)
+);
+
+const appDomainEscaped = env.APP_DOMAIN.replace(/\./g, '\\.');
+const isPlatformSubdomain = new RegExp(
+  '^https://[a-z0-9-]+(\\.[a-z0-9-]+)*\\.' + appDomainEscaped + '$',
+  'i'
+);
+const isLocalOrigin = /^https?:\/\/(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:\d+)?$/i;
+
+const corsOptions: cors.CorsOptions = {
+  origin: async (origin, callback) => {
+    // طلبات بلا Origin (same-origin، تطبيقات أصلية) مسموحة
+    if (!origin) return callback(null, true);
+
+    if (STATIC_ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+    if (isPlatformSubdomain.test(origin)) return callback(null, true);
+    // localhost في التطوير فقط
+    if (!isProduction && isLocalOrigin.test(origin)) return callback(null, true);
+
+    // النطاقات المخصصة الموثّقة فقط
+    try {
+      const host = new URL(origin).hostname;
+      if (await isVerifiedCustomDomain(host)) return callback(null, true);
+    } catch {
+      /* origin غير صالح */
     }
 
-    const allowedOrigins = [
-      'https://shamstores.com',
-      'https://www.shamstores.com',
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://shamstores-app-mixd9.ondigitalocean.app'
-    ];
-
-    const isShamstoresSubdomain = /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.shamstores\.com$/.test(origin);
-    const isLocalhost = /^https?:\/\/(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
-
-    if (allowedOrigins.includes(origin) || isShamstoresSubdomain || isLocalhost) {
-      console.log(`✅ CORS allowed for origin: ${origin}`);
-      return callback(null, true);
-    }
-
-    console.log(`❌ CORS blocked for origin: ${origin}`);
     return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Subdomain'],
+  maxAge: 86400,
   optionsSuccessStatus: 204
 };
 
@@ -82,16 +158,111 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // ==============================================
-// إعدادات السيرفر
+// تحليل الجسم — حد منخفض: الصور تمر عبر multer لا عبر JSON
 // ==============================================
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+const BODY_LIMIT = process.env.JSON_BODY_LIMIT || '1mb';
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
+app.use(hpp());
 
-// المجلدات الثابتة
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// المجلدات الثابتة (صور قديمة محفوظة محلياً)
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '../uploads'), {
+    maxAge: '7d',
+    setHeaders: (res) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; sandbox");
+    }
+  })
+);
 
-// تفعيل middleware استخراج الـ subdomain
+// فحص الصحة — يستخدمه Heroku والمراقبة
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), env: env.NODE_ENV });
+});
+
+// استخراج الـ subdomain / النطاق المخصص
 app.use(extractSubdomain);
+
+// ==============================================
+// وضع الصيانة — يجب أن يسبق المسارات وإلا لن يعمل إطلاقاً
+// ==============================================
+const MAINTENANCE_EXCLUDED = [
+  '/health',
+  '/api/auth/login',
+  '/api/auth/me',
+  '/api/platform-settings/public',
+  '/api/admin/login',
+  '/api/admin/maintenance'
+];
+
+let maintenanceCache: { value: boolean; message: string; expires: number } = {
+  value: false,
+  message: '',
+  expires: 0
+};
+
+const maintenanceMiddleware = async (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+) => {
+  if (!req.path.startsWith('/api/')) return next();
+  if (MAINTENANCE_EXCLUDED.some((p) => req.path === p || req.path.startsWith(p + '/'))) {
+    return next();
+  }
+
+  try {
+    if (maintenanceCache.expires < Date.now()) {
+      const [mode, message] = await Promise.all([
+        prisma.extendedPlatformSetting.findUnique({ where: { keyName: 'maintenance_mode' } }),
+        prisma.extendedPlatformSetting.findUnique({ where: { keyName: 'maintenance_message' } })
+      ]);
+      maintenanceCache = {
+        value: mode?.value === 'true',
+        message: message?.value || 'المنصة في وضع الصيانة حالياً. نعتذر عن الإزعاج.',
+        expires: Date.now() + 30000
+      };
+    }
+
+    if (maintenanceCache.value) {
+      return res.status(503).json({
+        success: false,
+        maintenance: true,
+        message: maintenanceCache.message
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Error checking maintenance mode:', error);
+    next();
+  }
+};
+
+app.use(maintenanceMiddleware);
+
+// ==============================================
+// حدود المعدل (Rate Limiting)
+// ==============================================
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/delivery/login', authLimiter);
+app.use('/api/auth/register', registerLimiter);
+app.use('/api/auth/register-store', registerLimiter);
+app.use('/api/auth/forgot-password', emailLimiter);
+app.use('/api/auth/reset-password', authLimiter);
+app.use('/api/auth/resend-verification', emailLimiter);
+app.use('/api/auth/verify-email', authLimiter);
+app.use('/api/upload', uploadLimiter);
+// إنشاء الطلبات فقط (مسار عام بلا مصادقة) — لا نقيّد قراءة الطلبات في لوحة التاجر
+app.use('/api/orders', (req, res, next) => {
+  if (req.method === 'POST' && (req.path === '/' || req.path === '')) {
+    return publicOrderLimiter(req, res, next);
+  }
+  next();
+});
 
 // ==============================================
 // المسارات (Routes)
@@ -116,74 +287,62 @@ app.use('/api/marketing', marketingRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/custom-domain', customDomainRoutes);
 
 
 // ==============================================
-// Middleware وضع الصيانة
+// معلومات الـ API (لا تكشف بنية المسارات في الإنتاج)
 // ==============================================
-const maintenanceMiddleware = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // استثناء مسارات API المهمة
-  const excludedPaths = ['/api/auth/login', '/api/platform-settings/public', '/api/admin/login'];
-  
-  if (excludedPaths.includes(req.path)) {
-    return next();
-  }
-  
-  try {
-    const maintenanceMode = await prisma.extendedPlatformSetting.findUnique({
-      where: { keyName: 'maintenance_mode' }
-    });
-    
-    if (maintenanceMode && maintenanceMode.value === 'true') {
-      const maintenanceMessage = await prisma.extendedPlatformSetting.findUnique({
-        where: { keyName: 'maintenance_message' }
-      });
-      
-      return res.status(503).json({
-        success: false,
-        maintenance: true,
-        message: maintenanceMessage?.value || 'المنصة في وضع الصيانة حالياً. نعتذر عن الإزعاج.'
-      });
-    }
-    
-    next();
-  } catch (error) {
-    console.error('Error checking maintenance mode:', error);
-    next();
-  }
-};
-
-// تطبيق middleware وضع الصيانة على جميع المسارات
-app.use(maintenanceMiddleware);
-
-// الصفحة الرئيسية
-app.get('/', (req, res) => {
+app.get('/api', (_req, res) => {
   res.json({
-    message: 'مرحباً بك في Digital Menu SaaS API',
+    message: 'Digital Menu SaaS API',
     version: '2.0.0',
-    status: 'active',
-    database: 'Prisma ORM',
-    endpoints: {
-      auth: '/api/auth',
-      restaurants: '/api/restaurants',
-      menu: '/api/menu',
-      orders: '/api/orders',
-      tables: '/api/tables',
-      upload: '/api/upload',
-      plans: '/api/plans',
-      qr: '/api/qr',
-      store: '/api/store',
-      delivery: '/api/delivery',
-      marketing: '/api/marketing'
-    }
+    status: 'active'
   });
 });
 
-// معالجة الأخطاء العامة
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('❌ Server error:', err.stack);
-  res.status(500).json({ error: 'حدث خطأ في الخادم' });
-});
+// 404 لمسارات الـ API غير الموجودة — قبل تقديم ملفات الواجهة
+app.use('/api', apiNotFound);
+
+// ==============================================
+// تقديم الواجهة المبنية (نشر بتطبيق Heroku واحد)
+// ==============================================
+const FRONTEND_DIST = path.resolve(__dirname, '../../frontend/dist');
+const hasFrontendBuild = env.SERVE_FRONTEND && fs.existsSync(path.join(FRONTEND_DIST, 'index.html'));
+
+if (hasFrontendBuild) {
+  // الأصول المُبصَمة (hashed) تُخزَّن طويلاً، وindex.html لا يُخزَّن إطلاقاً
+  app.use(
+    express.static(FRONTEND_DIST, {
+      index: false,
+      maxAge: '1y',
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        }
+      }
+    })
+  );
+
+  // SPA fallback — أي مسار غير معروف يُسلَّم إلى React Router
+  app.get('*', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
+  });
+} else {
+  app.get('/', (_req, res) => {
+    res.json({
+      message: 'مرحباً بك في Digital Menu SaaS API',
+      version: '2.0.0',
+      status: 'active'
+    });
+  });
+}
+
+// ==============================================
+// معالجة الأخطاء العامة — يجب أن تكون آخر شيء
+// ==============================================
+app.use(errorHandler);
 
 // ==============================================
 // إدراج البيانات الأساسية (الخطط)
@@ -391,45 +550,67 @@ const seedPlatformSettings = async () => {
 // ==============================================
 const startServer = async () => {
   try {
-    // الاتصال بقاعدة البيانات باستخدام Prisma
     await prisma.$connect();
-    console.log('✅ Prisma connected to database successfully.');
+    console.warn('✅ Prisma connected to database successfully.');
 
     // إدراج البيانات الأساسية
     await seedPlans();
     await seedPlatformSettings();
 
-     startSchedulers();
-    // تشغيل Socket.IO
+    startSchedulers();
     initializeSocket(httpServer);
 
-    // بدء الاستماع على المنفذ
     httpServer.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`📝 API: http://localhost:${PORT}`);
-      console.log(`🔔 Socket.IO: ws://localhost:${PORT}`);
-      console.log(`🌐 CORS: Enabled for shamstores.com and all subdomains`);
-      console.log(`🗄️  Database: Prisma ORM`);
+      console.warn(`🚀 Server running on port ${PORT} [${env.NODE_ENV}]`);
+      console.warn(`🌐 App domain: ${env.APP_DOMAIN}`);
+      console.warn(`🖥️  Frontend served from server: ${hasFrontendBuild ? 'yes' : 'no'}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
-    if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
-    }
+    // في الإنتاج نفشل بوضوح بدل البقاء في حالة نصف عاملة
+    process.exit(1);
   }
 };
 
-// إغلاق الاتصال بشكل نظيف عند إيقاف السيرفر
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  console.log('🔌 Prisma disconnected');
-  process.exit(0);
+// ==============================================
+// إغلاق نظيف — Heroku يرسل SIGTERM قبل إعادة التشغيل
+// ==============================================
+let shuttingDown = false;
+
+const shutdown = async (signal: string) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.warn(`🔻 Received ${signal}, shutting down gracefully...`);
+
+  const forceExit = setTimeout(() => {
+    console.error('⏱️  Graceful shutdown timed out, forcing exit');
+    process.exit(1);
+  }, 25000);
+  forceExit.unref();
+
+  httpServer.close(async () => {
+    try {
+      await prisma.$disconnect();
+      console.warn('🔌 Prisma disconnected');
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+    } finally {
+      clearTimeout(forceExit);
+      process.exit(0);
+    }
+  });
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+process.on('unhandledRejection', (reason) => {
+  console.error('❌ Unhandled promise rejection:', reason);
 });
 
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
-  console.log('🔌 Prisma disconnected');
-  process.exit(0);
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught exception:', error);
+  shutdown('uncaughtException');
 });
 
 startServer();

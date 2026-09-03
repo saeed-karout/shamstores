@@ -1,11 +1,6 @@
 import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 import { UserPayload } from '../types';
-
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this';
-const JWT_EXPIRE = process.env.JWT_EXPIRE || '30d';
+import env from './env';
 
 export interface TokenPayload {
   id: string;
@@ -19,30 +14,27 @@ export const generateToken = (payload: UserPayload): string => {
   // التأكد من أن role له قيمة (fallback للمستخدمين القدامى)
   const safePayload = {
     ...payload,
-    role: payload.role || 'user' // إذا كان role فارغاً، استخدم 'user'
+    role: payload.role || 'user'
   };
-  
-  console.log('🎫 Generating token with payload:', safePayload);
 
-  const options: jwt.SignOptions = { 
-    expiresIn: JWT_EXPIRE as jwt.SignOptions['expiresIn'] 
+  const options: jwt.SignOptions = {
+    expiresIn: env.JWT_EXPIRE as jwt.SignOptions['expiresIn'],
+    issuer: 'shamstores'
   };
-  return jwt.sign(safePayload, JWT_SECRET, options);
+  return jwt.sign(safePayload, env.JWT_SECRET, options);
 };
 
 export const verifyToken = (token: string): UserPayload | null => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-    
-    // التأكد من أن role موجود في التوكن المفكوك
+    const decoded = jwt.verify(token, env.JWT_SECRET) as UserPayload;
+
     if (!decoded.role) {
-      console.warn('⚠️ Token has no role, adding default');
       decoded.role = 'user';
     }
-    
+
     return decoded;
-  } catch (error) {
-    console.error('❌ Token verification failed:', error);
+  } catch {
+    // لا نسجّل التوكن ولا تفاصيل الخطأ — قد تسرّب بيانات حساسة في السجلات
     return null;
   }
 };

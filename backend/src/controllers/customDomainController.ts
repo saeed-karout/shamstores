@@ -1,304 +1,401 @@
 // backend/src/controllers/customDomainController.ts
+// إدارة النطاقات المخصصة للمطاعم والمتاجر — بتحقق DNS حقيقي
 
-import { Request, Response } from 'express';
-import { prisma } from '../server';
-import dns from 'dns';
-import { promisify } from 'util';
+import { Response } from 'express';
+import prisma from '../services/prisma';
+import { AuthRequest } from '../types';
+import env from '../config/env';
+import {
+  validateCustomDomain,
+  verifyDomainDns,
+  buildDnsInstructions,
+  generateVerificationCode,
+  invalidateDomainCache,
+  normalizeDomain,
+  stripWww,
+  BusinessType
+} from '../services/domain.service';
 
-const resolveTxt = promisify(dns.resolveTxt);
-const resolveCname = promisify(dns.resolveCname);
+interface OwnedBusiness {
+  type: BusinessType;
+  id: string;
+  name: string;
+  slug: string;
+  subdomain: string | null;
+  customDomain: string | null;
+  customDomainVerified: boolean | null;
+  customDomainVerifiedAt: Date | null;
+  customDomainVerificationCode: string | null;
+}
 
-// توليد رمز التحقق العشوائي
-const generateVerificationCode = () => {
-  return `verify-${Math.random().toString(36).substring(2, 15)}`;
-};
+const BUSINESS_SELECT = {
+  id: true,
+  name: true,
+  slug: true,
+  subdomain: true,
+  customDomain: true,
+  customDomainVerified: true,
+  customDomainVerifiedAt: true,
+  customDomainVerificationCode: true
+} as const;
 
-// دالة مساعدة لجلب العمل التجاري للمستخدم
-const getBusinessByUser = async (userId: string, businessType?: string) => {
+/**
+ * يحدد النشاط التجاري الذي يملكه المستخدم فعلياً.
+ * لا يُقبل أي معرّف من العميل — المصدر الوحيد هو ارتباط المستخدم في قاعدة البيانات.
+ */
+export const getOwnedBusiness = async (req: AuthRequest): Promise<OwnedBusiness | null> => {
+  const userId = req.user?.id;
+  if (!userId) return null;
+
   const user = await prisma.user.findUnique({
-    where: { id: userId }
+    where: { id: userId },
+    select: { restaurantId: true, storeId: true, role: true }
   });
-  
-  if (!user) return { business: null, type: null };
+  if (!user) return null;
 
-  if (businessType === 'restaurant' && user.restaurantId) {
-    const business = await prisma.restaurant.findUnique({
-      where: { id: user.restaurantId }
-    });
-    return { business, type: 'restaurant' };
-  }
-  
-  if (businessType === 'store' && user.storeId) {
-    const business = await prisma.store.findUnique({
-      where: { id: user.storeId }
-    });
-    return { business, type: 'store' };
-  }
-  
-  // إذا لم يكن محدداً
   if (user.restaurantId) {
-    const business = await prisma.restaurant.findUnique({
-      where: { id: user.restaurantId }
+    const restaurant = await prisma.restaurant.findUnique({
+      where: { id: user.restaurantId },
+      select: BUSINESS_SELECT
     });
-    return { business, type: 'restaurant' };
+    if (restaurant) return { type: 'restaurant', ...restaurant };
   }
-  
+
   if (user.storeId) {
-    const business = await prisma.store.findUnique({
-      where: { id: user.storeId }
+    const store = await prisma.store.findUnique({
+      where: { id: user.storeId },
+      select: BUSINESS_SELECT
     });
-    return { business, type: 'store' };
+    if (store) return { type: 'store', ...store };
   }
-  
-  return { business: null, type: null };
+
+  // مالك بلا ارتباط مباشر: نبحث عن نشاط يملكه
+  const ownedRestaurant = await prisma.restaurant.findFirst({
+    where: { userId },
+    select: BUSINESS_SELECT
+  });
+  if (ownedRestaurant) return { type: 'restaurant', ...ownedRestaurant };
+
+  const ownedStore = await prisma.store.findFirst({
+    where: { userId },
+    select: BUSINESS_SELECT
+  });
+  if (ownedStore) return { type: 'store', ...ownedStore };
+
+  return null;
 };
 
-// جلب إعدادات DNS المطلوبة
-export const getDnsSettings = async (req: Request, res: Response) => {
+const updateBusiness = async (type: BusinessType, id: string, data: any) => {
+  if (type === 'restaurant') {
+    return prisma.restaurant.update({ where: { id }, data, select: BUSINESS_SELECT });
+  }
+  return prisma.store.update({ where: { id }, data, select: BUSINESS_SELECT });
+};
+
+/** يضمن وجود رمز تحقق ثابت للنشاط التجاري */
+const ensureVerificationCode = async (business: OwnedBusiness): Promise<string> => {
+  if (business.customDomainVerificationCode) return business.customDomainVerificationCode;
+  const code = generateVerificationCode();
+  await updateBusiness(business.type, business.id, { customDomainVerificationCode: code });
+  return code;
+};
+
+// ==================== GET /dns-settings ====================
+
+export const getDnsSettings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.id;
-    const businessType = req.user?.businessType;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'غير مصرح' });
-    }
-    
-    const { business, type } = await getBusinessByUser(userId, businessType);
-    
+    const business = await getOwnedBusiness(req);
     if (!business) {
-      return res.status(404).json({ error: 'المطعم/المتجر غير موجود' });
+      res.status(404).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+      return;
     }
-    
-    const verificationCode = business.customDomainVerificationCode || generateVerificationCode();
-    
-    if (!business.customDomainVerificationCode) {
-      // تحديث باستخدام Prisma حسب النوع
-      if (type === 'restaurant') {
-        await prisma.restaurant.update({
-          where: { id: business.id },
-          data: { customDomainVerificationCode: verificationCode }
-        });
-      } else {
-        await prisma.store.update({
-          where: { id: business.id },
-          data: { customDomainVerificationCode: verificationCode }
-        });
-      }
-    }
-    
-    // تحديث المتغير المحلي بالرمز الجديد
-    const finalVerificationCode = business.customDomainVerificationCode || verificationCode;
-    const subdomain = business.subdomain;
-    
+
+    const verificationCode = await ensureVerificationCode(business);
+    const instructions = buildDnsInstructions(
+      business.subdomain || business.slug,
+      verificationCode,
+      business.customDomain
+    );
+
     res.json({
       success: true,
       data: {
-        targetDomain: `${subdomain}.shamstores.com`,
-        verificationCode: finalVerificationCode,
-        instructions: {
-          cname: {
-            name: 'www',
-            value: `${subdomain}.shamstores.com`,
-            ttl: 3600
-          },
-          txt: {
-            name: '@',
-            value: `verification=${finalVerificationCode}`,
-            ttl: 3600
-          }
-        }
+        ...instructions,
+        appDomain: env.APP_DOMAIN,
+        businessType: business.type,
+        currentDomain: business.customDomain,
+        verified: business.customDomainVerified === true
       }
     });
   } catch (error) {
     console.error('Error getting DNS settings:', error);
-    res.status(500).json({ error: 'حدث خطأ في جلب إعدادات DNS' });
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب إعدادات DNS' });
   }
 };
 
-// التحقق من صحة الدومين المخصص
-export const verifyCustomDomain = async (req: Request, res: Response) => {
+// ==================== POST /verify-domain ====================
+
+export const verifyCustomDomain = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { customDomain } = req.body;
-    const userId = req.user?.id;
-    const businessType = req.user?.businessType;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'غير مصرح' });
-    }
-    
-    if (!customDomain) {
-      return res.status(400).json({ error: 'الرجاء إدخال الدومين' });
-    }
-    
-    const { business, type } = await getBusinessByUser(userId, businessType);
-    
+    const business = await getOwnedBusiness(req);
     if (!business) {
-      return res.status(404).json({ error: 'المطعم/المتجر غير موجود' });
+      res.status(404).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+      return;
     }
-    
-    // التحقق من أن الدومين غير مستخدم من قبل مطعم آخر
-    const existingRestaurant = await prisma.restaurant.findFirst({
-      where: {
-        customDomain: customDomain,
-        id: { not: business.id }
-      }
-    });
-    
-    // التحقق من أن الدومين غير مستخدم من قبل متجر آخر
-    const existingStore = await prisma.store.findFirst({
-      where: {
-        customDomain: customDomain,
-        id: { not: business.id }
-      }
-    });
-    
-    if (existingRestaurant || existingStore) {
-      return res.status(400).json({ error: 'هذا الدومين مستخدم بالفعل' });
+
+    const validation = validateCustomDomain(req.body?.customDomain);
+    if (!validation.valid) {
+      res.status(400).json({ success: false, error: validation.error });
+      return;
     }
-    
-    let cnameVerified = false;
-    let txtVerified = false;
-    
-    // التحقق من سجل CNAME
-    try {
-      const cnameRecords = await resolveCname(customDomain);
-      cnameVerified = cnameRecords.some(record => 
-        record === `${business.subdomain}.shamstores.com`
-      );
-    } catch (error) {
-      console.log('CNAME check failed:', error);
+
+    const domain = validation.domain;
+    const candidates = Array.from(new Set([domain, stripWww(domain), `www.${stripWww(domain)}`]));
+
+    // الدومين محجوز من نشاط آخر؟
+    const [takenByRestaurant, takenByStore] = await Promise.all([
+      prisma.restaurant.findFirst({
+        where: {
+          customDomain: { in: candidates },
+          NOT: business.type === 'restaurant' ? { id: business.id } : undefined
+        },
+        select: { id: true }
+      }),
+      prisma.store.findFirst({
+        where: {
+          customDomain: { in: candidates },
+          NOT: business.type === 'store' ? { id: business.id } : undefined
+        },
+        select: { id: true }
+      })
+    ]);
+
+    if (takenByRestaurant || takenByStore) {
+      res.status(409).json({ success: false, error: 'هذا الدومين مستخدم بالفعل' });
+      return;
     }
-    
-    // التحقق من سجل TXT
-    try {
-      const txtRecords = await resolveTxt(customDomain);
-      const flatRecords = txtRecords.map(record => record.join(''));
-      txtVerified = flatRecords.some(record => 
-        record === `verification=${business.customDomainVerificationCode}`
-      );
-    } catch (error) {
-      console.log('TXT check failed:', error);
-    }
-    
-    if (cnameVerified && txtVerified) {
-      // تحديث باستخدام Prisma حسب النوع
-      if (type === 'restaurant') {
-        await prisma.restaurant.update({
-          where: { id: business.id },
-          data: {
-            customDomain: customDomain,
-            customDomainVerified: true,
-            customDomainVerifiedAt: new Date()
-          }
-        });
-      } else {
-        await prisma.store.update({
-          where: { id: business.id },
-          data: {
-            customDomain: customDomain,
-            customDomainVerified: true,
-            customDomainVerifiedAt: new Date()
-          }
-        });
-      }
-      
-      res.json({
-        success: true,
-        message: 'تم التحقق من الدومين وتفعيله بنجاح',
-        data: { customDomain, verified: true }
-      });
-    } else {
-      res.json({
+
+    const verificationCode = await ensureVerificationCode(business);
+    const subdomain = business.subdomain || business.slug;
+
+    // ✅ تحقق DNS حقيقي — لا نثق أبداً بادعاء العميل
+    const dnsResult = await verifyDomainDns(domain, verificationCode, subdomain);
+    const routingOk = dnsResult.cnameVerified || dnsResult.aVerified;
+
+    if (!dnsResult.txtVerified || !routingOk) {
+      const instructions = buildDnsInstructions(subdomain, verificationCode, domain);
+      res.status(200).json({
         success: false,
-        message: 'لم يتم التحقق من إعدادات DNS بعد',
+        verified: false,
+        error: !dnsResult.txtVerified
+          ? 'لم يتم العثور على سجل TXT لإثبات ملكية الدومين. تأكد من إضافته وانتظر انتشار الـ DNS (قد يستغرق حتى 24 ساعة).'
+          : 'سجل TXT صحيح، لكن الدومين لا يشير إلى المنصة بعد. أضف سجل CNAME المطلوب.',
         data: {
-          cnameVerified,
-          txtVerified,
-          requiredCname: `${business.subdomain}.shamstores.com`,
-          requiredTxt: `verification=${business.customDomainVerificationCode}`
+          txtVerified: dnsResult.txtVerified,
+          cnameVerified: dnsResult.cnameVerified,
+          aVerified: dnsResult.aVerified,
+          ...instructions
         }
       });
+      return;
     }
-  } catch (error) {
-    console.error('Error verifying custom domain:', error);
-    res.status(500).json({ error: 'حدث خطأ في التحقق من الدومين' });
-  }
-};
 
-// إزالة الدومين المخصص
-export const removeCustomDomain = async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.id;
-    const businessType = req.user?.businessType;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'غير مصرح' });
-    }
-    
-    const { business, type } = await getBusinessByUser(userId, businessType);
-    
-    if (!business) {
-      return res.status(404).json({ error: 'المطعم/المتجر غير موجود' });
-    }
-    
-    // تحديث باستخدام Prisma حسب النوع
-    if (type === 'restaurant') {
-      await prisma.restaurant.update({
-        where: { id: business.id },
-        data: {
-          customDomain: null,
-          customDomainVerified: false,
-          customDomainVerifiedAt: null
-        }
-      });
-    } else {
-      await prisma.store.update({
-        where: { id: business.id },
-        data: {
-          customDomain: null,
-          customDomainVerified: false,
-          customDomainVerifiedAt: null
-        }
-      });
-    }
-    
+    const updated = await updateBusiness(business.type, business.id, {
+      customDomain: domain,
+      customDomainVerified: true,
+      customDomainVerifiedAt: new Date()
+    });
+
+    invalidateDomainCache(domain);
+    if (business.customDomain) invalidateDomainCache(business.customDomain);
+
     res.json({
       success: true,
-      message: 'تم إزالة الدومين المخصص بنجاح'
+      verified: true,
+      message: 'تم التحقق من الدومين وتفعيله بنجاح',
+      data: {
+        customDomain: updated.customDomain,
+        customDomainVerified: updated.customDomainVerified,
+        customDomainVerifiedAt: updated.customDomainVerifiedAt
+      }
     });
   } catch (error) {
-    console.error('Error removing custom domain:', error);
-    res.status(500).json({ error: 'حدث خطأ في إزالة الدومين' });
+    console.error('Error verifying custom domain:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في التحقق من الدومين' });
   }
 };
 
-// جلب حالة الدومين المخصص
-export const getCustomDomainStatus = async (req: Request, res: Response) => {
+// ==================== DELETE /remove-domain ====================
+
+export const removeCustomDomain = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.id;
-    const businessType = req.user?.businessType;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'غير مصرح' });
-    }
-    
-    const { business } = await getBusinessByUser(userId, businessType);
-    
+    const business = await getOwnedBusiness(req);
     if (!business) {
-      return res.status(404).json({ error: 'المطعم/المتجر غير موجود' });
+      res.status(404).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+      return;
     }
-    
+
+    const previous = business.customDomain;
+
+    await updateBusiness(business.type, business.id, {
+      customDomain: null,
+      customDomainVerified: false,
+      customDomainVerifiedAt: null
+    });
+
+    if (previous) invalidateDomainCache(previous);
+
+    res.json({ success: true, message: 'تم إزالة الدومين المخصص بنجاح' });
+  } catch (error) {
+    console.error('Error removing custom domain:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إزالة الدومين' });
+  }
+};
+
+// ==================== GET /status ====================
+
+export const getCustomDomainStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = await getOwnedBusiness(req);
+    if (!business) {
+      res.status(404).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+      return;
+    }
+
     res.json({
       success: true,
       data: {
+        businessType: business.type,
+        subdomain: business.subdomain,
+        subdomainUrl: business.subdomain ? `https://${business.subdomain}.${env.APP_DOMAIN}` : null,
+        slugUrl: `https://${env.APP_DOMAIN}/${business.slug}`,
         customDomain: business.customDomain,
-        customDomainVerified: business.customDomainVerified,
+        customDomainUrl: business.customDomain ? `https://${business.customDomain}` : null,
+        customDomainVerified: business.customDomainVerified === true,
         customDomainVerifiedAt: business.customDomainVerifiedAt,
-        customDomainVerificationCode: business.customDomainVerificationCode
+        verificationCode: business.customDomainVerificationCode
       }
     });
   } catch (error) {
     console.error('Error getting custom domain status:', error);
-    res.status(500).json({ error: 'حدث خطأ في جلب حالة الدومين' });
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب حالة الدومين' });
   }
 };
+
+// ==================== PUT /subdomain ====================
+
+const SUBDOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$/;
+
+export const updateSubdomain = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = await getOwnedBusiness(req);
+    if (!business) {
+      res.status(404).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+      return;
+    }
+
+    const raw = String(req.body?.subdomain || '').trim().toLowerCase();
+
+    if (!SUBDOMAIN_REGEX.test(raw) || raw.length < 3 || raw.length > 63) {
+      res.status(400).json({
+        success: false,
+        error: 'الـ subdomain يجب أن يكون بين 3 و63 حرفاً، أحرف إنجليزية وأرقام وشرطات فقط'
+      });
+      return;
+    }
+
+    const { isReservedSubdomain } = await import('../services/domain.service');
+    if (isReservedSubdomain(raw)) {
+      res.status(400).json({ success: false, error: 'هذا الاسم محجوز، اختر اسماً آخر' });
+      return;
+    }
+
+    const [takenByRestaurant, takenByStore] = await Promise.all([
+      prisma.restaurant.findFirst({
+        where: {
+          OR: [{ subdomain: raw }, { slug: raw }],
+          NOT: business.type === 'restaurant' ? { id: business.id } : undefined
+        },
+        select: { id: true }
+      }),
+      prisma.store.findFirst({
+        where: {
+          OR: [{ subdomain: raw }, { slug: raw }],
+          NOT: business.type === 'store' ? { id: business.id } : undefined
+        },
+        select: { id: true }
+      })
+    ]);
+
+    if (takenByRestaurant || takenByStore) {
+      res.status(409).json({ success: false, error: 'هذا الـ subdomain مستخدم بالفعل' });
+      return;
+    }
+
+    const updated = await updateBusiness(business.type, business.id, { subdomain: raw });
+    invalidateDomainCache();
+
+    res.json({
+      success: true,
+      message: 'تم حفظ الـ subdomain بنجاح',
+      data: {
+        subdomain: updated.subdomain,
+        url: `https://${updated.subdomain}.${env.APP_DOMAIN}`
+      }
+    });
+  } catch (error) {
+    console.error('Error updating subdomain:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في حفظ الـ subdomain' });
+  }
+};
+
+/** فحص توفر الـ subdomain — يُستخدم أثناء الكتابة في الواجهة */
+export const checkSubdomainAvailability = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const raw = String(req.query?.subdomain || '').trim().toLowerCase();
+
+    if (!SUBDOMAIN_REGEX.test(raw) || raw.length < 3 || raw.length > 63) {
+      res.json({ success: true, data: { available: false, reason: 'صيغة غير صالحة' } });
+      return;
+    }
+
+    const { isReservedSubdomain } = await import('../services/domain.service');
+    if (isReservedSubdomain(raw)) {
+      res.json({ success: true, data: { available: false, reason: 'اسم محجوز' } });
+      return;
+    }
+
+    const business = await getOwnedBusiness(req);
+
+    const [restaurant, store] = await Promise.all([
+      prisma.restaurant.findFirst({
+        where: {
+          OR: [{ subdomain: raw }, { slug: raw }],
+          NOT: business?.type === 'restaurant' ? { id: business.id } : undefined
+        },
+        select: { id: true }
+      }),
+      prisma.store.findFirst({
+        where: {
+          OR: [{ subdomain: raw }, { slug: raw }],
+          NOT: business?.type === 'store' ? { id: business.id } : undefined
+        },
+        select: { id: true }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        available: !restaurant && !store,
+        reason: restaurant || store ? 'مستخدم بالفعل' : undefined,
+        url: `https://${raw}.${env.APP_DOMAIN}`
+      }
+    });
+  } catch (error) {
+    console.error('Error checking subdomain availability:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في فحص التوفر' });
+  }
+};
+
+export { normalizeDomain };

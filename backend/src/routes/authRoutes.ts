@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, logout, registerDriver, resetPassword, registerStore, resendVerificationEmail, verifyEmail, firebaseSignIn, linkFirebaseAccount } from '../controllers/authController';
+import { register, login, getMe, logout, registerDriver, resetPassword, forgotPassword, registerStore, resendVerificationEmail, verifyEmail, firebaseSignIn, linkFirebaseAccount } from '../controllers/authController';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
@@ -41,6 +41,18 @@ router.post('/register-driver', authenticate, authorize(['owner', 'super_admin']
 
 router.post('/register-store', registerStore);
 
+/**
+ * @route   POST /api/auth/forgot-password
+ * @desc    طلب كود إعادة تعيين كلمة المرور
+ * @access  Public
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    إعادة تعيين كلمة المرور بكود التحقق
+ * @access  Public
+ */
 router.post('/reset-password', resetPassword);
 
 /**

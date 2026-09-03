@@ -8,6 +8,7 @@ import { LoginRequest, RegisterRequest, ApiResponse, AuthRequest } from '../type
 import bcrypt from 'bcrypt';
 import settingsService from '../services/settingsService';
 import prisma from '../services/prisma';
+import { validateRegistration, validatePassword, isValidEmail, normalizeEmail, sanitizeText } from '../utils/validation';
 
 const getEmailVerificationRequirement = async () => {
   const requireEmailVerification = await settingsService.getBoolean('require_email_verification', false);
@@ -42,7 +43,17 @@ export const register = async (
       return;
     }
 
-    const { name, email, password, phone, restaurantName } = req.body;
+    const validation = validateRegistration(req.body);
+    if (!validation.valid) {
+      res.status(400).json({ success: false, error: validation.error });
+      return;
+    }
+
+    const name = sanitizeText(req.body.name, 100);
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password as string;
+    const phone = req.body.phone ? sanitizeText(req.body.phone, 20) : null;
+    const restaurantName = sanitizeText(req.body.restaurantName, 100);
 
     const existingUser = await UserService.findByEmail(email);
     if (existingUser) {
@@ -54,19 +65,36 @@ export const register = async (
     }
 
     const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
-    console.log('🔐 Email verification requirement (register):', { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification });
 
     let user;
     let token: string | null = null;
 
     if (restaurantName && restaurantName.trim() !== '') {
-      const slug = slugify(restaurantName);
+      // ملاحظة: كان المطعم يُنشأ قبل المستخدم ويشير إلى user.id غير الموجود بعد
+      // ما كان يُسقط تسجيل كل مطعم جديد. الترتيب الصحيح: المستخدم أولاً.
+      const baseSlug = slugify(restaurantName);
+      let uniqueSlug = baseSlug;
+      let counter = 1;
+      while (
+        (await prisma.restaurant.findUnique({ where: { slug: uniqueSlug } })) ||
+        (await prisma.store.findUnique({ where: { slug: uniqueSlug } }))
+      ) {
+        uniqueSlug = `${baseSlug}-${counter++}`;
+      }
+
+      user = await UserService.create({
+        name,
+        email,
+        password,
+        phone: phone || null,
+        role: 'owner',
+      });
 
       const restaurant = await prisma.restaurant.create({
         data: {
           name: restaurantName,
-          slug: slug,
-          subdomain: slug,
+          slug: uniqueSlug,
+          subdomain: uniqueSlug,
           email: email,
           phone: phone || null,
           planId: '11111111-1111-1111-1111-111111111111',
@@ -75,14 +103,7 @@ export const register = async (
         }
       });
 
-      user = await UserService.create({
-        name,
-        email,
-        password,
-        phone: phone || null,
-        role: 'owner',
-        restaurantId: restaurant.id,
-      });
+      user = await UserService.update(user.id, { restaurantId: restaurant.id });
     } else {
       user = await UserService.create({
         name,
@@ -93,8 +114,6 @@ export const register = async (
       });
     }
 
-    console.log('✅ User created with role:', user.role);
-
     // Generate and send verification code if email verification is required
     let verificationCode = null;
     if (shouldRequireEmailVerification) {
@@ -102,7 +121,6 @@ export const register = async (
       await emailService.initializeTransporter();
       verificationCode = await emailService.generateVerificationCode(email);
       const emailSent = await emailService.sendVerificationEmail(email, verificationCode);
-      console.log('📧 Verification email sent (register):', emailSent);
     }
 
     if (!shouldRequireEmailVerification) {
@@ -114,7 +132,6 @@ export const register = async (
         storeId: user.storeId || undefined
       });
     }
-    console.log('🔑 Token issued (register):', !!token);
 
     const registerData: any = {
       user: {
@@ -162,7 +179,17 @@ export const registerStore = async (
       return;
     }
 
-    const { name, email, password, phone, storeName } = req.body;
+    const validation = validateRegistration(req.body);
+    if (!validation.valid) {
+      res.status(400).json({ success: false, error: validation.error });
+      return;
+    }
+
+    const name = sanitizeText(req.body.name, 100);
+    const email = normalizeEmail(req.body.email);
+    const password = req.body.password as string;
+    const phone = req.body.phone ? sanitizeText(req.body.phone, 20) : null;
+    const storeName = sanitizeText(req.body.storeName, 100);
 
     console.log('📝 Registering store with data:', { name, email, phone, storeName });
 
@@ -191,10 +218,7 @@ export const registerStore = async (
       uniqueSlug = `${slug}-${counter++}`;
     }
 
-    console.log('✅ Unique slug generated:', uniqueSlug);
-
     const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
-    console.log('🔐 Email verification requirement (register-store):', { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification });
 
     // إنشاء المستخدم أولاً
     const user = await UserService.create({
@@ -204,8 +228,6 @@ export const registerStore = async (
       phone: phone || null,
       role: 'owner',
     });
-
-    console.log('✅ User created:', { userId: user.id });
 
     // إنشاء المتجر
     const store = await prisma.store.create({
@@ -221,8 +243,6 @@ export const registerStore = async (
       }
     });
 
-    console.log('✅ Store created:', { storeId: store.id, userId: store.userId });
-
     // تحديث المستخدم
     const updatedUser = await UserService.update(user.id, { storeId: store.id });
 
@@ -231,7 +251,6 @@ export const registerStore = async (
       await emailService.initializeTransporter();
       const verificationCode = await emailService.generateVerificationCode(email);
       const emailSent = await emailService.sendVerificationEmail(email, verificationCode);
-      console.log('📧 Verification email sent (register-store):', emailSent);
     }
 
     let token: string | null = null;
@@ -244,7 +263,6 @@ export const registerStore = async (
         storeId: store.id
       });
     }
-    console.log('🔑 Token issued (register-store):', !!token);
 
     const registerStoreData: any = {
       user: {
@@ -333,7 +351,6 @@ export const login = async (
     }
 
     const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
-    console.log('🔐 Email verification requirement (login):', { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification });
     if (shouldRequireEmailVerification && !user.isEmailVerified) {
       let emailSent = false;
       if (smtpConfigured) {
@@ -341,7 +358,6 @@ export const login = async (
         await emailService.initializeTransporter();
         const verificationCode = await emailService.generateVerificationCode(user.email);
         emailSent = await emailService.sendVerificationEmail(user.email, verificationCode);
-        console.log('📧 Verification email sent (login):', emailSent);
       } else {
         console.warn('⚠️ SMTP credentials not configured. Email sending disabled.');
       }
@@ -576,34 +592,101 @@ export const registerDriver = async (
 
 // ==================== إعادة تعيين كلمة المرور ====================
 
+/**
+ * POST /api/auth/forgot-password
+ *
+ * يرسل كود تحقق إلى البريد. يُرجع نفس الرد دائماً حتى لا يكشف
+ * أي عناوين بريد مسجّلة (user enumeration).
+ */
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  const genericResponse = {
+    success: true,
+    message: 'إذا كان البريد مسجلاً لدينا فسيصلك كود إعادة التعيين خلال دقائق'
+  };
+
+  try {
+    if (!isValidEmail(req.body?.email)) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني غير صالح' });
+      return;
+    }
+
+    const email = normalizeEmail(req.body.email);
+    const user = await UserService.findByEmail(email);
+
+    if (user && user.isActive !== false) {
+      const emailService = require('../services/emailService').default;
+      await emailService.initializeTransporter();
+      const code = await emailService.generateVerificationCode(email, 15);
+      await emailService.sendVerificationEmail(email, code);
+    }
+
+    res.json(genericResponse);
+  } catch (error) {
+    console.error('Error in forgotPassword:', error instanceof Error ? error.message : error);
+    // نُرجع نفس الرد حتى في حالة الفشل حتى لا نكشف شيئاً
+    res.json(genericResponse);
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ *
+ * ⚠️ كان هذا المسار عاماً ويعيد تعيين كلمة مرور أي حساب بمجرد معرفة بريده
+ * (استيلاء كامل على أي حساب بما فيها حسابات الإدارة). صار يتطلب الآن
+ * كود تحقق مُرسلاً إلى البريد نفسه.
+ */
 export const resetPassword = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const { email, newPassword } = req.body;
-    
-    console.log('🔐 Resetting password for:', email);
-    
-    const user = await UserService.findByEmail(email);
-    if (!user) {
-      res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+    const { email: rawEmail, code, newPassword } = req.body || {};
+
+    if (!isValidEmail(rawEmail)) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني غير صالح' });
       return;
     }
-    
-    const salt = await bcrypt.genSalt(10);
+
+    if (!code || typeof code !== 'string') {
+      res.status(400).json({ success: false, error: 'كود التحقق مطلوب' });
+      return;
+    }
+
+    const passwordCheck = validatePassword(newPassword);
+    if (!passwordCheck.valid) {
+      res.status(400).json({ success: false, error: passwordCheck.error });
+      return;
+    }
+
+    const email = normalizeEmail(rawEmail);
+
+    const emailService = require('../services/emailService').default;
+    const codeValid = await emailService.verifyCode(email, code.trim());
+
+    if (!codeValid) {
+      res.status(400).json({ success: false, error: 'كود التحقق غير صحيح أو منتهي الصلاحية' });
+      return;
+    }
+
+    const user = await UserService.findByEmail(email);
+    if (!user) {
+      // الكود صحيح لكن لا يوجد مستخدم — لا نكشف شيئاً
+      res.status(400).json({ success: false, error: 'كود التحقق غير صحيح أو منتهي الصلاحية' });
+      return;
+    }
+
+    const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
-    
+
     await UserService.update(user.id, { password: hashedPassword });
-    
     await UserService.resetLoginAttempts(user.id);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: 'تم إعادة تعيين كلمة المرور بنجاح'
     });
   } catch (error) {
-    console.error('Error resetting password:', error);
+    console.error('Error resetting password:', error instanceof Error ? error.message : error);
     res.status(500).json({ success: false, error: 'حدث خطأ في إعادة تعيين كلمة المرور' });
   }
 };
