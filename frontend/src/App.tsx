@@ -66,6 +66,7 @@ const AdminContactMessages = lazy(() => import('./pages/Admin/AdminContactMessag
 // ==================== صفحات عامة ====================
 import HomePage from './pages/HomePage';
 const PublicMenu = lazy(() => import('./pages/PublicMenu'));
+const PublicStorefrontRoute = lazy(() => import('./components/PublicStorefrontRoute'));
 const PublicTable = lazy(() => import('./pages/PublicTable'));
 const PublicItem = lazy(() => import('./pages/PublicItem'));
 const PublicProduct = lazy(() => import('./pages/PublicProduct'));
@@ -345,6 +346,15 @@ const MainApp: React.FC = () => {
         <Route element={<ProtectedRoute allowedRoles={['delivery_driver']} />}>
           <Route path="/driver/dashboard" element={<DriverDashboard />} />
         </Route>
+
+          {/* ==================== واجهات المتاجر عبر الدومين الرئيسي ==================== */}
+          {/* رموز QR تعود إلى shamstores.com/<slug> عند غياب subdomain أو دومين مخصص.
+              تبقى هذه المسارات قبل مسار 404 مباشرةً حتى لا تلتقط المسارات الثابتة. */}
+          <Route path="/table/:tableId" element={<PublicTable />} />
+          <Route path="/:slug" element={<PublicStorefrontRoute />} />
+          <Route path="/:slug/table/:tableId" element={<PublicStorefrontRoute />} />
+          <Route path="/:slug/item/:itemId" element={<PublicItem />} />
+          <Route path="/:slug/product/:productId" element={<PublicProduct />} />
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
