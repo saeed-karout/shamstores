@@ -39,6 +39,7 @@ import {
   IoCloseCircle,
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
+import DomainManager from '@/components/settings/DomainManager';
 
 // ==================== ثوابت التصميم الأساسية ====================
 const C = {
@@ -1062,39 +1063,11 @@ const StoreSettingsPage: React.FC = () => {
 
       {/* ==================== تبويب الدومين ==================== */}
       {activeTab === 'domain' && (
-        <div>
-          <div style={sectionCard}>
-            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoGlobe style={{ color: C.accent }} /> إعدادات الدومين
-            </h2>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>الدومين الفرعي</label>
-              <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                <input type="text" value={domainForm.subdomain} onChange={(e) => setDomainForm({ ...domainForm, subdomain: e.target.value })} style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }} placeholder="my-store" disabled={!canUpdateSettings} />
-                <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, fontSize: 13, borderRadius: '0 10px 10px 0' }}>.shamstores.com</span>
-              </div>
-              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>سيكون رابط متجرك: {domainForm.subdomain || 'my-store'}.shamstores.com</p>
-            </div>
-
-            <div>
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}><IoLink size={13} /> الدومين المخصص</label>
-              {hasCustomDomain || isSuperAdmin ? (
-                <input type="text" value={domainForm.customDomain} onChange={(e) => setDomainForm({ ...domainForm, customDomain: e.target.value })} style={getInput('customDomain')} placeholder="www.my-store.com" disabled={!canUpdateSettings} />
-              ) : (
-                <div style={{ background: C.surf, padding: 16, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, marginBottom: 12 }}><IoLockClosed /><span style={{ fontSize: 13 }}>الدومين المخصص متاح فقط في الخطة الاحترافية</span></div>
-                  <button onClick={() => window.location.href = '/plans'} style={{ ...saveBtn, padding: '8px 16px', fontSize: 13 }}>ترقية الخطة</button>
-                </div>
-              )}
-              <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{hasCustomDomain || isSuperAdmin ? 'أدخل الدومين الخاص بك (مثال: www.my-store.com)' : 'قم بترقية خطتك لاستخدام دومين خاص'}</p>
-            </div>
-          </div>
-
-          <button style={saveBtn} onClick={handleSaveDomain} disabled={!canUpdateSettings}>
-            <IoSave size={16} /> حفظ إعدادات الدومين
-          </button>
-        </div>
+        <DomainManager
+          hasCustomDomainFeature={hasCustomDomain || isSuperAdmin}
+          canEdit={canUpdateSettings}
+          onChanged={() => window.location.reload()}
+        />
       )}
 
       {/* ==================== تبويب الفروع ==================== */}

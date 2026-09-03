@@ -219,6 +219,15 @@ class ApiService {
     );
   }
 
+  // ==================== الوصول إلى نسخة axios ====================
+  /**
+   * للحالات التي تحتاج غلاف الرد كاملاً (success / error / data)
+   * بدل قيمة data المستخرجة فقط.
+   */
+  get client(): AxiosInstance {
+    return this.api;
+  }
+
   // ==================== دوال عامة ====================
   async get<T>(url: string, params?: any): Promise<T> {
     const requestKey = `${url}-${JSON.stringify(params)}`;

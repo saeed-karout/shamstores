@@ -35,6 +35,7 @@ import {
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 import api from '@/services/api';
+import DomainManager from '@/components/settings/DomainManager';
 
 const C = {
   bg:     '#082E24',
@@ -1188,66 +1189,15 @@ export const SettingsPage: React.FC = () => {
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{seoForm.metaDescription.length}/160 حرف</p>
               </div>
 
-              <div>
-                <label style={labelStyle}>الدومين الفرعي</label>
-                <div style={{ display: 'flex', alignItems: 'stretch' }}>
-                  <input
-                    type="text"
-                    value={seoForm.subdomain}
-                    onChange={(e) => setSeoForm({ ...seoForm, subdomain: e.target.value })}
-                    style={{ ...getInput('subdomain'), borderRadius: '10px 0 0 10px', flex: 1 }}
-                    placeholder="my-restaurant"
-                    disabled={!permissions.checkPermission('customDomain') && !isSuperAdmin}
-                  />
-                  <span style={{ background: C.surfL, border: `1px solid ${C.border}`, borderRight: 'none', padding: '0 12px', display: 'flex', alignItems: 'center', color: C.muted, fontSize: 13, borderRadius: '0 10px 10px 0' }}>
-                    .yourdomain.com
-                  </span>
-                </div>
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
-                  سيكون رابط مطعمك: {seoForm.subdomain || 'my-restaurant'}.yourdomain.com
-                </p>
-                {!permissions.checkPermission('customDomain') && !isSuperAdmin && (
-                  <div style={{ marginTop: 8, background: 'rgba(255,200,0,0.08)', border: '1px solid rgba(255,200,0,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <IoLockClosed style={{ color: '#FFD700' }} />
-                    <span style={{ color: '#FFD700', fontSize: 13 }}>الدومين الخاص متاح فقط في الخطة الاحترافية</span>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <IoLink size={13} /> الدومين المخصص
-                </label>
-                {permissions.checkPermission('customDomain') || isSuperAdmin ? (
-                  <input
-                    type="text"
-                    value={seoForm.customDomain}
-                    onChange={(e) => setSeoForm({ ...seoForm, customDomain: e.target.value })}
-                    style={getInput('customDomain')}
-                    placeholder="www.my-restaurant.com"
-                  />
-                ) : (
-                  <div style={{ background: C.surf, padding: 16, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, marginBottom: 12 }}>
-                      <IoLockClosed />
-                      <span style={{ fontSize: 13 }}>هذه الميزة متاحة فقط في الخطة الاحترافية</span>
-                    </div>
-                    <button
-                      onClick={() => window.location.href = '/plans'}
-                      style={{ ...saveBtn, padding: '8px 16px', fontSize: 13 }}
-                    >
-                      ترقية الخطة
-                    </button>
-                  </div>
-                )}
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>
-                  {permissions.checkPermission('customDomain') || isSuperAdmin
-                    ? 'أدخل الدومين الخاص بك (مثال: www.my-restaurant.com)'
-                    : 'قم بترقية خطتك لاستخدام دومين خاص'}
-                </p>
-              </div>
             </div>
           </div>
+
+          {/* إدارة الروابط والنطاق المخصص — تتحقق فعلياً من DNS */}
+          <DomainManager
+            hasCustomDomainFeature={permissions.checkPermission('customDomain') || isSuperAdmin}
+            canEdit={true}
+            onChanged={() => window.location.reload()}
+          />
 
           <div style={sectionCard}>
             <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>معاينة في محركات البحث</h3>

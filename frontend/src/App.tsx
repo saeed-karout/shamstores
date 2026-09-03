@@ -8,7 +8,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { IoWarning } from 'react-icons/io5';
 
 // ==================== خدمات ====================
-import { getCurrentSubdomain, isMainDomain } from './utils/subdomain';
+import { isStorefrontHost } from './utils/subdomain';
 
 // frontend/src/pages/auth
 import EmailVerification from './pages/auth/EmailVerification';
@@ -177,6 +177,16 @@ const SubdomainApp: React.FC = () => {
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
         <Router>
+          <Toaster
+            position="top-center"
+            reverseOrder={false}
+            toastOptions={{
+              duration: 3500,
+              style: { fontFamily: 'Cairo, sans-serif', direction: 'rtl' },
+              success: { iconTheme: { primary: '#10B981', secondary: '#FFFFFF' } },
+              error: { iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' } },
+            }}
+          />
           <Routes>
             {/* ✅ جميع المسارات الأخرى تذهب إلى PublicRouter */}
             <Route path="*" element={<PublicRouter />} />
@@ -322,18 +332,11 @@ const MainApp: React.FC = () => {
 
 // ==================== التطبيق الرئيسي ====================
 const App: React.FC = () => {
-  const currentSubdomain = getCurrentSubdomain();
-  const isSubdomain = currentSubdomain !== null && !isMainDomain();
-  
-  console.log('🔥 App - currentSubdomain:', currentSubdomain);
-  console.log('🔥 App - isSubdomain:', isSubdomain);
-  
-  if (isSubdomain) {
-    console.log('🚀 Rendering SubdomainApp for subdomain:', currentSubdomain);
+  // النطاق المخصص للتاجر يجب أن يعرض واجهة المتجر تماماً كالنطاق الفرعي
+  if (isStorefrontHost()) {
     return <SubdomainApp />;
   }
-  
-  console.log('🏠 Rendering MainApp');
+
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
