@@ -1,4 +1,7 @@
 // backend/src/services/prisma.ts
+// ⚠️ يجب أن يبقى استيراد config/env أولاً: هو من يضبط DATABASE_URL
+// من متغيرات إضافات Heroku قبل إنشاء عميل Prisma.
+import '../config/env';
 import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {

@@ -4,7 +4,22 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
+// نفس الأصل في الإنتاج (النشر بتطبيق واحد)، خادم محلي في التطوير
+const resolveSocketUrl = (): string => {
+  const configured = import.meta.env.VITE_BASE_URL as string | undefined;
+  if (configured && configured.trim()) return configured.trim().replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost');
+    if (isLocal) return 'http://localhost:5000';
+    return window.location.origin;
+  }
+
+  return '';
+};
+
+const SOCKET_URL = resolveSocketUrl();
 
 export interface OrderRealtimeEvent {
   event: string;

@@ -5,6 +5,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// ==================== توافق إضافات Heroku ====================
+// JawsDB/ClearDB يوفّران رابط الاتصال باسم مختلف. نُسقطه على DATABASE_URL
+// هنا لأن Prisma يقرأ DATABASE_URL من البيئة عند إنشاء العميل.
+if (!process.env.DATABASE_URL) {
+  const addonUrl =
+    process.env.JAWSDB_URL ||
+    process.env.JAWSDB_MARIA_URL ||
+    process.env.CLEARDB_DATABASE_URL;
+  if (addonUrl) {
+    process.env.DATABASE_URL = addonUrl;
+  }
+}
+
 const NODE_ENV = process.env.NODE_ENV || 'development';
 export const isProduction = NODE_ENV === 'production';
 export const isDevelopment = NODE_ENV === 'development';

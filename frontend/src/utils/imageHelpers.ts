@@ -60,7 +60,12 @@ export const getImageUrl = (url: string, options?: ImageOptions): string => {
   
   // ✅ الروابط المحلية (خلال التطوير) - صورة جديدة لم تُرفع بعد
   if (url.startsWith('/uploads/')) {
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    const configuredApi = import.meta.env.VITE_API_URL as string | undefined;
+    const baseUrl = configuredApi
+      ? configuredApi.replace(/\/api\/?$/, '')
+      : typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+      ? window.location.origin
+      : 'http://localhost:5000';
     const fullUrl = `${baseUrl}${url}`;
     console.log('🔄 Local URL converted:', fullUrl);
     return fullUrl;

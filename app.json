@@ -1,0 +1,91 @@
+{
+  "name": "Sham Stores",
+  "description": "منصة القوائم الرقمية والمتاجر — Express + Prisma + React على تطبيق Heroku واحد",
+  "repository": "https://github.com/saeed-karout/digital-menu-saas",
+  "keywords": ["node", "express", "prisma", "react", "vite", "saas", "restaurant", "menu"],
+  "stack": "heroku-24",
+  "buildpacks": [{ "url": "heroku/nodejs" }],
+  "addons": [
+    {
+      "plan": "jawsdb:kitefin",
+      "options": { "version": "8.0" }
+    }
+  ],
+  "env": {
+    "NODE_ENV": {
+      "description": "بيئة التشغيل. يجب أن تكون production على Heroku.",
+      "value": "production"
+    },
+    "JWT_SECRET": {
+      "description": "مفتاح توقيع الجلسات. لا تشاركه إطلاقاً — تغييره يُخرج كل المستخدمين.",
+      "generator": "secret"
+    },
+    "JWT_EXPIRE": {
+      "description": "مدة صلاحية جلسة الدخول.",
+      "value": "7d",
+      "required": false
+    },
+    "DATABASE_URL": {
+      "description": "رابط MySQL. اتركه فارغاً إذا كنت تستخدم إضافة JawsDB (سيُضبط تلقائياً عبر JAWSDB_URL).",
+      "required": false
+    },
+    "APP_DOMAIN": {
+      "description": "النطاق الأساسي للمنصة بدون بروتوكول، مثل shamstores.com — يُستخدم للنطاقات الفرعية وتعليمات DNS.",
+      "value": "shamstores.com"
+    },
+    "CLIENT_URL": {
+      "description": "الرابط الكامل للواجهة، مثل https://shamstores.com",
+      "value": "https://shamstores.com"
+    },
+    "ALLOWED_ORIGINS": {
+      "description": "نطاقات إضافية مسموح بها في CORS، مفصولة بفواصل.",
+      "required": false
+    },
+    "SERVE_FRONTEND": {
+      "description": "تقديم ملفات الواجهة المبنية من نفس السيرفر (true للنشر بتطبيق واحد).",
+      "value": "true",
+      "required": false
+    },
+    "TRUST_PROXY": {
+      "description": "عدد الوكلاء أمام التطبيق. اتركه 1 على Heroku.",
+      "value": "1",
+      "required": false
+    },
+    "VITE_API_URL": {
+      "description": "رابط الـ API الذي تستخدمه الواجهة. اتركه /api للنشر بتطبيق واحد.",
+      "value": "/api",
+      "required": false
+    },
+    "VITE_APP_DOMAIN": {
+      "description": "نفس قيمة APP_DOMAIN، تُستخدم في الواجهة لتمييز النطاقات المخصصة.",
+      "value": "shamstores.com",
+      "required": false
+    },
+    "R2_ACCOUNT_ID": { "description": "Cloudflare R2 — معرّف الحساب", "required": false },
+    "R2_BUCKET_NAME": { "description": "Cloudflare R2 — اسم الحاوية", "required": false },
+    "R2_ACCESS_KEY_ID": { "description": "Cloudflare R2 — مفتاح الوصول", "required": false },
+    "R2_SECRET_ACCESS_KEY": { "description": "Cloudflare R2 — المفتاح السري", "required": false },
+    "R2_ENDPOINT": { "description": "Cloudflare R2 — نقطة النهاية", "required": false },
+    "R2_PUBLIC_URL": { "description": "Cloudflare R2 — الرابط العام للصور", "required": false },
+    "SMTP_HOST": { "description": "خادم البريد الصادر", "required": false },
+    "SMTP_PORT": { "description": "منفذ SMTP", "value": "587", "required": false },
+    "SMTP_USER": { "description": "مستخدم SMTP", "required": false },
+    "SMTP_PASSWORD": { "description": "كلمة مرور SMTP", "required": false },
+    "SMTP_FROM_EMAIL": { "description": "بريد المُرسِل", "required": false },
+    "SMTP_FROM_NAME": { "description": "اسم المُرسِل", "value": "Sham Stores", "required": false },
+    "FIREBASE_PROJECT_ID": { "description": "Firebase — معرّف المشروع (لتسجيل الدخول عبر Google)", "required": false },
+    "FIREBASE_CLIENT_EMAIL": { "description": "Firebase — بريد حساب الخدمة", "required": false },
+    "FIREBASE_PRIVATE_KEY": { "description": "Firebase — المفتاح الخاص لحساب الخدمة", "required": false }
+  },
+  "formation": {
+    "web": { "quantity": 1, "size": "basic" }
+  },
+  "healthchecks": [
+    {
+      "type": "startup",
+      "name": "web check",
+      "path": "/health",
+      "attempts": 10
+    }
+  ]
+}

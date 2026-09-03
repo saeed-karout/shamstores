@@ -5,8 +5,25 @@ import { ApiResponse } from './types';
 import toast from 'react-hot-toast';
 import { getCurrentSubdomain, isMainDomain } from '../utils/subdomain';
 
-// ✅ ثابت واحد للـ base URL مع /api دائماً
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// ==================== تحديد رابط الـ API ====================
+// أولوية VITE_API_URL. عند غيابها:
+//   - في التطوير: خادم محلي على 5000
+//   - في الإنتاج: نفس الأصل (/api) — يعمل مباشرة مع النشر بتطبيق واحد
+//     وعلى النطاقات المخصصة بلا أي إعداد إضافي.
+const resolveApiUrl = (): string => {
+  const configured = import.meta.env.VITE_API_URL as string | undefined;
+  if (configured && configured.trim()) return configured.trim().replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost');
+    if (isLocal) return 'http://localhost:5000/api';
+  }
+
+  return '/api';
+};
+
+const API_URL = resolveApiUrl();
 
 // ==================== Re-export subdomain utilities ====================
 export { getCurrentSubdomain, isMainDomain };
@@ -55,8 +72,6 @@ class ApiService {
   ];
 
   constructor() {
-    console.log('🌐 API Base URL:', API_URL);
-    
     this.api = axios.create({
       baseURL: API_URL,
       headers: {

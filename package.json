@@ -1,0 +1,25 @@
+{
+  "name": "digital-menu-saas",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Sham Stores — منصة القوائم الرقمية والمتاجر (Express + Prisma + React)",
+  "engines": {
+    "node": "20.x",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "heroku-postbuild": "npm --prefix backend ci --include=dev && npm --prefix frontend ci --include=dev && npm run build",
+    "start": "node backend/dist/server.js",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "typecheck": "npm --prefix backend exec tsc -- --noEmit && npm --prefix frontend exec tsc -- --noEmit",
+    "db:push": "npm --prefix backend run prisma:db-push",
+    "db:generate": "npm --prefix backend run prisma:generate",
+    "postinstall": "echo \"استخدم npm run install:all لتثبيت تبعيات backend و frontend\""
+  },
+  "license": "UNLICENSED"
+}

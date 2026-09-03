@@ -4,7 +4,21 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'ax
 import toast from 'react-hot-toast';
 import { getCurrentSubdomain, isMainDomain } from '../../utils/subdomain';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// نفس منطق services/api.ts: نفس الأصل في الإنتاج، خادم محلي في التطوير
+const resolveApiUrl = (): string => {
+  const configured = import.meta.env.VITE_API_URL as string | undefined;
+  if (configured && configured.trim()) return configured.trim().replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost');
+    if (isLocal) return 'http://localhost:5000/api';
+  }
+
+  return '/api';
+};
+
+const API_URL = resolveApiUrl();
 
 export const getApiBaseUrl = (): string => API_URL;
 export { getCurrentSubdomain, isMainDomain };
