@@ -1,16 +1,10 @@
 // workers/subdomain-proxy/index.js
 //
-// يوجّه نطاقات المنصة إلى الواجهة على Cloudflare، ويمرّر الـ API إلى Heroku
-// حتى تصبح الواجهة والـ API على أصل واحد من منظور المتصفح — فلا CORS ولا
-// preflight ولا حاجة لرابط مطلق مدفون في حزمة الواجهة.
+// يوجّه نطاقات المنصة إلى الواجهة، ويمرّر الـ API إلى Heroku حتى تصبح الواجهة
+// والـ API على أصل واحد من منظور المتصفح — فلا CORS ولا preflight ولا رابط
+// مطلق مدفون في حزمة الواجهة.
 //
 // النشر:  npx wrangler deploy --cwd workers/subdomain-proxy
-//
-// ⚠️ يجب أن تغطّي مسارات الـ Worker (Routes) النطاقين معاً:
-//      shamstores.com/*
-//      *.shamstores.com/*
-//    لو غطّت النطاقات الفرعية وحدها، فإن /api على النطاق الرئيسي لن يُمرَّر
-//    وستفشل الواجهة كلها.
 
 const APP_DOMAIN = 'shamstores.com';
 const CDN_HOST = `cdn.${APP_DOMAIN}`;
@@ -41,24 +35,22 @@ export default {
       return proxyTo(request, API_HOST);
     }
 
-    // 2) الأصول الثابتة دائماً من النطاق الرئيسي — نسخة واحدة مخزّنة مؤقتاً
-    //    بدل نسخة لكل نطاق فرعي.
-    if (pathname.startsWith('/assets/')) {
-      return proxyTo(request, APP_DOMAIN);
+    // 2) النطاق الرئيسي و www: كل ما تبقّى إلى الأصل كما هو.
+    //
+    //    لا نعيد كتابة أي مسار هنا — أي طلب فرعي إلى shamstores.com من داخل
+    //    Worker يخدم shamstores.com نفسه هو طلب إلى الذات، ومصدر حلقات.
+    if (hostname === APP_DOMAIN || hostname === `www.${APP_DOMAIN}`) {
+      return fetch(request);
     }
 
     // 3) نطاق فرعي لتاجر أو نطاق مخصص → نفس المسار من النطاق الرئيسي.
+    //    يشمل /assets/ فتُخدم نسخة واحدة مخزّنة مؤقتاً بدل نسخة لكل نطاق.
     //
     //    المسار يُمرَّر كما هو ولا يُسبَق باسم النطاق الفرعي: عنوان المتصفح لا
     //    يتغيّر بإعادة الكتابة، فـ React Router لا يرى البادئة أصلاً. الواجهة
     //    تتعرّف على المتجر من المضيف عبر getCurrentSubdomain() في
     //    components/PublicRouter.tsx. وهذا يصحّ للنطاقات المخصصة أيضاً، حيث
     //    أول جزء من mystore.com ليس معرّف المتجر.
-    if (hostname !== APP_DOMAIN && hostname !== `www.${APP_DOMAIN}`) {
-      return proxyTo(request, APP_DOMAIN);
-    }
-
-    // 4) النطاق الرئيسي و www: إلى الأصل كما هو
-    return fetch(request);
+    return proxyTo(request, APP_DOMAIN);
   }
 };

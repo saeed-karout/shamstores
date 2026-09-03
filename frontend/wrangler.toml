@@ -1,8 +1,15 @@
-# Cloudflare static assets deployment for the Vite frontend.
-# This makes `npx wrangler deploy` work with the built `dist` folder.
+# نشر الواجهة المبنية على Cloudflare **Pages**.
+#
+# ⚠️ ليس Worker. `wrangler deploy` كان ينشئ Worker بأصول ثابتة اسمه shamstores
+#    بلا أي مسار مربوط — فلا يخدم النطاق إطلاقاً — ويرفض `_redirects` بخطأ
+#    "Infinite loop detected" لأن نموذج Workers Assets يجرّد `.html` تلقائياً.
+#
+#    مشروع Pages باسم shamstores هو ما يشير إليه DNS، وهو يدعم `_redirects`
+#    و`_headers` أصلاً.
+#
+# النشر (من جذر المستودع):
+#   npx wrangler pages deploy frontend/dist --project-name shamstores
 
 name = "shamstores"
 compatibility_date = "2026-05-17"
-
-[assets]
-directory = "./dist"
+pages_build_output_dir = "./dist"

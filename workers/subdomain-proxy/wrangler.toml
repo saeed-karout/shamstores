@@ -2,14 +2,20 @@ name = "subdomain-proxy"
 main = "index.js"
 compatibility_date = "2026-05-17"
 
-# المسارات يجب أن تشمل النطاق الرئيسي والنطاقات الفرعية معاً، وإلا لم يُمرَّر
-# /api على shamstores.com. فعّلها من لوحة Cloudflare أو أزل التعليق هنا بعد
-# التأكد من اسم الـ zone.
+# المسارات مُدارة من هنا لا من اللوحة، حتى لا يضيع مسار عند إعادة النشر.
 #
-# [[routes]]
-# pattern = "shamstores.com/*"
-# zone_name = "shamstores.com"
-#
-# [[routes]]
-# pattern = "*.shamstores.com/*"
-# zone_name = "shamstores.com"
+# ⚠️ المسار الأول ضروري: الحزمة تنادي /api نسبياً، فبدون تغطية النطاق الرئيسي
+#    يذهب /api إلى الواجهة الثابتة ويعود بـ index.html بدل JSON.
+#    (هذا ما حدث فعلاً: *.shamstores.com كان مربوطاً والجذر لا.)
+
+[[routes]]
+pattern = "shamstores.com/*"
+zone_name = "shamstores.com"
+
+[[routes]]
+pattern = "www.shamstores.com/*"
+zone_name = "shamstores.com"
+
+[[routes]]
+pattern = "*.shamstores.com/*"
+zone_name = "shamstores.com"

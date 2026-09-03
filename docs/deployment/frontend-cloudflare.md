@@ -27,19 +27,31 @@ cdn.shamstores.com      → R2: shamstores-images (لا يمرّ بالـ Worker
 |---|---|---|
 | 0 | `cdn.shamstores.com` | تمرير مباشر — R2 |
 | 1 | `/api/*` أو `/socket.io/*` | **Heroku** |
-| 2 | `/assets/*` | النطاق الرئيسي (نسخة واحدة مخزّنة مؤقتاً) |
+| 2 | النطاق الرئيسي أو `www` | الأصل كما هو (بلا إعادة كتابة — الطلب الفرعي إلى الذات مصدر حلقات) |
 | 3 | أي مضيف آخر (نطاق فرعي أو مخصص) | النطاق الرئيسي، **بنفس المسار** |
-| 4 | النطاق الرئيسي و`www` | الأصل كما هو |
 
-### ⚠️ المسارات (Routes) يجب أن تشمل النطاقين
+### ⚠️ المسارات (Routes) تشمل النطاقات الثلاثة
+
+مُدارة في `workers/subdomain-proxy/wrangler.toml` لا من اللوحة، حتى لا يضيع
+مسار عند إعادة النشر:
 
 ```
 shamstores.com/*
+www.shamstores.com/*
 *.shamstores.com/*
 ```
 
-لو غطّت النطاقات الفرعية وحدها، فإن `/api` على النطاق الرئيسي لن يُمرَّر
-وستفشل الواجهة كلها — لأن الحزمة تنادي `/api` نسبياً.
+النمط `*.shamstores.com/*` **لا يطابق الجذر**. حين كان الجذر بلا مسار كان
+`shamstores.com/api` يعود بـ `index.html` بدل JSON — لأن الطلب لم يبلغ
+الـ Worker أصلاً فخدمته الواجهة الثابتة عبر قاعدة `_redirects`.
+
+للتحقق بعد أي نشر:
+
+```bash
+curl -s https://shamstores.com/api
+```
+
+يجب أن يعود JSON فيه `"status":"active"`. لو عاد HTML فالمسار غير مربوط.
 
 ### لماذا لا يُسبَق المسار باسم النطاق الفرعي
 
@@ -94,13 +106,23 @@ npm --prefix frontend run build
 ```
 
 ```bash
-npx wrangler deploy --cwd frontend
+npx wrangler pages deploy frontend/dist --project-name shamstores
 ```
 
-`frontend/wrangler.toml` يشير إلى `./dist`، و`public/_redirects` فيه
-`/* /index.html 200` ليعمل توجيه SPA لكل المسارات.
+### ⚠️ Pages لا Worker
 
----
+الوجهة مشروع **Pages** باسم `shamstores` — وهو ما يشير إليه DNS.
+`wrangler deploy` (بلا `pages`) ينشئ **Worker** بأصول ثابتة بنفس الاسم،
+بلا أي مسار مربوط فلا يخدم النطاق، ويرفض `_redirects` بخطأ:
+
+```
+Invalid _redirects configuration:
+Line 1: Infinite loop detected in this rule.
+```
+
+لأن نموذج Workers Assets يجرّد `.html` و`/index` تلقائياً فتصير القاعدة
+`/* /index.html 200` حلقة. Pages يدعم القاعدة أصلاً — وهي ما يجعل توجيه
+SPA يعمل لكل المسارات.
 
 ## 4. التحقق بعد البناء (لا تتخطَّه)
 
