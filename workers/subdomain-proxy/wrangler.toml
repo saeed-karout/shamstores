@@ -1,0 +1,15 @@
+name = "subdomain-proxy"
+main = "index.js"
+compatibility_date = "2026-05-17"
+
+# المسارات يجب أن تشمل النطاق الرئيسي والنطاقات الفرعية معاً، وإلا لم يُمرَّر
+# /api على shamstores.com. فعّلها من لوحة Cloudflare أو أزل التعليق هنا بعد
+# التأكد من اسم الـ zone.
+#
+# [[routes]]
+# pattern = "shamstores.com/*"
+# zone_name = "shamstores.com"
+#
+# [[routes]]
+# pattern = "*.shamstores.com/*"
+# zone_name = "shamstores.com"

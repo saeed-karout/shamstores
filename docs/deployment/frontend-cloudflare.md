@@ -1,22 +1,63 @@
 # نشر الواجهة على Cloudflare
 
 بنية مقسّمة: الواجهة على Cloudflare، الـ API على Heroku، الوسائط على R2.
+الـ Worker يجمعها على أصل واحد من منظور المتصفح.
 
 ```
-shamstores.com          → Cloudflare (الواجهة المبنية)
-*.shamstores.com        → Worker: subdomain-proxy → Cloudflare
-cdn.shamstores.com      → R2: shamstores-images
-shamstores-…herokuapp.com → Heroku: Express + Prisma (الـ API)
+shamstores.com          → Worker → Cloudflare (الواجهة المبنية)
+*.shamstores.com        → Worker → Cloudflare (نفس الواجهة، تُميّز المتجر من المضيف)
+  ├─ /api/*             → Worker → Heroku (Express + Prisma)
+  └─ /socket.io/*       → Worker → Heroku (Socket.IO)
+cdn.shamstores.com      → R2: shamstores-images (لا يمرّ بالـ Worker)
 ```
 
 > البديل الأبسط قائم وجاهز: تطبيق Heroku يقدّم الواجهة بنفسه
-> (`SERVE_FRONTEND=true`)، فيصبح كل شيء على أصل واحد بلا CORS ولا Worker.
+> (`SERVE_FRONTEND=true`)، فيصبح كل شيء على أصل واحد بلا Worker إطلاقاً.
 > اختيار Cloudflare يشتري تخزيناً مؤقتاً على الحافة ومرونة في توجيه النطاقات،
-> ويكلّف تعقيد الأصلين المختلفين.
+> ويكلّف الاعتماد على الـ Worker في كل طلب API.
 
 ---
 
-## 1. متغيرات البناء
+## 1. الـ Worker
+
+الكود في [`workers/subdomain-proxy/`](../../workers/subdomain-proxy/index.js).
+ترتيب القواعد مقصود:
+
+| # | الشرط | الوجهة |
+|---|---|---|
+| 0 | `cdn.shamstores.com` | تمرير مباشر — R2 |
+| 1 | `/api/*` أو `/socket.io/*` | **Heroku** |
+| 2 | `/assets/*` | النطاق الرئيسي (نسخة واحدة مخزّنة مؤقتاً) |
+| 3 | أي مضيف آخر (نطاق فرعي أو مخصص) | النطاق الرئيسي، **بنفس المسار** |
+| 4 | النطاق الرئيسي و`www` | الأصل كما هو |
+
+### ⚠️ المسارات (Routes) يجب أن تشمل النطاقين
+
+```
+shamstores.com/*
+*.shamstores.com/*
+```
+
+لو غطّت النطاقات الفرعية وحدها، فإن `/api` على النطاق الرئيسي لن يُمرَّر
+وستفشل الواجهة كلها — لأن الحزمة تنادي `/api` نسبياً.
+
+### لماذا لا يُسبَق المسار باسم النطاق الفرعي
+
+إعادة الكتابة إلى `shamstores.com/<subdomain>/<path>` تغيّر **الطلب الخلفي
+فقط**؛ عنوان المتصفح يبقى كما هو، فـ React Router لا يرى البادئة إطلاقاً.
+الواجهة تتعرّف على المتجر من المضيف عبر `getCurrentSubdomain()` في
+`components/PublicRouter.tsx`. ونفس الشيء للنطاقات المخصصة: أول جزء من
+`mystore.com` ليس معرّف المتجر.
+
+### النشر
+
+```bash
+npx wrangler deploy --cwd workers/subdomain-proxy
+```
+
+---
+
+## 2. متغيرات البناء
 
 `VITE_*` تُحقن **داخل الحزمة وقت البناء**. ضبطها بعد البناء لا يفعل شيئاً.
 
@@ -24,8 +65,8 @@ shamstores-…herokuapp.com → Heroku: Express + Prisma (الـ API)
 يستبعد النمط كله). أنشئه بهذا المحتوى قبل أي بناء إنتاجي:
 
 ```ini
-VITE_API_URL=https://shamstores-5fa37cec9e6e.herokuapp.com/api
-VITE_BASE_URL=https://shamstores-5fa37cec9e6e.herokuapp.com
+VITE_API_URL=/api
+VITE_BASE_URL=
 
 VITE_APP_DOMAIN=shamstores.com
 VITE_FRONTEND_URL=https://shamstores.com
@@ -34,21 +75,19 @@ VITE_R2_PUBLIC_URL=https://cdn.shamstores.com
 VITE_MAX_VIDEO_MB=100
 ```
 
-بقية المتغيرات (Firebase، WhatsApp) تُورَّث من `frontend/.env` — يحمّل Vite
-`.env` أولاً ثم يطغى `.env.production` عليه في وضع البناء، فيبقى ملف التطوير
-مشيراً إلى `localhost:5000` بلا تعارض.
+- `VITE_API_URL=/api` — نسبي، لأن الـ Worker يمرّره إلى Heroku.
+- `VITE_BASE_URL=` **فارغ عمداً**: `useSocket` يسقط إلى
+  `window.location.origin` فيمرّ بالـ Worker. تركه بلا تعريف كان سيرث قيمة
+  `.env` التطويرية ويدفن `localhost:5000` في حزمة الإنتاج.
+- بقية المتغيرات (Firebase، WhatsApp) تُورَّث من `frontend/.env`.
 
-**لماذا روابط مطلقة:** الـ Worker الحالي لا يمرّر `/api` إلى Heroku، فالمسار
-النسبي لا يجد خادماً. و`useSocket` يسقط إلى `window.location.origin` — وهو
-Cloudflare الذي لا يشغّل Socket.IO — ما لم يُضبط `VITE_BASE_URL`.
-
-> ⚠️ الخطأ الذي وقع سابقاً: بُنيت الواجهة و`VITE_API_URL` فارغ، فحُقن
-> `http://localhost:5000/api` في حزمة الإنتاج وكانت كل نداءات الـ API معطّلة.
-> تحقق دائماً بعد البناء (القسم 3).
+> لو تعطّل الـ Worker أو لم يُربط بالمسارات، بدّل مؤقتاً إلى رابط مطلق
+> (`VITE_API_URL=https://<app>.herokuapp.com/api` و`VITE_BASE_URL` مثله)
+> وأعد البناء. الخادم يسمح بالأصول عبر CORS في هذه الحالة.
 
 ---
 
-## 2. البناء والنشر
+## 3. البناء والنشر
 
 ```bash
 npm --prefix frontend run build
@@ -58,81 +97,48 @@ npm --prefix frontend run build
 npx wrangler deploy --cwd frontend
 ```
 
-`frontend/wrangler.toml` يشير إلى `./dist` كمجلد الأصول الثابتة،
-و`public/_redirects` فيه `/* /index.html 200` ليعمل توجيه SPA لكل المسارات.
+`frontend/wrangler.toml` يشير إلى `./dist`، و`public/_redirects` فيه
+`/* /index.html 200` ليعمل توجيه SPA لكل المسارات.
 
 ---
 
-## 3. التحقق بعد البناء (لا تتخطَّه)
+## 4. التحقق بعد البناء (لا تتخطَّه)
+
+```bash
+grep -ro '"/api"' frontend/dist/assets/ | wc -l
+```
+
+يجب أن يكون أكبر من صفر. وهذان يجب أن يكونا **صفراً**:
 
 ```bash
 grep -ro "herokuapp.com" frontend/dist/assets/ | wc -l
 ```
 
-يجب أن يكون أكبر من صفر. وللتأكد أن الرابط القديم للوسائط لم يبقَ:
-
 ```bash
 grep -ro "pub-0f129677" frontend/dist/assets/ | wc -l
 ```
 
-يجب أن يكون صفراً. أما `localhost:5000` فوجوده طبيعي: فروع تطوير محروسة بفحص
-`isLocal` لا تُنفَّذ على نطاق حقيقي.
+أما `localhost:5000` فوجوده طبيعي: فروع تطوير محروسة بفحص `isLocal` لا
+تُنفَّذ على نطاق حقيقي.
+
+> ⚠️ الخطأ الذي وقع سابقاً: بُنيت الواجهة و`VITE_API_URL` فارغ، فحُقن
+> `http://localhost:5000/api` في حزمة الإنتاج وكانت كل نداءات الـ API معطّلة
+> على الموقع المنشور. هذه الخطوة تمنع تكراره.
 
 ---
 
-## 4. الـ Worker (`subdomain-proxy`)
+## 5. نقاط تستحق الانتباه
 
-يوجّه النطاقات الفرعية ونطاقات التجّار المخصصة إلى الواجهة. ثلاث ملاحظات:
-
-### أ. تحقّق من سطر `www`
-
-يجب أن يكون مقارنة نصية بسيطة:
-
-```js
-if (hostname !== 'shamstores.com' && hostname !== 'www.shamstores.com') {
-```
-
-إن تسرّب إليه أي تنسيق آخر فلن يطابق `www.shamstores.com` أبداً، فيُعامَل
-كنطاق فرعي اسمه `www` ويُعاد كتابته إلى `shamstores.com/www/…`.
-
-### ب. إعادة كتابة المسار لا لزوم لها
-
-القاعدة التي تحوّل `pizza.shamstores.com/x` إلى `shamstores.com/pizza/x`
-تغيّر **الطلب الخلفي فقط** — عنوان المتصفح يبقى كما هو، فـ React Router لا
-يرى `/pizza` إطلاقاً. الواجهة تكتشف المتجر من المضيف نفسه عبر
-`getCurrentSubdomain()` في `components/PublicRouter.tsx`.
-
-النتيجة عملياً واحدة لأن `_redirects` يُرجع `index.html` لأي مسار، لكن
-القاعدة تضيف طلباً فرعياً بلا فائدة. تمرير المسار كما هو مع تبديل المضيف
-فقط أبسط وأقل عرضة لحلقات الطلبات الفرعية داخل نفس النطاق.
-
-نفس الملاحظة تنطبق على النطاقات المخصصة: `mystore.com` ليس أول جزء منه
-هو الـ slug، والواجهة تتعامل معه عبر `isCustomDomain()`.
-
-### ج. لا قاعدة لـ `/api`
-
-هذا ما يفرض الروابط المطلقة أعلاه. إضافة قاعدة تمرير تُلغي CORS من المعادلة
-كلياً وتسمح بالعودة إلى `VITE_API_URL=/api`:
-
-```js
-if (pathname.startsWith('/api/')) {
-  const upstream = new URL(request.url);
-  upstream.hostname = 'shamstores-5fa37cec9e6e.herokuapp.com';
-  return fetch(upstream.toString(), request);
-}
-```
-
-توضع **قبل** قاعدة النطاقات الفرعية. وتذكّر أن Socket.IO يحتاج ترقية
-WebSocket — تحقق من عمله عبر الـ Worker قبل الاعتماد عليه.
-
----
-
-## 5. أثر الأصلين المختلفين
-
-- **CORS**: الخادم يسمح بـ `shamstores.com` و`www` وكل `*.shamstores.com`
-  ونطاقات التجّار الموثّقة — مضبوط في `backend/src/server.ts`.
-- **preflight**: كل طلب `POST/PUT/DELETE` يسبقه `OPTIONS`. مدعوم عبر
-  `app.options('*', cors(corsOptions))`.
-- **R2**: رفع الفيديو المباشر يحتاج `AllowedOrigins` في سياسة CORS على
-  الحاوية تشمل نفس الأصول — راجع [cloudflare-r2.md](./cloudflare-r2.md).
+- **CORS**: مع تمرير `/api` عبر الـ Worker تصبح الطلبات same-origin — بلا
+  ترويسة `Origin` وبلا preflight. الخادم يقبلها عبر
+  `if (!origin) return callback(null, true)`.
+- **R2**: رفع الفيديو المباشر يذهب إلى `cdn.shamstores.com` لا عبر الـ Worker،
+  فيبقى **سياسة CORS على الحاوية شرطاً** — راجع [cloudflare-r2.md](./cloudflare-r2.md).
+- **Socket.IO والنطاقات الفرعية**: `getSocketCorsOrigin()` في
+  `backend/src/realtime/socket.ts` يبني قائمة أصول **حرفية**
+  (`CLIENT_URL`، النطاق الرئيسي، `www`) بلا مطابقة `*.shamstores.com`،
+  خلافاً لـ CORS الخاص بالـ HTTP الذي يطابقها بتعبير نمطي. ترقية WebSocket
+  ترسل ترويسة `Origin` دائماً حتى على نفس الأصل، فاتصال السوكِت من نطاق
+  فرعي **يُرفض**. لا يظهر الأثر اليوم لأن السوكِت يتطلب رمز دخول ولوحات
+  التحكم على النطاق الرئيسي — لكنه ينفجر أول ما تُقدَّم لوحة تاجر على نطاقه.
 - **الجلسة**: المصادقة برأس `Authorization` لا بكوكي، فلا مشكلة عبر الأصول.
