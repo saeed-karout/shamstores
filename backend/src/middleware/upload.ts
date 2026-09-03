@@ -52,7 +52,7 @@ export const handleUploadError = (err: any, req: Request, res: Response, next: N
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ 
         success: false, 
-        error: 'حجم الملف كبير جداً. الحد الأقصى 10 ميجابايت' 
+        error: 'حجم الملف كبير جداً. راجع الحد الأقصى المسموح لنوع الملف.' 
       });
     }
     if (err.code === 'LIMIT_FILE_COUNT') {
@@ -93,3 +93,30 @@ export const cleanupTempFile = (filePath: string) => {
     console.error('Error cleaning up temp file:', error);
   }
 };
+// ==================== الفيديو ====================
+// المسار الأساسي للفيديو هو الرفع المباشر إلى R2 برابط موقّع (لا يمر بالسيرفر).
+// هذا المُحمِّل مسار احتياطي للمقاطع الصغيرة فقط: مهلة طلب Heroku 30 ثانية،
+// وأي ملف أكبر من ذلك عبر الدينو سيفشل بـ H12.
+const MAX_DIRECT_VIDEO_MB = Number(process.env.R2_MAX_DIRECT_VIDEO_MB || 25);
+
+const videoFileFilter = (req: any, file: any, cb: any) => {
+  const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+  const allowedExtensions = /\.(mp4|webm|mov)$/i;
+
+  if (allowedTypes.includes(file.mimetype) && allowedExtensions.test(file.originalname || '')) {
+    cb(null, true);
+  } else {
+    cb(new Error('صيغة الفيديو غير مدعومة. الصيغ المسموحة: MP4 أو WEBM أو MOV'), false);
+  }
+};
+
+// تخزين في الذاكرة: الملف يُمرَّر مباشرة إلى R2 ثم يُهمَل — لا نلمس قرص الدينو المؤقت.
+export const uploadVideo = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: MAX_DIRECT_VIDEO_MB * 1024 * 1024,
+    files: 1,
+    fields: 20
+  },
+  fileFilter: videoFileFilter
+});

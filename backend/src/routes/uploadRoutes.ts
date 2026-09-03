@@ -4,10 +4,13 @@ import {
   uploadImage, 
   deleteImage, 
   uploadMultipleImages,
-  getBusinessImages 
+  getBusinessImages,
+  createVideoUploadUrl,
+  completeVideoUpload,
+  uploadVideoDirect
 } from '../controllers/uploadController';
 import { authenticate, authorize } from '../middleware/auth';
-import { upload, handleUploadError } from '../middleware/upload';
+import { upload, uploadVideo, handleUploadError } from '../middleware/upload';
 
 const router = Router();
 
@@ -27,6 +30,27 @@ router.post('/', upload.single('image'), handleUploadError, uploadImage);
  * @access  Private
  */
 router.post('/multiple', upload.array('images', 10), handleUploadError, uploadMultipleImages);
+
+/**
+ * @route   POST /api/upload/video/presign
+ * @desc    رابط PUT موقّع لرفع الفيديو مباشرة من المتصفح إلى R2
+ * @access  Private
+ */
+router.post('/video/presign', createVideoUploadUrl);
+
+/**
+ * @route   POST /api/upload/video/complete
+ * @desc    تأكيد الرفع المباشر وتسجيل الفيديو
+ * @access  Private
+ */
+router.post('/video/complete', completeVideoUpload);
+
+/**
+ * @route   POST /api/upload/video
+ * @desc    مسار احتياطي لرفع فيديو صغير عبر السيرفر
+ * @access  Private
+ */
+router.post('/video', uploadVideo.single('video'), handleUploadError, uploadVideoDirect);
 
 /**
  * @route   DELETE /api/upload

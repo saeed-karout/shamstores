@@ -62,6 +62,16 @@ if (isProduction) {
   if (!process.env.APP_DOMAIN) {
     warnings.push('APP_DOMAIN غير معرّف — سيتم استخدام shamstores.com كنطاق أساسي.');
   }
+  // قرص الدينو على Heroku مؤقت: بلا R2 تختفي كل الوسائط المرفوعة عند إعادة التشغيل.
+  const r2Missing = ['R2_BUCKET_NAME', 'R2_PUBLIC_URL', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'].filter(
+    (key) => !process.env[key]
+  );
+  if (!process.env.R2_ENDPOINT && !process.env.R2_ACCOUNT_ID) {
+    r2Missing.push('R2_ENDPOINT أو R2_ACCOUNT_ID');
+  }
+  if (r2Missing.length) {
+    warnings.push(`تخزين الوسائط غير مهيأ (${r2Missing.join('، ')}) — رفع الصور والفيديو سيفشل.`);
+  }
 }
 
 if (warnings.length) {

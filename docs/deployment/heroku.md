@@ -41,10 +41,19 @@ heroku login
 
 ---
 
-## 3. إنشاء التطبيق
+## 3. التطبيق
+
+تطبيق `shamstores` **موجود مسبقاً** على الحساب (stack `heroku-24`، منطقة `us`).
+اربط المستودع المحلي به:
 
 ```bash
-heroku create shamstores-app --stack heroku-24
+heroku git:remote -a shamstores
+```
+
+لإنشاء تطبيق جديد من الصفر بدلاً منه:
+
+```bash
+heroku create <اسم-جديد> --stack heroku-24
 ```
 
 ---
@@ -54,7 +63,7 @@ heroku create shamstores-app --stack heroku-24
 Heroku لا يوفّر MySQL أصلياً، لذا نستخدم إضافة JawsDB:
 
 ```bash
-heroku addons:create jawsdb:kitefin --app shamstores-app
+heroku addons:create jawsdb:kitefin --app shamstores
 ```
 
 الإضافة تضبط متغير `JAWSDB_URL` تلقائياً. التطبيق يُسقطه على `DATABASE_URL`
@@ -66,12 +75,26 @@ heroku addons:create jawsdb:kitefin --app shamstores-app
 لعرض الرابط:
 
 ```bash
-heroku config:get JAWSDB_URL --app shamstores-app
+heroku config:get JAWSDB_URL --app shamstores
 ```
 
 ---
 
 ## 5. متغيرات البيئة
+
+### الطريق السريع: سكربت الضبط
+
+`scripts/heroku-config.ps1` ينفّذ كل ما في هذا القسم دفعة واحدة: يزوّد JawsDB،
+يقرأ أسرار R2 وSMTP وFirebase من `backend/.env` ويمرّرها إلى Heroku مباشرة
+(بلا طباعتها)، ويولّد `JWT_SECRET` إنتاجياً جديداً — ولا يلمسه إن كان مضبوطاً
+مسبقاً، لأن تغييره يُخرج كل المستخدمين من جلساتهم.
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/heroku-config.ps1
+```
+
+استدعاء واحد لـ `config:set` = إعادة تشغيل واحدة للتطبيق. السكربت قابل لإعادة
+التشغيل بأمان. الأقسام التالية تشرح المتغيرات نفسها لمن يريد ضبطها يدوياً.
 
 ### الإلزامية
 
@@ -79,7 +102,7 @@ heroku config:get JAWSDB_URL --app shamstores-app
 # ولّد مفتاحاً قوياً أولاً:
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
-heroku config:set --app shamstores-app \
+heroku config:set --app shamstores \
   NODE_ENV=production \
   JWT_SECRET="<الصق الناتج هنا>" \
   JWT_EXPIRE=7d \
@@ -97,7 +120,7 @@ heroku config:set --app shamstores-app \
 `VITE_*` تُحقن داخل حزمة الجافاسكربت أثناء البناء، لذا يجب ضبطها **قبل** أول نشر:
 
 ```bash
-heroku config:set --app shamstores-app \
+heroku config:set --app shamstores \
   VITE_API_URL=/api \
   VITE_APP_DOMAIN=shamstores.com \
   VITE_FRONTEND_URL=https://shamstores.com
@@ -108,21 +131,34 @@ heroku config:set --app shamstores-app \
 >
 > ⚠️ لا تضع أي سرّ في متغير يبدأ بـ `VITE_` — كل قيمه مرئية لأي زائر.
 
-### الصور (Cloudflare R2)
+### الوسائط — الصور والفيديو (Cloudflare R2)
 
 ```bash
-heroku config:set --app shamstores-app \
+heroku config:set --app shamstores \
   R2_ACCOUNT_ID=... R2_BUCKET_NAME=... R2_ACCESS_KEY_ID=... \
-  R2_SECRET_ACCESS_KEY=... R2_ENDPOINT=... R2_PUBLIC_URL=...
+  R2_SECRET_ACCESS_KEY=... R2_ENDPOINT=... R2_PUBLIC_URL=... \
+  R2_MAX_VIDEO_MB=100 R2_MAX_DIRECT_VIDEO_MB=25
+```
+
+ومتغيرات الواجهة المقابلة (تُحقن وقت البناء):
+
+```bash
+heroku config:set --app shamstores \
+  VITE_R2_PUBLIC_URL=https://cdn.shamstores.com VITE_MAX_VIDEO_MB=100
 ```
 
 > نظام ملفات Heroku مؤقت — أي ملف يُكتب على القرص يختفي عند إعادة تشغيل الدينو.
-> رفع الصور **يجب** أن يمرّ عبر R2. لا تعتمد على `backend/uploads`.
+> رفع الصور والفيديو **يجب** أن يمرّ عبر R2. لا تعتمد على `backend/uploads`.
+>
+> الفيديو يُرفع من المتصفح **مباشرة** إلى R2 برابط موقّع، فلا تحدّه مهلة الـ 30 ثانية
+> على Heroku — لكن هذا يتطلب ضبط **CORS** على الحاوية.
+>
+> 📄 الإعداد الكامل خطوة بخطوة: [cloudflare-r2.md](./cloudflare-r2.md)
 
 ### البريد
 
 ```bash
-heroku config:set --app shamstores-app \
+heroku config:set --app shamstores \
   SMTP_HOST=... SMTP_PORT=587 SMTP_USER=... SMTP_PASSWORD=... \
   SMTP_FROM_EMAIL=... SMTP_FROM_NAME="Sham Stores"
 ```
@@ -133,9 +169,9 @@ heroku config:set --app shamstores-app \
 ### Firebase (اختياري — تسجيل الدخول عبر Google)
 
 ```bash
-heroku config:set --app shamstores-app \
+heroku config:set --app shamstores \
   FIREBASE_PROJECT_ID=... FIREBASE_CLIENT_EMAIL=...
-heroku config:set --app shamstores-app FIREBASE_PRIVATE_KEY="$(cat key.pem)"
+heroku config:set --app shamstores FIREBASE_PRIVATE_KEY="$(cat key.pem)"
 ```
 
 ---
@@ -153,7 +189,7 @@ git push heroku ui-ux/storefront-redesign:main
 تابع البناء:
 
 ```bash
-heroku logs --tail --app shamstores-app
+heroku logs --tail --app shamstores
 ```
 
 ---
@@ -164,7 +200,7 @@ heroku logs --tail --app shamstores-app
 **لا تُشغّل هذا تلقائياً في مرحلة release** — قد يحذف أعمدة. شغّله يدوياً وبوعي:
 
 ```bash
-heroku run --app shamstores-app "npm --prefix backend run prisma:db-push"
+heroku run --app shamstores "npm --prefix backend run prisma:db-push"
 ```
 
 الخطط وإعدادات المنصة الافتراضية تُزرع تلقائياً عند أول إقلاع
@@ -173,7 +209,7 @@ heroku run --app shamstores-app "npm --prefix backend run prisma:db-push"
 ### إنشاء حساب سوبر أدمن
 
 ```bash
-heroku run --app shamstores-app bash
+heroku run --app shamstores bash
 # ثم داخل الجلسة، استخدم سكربتات backend/src/scripts أو أدخل الصف يدوياً
 ```
 
@@ -181,24 +217,72 @@ heroku run --app shamstores-app bash
 
 ## 8. النطاقات و SSL
 
+### الوضع الحالي: النطاق على Cloudflare Pages
+
+قبل أي شيء — سجلات DNS الحالية تشير إلى نشر Pages، لا إلى Heroku:
+
+```
+shamstores.com     CNAME  shamstores.pages.dev   (Proxied)
+www.shamstores.com CNAME  shamstores.pages.dev   (Proxied)
+*.shamstores.com   CNAME  shamstores.pages.dev   (Proxied)
+cdn.shamstores.com R2     shamstores-images      (Proxied)  ← الوسائط، يبقى كما هو
+```
+
+أول ثلاثة سجلات **يجب أن تُعاد توجيهها إلى Heroku** وإلا بقي الموقع يُخدَم من Pages.
+سجل `cdn` لا يُمسّ — هو نطاق R2 وشأنه منفصل.
+
+الترتيب الآمن للتبديل:
+
+1. انشر على Heroku وتأكد أن كل شيء يعمل على `shamstores-5fa37cec9e6e.herokuapp.com` أولاً.
+2. `heroku domains:add` للنطاقات الثلاثة — يعطيك هدف DNS لكل واحد
+   (`*.herokudns.com`).
+3. بدّل وجهة السجلات الثلاثة من `shamstores.pages.dev` إلى أهداف Heroku.
+4. احذف نشر Pages أو أوقفه لاحقاً — لا تحذفه قبل أن تستقر Heroku.
+
+> ⚠️ الواجهة المنشورة حالياً على Pages مبنية بـ `VITE_API_URL=http://localhost:5000/api`،
+> أي أن نداءات الـ API فيها معطّلة أصلاً. لا تقلق من «كسر» شيء يعمل.
+
+### SSL خلف Cloudflare (مهم)
+
+السجلات **Proxied** (السحابة البرتقالية)، وهذا مقصود ومطلوب للنطاقات الفرعية للتجّار.
+لكنه يعني أن إدارة شهادات Heroku التلقائية (ACM) **لن تستطيع التحقق** — فطلب
+التحقق يصل من Cloudflare لا من Heroku.
+
+الحل الصحيح لهذه البنية:
+
+1. Cloudflare → SSL/TLS → Overview → اضبط الوضع على **Full (Strict)**.
+2. Cloudflare → SSL/TLS → Origin Server → **Create Certificate**
+   لـ `shamstores.com` و`*.shamstores.com` (صلاحية 15 سنة).
+3. ارفعها إلى Heroku:
+
+```bash
+heroku certs:add origin-cert.pem origin-key.pem --app shamstores
+```
+
+هكذا تُصدر Cloudflare شهادة الحافة للزوار (تشمل `*.shamstores.com` تلقائياً)،
+ويثق Cloudflare بشهادة Heroku الأصلية — بلا ACM وبلا شهادة wildcard مدفوعة من Heroku.
+
+> البديل الأبسط لو تخلّيت عن النطاقات الفرعية: اجعل السجلات **DNS only** (رمادية)
+> ودع `heroku certs:auto:enable` يتولّى الأمر. لكنك تخسر عندها `*.shamstores.com`.
+
 ### النطاق الرئيسي
 
 ```bash
-heroku domains:add shamstores.com --app shamstores-app
-heroku domains:add www.shamstores.com --app shamstores-app
-heroku certs:auto:enable --app shamstores-app
+heroku domains:add shamstores.com --app shamstores
+heroku domains:add www.shamstores.com --app shamstores
+heroku certs:auto:enable --app shamstores
 ```
 
 ثم أضف سجلات DNS التي يعرضها الأمر التالي عند مزوّد نطاقك:
 
 ```bash
-heroku domains --app shamstores-app
+heroku domains --app shamstores
 ```
 
 ### النطاقات الفرعية للتجّار (`*.shamstores.com`)
 
 ```bash
-heroku domains:add "*.shamstores.com" --app shamstores-app
+heroku domains:add "*.shamstores.com" --app shamstores
 ```
 
 > ⚠️ شهادة wildcard على Heroku تتطلب رفع شهادة SSL خاصة بك
@@ -217,7 +301,7 @@ heroku domains:add "*.shamstores.com" --app shamstores-app
 3. **أنت** تضيف النطاق إلى Heroku ليُصدر له شهادة:
 
    ```bash
-   heroku domains:add mystore.com --app shamstores-app
+   heroku domains:add mystore.com --app shamstores
    ```
 
 > الخطوة 3 يدوية بطبيعتها على Heroku. لأتمتتها لاحقاً استخدم
@@ -229,7 +313,7 @@ heroku domains:add "*.shamstores.com" --app shamstores-app
 ## 9. التحقق بعد النشر
 
 ```bash
-APP=https://shamstores-app.herokuapp.com
+APP=https://shamstores-5fa37cec9e6e.herokuapp.com
 
 # فحص الصحة
 curl -s $APP/health
@@ -258,9 +342,9 @@ done; echo
 - **الدينو**: `basic` يكفي للبداية؛ الدينو المجاني/eco ينام ويُبطئ أول طلب.
 - **السجلات**: `heroku logs --tail`. في الإنتاج `console.log` مُسكَت عمداً؛
   لتفعيله مؤقتاً للتشخيص: `heroku config:set VERBOSE_LOGS=true` ثم أعِده إلى false.
-- **إعادة التشغيل**: `heroku ps:restart --app shamstores-app`.
-- **التراجع**: `heroku releases --app shamstores-app` ثم
-  `heroku rollback v<رقم> --app shamstores-app`.
+- **إعادة التشغيل**: `heroku ps:restart --app shamstores`.
+- **التراجع**: `heroku releases --app shamstores` ثم
+  `heroku rollback v<رقم> --app shamstores`.
 
 ---
 
@@ -275,6 +359,8 @@ done; echo
 | النطاق المخصص لا يفتح المتجر | لم يُضَف إلى Heroku، أو التحقق لم يكتمل | راجع القسم 8 |
 | `429` بسرعة على الدخول | حد المعدل | متوقع؛ 10 محاولات لكل 15 دقيقة لكل (IP + بريد) |
 | رفع الصور يعمل ثم تختفي | تُحفظ على قرص الدينو المؤقت | اضبط متغيرات R2 |
+| رفع الفيديو بطيء أو يفشل بـ `H12` | ذهب عبر الخادم لا مباشرة إلى R2 | اضبط CORS على الحاوية — راجع [cloudflare-r2.md](./cloudflare-r2.md) |
+| مسارات الرفع تُرجع `503` | إعدادات R2 ناقصة | راجع `heroku config` وتحقق من متغيرات `R2_` |
 
 ---
 
@@ -283,7 +369,8 @@ done; echo
 - [ ] `JWT_SECRET` جديد وقوي (لا تعيد استخدام مفتاح التطوير)
 - [ ] `NODE_ENV=production`
 - [ ] `APP_DOMAIN` و`CLIENT_URL` و`VITE_APP_DOMAIN` تطابق نطاقك الفعلي
-- [ ] متغيرات R2 مضبوطة (وإلا ستضيع كل الصور)
+- [ ] متغيرات R2 مضبوطة (وإلا ستضيع كل الصور) و`VITE_R2_PUBLIC_URL` كذلك
+- [ ] سياسة CORS على حاوية R2 تسمح بـ `PUT` من نطاقك (شرط رفع الفيديو)
 - [ ] متغيرات SMTP مضبوطة (وإلا لن تعمل استعادة كلمة المرور)
 - [ ] `prisma db push` نُفّذ مرة واحدة
 - [ ] حساب سوبر أدمن أُنشئ وكلمة مروره قوية

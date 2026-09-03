@@ -88,6 +88,8 @@ app.use(
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
             imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+            // الفيديو يُقدَّم من R2 على نطاق مختلف؛ بدون mediaSrc يمنعه defaultSrc
+            mediaSrc: ["'self'", 'data:', 'blob:', 'https:'],
             connectSrc: ["'self'", 'https:', 'wss:'],
             frameSrc: ["'self'", 'https://www.google.com', 'https://shamstores.firebaseapp.com'],
             objectSrc: ["'none'"],

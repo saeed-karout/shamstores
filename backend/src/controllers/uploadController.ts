@@ -5,6 +5,7 @@ import { AuthRequest } from '../types';
 import fs from 'fs';
 import path from 'path';
 import r2ImagesService from '../services/r2ImagesService';
+import r2Service from '../services/r2Service';
 import prisma from '../services/prisma';
 import { cleanupTempFile } from '../middleware/upload';
 
@@ -220,18 +221,13 @@ export const deleteImage = async (
   try {
     const { imageUrl, imageId } = req.body;
 
-    let idToDelete = imageId;
-    if (!idToDelete && imageUrl) {
-      // استخراج معرف الصورة من URL لـ R2
-      const urlParts = imageUrl.split('.r2.dev/');
-      if (urlParts.length > 1) {
-        idToDelete = urlParts[1];
-      }
-    }
+    // المفتاح يُستخرج من الرابط العام — يعمل مع النطاق المخصص ومع r2.dev معاً،
+    // ويشمل الفيديو لأن كليهما كائن واحد في نفس الحاوية.
+    let idToDelete = imageId || (imageUrl ? r2Service.keyFromUrl(imageUrl) : null);
 
     if (idToDelete) {
       // ✅ حذف من R2
-      await r2ImagesService.deleteImage(idToDelete);
+      await r2Service.deleteObject(idToDelete);
       
       // حذف السجل من قاعدة البيانات
       await prisma.image.deleteMany({
@@ -291,5 +287,211 @@ export const getBusinessImages = async (
       success: false,
       error: 'حدث خطأ في جلب الصور' 
     });
+  }
+};
+// ==================== الفيديو ====================
+
+/**
+ * تسجيل سجل وسائط دون ملف multer (يُستخدم بعد الرفع المباشر إلى R2).
+ */
+const saveMediaRecord = async (
+  req: AuthRequest,
+  params: {
+    url: string;
+    key: string;
+    type: string;
+    subType: string;
+    originalName?: string;
+    mimeType?: string;
+    sizeBytes?: number;
+    businessId?: string;
+  }
+): Promise<void> => {
+  await prisma.image.create({
+    data: {
+      userId: req.user?.id || null,
+      businessType: normalizeBusinessType(req),
+      businessId: resolveBusinessId(req, params.businessId) || null,
+      uploadType: params.type,
+      subType: params.subType,
+      provider: 'r2' as any,
+      imageUrl: params.url,
+      cloudflareImageId: params.key,
+      originalName: params.originalName || null,
+      mimeType: params.mimeType || null,
+      sizeBytes: params.sizeBytes ?? null
+    }
+  });
+};
+
+/**
+ * الخطوة 1 للفيديو: توليد رابط PUT موقّع يرفع عبره المتصفح الملف مباشرة إلى R2.
+ * الملف لا يمر بالسيرفر إطلاقاً — لا مهلة H12 ولا ضغط على الدينو.
+ */
+export const createVideoUploadUrl = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!r2Service.isR2Configured()) {
+      res.status(503).json({
+        success: false,
+        error: 'تخزين الوسائط غير مهيأ. راجع متغيرات R2 في إعدادات الخادم.'
+      });
+      return;
+    }
+
+    const { type = 'misc', id, subType = 'video', fileName, contentType, size } = req.body;
+
+    const validationError = r2Service.validateVideo(
+      String(contentType || ''),
+      size === undefined ? undefined : Number(size)
+    );
+    if (validationError) {
+      res.status(400).json({ success: false, error: validationError });
+      return;
+    }
+
+    const entityId = id ? String(id) : resolveBusinessId(req) || req.user?.id || 'unknown';
+    const key = r2Service.buildMediaKey({
+      entity: getValidEntity(String(type)),
+      entityId,
+      subType: String(subType),
+      kind: 'video',
+      originalName: String(fileName || 'video'),
+      ext: r2Service.ALLOWED_VIDEO_TYPES[String(contentType)]
+    });
+
+    const presigned = await r2Service.createPresignedUpload({
+      key,
+      contentType: String(contentType)
+    });
+
+    res.json({ success: true, data: presigned });
+  } catch (error) {
+    console.error('❌ Error creating video upload URL:', error);
+    res.status(500).json({ success: false, error: 'تعذّر تجهيز رابط الرفع. حاول مرة أخرى.' });
+  }
+};
+
+/**
+ * الخطوة 2 للفيديو: تأكيد الرفع.
+ * نتحقق من الكائن فعلياً في R2 (وجوده ونوعه وحجمه) قبل تسجيله — لا نثق بما يرسله العميل.
+ * أي كائن يتجاوز الحد يُحذف فوراً بدل أن يبقى يستهلك تخزيناً بلا سجل.
+ */
+export const completeVideoUpload = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { key, type = 'misc', id, subType = 'video', originalName } = req.body;
+
+    if (!key || typeof key !== 'string') {
+      res.status(400).json({ success: false, error: 'مفتاح الملف مفقود' });
+      return;
+    }
+
+    const head = await r2Service.headObject(key);
+    if (!head) {
+      res.status(404).json({ success: false, error: 'لم يتم العثور على الملف المرفوع' });
+      return;
+    }
+
+    const validationError = r2Service.validateVideo(head.contentType, head.size);
+    if (validationError) {
+      await r2Service.deleteObject(key);
+      res.status(400).json({ success: false, error: validationError });
+      return;
+    }
+
+    const url = r2Service.publicUrlForKey(key);
+
+    await saveMediaRecord(req, {
+      url,
+      key,
+      type: String(type),
+      subType: String(subType),
+      originalName: originalName ? String(originalName) : undefined,
+      mimeType: head.contentType,
+      sizeBytes: head.size,
+      businessId: id ? String(id) : undefined
+    });
+
+    res.json({
+      success: true,
+      data: { videoUrl: url, url, key, sizeBytes: head.size, mimeType: head.contentType },
+      message: 'تم رفع الفيديو بنجاح'
+    });
+  } catch (error) {
+    console.error('❌ Error completing video upload:', error);
+    res.status(500).json({ success: false, error: 'تعذّر تأكيد رفع الفيديو' });
+  }
+};
+
+/**
+ * مسار احتياطي: رفع فيديو صغير عبر السيرفر.
+ * يُستخدم فقط إن تعذّر الرفع المباشر (مثلاً CORS غير مضبوط على الحاوية بعد).
+ */
+export const uploadVideoDirect = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!r2Service.isR2Configured()) {
+      res.status(503).json({
+        success: false,
+        error: 'تخزين الوسائط غير مهيأ. راجع متغيرات R2 في إعدادات الخادم.'
+      });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ success: false, error: 'لم يتم رفع أي ملف' });
+      return;
+    }
+
+    const { type = 'misc', id, subType = 'video' } = req.body;
+
+    const validationError = r2Service.validateVideo(req.file.mimetype, req.file.size);
+    if (validationError) {
+      res.status(400).json({ success: false, error: validationError });
+      return;
+    }
+
+    const entityId = id ? String(id) : resolveBusinessId(req) || req.user?.id || 'unknown';
+    const key = r2Service.buildMediaKey({
+      entity: getValidEntity(String(type)),
+      entityId,
+      subType: String(subType),
+      kind: 'video',
+      originalName: req.file.originalname,
+      ext: r2Service.ALLOWED_VIDEO_TYPES[req.file.mimetype]
+    });
+
+    const url = await r2Service.putObject({
+      key,
+      body: req.file.buffer,
+      contentType: req.file.mimetype
+    });
+
+    await saveMediaRecord(req, {
+      url,
+      key,
+      type: String(type),
+      subType: String(subType),
+      originalName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      sizeBytes: req.file.size,
+      businessId: id ? String(id) : undefined
+    });
+
+    res.json({
+      success: true,
+      data: { videoUrl: url, url, key },
+      message: 'تم رفع الفيديو بنجاح'
+    });
+  } catch (error) {
+    console.error('❌ Error uploading video:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في رفع الفيديو' });
   }
 };

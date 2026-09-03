@@ -248,6 +248,58 @@ class ApiClient {
   }
 
   /**
+   * طلب رابط رفع موقّع للفيديو (الخطوة 1 من الرفع المباشر إلى R2)
+   */
+  async createVideoUploadUrl(params: {
+    fileName: string;
+    contentType: string;
+    size: number;
+    type?: string;
+    id?: string;
+    subType?: string;
+  }): Promise<{ uploadUrl: string; key: string; publicUrl: string; expiresIn: number }> {
+    const response = await this.api.post('/upload/video/presign', params);
+    return response.data?.data || response.data;
+  }
+
+  /**
+   * تأكيد رفع الفيديو وتسجيله (الخطوة 3 من الرفع المباشر)
+   */
+  async completeVideoUpload(params: {
+    key: string;
+    type?: string;
+    id?: string;
+    subType?: string;
+    originalName?: string;
+  }): Promise<{ videoUrl: string; key: string }> {
+    const response = await this.api.post('/upload/video/complete', params);
+    return response.data?.data || response.data;
+  }
+
+  /**
+   * رفع فيديو عبر السيرفر — مسار احتياطي للمقاطع الصغيرة فقط
+   */
+  async uploadVideoViaServer(
+    file: File,
+    type: string = 'misc',
+    id?: string,
+    subType: string = 'video'
+  ): Promise<{ videoUrl: string; key: string }> {
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('type', type);
+    if (id) formData.append('id', id);
+    formData.append('subType', subType);
+
+    const response = await this.api.post('/upload/video', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 0
+    });
+
+    return response.data?.data || response.data;
+  }
+
+  /**
    * جلب صور النشاط التجاري
    */
   async getBusinessImages(): Promise<any[]> {

@@ -13,6 +13,19 @@ const R2_PUBLIC_URL = import.meta.env.VITE_R2_PUBLIC_URL || 'https://pub-0f12967
 const CLOUDFLARE_DELIVERY_URL = 'https://imagedelivery.net/AS_DZ3xmdS7tL6SgO2AGxA';
 const DEFAULT_VARIANT = 'public';
 
+const R2_DEV_MARKER = '.r2.dev/';
+
+/**
+ * أي رابط r2.dev قديم (أو من حاوية سابقة) يُحوَّل إلى الرابط العام الحالي.
+ * المفتاح داخل الحاوية لا يتغيّر، فالتحويل آمن ويجعل الانتقال إلى نطاق مخصص
+ * بلا أي تعديل على الروابط المخزّنة في قاعدة البيانات.
+ */
+const normalizeR2Url = (url: string): string => {
+  const markerIndex = url.indexOf(R2_DEV_MARKER);
+  if (markerIndex === -1) return url;
+  return `${R2_PUBLIC_URL}/${url.slice(markerIndex + R2_DEV_MARKER.length)}`;
+};
+
 /**
  * الحصول على رابط صورة محسن (للاستخدام في upload.service)
  */
@@ -29,22 +42,9 @@ export const getImageUrl = (url: string, options?: ImageOptions): string => {
   
   console.log('🖼️ getImageUrl input:', url);
   
-  // ✅ إذا كان الرابط من R2 (يحتوي على .r2.dev)
+  // ✅ رابط من R2 — يُوحَّد على الرابط العام المضبوط حالياً
   if (url.includes('.r2.dev')) {
-    // إذا كان الرابط يستخدم الـ hash الصحيح، نرجعه كما هو
-    if (url.includes(R2_PUBLIC_URL)) {
-      console.log('✅ R2 image with correct hash:', url);
-      return url;
-    }
-    
-    // إذا كان الرابط يستخدم hash قديم، نستبدله بالـ hash الصحيح
-    if (url.includes('pub-06055d0a5a3f4bc41727965ba16a5185')) {
-      const newUrl = url.replace('pub-06055d0a5a3f4bc41727965ba16a5185', 'pub-0f129677a5514faaad5ee813ca483811');
-      console.log('🔄 Replaced old R2 hash with new one:', newUrl);
-      return newUrl;
-    }
-    
-    return url;
+    return normalizeR2Url(url);
   }
   
   // ✅ إذا كان الرابط من Cloudflare Images
@@ -170,8 +170,17 @@ export const extractImageId = (url: string): string | null => {
  */
 export const fixR2Url = (url: string): string => {
   if (!url) return '';
-  if (url.includes('pub-06055d0a5a3f4bc41727965ba16a5185')) {
-    return url.replace('pub-06055d0a5a3f4bc41727965ba16a5185', 'pub-0f129677a5514faaad5ee813ca483811');
-  }
-  return url;
+  return normalizeR2Url(url);
 };
+
+/**
+ * يميّز روابط الفيديو عن الصور (كلاهما يُخزَّن في نفس حاوية R2)
+ */
+export const isVideoUrl = (url: string): boolean => /\.(mp4|webm|mov)(\?|$)/i.test(url || '');
+
+/**
+ * رابط وسائط عام: الفيديو يُعاد كما هو (لا تحويلات صور عليه)،
+ * والصورة تمر بمنطق getImageUrl المعتاد.
+ */
+export const getMediaUrl = (url: string, options?: ImageOptions): string =>
+  isVideoUrl(url) ? url || '' : getImageUrl(url, options);
