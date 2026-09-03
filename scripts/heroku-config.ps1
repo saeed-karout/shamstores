@@ -67,6 +67,18 @@ if ($addons -match 'jawsdb') {
   Write-Step "تزويد JawsDB (الخطة المجانية kitefin)"
   heroku addons:create jawsdb:kitefin --app $App | Out-Null
   if ($LASTEXITCODE -ne 0) { throw 'فشل تزويد JawsDB — راجع رسالة heroku أعلاه' }
+
+  # التزويد لا تزامني: heroku يعود فوراً بينما JawsDB تضبط JAWSDB_URL بعد ثوانٍ.
+  # بلا هذا الانتظار تقرأ خطوة التحقق أدناه إعدادات ناقصة وتبدو كأن المتغير مفقود.
+  Write-Step 'انتظار ضبط JAWSDB_URL'
+  $waited = 0
+  while ($waited -lt 120) {
+    $cfg = heroku config --shell --app $App 2>$null | Out-String
+    if ($cfg -match '(?m)^JAWSDB_URL=') { Write-Step "JAWSDB_URL جاهز بعد $waited ثانية"; break }
+    Start-Sleep -Seconds 5
+    $waited += 5
+  }
+  if ($waited -ge 120) { Write-Warn 'لم يظهر JAWSDB_URL خلال دقيقتين — تحقق بـ heroku addons' }
 }
 
 # ---------- المتغيرات الثابتة ----------
