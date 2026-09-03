@@ -1,6 +1,6 @@
 // frontend/src/App.tsx
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,96 +11,117 @@ import { IoWarning } from 'react-icons/io5';
 import { isStorefrontHost } from './utils/subdomain';
 
 // frontend/src/pages/auth
-import EmailVerification from './pages/auth/EmailVerification';
-
+const EmailVerification = lazy(() => import('./pages/auth/EmailVerification'));
 // ==================== صفحات المالكين ====================
-import RestaurantDashboard from './pages/Owner/RestaurantDashboard';
-import StoreDashboard from './pages/Owner/StoreDashboard';
-
+const RestaurantDashboard = lazy(() => import('./pages/Owner/RestaurantDashboard'));
+const StoreDashboard = lazy(() => import('./pages/Owner/StoreDashboard'));
 // ==================== صفحات المطعم ====================
-import RestaurantMenuPage from './pages/Restaurant/RestaurantMenuPage';
-import RestaurantOrdersPage from './pages/Restaurant/RestaurantOrdersPage';
-import RestaurantTablesPage from './pages/Restaurant/RestaurantTablesPage';
-import RestaurantQRCodesPage from './pages/Restaurant/RestaurantQRCodesPage';
-import RestaurantStaffPage from './pages/Restaurant/RestaurantStaffPage';
-import RestaurantDeliveryDashboard from './pages/Restaurant/RestaurantDeliveryDashboard';
-import RestaurantDriversPage from './pages/Restaurant/RestaurantDriversPage';
-import RestaurantSettingsPage from './pages/Restaurant/RestaurantSettingsPage';
-import RestaurantAnalyticsPage from './pages/Restaurant/RestaurantAnalyticsPage';
-import RestaurantPlansPage from './pages/Restaurant/RestaurantPlansPage';
-import RestaurantCouponsPage from './pages/Restaurant/RestaurantCouponsPage';
-
+const RestaurantMenuPage = lazy(() => import('./pages/Restaurant/RestaurantMenuPage'));
+const RestaurantOrdersPage = lazy(() => import('./pages/Restaurant/RestaurantOrdersPage'));
+const RestaurantTablesPage = lazy(() => import('./pages/Restaurant/RestaurantTablesPage'));
+const RestaurantQRCodesPage = lazy(() => import('./pages/Restaurant/RestaurantQRCodesPage'));
+const RestaurantStaffPage = lazy(() => import('./pages/Restaurant/RestaurantStaffPage'));
+const RestaurantDeliveryDashboard = lazy(() => import('./pages/Restaurant/RestaurantDeliveryDashboard'));
+const RestaurantDriversPage = lazy(() => import('./pages/Restaurant/RestaurantDriversPage'));
+const RestaurantSettingsPage = lazy(() => import('./pages/Restaurant/RestaurantSettingsPage'));
+const RestaurantAnalyticsPage = lazy(() => import('./pages/Restaurant/RestaurantAnalyticsPage'));
+const RestaurantPlansPage = lazy(() => import('./pages/Restaurant/RestaurantPlansPage'));
+const RestaurantCouponsPage = lazy(() => import('./pages/Restaurant/RestaurantCouponsPage'));
 // ==================== صفحات المتجر ====================
-import StoreProductsPage from './pages/Store/StoreProductsPage';
-import StoreInventoryPage from './pages/Store/StoreInventoryPage';
-import StoreOrdersPage from './pages/Store/StoreOrdersPage';
-import StoreCouponsPage from './pages/Store/StoreCouponsPage';
-import StoreDeliveryDashboard from './pages/Store/StoreDeliveryDashboard';
-import StoreDriversPage from './pages/Store/StoreDriversPage';
-import StoreSettingsPage from './pages/Store/StoreSettingsPage';
-import StoreAnalyticsPage from './pages/Store/StoreAnalyticsPage';
-import StoreStaffPage from './pages/Store/StoreStaffPage';
-import StorePlansPage from './pages/Store/StorePlansPage';
-import StoreQRCodesPage from './pages/Store/StoreQRCodesPage';
-
+const StoreProductsPage = lazy(() => import('./pages/Store/StoreProductsPage'));
+const StoreInventoryPage = lazy(() => import('./pages/Store/StoreInventoryPage'));
+const StoreOrdersPage = lazy(() => import('./pages/Store/StoreOrdersPage'));
+const StoreCouponsPage = lazy(() => import('./pages/Store/StoreCouponsPage'));
+const StoreDeliveryDashboard = lazy(() => import('./pages/Store/StoreDeliveryDashboard'));
+const StoreDriversPage = lazy(() => import('./pages/Store/StoreDriversPage'));
+const StoreSettingsPage = lazy(() => import('./pages/Store/StoreSettingsPage'));
+const StoreAnalyticsPage = lazy(() => import('./pages/Store/StoreAnalyticsPage'));
+const StoreStaffPage = lazy(() => import('./pages/Store/StoreStaffPage'));
+const StorePlansPage = lazy(() => import('./pages/Store/StorePlansPage'));
+const StoreQRCodesPage = lazy(() => import('./pages/Store/StoreQRCodesPage'));
 // ==================== صفحات السوبر أدمن ====================
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import AdminRestaurants from './pages/Admin/AdminRestaurants';
-import AdminStores from './pages/Admin/AdminStores';
-import AdminBranches from './pages/Admin/AdminBranches';
-import AdminUsers from './pages/Admin/AdminUsers';
-import AdminOrders from './pages/Admin/AdminOrders';
-import AdminDrivers from './pages/Admin/AdminDrivers';
-import AdminPlans from './pages/Admin/AdminPlans';
-import AdminSettings from './pages/Admin/AdminSettings';
-import AdminRestaurantDetails from './pages/Admin/AdminRestaurantDetails';
-import AdminStoreDetails from './pages/Admin/AdminStoreDetails';
-import AdminUserDetails from './pages/Admin/AdminUserDetails';
-import AdminStaffPage from './pages/Admin/AdminStaffPage';
-import AdminStaffListPage from './pages/Admin/AdminStaffListPage';
-import AdminStaffDetailsPage from './pages/Admin/AdminStaffDetailsPage';
-import AdminQRCodesPage from './pages/Admin/AdminQRCodesPage';
-import AdminBusinessFeatures from './pages/Admin/AdminBusinessFeatures';
-import AdminPlatformSettings from './pages/Admin/AdminPlatformSettings';
-import AdminFeatures from './pages/Admin/AdminFeatures';
-import AdminBusinessMarketing from './pages/Admin/AdminBusinessMarketing';
-import AdminAdvertisements from './pages/Admin/AdminAdvertisements';
-import AdminSubscriptions from './pages/Admin/AdminSubscriptions';
-import AdminContactMessages from './pages/Admin/AdminContactMessages';
-
+const AdminDashboard = lazy(() => import('./pages/Admin/AdminDashboard'));
+const AdminRestaurants = lazy(() => import('./pages/Admin/AdminRestaurants'));
+const AdminStores = lazy(() => import('./pages/Admin/AdminStores'));
+const AdminBranches = lazy(() => import('./pages/Admin/AdminBranches'));
+const AdminUsers = lazy(() => import('./pages/Admin/AdminUsers'));
+const AdminOrders = lazy(() => import('./pages/Admin/AdminOrders'));
+const AdminDrivers = lazy(() => import('./pages/Admin/AdminDrivers'));
+const AdminPlans = lazy(() => import('./pages/Admin/AdminPlans'));
+const AdminSettings = lazy(() => import('./pages/Admin/AdminSettings'));
+const AdminRestaurantDetails = lazy(() => import('./pages/Admin/AdminRestaurantDetails'));
+const AdminStoreDetails = lazy(() => import('./pages/Admin/AdminStoreDetails'));
+const AdminUserDetails = lazy(() => import('./pages/Admin/AdminUserDetails'));
+const AdminStaffPage = lazy(() => import('./pages/Admin/AdminStaffPage'));
+const AdminStaffListPage = lazy(() => import('./pages/Admin/AdminStaffListPage'));
+const AdminStaffDetailsPage = lazy(() => import('./pages/Admin/AdminStaffDetailsPage'));
+const AdminQRCodesPage = lazy(() => import('./pages/Admin/AdminQRCodesPage'));
+const AdminBusinessFeatures = lazy(() => import('./pages/Admin/AdminBusinessFeatures'));
+const AdminPlatformSettings = lazy(() => import('./pages/Admin/AdminPlatformSettings'));
+const AdminFeatures = lazy(() => import('./pages/Admin/AdminFeatures'));
+const AdminBusinessMarketing = lazy(() => import('./pages/Admin/AdminBusinessMarketing'));
+const AdminAdvertisements = lazy(() => import('./pages/Admin/AdminAdvertisements'));
+const AdminSubscriptions = lazy(() => import('./pages/Admin/AdminSubscriptions'));
+const AdminContactMessages = lazy(() => import('./pages/Admin/AdminContactMessages'));
 // ==================== صفحات عامة ====================
 import HomePage from './pages/HomePage';
-import PublicMenu from './pages/PublicMenu';
-import PublicTable from './pages/PublicTable';
-import PublicItem from './pages/PublicItem';
-import PublicProduct from './pages/PublicProduct';
-import RestaurantPage from './pages/RestaurantPage';
-import DeliveryTracking from './pages/DeliveryTracking';
-import DriverDashboard from './pages/DriverDashboard';
-import MaintenancePage from './pages/MaintenancePage';
-import AdminMarketingIndex from './pages/Admin/AdminMarketingIndex';
-
+const PublicMenu = lazy(() => import('./pages/PublicMenu'));
+const PublicTable = lazy(() => import('./pages/PublicTable'));
+const PublicItem = lazy(() => import('./pages/PublicItem'));
+const PublicProduct = lazy(() => import('./pages/PublicProduct'));
+const RestaurantPage = lazy(() => import('./pages/RestaurantPage'));
+const DeliveryTracking = lazy(() => import('./pages/DeliveryTracking'));
+const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
+const MaintenancePage = lazy(() => import('./pages/MaintenancePage'));
+const AdminMarketingIndex = lazy(() => import('./pages/Admin/AdminMarketingIndex'));
 // ==================== صفحات قانونية ====================
-import TermsPage from './pages/legal/TermsPage';
-import PrivacyPage from './pages/legal/PrivacyPage';
-import AboutPage from './pages/legal/AboutPage';
-import FaqPage from './pages/legal/FaqPage';
-import ContactPage from './pages/legal/ContactPage';
-
+const TermsPage = lazy(() => import('./pages/legal/TermsPage'));
+const PrivacyPage = lazy(() => import('./pages/legal/PrivacyPage'));
+const AboutPage = lazy(() => import('./pages/legal/AboutPage'));
+const FaqPage = lazy(() => import('./pages/legal/FaqPage'));
+const ContactPage = lazy(() => import('./pages/legal/ContactPage'));
 // ==================== مكونات ====================
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PlanRoute from './components/auth/PlanRoute';
 import Layout from './components/layout/Layout';
 import { useAuth } from './hooks/useAuth';
 import PublicRouter from './components/PublicRouter';
-import BusinessMarketing from './pages/Owner/BusinessMarketing';
+const BusinessMarketing = lazy(() => import('./pages/Owner/BusinessMarketing'));
 import SEOHead from './components/dashboard/SEO';
-import StaffDashboard from './pages/Staff/StaffDashboard';
-import UserRegister from './pages/auth/UserRegister';
-import DeliveryLogin from './pages/auth/DeliveryLogin';
-import UserLogin from './pages/auth/UserLogin';
-import Register from './pages/auth/Register';
-import Login from './pages/auth/Login';
+const StaffDashboard = lazy(() => import('./pages/Staff/StaffDashboard'));
+const UserRegister = lazy(() => import('./pages/auth/UserRegister'));
+const DeliveryLogin = lazy(() => import('./pages/auth/DeliveryLogin'));
+const UserLogin = lazy(() => import('./pages/auth/UserLogin'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const Login = lazy(() => import('./pages/auth/Login'));
+// ==================== شاشة انتظار تحميل الصفحات المؤجّلة ====================
+const RouteFallback: React.FC = () => (
+  <div
+    style={{
+      minHeight: '60vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 14,
+      color: '#9DC4AC',
+      fontFamily: 'Cairo, sans-serif'
+    }}
+  >
+    <div
+      style={{
+        width: 40,
+        height: 40,
+        border: '3px solid rgba(157,196,172,0.25)',
+        borderTopColor: '#C8E235',
+        borderRadius: '50%',
+        animation: 'app-route-spin .8s linear infinite'
+      }}
+    />
+    <span style={{ fontSize: 13 }}>جاري التحميل...</span>
+    <style>{'@keyframes app-route-spin{to{transform:rotate(360deg)}}'}</style>
+  </div>
+);
 
 // ==================== إعدادات React Query ====================
 const queryClient = new QueryClient({
@@ -215,8 +236,9 @@ const MainApp: React.FC = () => {
   return (
     <>
       <SEOHead />
-      
-      <Routes>
+
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
         {/* ==================== مسارات عامة (بدون مصادقة) ==================== */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
@@ -324,8 +346,9 @@ const MainApp: React.FC = () => {
           <Route path="/driver/dashboard" element={<DriverDashboard />} />
         </Route>
 
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
     </>
   );
 };
