@@ -21,7 +21,7 @@ import {
   errorHandler,
   apiNotFound
 } from './middleware/security';
-import { isVerifiedCustomDomain } from './services/domain.service';
+import { isAllowedOrigin } from './config/origins';
 import { configureLogging } from './utils/logger';
 
 // استيراد المسارات
@@ -113,41 +113,12 @@ app.use(compression());
 // ==============================================
 // ✅ إعدادات CORS
 // ==============================================
-const STATIC_ALLOWED_ORIGINS = new Set(
-  [
-    env.CLIENT_URL,
-    'https://' + env.APP_DOMAIN,
-    'https://www.' + env.APP_DOMAIN,
-    ...env.ALLOWED_ORIGINS
-  ].filter(Boolean)
-);
-
-const appDomainEscaped = env.APP_DOMAIN.replace(/\./g, '\\.');
-const isPlatformSubdomain = new RegExp(
-  '^https://[a-z0-9-]+(\\.[a-z0-9-]+)*\\.' + appDomainEscaped + '$',
-  'i'
-);
-const isLocalOrigin = /^https?:\/\/(([a-z0-9-]+\.)*localhost|127\.0\.0\.1)(:\d+)?$/i;
-
+// القواعد نفسها يستخدمها Socket.IO — تعريفها في config/origins.ts
 const corsOptions: cors.CorsOptions = {
-  origin: async (origin, callback) => {
-    // طلبات بلا Origin (same-origin، تطبيقات أصلية) مسموحة
-    if (!origin) return callback(null, true);
-
-    if (STATIC_ALLOWED_ORIGINS.has(origin)) return callback(null, true);
-    if (isPlatformSubdomain.test(origin)) return callback(null, true);
-    // localhost في التطوير فقط
-    if (!isProduction && isLocalOrigin.test(origin)) return callback(null, true);
-
-    // النطاقات المخصصة الموثّقة فقط
-    try {
-      const host = new URL(origin).hostname;
-      if (await isVerifiedCustomDomain(host)) return callback(null, true);
-    } catch {
-      /* origin غير صالح */
-    }
-
-    return callback(null, false);
+  origin: (origin, callback) => {
+    isAllowedOrigin(origin)
+      .then((allowed) => callback(null, allowed))
+      .catch(() => callback(null, false));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

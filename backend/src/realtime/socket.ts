@@ -2,7 +2,8 @@ import { Server as HttpServer } from 'http';
 import { Server, Socket } from 'socket.io';
 import { verifyToken } from '../config/auth';
 import prisma from '../services/prisma';
-import env, { isProduction } from '../config/env';
+import env from '../config/env';
+import { isAllowedOrigin } from '../config/origins';
 import { UserPayload } from '../types';
 
 const SOCKET_EVENTS = {
@@ -80,26 +81,35 @@ const extractToken = (socket: Socket): string | null => {
   return rawToken.startsWith('Bearer ') ? rawToken.replace('Bearer ', '') : rawToken;
 };
 
-const getSocketCorsOrigin = (): string[] | boolean => {
-  const configured = (process.env.SOCKET_CORS_ORIGIN || process.env.CLIENT_URL || '')
+/**
+ * أصول إضافية خاصة بالسوكِت فقط (SOCKET_CORS_ORIGIN)، فوق القواعد المشتركة.
+ */
+const extraSocketOrigins = new Set(
+  (process.env.SOCKET_CORS_ORIGIN || '')
     .split(',')
     .map((origin) => origin.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+);
 
-  const origins = new Set<string>([
-    ...configured,
-    ...env.ALLOWED_ORIGINS,
-    'https://' + env.APP_DOMAIN,
-    'https://www.' + env.APP_DOMAIN
-  ]);
-
-  if (!isProduction) {
-    origins.add('http://localhost:3000');
-    origins.add('http://localhost:5173');
+/**
+ * فحص أصل اتصال السوكِت بنفس قواعد CORS الخاصة بالـ HTTP.
+ *
+ * كانت هنا قائمة حرفية بلا النطاقات الفرعية ولا النطاقات المخصصة، فكان
+ * اتصال لوحة تاجر من نطاقه يُرفض في نقل polling (مصافحته XHR تخضع لـ CORS)
+ * بينما يمرّ في نقل websocket الذي لا يخضع لـ CORS في المتصفح.
+ */
+const checkSocketOrigin = (
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void
+): void => {
+  if (origin && extraSocketOrigins.has(origin)) {
+    callback(null, true);
+    return;
   }
 
-  // لا نعيد '*' أبداً: مع credentials يعني ذلك السماح لأي موقع بفتح اتصال باسم المستخدم
-  return Array.from(origins);
+  isAllowedOrigin(origin)
+    .then((allowed) => callback(null, allowed))
+    .catch(() => callback(null, false));
 };
 
 const addRoomIfValid = (
@@ -238,11 +248,9 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     return io;
   }
 
-  const corsOrigin = getSocketCorsOrigin();
-
   io = new Server(httpServer, {
     cors: {
-      origin: corsOrigin,
+      origin: checkSocketOrigin,
       methods: ['GET', 'POST', 'PATCH'],
       credentials: true
     }
