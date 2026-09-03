@@ -706,7 +706,7 @@ model Image {
 }
 
 model Subscription {
-  id               String   @id @default(cuid())
+  id               String   @id @default(cuid()) 
   businessType     String
   businessId       String
   planId           String
