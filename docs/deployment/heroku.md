@@ -206,6 +206,29 @@ heroku run --app shamstores "npm --prefix backend run prisma:db-push"
 الخطط وإعدادات المنصة الافتراضية تُزرع تلقائياً عند أول إقلاع
 (`seedPlans` و`seedPlatformSettings`) إذا كانت الجداول فارغة.
 
+### لماذا لا يقرأ Prisma رابط قاعدة البيانات وحده
+
+إضافة JawsDB تضبط `JAWSDB_URL` لا `DATABASE_URL`. التطبيق يُسقط الاسم عند
+الإقلاع في `src/config/env.ts`، لكن **Prisma CLI عملية منفصلة لا تمرّ بذلك**
+الكود، فكانت الأوامر تفشل بـ:
+
+```
+Error code: P1012
+error: Environment variable not found: DATABASE_URL.
+```
+
+لذلك تمرّ سكربتات Prisma عبر `backend/scripts/prisma.js` — غلاف يُسقط الاسم
+بنفس منطق `env.ts` قبل استدعاء الأداة. محلياً لا يفعل شيئاً لأن `DATABASE_URL`
+موجود في `backend/.env`.
+
+لو احتجت تشغيل Prisma بلا الغلاف (نسخة أقدم من الكود مثلاً):
+
+```bash
+heroku run --app shamstores 'DATABASE_URL=$JAWSDB_URL npx prisma db push --schema backend/prisma/schema.prisma'
+```
+
+> الاقتباس **مفرد** عمداً: نريد توسيع `$JAWSDB_URL` داخل الدينو لا في صدفتك المحلية.
+
 ### إنشاء حساب سوبر أدمن
 
 ```bash
@@ -379,6 +402,8 @@ done; echo
 | صفحة بيضاء والـ API يعمل | الواجهة لم تُبنَ | تحقق من سجلات البناء؛ `frontend/dist` يجب أن يُنتَج |
 | الواجهة تنادي `localhost:5000` | `VITE_API_URL` كان خاطئاً وقت البناء | صحّحه ثم أعِد النشر (البناء يحقن القيمة) |
 | `P1001 Can't reach database` | `DATABASE_URL`/`JAWSDB_URL` غير مضبوط | تحقق من `heroku config` |
+| `P1012 Environment variable not found: DATABASE_URL` | Prisma CLI لا يمرّ بـ `config/env.ts` | استخدم سكربتات `prisma:*` (تمرّ بالغلاف) — راجع القسم 7 |
+| `P2021 table does not exist` | المخطط لم يُدفَع بعد | نفّذ `prisma:db-push` مرة واحدة |
 | النطاق المخصص لا يفتح المتجر | لم يُضَف إلى Heroku، أو التحقق لم يكتمل | راجع القسم 8 |
 | `429` بسرعة على الدخول | حد المعدل | متوقع؛ 10 محاولات لكل 15 دقيقة لكل (IP + بريد) |
 | رفع الصور يعمل ثم تختفي | تُحفظ على قرص الدينو المؤقت | اضبط متغيرات R2 |
