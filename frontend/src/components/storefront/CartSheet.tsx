@@ -12,6 +12,7 @@ import {
   IoCheckmarkCircle
 } from 'react-icons/io5';
 import BottomSheet from './BottomSheet';
+import LocationPickerMap, { PickedLocation } from './LocationPickerMap';
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
@@ -47,6 +48,11 @@ export interface CartSheetProps {
   /** حقول التوصيل — تُعرض فقط عند اختيار التوصيل */
   address?: string;
   onAddressChange?: (value: string) => void;
+  /** إحداثيات التوصيل — العنوان النصّي وحده لا يكفي السائق */
+  deliveryLocation?: PickedLocation | null;
+  onDeliveryLocationChange?: (location: PickedLocation) => void;
+  /** موقع النشاط، يُستخدم مركزاً للخريطة قبل أي اختيار */
+  businessLocation?: { lat: number; lng: number };
   deliveryFee?: number;
 
   discount?: number;
@@ -90,6 +96,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
   onNotesChange,
   address = '',
   onAddressChange,
+  deliveryLocation = null,
+  onDeliveryLocationChange,
+  businessLocation,
   deliveryFee = 0,
   discount = 0,
   couponCode,
@@ -449,6 +458,16 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     rows={2}
                     style={{ ...inputStyle, resize: 'vertical' }}
                   />
+
+                  {onDeliveryLocationChange && (
+                    <div style={{ marginTop: 10 }}>
+                      <LocationPickerMap
+                        value={deliveryLocation}
+                        onChange={onDeliveryLocationChange}
+                        fallbackCenter={businessLocation}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 

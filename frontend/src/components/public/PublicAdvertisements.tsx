@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getImageUrl } from '@/utils/imageHelpers';
+import BannerCarousel from '@/components/storefront/BannerCarousel';
 import api from '@/services/api';
 
 export interface Advertisement {
@@ -130,48 +131,19 @@ const fetchAdvertisements = async () => {
     return null;
   }
 
-  console.log('📢 Rendering', advertisements.length, 'advertisements');
-
+  // بانر بعرض كامل بدل بطاقات مكدّسة: الإعلان الثاني في قائمة عمودية لا
+  // يراه أحد على الجوال، والكاروسيل يمنح كل إعلان نفس الفرصة.
   return (
-    <div className={`space-y-4 ${className}`} dir="rtl">
-      {advertisements.map((ad, index) => (
-        <a
-          key={ad.id}
-          href={ad.linkUrl || '#'}
-          target={ad.linkUrl ? '_blank' : undefined}
-          rel={ad.linkUrl ? 'noopener noreferrer' : undefined}
-          className="block group overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
-          style={{ display: 'block', marginBottom: index < advertisements.length - 1 ? '16px' : '0' }}
-        >
-          <div className="relative" style={{ position: 'relative', width: '100%' }}>
-            {ad.imageUrl ? (
-              <img
-                src={getImageUrl(ad.imageUrl)}
-                alt={ad.title}
-                className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-                loading="lazy"
-                onError={(e) => {
-                  console.error('Image failed to load:', ad.imageUrl);
-                  (e.target as HTMLImageElement).src = 'https://placehold.co/600x400/cccccc/999999?text=No+Image';
-                }}
-              />
-            ) : (
-              <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                <span className="text-gray-500">لا توجد صورة</span>
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-            <div className="absolute bottom-0 right-0 left-0 p-4 text-white">
-              <h3 className="text-lg font-bold mb-1">{ad.title}</h3>
-              {ad.description && (
-                <p className="text-sm text-white/80 line-clamp-2">{ad.description}</p>
-              )}
-            </div>
-          </div>
-        </a>
-      ))}
-    </div>
+    <BannerCarousel
+      className={className}
+      slides={advertisements.map((ad) => ({
+        id: ad.id,
+        imageUrl: getImageUrl(ad.imageUrl),
+        title: ad.title,
+        subtitle: ad.description,
+        linkUrl: ad.linkUrl || null
+      }))}
+    />
   );
 };
 

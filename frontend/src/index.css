@@ -288,3 +288,9 @@ textarea:focus-visible,
 @media (max-width: 768px) {
   input, textarea, select { font-size: max(16px, 1rem); }
 }
+
+/* شريط تمرير مخفيّ — للكاروسيل وأشرطة الفئات الأفقية */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* مسار الكاروسيل: التمرير الأصلي يعطي سحباً بإصبع أنعم من أي محاكاة */
+[aria-roledescription="carousel"] > div::-webkit-scrollbar { display: none; }
