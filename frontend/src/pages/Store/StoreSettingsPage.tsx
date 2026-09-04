@@ -21,6 +21,7 @@ import {
   IoLink,
   IoLockClosed,
   IoCar,
+  IoWalletOutline,
   IoLocation,
   IoCash,
   IoTime,
@@ -40,6 +41,7 @@ import {
 } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
 import DomainManager from '@/components/settings/DomainManager';
+import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
 
 // ==================== ثوابت التصميم الأساسية ====================
 const C = {
@@ -311,6 +313,36 @@ const StoreSettingsPage: React.FC = () => {
   };
 
   // ✅ حفظ إعدادات التوصيل
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettingsValue | null>(null);
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  // الإعدادات المخزَّنة تصل مع بيانات المتجر؛ بلا هذا يفتح التاجر التبويب
+  // فيراه فارغاً ويظن أن ما حفظه ضاع.
+  useEffect(() => {
+    const stored = (store as any)?.paymentSettings;
+    if (stored) {
+      setPaymentSettings(typeof stored === 'string' ? JSON.parse(stored) : stored);
+    }
+  }, [store]);
+
+  const handleSavePayment = async (value: PaymentSettingsValue) => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتحديث إعدادات الدفع');
+      return;
+    }
+    setSavingPayment(true);
+    try {
+      await updateStore({ paymentSettings: value } as any);
+      setPaymentSettings(value);
+      toast.success('تم حفظ إعدادات الدفع');
+    } catch (error: any) {
+      // الخادم يُرجع رسالة عربية جاهزة للعرض — نعرضها بدل رسالة عامة
+      toast.error(error?.response?.data?.error || 'فشل حفظ إعدادات الدفع');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   const handleSaveDeliverySettings = async () => {
     if (!canUpdateSettings) {
       toast.error('ليس لديك صلاحية لتحديث إعدادات التوصيل');
@@ -467,6 +499,7 @@ const StoreSettingsPage: React.FC = () => {
     { id: 'design', label: 'التصميم والألوان', icon: IoColorPalette },
     { id: 'images', label: 'الصور', icon: IoImage },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
+    { id: 'payment', label: 'الدفع', icon: IoWalletOutline },
     { id: 'domain', label: 'الدومين', icon: IoGlobe },
     { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
@@ -1059,6 +1092,17 @@ const StoreSettingsPage: React.FC = () => {
             <IoSave size={16} /> حفظ إعدادات التوصيل
           </button>
         </div>
+      )}
+
+      {/* ==================== تبويب الدفع ==================== */}
+      {activeTab === 'payment' && (
+        <ShamCashSettingsTab
+          value={paymentSettings}
+          onSave={handleSavePayment}
+          saving={savingPayment}
+          canEdit={canUpdateSettings}
+          colors={C}
+        />
       )}
 
       {/* ==================== تبويب الدومين ==================== */}

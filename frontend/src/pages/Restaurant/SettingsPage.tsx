@@ -6,6 +6,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
+import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
 import {
   IoRestaurant,
   IoColorPalette,
@@ -19,6 +20,7 @@ import {
   IoLink,
   IoLockClosed,
   IoCar,
+  IoWalletOutline,
   IoLocation,
   IoCash,
   IoTime,
@@ -385,12 +387,39 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettingsValue | null>(null);
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  // الإعدادات المخزَّنة تصل مع بيانات المطعم؛ بلا هذا يفتح التاجر التبويب
+  // فيراه فارغاً ويظن أن ما حفظه ضاع.
+  useEffect(() => {
+    const stored = (restaurant as any)?.paymentSettings;
+    if (stored) {
+      setPaymentSettings(typeof stored === 'string' ? JSON.parse(stored) : stored);
+    }
+  }, [restaurant]);
+
+  const handleSavePayment = async (value: PaymentSettingsValue) => {
+    setSavingPayment(true);
+    try {
+      await updateRestaurant({ paymentSettings: value } as any);
+      setPaymentSettings(value);
+      toast.success('تم حفظ إعدادات الدفع');
+    } catch (error: any) {
+      // الخادم يُرجع رسالة عربية جاهزة للعرض
+      toast.error(error?.response?.data?.error || 'فشل حفظ إعدادات الدفع');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   const tabs = [
     { id: 'general', label: 'عام', icon: IoRestaurant },
     { id: 'design', label: 'التصميم والألوان', icon: IoColorPalette },
     { id: 'images', label: 'الصور', icon: IoImage },
     { id: 'hours', label: 'أوقات العمل', icon: IoTimer },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
+    { id: 'payment', label: 'الدفع', icon: IoWalletOutline },
     { id: 'seo', label: 'SEO & الدومين', icon: IoGlobe },
      { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
@@ -1155,6 +1184,15 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {/* ==================== SEO والدومين ==================== */}
+      {activeTab === 'payment' && (
+        <ShamCashSettingsTab
+          value={paymentSettings}
+          onSave={handleSavePayment}
+          saving={savingPayment}
+          colors={C}
+        />
+      )}
+
       {activeTab === 'seo' && (
         // ... (نفس الكود السابق لـ SEO)
         <div>
