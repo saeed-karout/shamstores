@@ -3,9 +3,23 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   base: '/',
   plugins: [react()],
+
+  // تجريد ضجيج console من حزمة الإنتاج.
+  //
+  // كان في الكود 414 نداءً، منها عشرات في useAuth وapi.ts تطبع بيانات
+  // المستخدم ورموز الجلسة في وحدة تحكّم كل زائر — تسريب ووزن معاً.
+  // نتركها في التطوير حيث تفيد، ونُبقي console.error في الإنتاج لأن إخفاء
+  // الأخطاء الحقيقية أسوأ من ضجيجها.
+  esbuild:
+    mode === 'production'
+      ? {
+          pure: ['console.log', 'console.info', 'console.debug', 'console.warn', 'console.table'],
+          drop: ['debugger']
+        }
+      : {},
   server: {
     port: 3000,
     open: true
@@ -42,4 +56,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))
