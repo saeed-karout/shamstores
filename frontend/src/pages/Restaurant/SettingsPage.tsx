@@ -344,6 +344,38 @@ export const SettingsPage: React.FC = () => {
     }));
   };
 
+  // ⚠️ هذه الخطّافات **فوق** العودة المبكرة عمداً.
+  //
+  // كانت تحتها فسقطت الصفحة بـ React #310: أول رسم يعود عند `loading`
+  // قبل بلوغها، والرسم التالي يصلها — فيختلف عدد الخطّافات بين رسمتين.
+  // قاعدة الخطّافات لا تقبل استدعاءً مشروطاً، وأي خطّاف جديد هنا يجب أن
+  // يبقى قبل أي return.
+  const [paymentSettings, setPaymentSettings] = useState<PaymentSettingsValue | null>(null);
+  const [savingPayment, setSavingPayment] = useState(false);
+
+  // الإعدادات المخزَّنة تصل مع بيانات المطعم؛ بلا هذا يفتح التاجر التبويب
+  // فيراه فارغاً ويظن أن ما حفظه ضاع.
+  useEffect(() => {
+    const stored = (restaurant as any)?.paymentSettings;
+    if (stored) {
+      setPaymentSettings(typeof stored === 'string' ? JSON.parse(stored) : stored);
+    }
+  }, [restaurant]);
+
+  const handleSavePayment = async (value: PaymentSettingsValue) => {
+    setSavingPayment(true);
+    try {
+      await updateRestaurant({ paymentSettings: value } as any);
+      setPaymentSettings(value);
+      toast.success('تم حفظ إعدادات الدفع');
+    } catch (error: any) {
+      // الخادم يُرجع رسالة عربية جاهزة للعرض
+      toast.error(error?.response?.data?.error || 'فشل حفظ إعدادات الدفع');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   if (loading) return <Loader fullScreen />;
 
   const days = [
@@ -387,31 +419,6 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  const [paymentSettings, setPaymentSettings] = useState<PaymentSettingsValue | null>(null);
-  const [savingPayment, setSavingPayment] = useState(false);
-
-  // الإعدادات المخزَّنة تصل مع بيانات المطعم؛ بلا هذا يفتح التاجر التبويب
-  // فيراه فارغاً ويظن أن ما حفظه ضاع.
-  useEffect(() => {
-    const stored = (restaurant as any)?.paymentSettings;
-    if (stored) {
-      setPaymentSettings(typeof stored === 'string' ? JSON.parse(stored) : stored);
-    }
-  }, [restaurant]);
-
-  const handleSavePayment = async (value: PaymentSettingsValue) => {
-    setSavingPayment(true);
-    try {
-      await updateRestaurant({ paymentSettings: value } as any);
-      setPaymentSettings(value);
-      toast.success('تم حفظ إعدادات الدفع');
-    } catch (error: any) {
-      // الخادم يُرجع رسالة عربية جاهزة للعرض
-      toast.error(error?.response?.data?.error || 'فشل حفظ إعدادات الدفع');
-    } finally {
-      setSavingPayment(false);
-    }
-  };
 
   const tabs = [
     { id: 'general', label: 'عام', icon: IoRestaurant },

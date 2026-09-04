@@ -255,6 +255,51 @@ const commands = {
     }
   },
 
+  /**
+   * يقارن أعمدة قاعدة البيانات بما يتوقّعه المخطط.
+   *
+   * تغيير المخطط بلا `prisma db push` يترك أعمدة مفقودة، فتفشل كل قراءة
+   * للجدول بـ P2022 — وتظهر الشاشة معطّلة بلا سبب واضح في الواجهة.
+   */
+  async 'schema-check'() {
+    const { Prisma } = require('@prisma/client');
+    const p = getPrisma();
+    let missing = 0;
+
+    for (const model of Prisma.dmmf.datamodel.models) {
+      const table = model.dbName || model.name;
+      let columns;
+      try {
+        const rows = await p.$queryRawUnsafe(`SHOW COLUMNS FROM \`${table}\``);
+        columns = rows.map((r) => r.Field);
+      } catch {
+        console.log(`✘ ${table}: الجدول غير موجود`);
+        missing++;
+        continue;
+      }
+
+      // الحقول القياسية وحدها — العلاقات ليست أعمدة
+      const expected = model.fields
+        .filter((f) => f.kind === 'scalar' || f.kind === 'enum')
+        .map((f) => f.dbName || f.name);
+
+      const absent = expected.filter((name) => !columns.includes(name));
+      if (absent.length > 0) {
+        console.log(`✘ ${table}: أعمدة مفقودة → ${absent.join(', ')}`);
+        missing += absent.length;
+      }
+    }
+
+    if (missing === 0) {
+      console.log('✅ قاعدة البيانات موائمة للمخطط.');
+    } else {
+      console.log("");
+      console.log(`⚠️  ${missing} عنصراً مفقوداً. شغّل:`);
+      console.log('   npm --prefix backend run prisma:db-push');
+      process.exitCode = 1;
+    }
+  },
+
   async 'reset-password'() {
     const email = requireEmail();
     const user = await findUser(email);
@@ -284,6 +329,7 @@ const commands = {
       console.log('  sync-plans                مواءمة الخطط مع تعريفها في الكود');
       console.log('  backup-now                نسخة احتياطية فورية');
       console.log('  backup-list               عرض النسخ المتاحة');
+      console.log('  schema-check              مقارنة قاعدة البيانات بالمخطط');
       process.exitCode = command ? 1 : 0;
       return;
     }
