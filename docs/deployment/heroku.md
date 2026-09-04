@@ -238,6 +238,39 @@ heroku run --app shamstores 'DATABASE_URL=$JAWSDB_URL npx prisma db push --schem
 
 > الاقتباس **مفرد** عمداً: نريد توسيع `$JAWSDB_URL` داخل الدينو لا في صدفتك المحلية.
 
+### الوصول اليدوي إلى قاعدة البيانات
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/db-studio.ps1
+```
+
+يفتح Prisma Studio على قاعدة بيانات الإنتاج: تصفّح الجداول وتعديل الصفوف من
+المتصفح. رابط الاتصال يُقرأ من Heroku ولا يُطبع ولا يُحفظ.
+
+بدائل: `heroku addons:open jawsdb` يفتح لوحة JawsDB، وأي عميل MySQL
+(DBeaver، TablePlus، Workbench) يقبل بيانات الاتصال من `JAWSDB_URL`.
+
+> ⚠️ خطة Kitefin المجانية بلا نسخ احتياطية. لا تراجع عن أي تعديل.
+
+**أمثلة شائعة:**
+
+| الحاجة | الجدول | التعديل |
+|---|---|---|
+| تفعيل حساب بلا بريد | `users` | `isEmailVerified` → `true` |
+| ترقية حساب إلى سوبر أدمن | `users` | `role` → `super_admin` |
+| إيقاف فرض تفعيل البريد | `platform_settings` | `require_email_verification` → `false` |
+
+> إيقاف فرض التفعيل من الإعدادات **لا يكفي وحده**: الشرط في
+> `authController.getEmailVerificationRequirement` هو
+> `requireEmailVerification || smtpConfigured` — أي أن مجرد وجود متغيرات
+> SMTP يفرض التفعيل ولو كانت المصادقة مرفوضة. لرفع الحبس فوراً:
+>
+> ```bash
+> heroku config:unset SMTP_USER SMTP_PASSWORD --app shamstores
+> ```
+
+---
+
 ### إنشاء حساب سوبر أدمن
 
 ```bash
