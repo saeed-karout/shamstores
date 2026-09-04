@@ -12,6 +12,7 @@ import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoCube, IoWarning, 
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
+import MultiImageUploader from '@/components/settings/MultiImageUploader';
 
 // ✅ الألوان الثابتة فقط للعناصر التي لا تتغير (الأحمر، الأزرق، إلخ)
 const staticColors = {
@@ -113,7 +114,9 @@ const StoreProductsPage: React.FC = () => {
     description: '',
     descriptionEn: '',
     price: '',
-    discountedPrice: '',
+    originalPrice: '',
+    isPopular: false,
+    images: [] as string[],
     imageUrl: '',
     stock: '',
     sku: '',
@@ -197,7 +200,7 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const resetProductForm = () => {
-    setProductForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', discountedPrice: '', imageUrl: '', stock: '', sku: '', isAvailable: true });
+    setProductForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', isAvailable: true });
     setSelectedProduct(null);
   };
 
@@ -224,7 +227,11 @@ const StoreProductsPage: React.FC = () => {
         description: product.description || '',
         descriptionEn: product.descriptionEn || '',
         price: product.price.toString(),
-        discountedPrice: product.discountedPrice?.toString() || '',
+        originalPrice: (product as any).originalPrice?.toString() || '',
+        isPopular: (product as any).isPopular === true,
+        images: Array.isArray((product as any).images)
+          ? (product as any).images
+          : (product.imageUrl ? [product.imageUrl] : []),
         imageUrl: product.imageUrl || '',
         stock: product.stock.toString(),
         sku: product.sku || '',
@@ -259,7 +266,13 @@ const StoreProductsPage: React.FC = () => {
       if (!productForm.price || parseFloat(productForm.price) <= 0) { toast.error('السعر مطلوب ويجب أن يكون أكبر من 0'); return; }
       const price = parseFloat(productForm.price);
       if (isNaN(price) || price <= 0) { toast.error('السعر يجب أن يكون رقماً صحيحاً أكبر من 0'); return; }
-      const data = { ...productForm, storeId: productForm.storeId || selectedBranchId, price, discountedPrice: productForm.discountedPrice ? parseFloat(productForm.discountedPrice) : null, stock: parseInt(productForm.stock) || 0 };
+      const data = { ...productForm, storeId: productForm.storeId || selectedBranchId, price, 
+        // كان discountedPrice — حقل لا وجود له في المخطط ولا في المتحكّم
+        // إطلاقاً: يملؤه التاجر ويُرمى بصمت. الصحيح تخزين سعر ما **قبل**
+        // التخفيض، فيبقى price هو ما يُحصَّل ولا يحتاج أي موضع قراءة تعديلاً.
+        originalPrice: productForm.originalPrice ? parseFloat(productForm.originalPrice) : null,
+        isPopular: productForm.isPopular === true,
+        images: productForm.images, stock: parseInt(productForm.stock) || 0 };
       if (selectedProduct) {
         await api.put(`/store/products/${selectedProduct.id}`, data);
         toast.success('تم تحديث المنتج بنجاح');
@@ -648,14 +661,39 @@ const StoreProductsPage: React.FC = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={dynamicLabelStyle}>السعر (ر.س) <span style={{ color: staticColors.red }}>*</span></label>
+              <label style={dynamicLabelStyle}>السعر (ل.س) <span style={{ color: staticColors.red }}>*</span></label>
               <input type="number" step="0.01" min="0" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} style={dynamicInputStyle} placeholder="0.00" />
             </div>
             <div>
-              <label style={dynamicLabelStyle}>السعر بعد الخصم (ر.س)</label>
-              <input type="number" step="0.01" min="0" value={productForm.discountedPrice} onChange={(e) => setProductForm({ ...productForm, discountedPrice: e.target.value })} style={dynamicInputStyle} placeholder="0.00" />
+              {/* السعر **قبل** الخصم لا بعده: price هو ما يُحصَّل دائماً،
+                  فلا يحتاج أي موضع قراءة للسعر أن يعرف بوجود خصم أصلاً. */}
+              <label style={dynamicLabelStyle}>السعر قبل الخصم (ل.س)</label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={productForm.originalPrice}
+                onChange={(e) => setProductForm({ ...productForm, originalPrice: e.target.value })}
+                style={dynamicInputStyle}
+                placeholder="اتركه فارغاً إن لا خصم"
+              />
+              <div style={{ color: dynamicColors.muted, fontSize: 11.5, marginTop: 5, lineHeight: 1.7 }}>
+                يظهر مشطوباً بجانب السعر. يجب أن يكون <strong>أعلى</strong> من السعر الحالي وإلا تُجوهِل.
+              </div>
             </div>
           </div>
+
+          <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={productForm.isPopular}
+              onChange={(e) => setProductForm({ ...productForm, isPopular: e.target.checked })}
+              style={{ width: 16, height: 16, accentColor: dynamicColors.accent }}
+            />
+            <span style={{ color: dynamicColors.text, fontSize: 14, fontWeight: 500 }}>
+              أبرزه ضمن «الأكثر طلباً»
+            </span>
+          </label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={dynamicLabelStyle}>المخزون</label>
@@ -675,23 +713,23 @@ const StoreProductsPage: React.FC = () => {
             <textarea value={productForm.descriptionEn} onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })} style={{ ...dynamicInputStyle, resize: 'vertical' }} rows={3} placeholder="Product description..." />
           </div>
           <div>
-            <label style={dynamicLabelStyle}>صورة المنتج</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <label style={{ flex: 1, cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px', border: `2px dashed ${dynamicColors.border}`, borderRadius: 10, color: dynamicColors.muted }}>
-                  <IoCloudUpload />
-                  <span style={{ fontSize: 13 }}>اختر صورة</span>
-                </div>
-                <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'product')} style={{ display: 'none' }} disabled={uploading} />
-              </label>
-              {productForm.imageUrl && (
-                <button onClick={() => removeImage('product')} style={{ padding: 8, background: 'transparent', border: 'none', color: staticColors.red, cursor: 'pointer' }}>
-                  <IoTrash size={18} />
-                </button>
-              )}
-            </div>
-            {uploading && <p style={{ color: dynamicColors.accent, fontSize: 13, marginTop: 4 }}>جاري رفع الصورة...</p>}
-            {productForm.imageUrl && <img src={getImageUrl(productForm.imageUrl)} alt="معاينة" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 10, marginTop: 8, border: `1px solid ${dynamicColors.border}` }} />}
+            <label style={dynamicLabelStyle}>صور المنتج</label>
+            <MultiImageUploader
+              value={productForm.images}
+              onChange={(images) => setProductForm({ ...productForm, images })}
+              entityType="products"
+              entityId={productForm.storeId || selectedBranchId}
+              colors={{
+                card: dynamicColors.card,
+                surf: dynamicColors.card,
+                accent: dynamicColors.accent,
+                bg: dynamicColors.bg,
+                text: dynamicColors.text,
+                muted: dynamicColors.muted,
+                border: dynamicColors.border,
+                red: staticColors.red
+              }}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm({ ...productForm, isAvailable: e.target.checked })} style={{ width: 16, height: 16, accentColor: dynamicColors.accent }} />

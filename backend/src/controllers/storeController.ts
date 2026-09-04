@@ -647,7 +647,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, price, cost, stock, imageUrl, categoryId, isAvailable, unit } = req.body;
+    const { name, nameEn, sku, description, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
     
     if (!name) {
       res.status(400).json({ success: false, error: 'اسم المنتج مطلوب' });
@@ -678,6 +678,13 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
         unit: unit || 'piece',
         reservedStock: 0,
         minStockLevel: 5,
+        // سعر ما قبل التخفيض. أقل من السعر الحالي أو مساوٍ له ليس تخفيضاً،
+        // فنخزّنه null بدل أن نترك catalog.service يحسب نسبة سالبة.
+        originalPrice:
+          originalPrice && parseFloat(originalPrice) > parseFloat(price)
+            ? parseFloat(originalPrice)
+            : null,
+        isPopular: isPopular === true,
         // الصور تمرّ بالتطبيع دائماً، فلا يتباعد الغلاف عن المصفوفة
         ...(buildImageUpdate(req.body, 'imageUrl') || {})
       },
@@ -706,7 +713,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, price, cost, stock, imageUrl, categoryId, isAvailable, unit } = req.body;
+    const { name, nameEn, sku, description, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
     
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
@@ -724,6 +731,15 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
 
     // null يعني أن الطلب لم يمسّ الصور — لا نمحو صوراً قائمة لأن التاجر
     // عدّل السعر وحده.
+    if (originalPrice !== undefined) {
+      const before = parseFloat(originalPrice);
+      const current = parseFloat(price ?? updateData.price);
+      // نفس القاعدة: سعر «قبل» غير أعلى من الحالي يُمسح لا يُخزَّن
+      updateData.originalPrice =
+        Number.isFinite(before) && Number.isFinite(current) && before > current ? before : null;
+    }
+    if (isPopular !== undefined) updateData.isPopular = isPopular === true;
+
     const imageUpdate = buildImageUpdate(req.body, 'imageUrl');
     if (imageUpdate) Object.assign(updateData, imageUpdate);
 
