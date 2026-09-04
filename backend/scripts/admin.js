@@ -57,6 +57,15 @@ const getPrisma = () => {
   return _prisma;
 };
 
+/** خدمة النسخ مكتوبة بـ TypeScript — نقرأ نسختها المبنية */
+const loadBackupService = () => {
+  try {
+    return require(path.join(__dirname, '..', 'dist', 'services', 'backup.service'));
+  } catch {
+    throw new Error('لم أجد dist/services/backup.service — ابنِ الباكيند أولاً (npm run build).');
+  }
+};
+
 const requireEmail = () => {
   const email = (args[0] || '').trim().toLowerCase();
   if (!email || !email.includes('@')) {
@@ -201,6 +210,51 @@ const commands = {
     console.log('✅ الخطط موائمة لـ src/config/plans.ts');
   },
 
+  /** نسخة احتياطية فورية — لا تنتظر موعد 03:00 */
+  async 'backup-now'() {
+    const { createBackup, pruneOldBackups } = loadBackupService();
+    console.log('جارٍ إنشاء نسخة احتياطية...');
+    const result = await createBackup();
+
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+
+    console.log(`✅ ${result.key}`);
+    console.log(`   ${result.rows} صفاً من ${result.tables} جدولاً · ${Math.round(result.bytes / 1024)} ك.ب مضغوطة`);
+
+    const pruned = await pruneOldBackups();
+    if (pruned > 0) console.log(`   حُذفت ${pruned} نسخة تجاوزت مدة الاحتفاظ`);
+  },
+
+  /**
+   * عرض النسخ المتاحة. نسخة لا تعرف أنها موجودة ليست نسخة —
+   * شغّل هذا دورياً لتتأكد أن الجدولة تعمل فعلاً.
+   */
+  async 'backup-list'() {
+    const { listBackups } = loadBackupService();
+    const backups = await listBackups();
+
+    if (backups.length === 0) {
+      console.log('لا نسخ احتياطية بعد.');
+      return;
+    }
+
+    console.log(`${backups.length} نسخة:`);
+    for (const b of backups) {
+      const when = b.lastModified ? new Date(b.lastModified).toISOString().slice(0, 16).replace('T', ' ') : '?';
+      console.log(`  ${when}   ${String(Math.round(b.size / 1024)).padStart(6)} ك.ب   ${b.key}`);
+    }
+
+    const newest = backups[0].lastModified ? new Date(backups[0].lastModified) : null;
+    if (newest) {
+      const hours = Math.round((Date.now() - newest.getTime()) / 3600000);
+      if (hours > 30) {
+        console.log(`⚠️  أحدث نسخة عمرها ${hours} ساعة — الجدولة قد تكون متوقفة.`);
+      }
+    }
+  },
+
   async 'reset-password'() {
     const email = requireEmail();
     const user = await findUser(email);
@@ -228,6 +282,8 @@ const commands = {
       console.log('  migrate-currency [من] [إلى]  ترحيل عملة الأنشطة (افتراضياً SAR→SYP)');
       console.log('  set-usd-rate <رقم>        سعر صرف الدولار العام');
       console.log('  sync-plans                مواءمة الخطط مع تعريفها في الكود');
+      console.log('  backup-now                نسخة احتياطية فورية');
+      console.log('  backup-list               عرض النسخ المتاحة');
       process.exitCode = command ? 1 : 0;
       return;
     }
