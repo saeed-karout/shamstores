@@ -10,14 +10,14 @@ import {
   IoRestaurant, IoStorefront, IoCall, IoLogoWhatsapp,
   IoLogoInstagram, IoLogoFacebook, IoLogoTwitter,
   IoArrowUp, IoRocket, IoBusiness, IoServer,
-  IoStar, IoPeople, IoTime, IoWallet, IoAnalytics
+  IoStar, IoPeople, IoTime, IoWallet, IoAnalytics,
+  IoChatbubbles, IoLockClosed
 } from 'react-icons/io5';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,12 +27,6 @@ const HomePage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -47,25 +41,75 @@ const HomePage: React.FC = () => {
   };
 
   // بيانات الصفحة
+  //
+  // ملاحظة مقصودة: لا شهادات عملاء ولا أرقام إنجاز هنا. كانت الصفحة تعرض
+  // اسمين مخترَعين بصور من randomuser.me و«1000+ عميل» و«50K+ طلب شهرياً»
+  // بينما المنصة في أول أيامها. زائر واحد يبحث بالصورة عكسياً، أو تاجر
+  // يسأل «من هم الألف عميل؟»، يكلّفك الصفقة والسمعة معاً. الثقة تُبنى بما
+  // يمكن التحقق منه: ما يفعله المنتج فعلاً، وبأي شروط.
+  //
+  // حين تصير لديك أرقام حقيقية وعملاء يوافقون على ذكر أسمائهم، أعِد القسم
+  // بأسمائهم ونشاطاتهم — لا بصور مخزون.
+
   const features = [
-    { icon: IoQrCode, title: 'قوائم رقمية ذكية', desc: 'قوائم طعام رقمية تفاعلية يمكن تحديثها بسهولة', color: '#C8E235' },
-    { icon: IoCart, title: 'طلبات أونلاين', desc: 'استقبل الطلبات عبر الإنترنت مع نظام دفع متكامل', color: '#C8E235' },
-    { icon: IoStatsChart, title: 'تحليلات متقدمة', desc: 'تقارير وإحصائيات دقيقة عن المبيعات', color: '#C8E235' },
-    { icon: IoFlash, title: 'توصيل فوري', desc: 'نظام توصيل ذكي مع تتبع لحظي للسائقين', color: '#C8E235' },
-    { icon: IoTrophy, title: 'كوبونات وعروض', desc: 'أنشئ عروضاً ترويجية وكوبونات خصم', color: '#C8E235' },
-    { icon: IoShield, title: 'أمان عالي', desc: 'نظام حماية متقدم يضمن أمان بياناتك', color: '#C8E235' },
+    { icon: IoQrCode, title: 'قوائم رقمية ورموز QR', desc: 'قائمة تفاعلية لكل طاولة، تُحدَّث فوراً بلا إعادة طباعة', color: '#C8E235' },
+    { icon: IoCart, title: 'طلبات أونلاين', desc: 'يطلب الزبون بلا تسجيل دخول — كل خطوة إضافية تعني سلة متروكة', color: '#C8E235' },
+    { icon: IoStatsChart, title: 'تقارير المبيعات', desc: 'ما يُباع ومتى وبأي قيمة، بلا جداول تملؤها يدوياً', color: '#C8E235' },
+    { icon: IoFlash, title: 'توصيل وتتبّع', desc: 'إسناد السائقين وتتبّع الطلب لحظياً حتى باب الزبون', color: '#C8E235' },
+    { icon: IoTrophy, title: 'كوبونات وعروض', desc: 'خصومات ورموز ترويجية تضبط صلاحيتها وحدودها بنفسك', color: '#C8E235' },
+    { icon: IoShield, title: 'نطاقك ولوحتك', desc: 'نطاق فرعي مجاني أو نطاقك الخاص — المتجر باسمك لا باسمنا', color: '#C8E235' },
   ];
 
-  const testimonials = [
-    { name: 'أحمد السيد', role: 'مالك مطعم', content: 'منذ استخدام شام ستورز، زادت مبيعاتنا بنسبة 40%!', rating: 5, image: 'https://randomuser.me/api/portraits/men/1.jpg' },
-    { name: 'نورا خالد', role: 'مديرة متجر', content: 'أفضل استثمار قمنا به! النظام سهل وسريع.', rating: 5, image: 'https://randomuser.me/api/portraits/women/2.jpg' },
+  /** أسئلة ما قبل التسجيل. كل جواب صحيح عن المنتج كما هو اليوم. */
+  const faqs = [
+    {
+      q: 'كم تكلّفني المنصة؟',
+      a: 'تبدأ بخطة مجانية بلا بطاقة ائتمان وبلا التزام. تفاصيل الخطط المدفوعة وحدودها تظهر داخل لوحتك بعد التسجيل، وتبقى على المجانية ما شئت.'
+    },
+    {
+      q: 'هل يحتاج زبوني إلى تطبيق أو حساب؟',
+      a: 'لا. يمسح رمز QR أو يفتح رابط متجرك فتظهر القائمة في المتصفح مباشرة، ويطلب بلا تسجيل دخول. كل خطوة إضافية تعني سلة متروكة.'
+    },
+    {
+      q: 'كيف يدفع الزبون؟',
+      a: 'نقداً عند الاستلام، أو عبر شام كاش إلى محفظتك أنت — تُفعّلها وتضع رقمها من إعداداتك. التحويل يصلك مباشرة، ونحن لا نمرّ عليه ولا نقتطع منه.'
+    },
+    {
+      q: 'هل الأسعار بالليرة السورية؟',
+      a: 'نعم، الليرة هي الأساس. ويمكنك عرض متجرك بالدولار أيضاً بسعر صرف موحّد على المنصة، فلا يختلف السعر بين متجر وآخر.'
+    },
+    {
+      q: 'ماذا لو أردت المغادرة؟',
+      a: 'بياناتك ملكك: قوائمك وطلباتك وزبائنك. تصدّرها وتغادر متى شئت، بلا احتجاز ولا رسوم خروج.'
+    },
+    {
+      q: 'هل أحصل على نطاق باسمي؟',
+      a: 'نعم. نطاق فرعي مجاني فوراً، وإن كان لديك نطاق خاص فاربطه بمتجرك — يظهر باسمك لا باسمنا.'
+    },
   ];
 
-  const stats = [
-    { value: '1000+', label: 'عميل' },
-    { value: '50K+', label: 'طلب شهرياً' },
-    { value: '99.9%', label: 'وقت تشغيل' },
-    { value: '4.9★', label: 'تقييم' },
+  /** ما نلتزم به صراحةً — كل بند قابل للتحقق من المنتج نفسه لا وعد تسويقي */
+  const commitments = [
+    {
+      icon: IoShield,
+      title: 'بياناتك ملكك',
+      desc: 'قوائمك وطلباتك وزبائنك بياناتك أنت. تصدّرها متى شئت، وتغادر بلا احتجاز.'
+    },
+    {
+      icon: IoWallet,
+      title: 'أسعار بالليرة السورية',
+      desc: 'التسعير بالليرة والدفع عبر شام كاش أو نقداً عند الاستلام — بلا بطاقة أجنبية.'
+    },
+    {
+      icon: IoChatbubbles,
+      title: 'دعم بالعربية',
+      desc: 'الواجهة والدعم بالعربية أولاً، لا ترجمة حرفية عن منتج أجنبي.'
+    },
+    {
+      icon: IoLockClosed,
+      title: 'حساب محميّ',
+      desc: 'اتصال مشفّر، جلسات موقّعة، وحدّ لمحاولات الدخول يوقف التخمين الآلي.'
+    },
   ];
 
   return (
@@ -89,10 +133,10 @@ const HomePage: React.FC = () => {
 
               {/* Desktop Menu */}
               <div className="hidden md:flex items-center gap-8">
-                {['المميزات', 'الحلول', 'الأسعار', 'آراء العملاء'].map((item, idx) => (
+                {['المميزات', 'الحلول', 'الأسئلة الشائعة'].map((item, idx) => (
                   <button
                     key={idx}
-                    onClick={() => scrollToSection(['features', 'solutions', 'pricing', 'testimonials'][idx])}
+                    onClick={() => scrollToSection(['features', 'solutions', 'faq'][idx])}
                     className="text-sm font-medium transition-colors hover:text-[#C8E235]"
                     style={{ color: '#9DC4AC' }}
                   >
@@ -127,10 +171,10 @@ const HomePage: React.FC = () => {
             {isMenuOpen && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:hidden border-t" style={{ backgroundColor: '#082E24', borderColor: 'rgba(200,226,53,0.15)' }}>
                 <div className="p-4 space-y-3">
-                  {['المميزات', 'الحلول', 'الأسعار', 'آراء العملاء'].map((item, idx) => (
+                  {['المميزات', 'الحلول', 'الأسئلة الشائعة'].map((item, idx) => (
                     <button
                       key={idx}
-                      onClick={() => scrollToSection(['features', 'solutions', 'pricing', 'testimonials'][idx])}
+                      onClick={() => scrollToSection(['features', 'solutions', 'faq'][idx])}
                       className="block w-full text-right p-3 rounded-lg transition-colors"
                       style={{ color: '#9DC4AC' }}
                     >
@@ -161,7 +205,7 @@ const HomePage: React.FC = () => {
             <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-8" style={{ backgroundColor: 'rgba(200,226,53,0.1)', border: '1px solid rgba(200,226,53,0.2)' }}>
               <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#C8E235' }} />
-              <span className="text-sm font-medium" style={{ color: '#C8E235' }}>بوابتك الآمنة للتجارة الإلكترونية</span>
+              <span className="text-sm font-medium" style={{ color: '#C8E235' }}>منصة سورية — تسعير بالليرة ودفع عبر شام كاش</span>
             </motion.div>
 
             {/* Main Title */}
@@ -193,10 +237,11 @@ const HomePage: React.FC = () => {
             {/* Stats Row */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
               className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-2xl p-6" style={{ backgroundColor: 'rgba(13,74,58,0.5)', border: '1px solid rgba(200,226,53,0.1)' }}>
-              {stats.map((stat, idx) => (
-                <div key={idx} className="text-center">
-                  <div className="text-3xl font-bold" style={{ color: '#C8E235' }}>{stat.value}</div>
-                  <div className="text-sm mt-1" style={{ color: '#9DC4AC' }}>{stat.label}</div>
+              {commitments.map((item, idx) => (
+                <div key={idx} className="text-center px-2">
+                  <item.icon size={22} style={{ color: '#C8E235', margin: '0 auto 8px' }} />
+                  <div className="text-sm font-bold">{item.title}</div>
+                  <div className="text-xs mt-1 leading-relaxed" style={{ color: '#9DC4AC' }}>{item.desc}</div>
                 </div>
               ))}
             </motion.div>
@@ -278,11 +323,47 @@ const HomePage: React.FC = () => {
           </div>
         </section>
 
+        {/* ===== FAQ SECTION ===== */}
+        {/*
+          أسئلة التاجر الحقيقية قبل التسجيل — لا أسئلة تسويقية مصاغة لتُمدَح
+          الإجابة عنها. كل جواب هنا صحيح عن المنتج كما هو اليوم؛ لا تُضِف
+          سؤالاً لا تستطيع الإجابة عنه بصدق.
+        */}
+        <section id="faq" className="py-24 px-4" style={{ backgroundColor: '#082E24' }}>
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-14">
+              <span className="text-sm font-semibold tracking-wider" style={{ color: '#C8E235' }}>قبل أن تبدأ</span>
+              <h2 className="text-3xl md:text-4xl font-bold mt-3">أسئلة يطرحها كل تاجر</h2>
+            </div>
+
+            <div className="space-y-4">
+              {faqs.map((item, idx) => (
+                <details
+                  key={idx}
+                  className="rounded-2xl overflow-hidden"
+                  style={{ backgroundColor: '#0D4A3A', border: '1px solid rgba(200,226,53,0.12)' }}
+                >
+                  <summary
+                    className="cursor-pointer px-5 py-4 font-semibold flex items-center gap-3"
+                    style={{ listStyle: 'none' }}
+                  >
+                    <IoCheckmarkCircle size={18} style={{ color: '#C8E235', flexShrink: 0 }} />
+                    {item.q}
+                  </summary>
+                  <div className="px-5 pb-5 text-sm leading-loose" style={{ color: '#9DC4AC' }}>
+                    {item.a}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ===== CTA SECTION ===== */}
         <section className="py-24 px-4" style={{ backgroundColor: '#0D4A3A' }}>
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-4">جاهز لتحويل عملك إلى تجربة رقمية؟</h2>
-            <p className="text-lg mb-8" style={{ color: '#9DC4AC' }}>انضم إلى آلاف المطاعم والمتاجر التي تثق بشام ستورز</p>
+            <p className="text-lg mb-8" style={{ color: '#9DC4AC' }}>ابدأ بخطة مجانية، وافتح متجرك اليوم. بلا بطاقة ائتمان وبلا التزام.</p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link to="/register" className="px-8 py-3 rounded-xl font-semibold transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }}>
                 ابدأ الآن مجاناً
@@ -311,7 +392,7 @@ const HomePage: React.FC = () => {
                 <h4 className="font-semibold mb-4">المنتج</h4>
                 <ul className="space-y-2 text-sm" style={{ color: '#9DC4AC' }}>
                   <li><button onClick={() => scrollToSection('features')}>المميزات</button></li>
-                  <li><button onClick={() => scrollToSection('pricing')}>الأسعار</button></li>
+                  <li><button onClick={() => scrollToSection('faq')}>الأسئلة الشائعة</button></li>
                 </ul>
               </div>
               <div>
@@ -338,8 +419,7 @@ const HomePage: React.FC = () => {
 
         {/* Scroll to Top */}
         {showScrollTop && (
-          <button onClick={scrollToTop} className="fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }}>
-            aria-label="العودة إلى أعلى الصفحة"
+          <button onClick={scrollToTop} className="fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }} aria-label="العودة إلى أعلى الصفحة">
             <IoArrowUp size={22} />
           </button>
         )}
