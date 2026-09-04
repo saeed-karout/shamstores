@@ -60,6 +60,20 @@ class EmailService {
           port: emailConfig.port,
           from: emailConfig.from
         });
+
+        // فحص الاعتماد الآن لا عند أول تسجيل. بلا هذا كان خطأ 535 BadCredentials
+        // يظهر بعد إنشاء الحساب: المستخدم يُطالَب بتفقّد بريد لن يصل أبداً.
+        try {
+          await this.transporter.verify();
+          console.log('✅ SMTP credentials verified');
+        } catch (verifyError: any) {
+          console.error('❌ SMTP رفض الاعتماد — لن يُرسَل أي بريد:', {
+            code: verifyError?.code,
+            response: verifyError?.response,
+            host: emailConfig.host,
+            user: emailConfig.user
+          });
+        }
       } else {
         console.warn('⚠️ SMTP credentials not configured. Email sending disabled.');
       }
@@ -111,6 +125,13 @@ class EmailService {
         to: email,
         subject: 'تحقق من بريدك الإلكتروني - Sham Stores',
         html: this.getVerificationEmailTemplate(code, email),
+        // بديل نصّي: رسالة HTML بلا نصّ إشارة سبام معروفة، وبعض العملاء
+        // لا يعرضون HTML أصلاً.
+        text: `رمز التحقق الخاص بك في Sham Stores:
+${code}
+
+الرمز صالح لخمس عشرة دقيقة.
+إن لم تطلب هذا الرمز فتجاهل الرسالة.`,
       };
 
       await this.transporter.sendMail(mailOptions);

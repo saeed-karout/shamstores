@@ -116,11 +116,15 @@ export const register = async (
 
     // Generate and send verification code if email verification is required
     let verificationCode = null;
+    let emailDelivered = true;
     if (shouldRequireEmailVerification) {
       const emailService = require('../services/emailService').default;
       await emailService.initializeTransporter();
       verificationCode = await emailService.generateVerificationCode(email);
-      const emailSent = await emailService.sendVerificationEmail(email, verificationCode);
+      emailDelivered = await emailService.sendVerificationEmail(email, verificationCode);
+      if (!emailDelivered) {
+        console.error(`❌ تعذّر إرسال رمز التحقق إلى ${email} — الحساب أُنشئ لكن لا يمكن تفعيله`);
+      }
     }
 
     if (!shouldRequireEmailVerification) {
@@ -143,7 +147,10 @@ export const register = async (
         storeId: user.storeId,
         isEmailVerified: user.isEmailVerified
       },
-      requiresEmailVerification: shouldRequireEmailVerification
+      requiresEmailVerification: shouldRequireEmailVerification,
+      // تُخبر الواجهة أن الرمز لم يصل فعلاً، بدل أن تطلب من المستخدم تفقّد
+      // بريد لن يأتي. حقل مضاف — لا يكسر أي مستهلك حالي.
+      emailDelivered
     };
     if (!shouldRequireEmailVerification) {
       registerData.token = token;
@@ -246,11 +253,15 @@ export const registerStore = async (
     // تحديث المستخدم
     const updatedUser = await UserService.update(user.id, { storeId: store.id });
 
+    let emailDelivered = true;
     if (shouldRequireEmailVerification) {
       const emailService = require('../services/emailService').default;
       await emailService.initializeTransporter();
       const verificationCode = await emailService.generateVerificationCode(email);
-      const emailSent = await emailService.sendVerificationEmail(email, verificationCode);
+      emailDelivered = await emailService.sendVerificationEmail(email, verificationCode);
+      if (!emailDelivered) {
+        console.error(`❌ تعذّر إرسال رمز التحقق إلى ${email} — الحساب أُنشئ لكن لا يمكن تفعيله`);
+      }
     }
 
     let token: string | null = null;
@@ -278,7 +289,10 @@ export const registerStore = async (
         name: store.name,
         slug: store.slug
       },
-      requiresEmailVerification: shouldRequireEmailVerification
+      requiresEmailVerification: shouldRequireEmailVerification,
+      // تُخبر الواجهة أن الرمز لم يصل فعلاً، بدل أن تطلب من المستخدم تفقّد
+      // بريد لن يأتي. حقل مضاف — لا يكسر أي مستهلك حالي.
+      emailDelivered
     };
     if (!shouldRequireEmailVerification) {
       registerStoreData.token = token;
