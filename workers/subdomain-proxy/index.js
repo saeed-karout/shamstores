@@ -30,8 +30,18 @@ export default {
       return fetch(request);
     }
 
-    // 1) الـ API و Socket.IO → Heroku. قبل أي قاعدة أخرى، ولكل المضيفات.
-    if (pathname === '/api' || pathname.startsWith('/api/') || pathname.startsWith('/socket.io/')) {
+    // 1) الـ API و Socket.IO وفحوص الصحة → Heroku. قبل أي قاعدة أخرى.
+    //
+    //    /health لا يقلّ أهمية عن /api هنا: بدونه تذهب نقطة المراقبة إلى
+    //    الواجهة الثابتة فتُرجع index.html بحالة 200 — فيرى المنبّه أخضر
+    //    دائماً حتى لو سقط الخادم بالكامل. مراقبة تكذب أسوأ من غيابها.
+    if (
+      pathname === '/api' ||
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/socket.io/') ||
+      pathname === '/health' ||
+      pathname.startsWith('/health/')
+    ) {
       return proxyTo(request, API_HOST);
     }
 
