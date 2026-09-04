@@ -385,6 +385,8 @@ model Product {
   sku         String    @unique
   description String?
   price       Float
+  /// السعر قبل التخفيض. أعلى من price يعني عرضاً؛ مساوٍ أو أقل يُتجاهَل.
+  originalPrice Float?
   cost        Float?
   stock       Int       @default(0)
   reservedStock Int     @default(0)
@@ -399,6 +401,10 @@ model Product {
   isAvailable Boolean   @default(true)
   unit        String    @default("piece")
   sortOrder   Int       @default(0)
+  /// يرفعه التاجر يدوياً — تناظراً مع MenuItem
+  isPopular   Boolean   @default(false)
+  /// عدّاد مبيعات يُغذّي تصنيف «الرائج» بلا تدخّل يدوي
+  ordersCount Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
