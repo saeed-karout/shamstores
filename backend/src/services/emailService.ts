@@ -15,6 +15,16 @@ export interface EmailConfig {
 class EmailService {
   private transporter: nodemailer.Transporter | null = null;
   private config: EmailConfig | null = null;
+  /** هل قبِل الخادم الاعتماد فعلاً؟ «مضبوط» لا يعني «يعمل». */
+  private operational = false;
+
+  /**
+   * صحيح فقط إن نجحت مصادقة SMTP. يستخدمه التسجيل ليقرّر فرض تفعيل البريد:
+   * فرضه بينما الإرسال مرفوض يحبس كل مستخدم جديد خلف رمز لن يصل أبداً.
+   */
+  isOperational(): boolean {
+    return this.operational;
+  }
 
   async initializeTransporter(): Promise<void> {
     try {
@@ -65,8 +75,10 @@ class EmailService {
         // يظهر بعد إنشاء الحساب: المستخدم يُطالَب بتفقّد بريد لن يصل أبداً.
         try {
           await this.transporter.verify();
+          this.operational = true;
           console.log('✅ SMTP credentials verified');
         } catch (verifyError: any) {
+          this.operational = false;
           console.error('❌ SMTP رفض الاعتماد — لن يُرسَل أي بريد:', {
             code: verifyError?.code,
             response: verifyError?.response,
@@ -75,6 +87,7 @@ class EmailService {
           });
         }
       } else {
+        this.operational = false;
         console.warn('⚠️ SMTP credentials not configured. Email sending disabled.');
       }
     } catch (error) {
@@ -139,6 +152,10 @@ ${code}
       return true;
     } catch (error) {
       console.error('Error sending verification email:', error);
+      // رفض المصادقة أثناء الإرسال يعني أن الاعتماد بطل بعد الفحص الأول
+      if ((error as any)?.code === 'EAUTH') {
+        this.operational = false;
+      }
       return false;
     }
   }

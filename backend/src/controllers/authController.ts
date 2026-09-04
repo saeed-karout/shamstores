@@ -17,7 +17,28 @@ const getEmailVerificationRequirement = async () => {
     settingsService.getString('smtp_password', ''),
   ]);
   const smtpConfigured = (!!smtpUser && !!smtpPassword) || (!!process.env.SMTP_USER && !!process.env.SMTP_PASSWORD);
-  const shouldRequireEmailVerification = requireEmailVerification || smtpConfigured;
+
+  // «مضبوط» لا يعني «يعمل». كان الشرط `requireEmailVerification || smtpConfigured`،
+  // فمجرد وجود متغيرات SMTP يفرض التفعيل — ولو كان الخادم يرفض الاعتماد.
+  // النتيجة أن عطلاً في البريد يتحوّل إلى حبس كامل: كل حساب جديد ينتظر رمزاً
+  // لا يصل، بلا مخرج إلا التعديل اليدوي على قاعدة البيانات.
+  //
+  // الآن: الفرض الضمني (لأن SMTP موجود) يشترط نجاح المصادقة فعلياً. أما إن
+  // طلبه المشرف صراحةً فنحترم قراره ونفشل مغلقين، مع تحذير صريح في السجل.
+  let smtpOperational = false;
+  if (smtpConfigured) {
+    const emailService = require('../services/emailService').default;
+    await emailService.initializeTransporter();
+    smtpOperational = emailService.isOperational();
+  }
+
+  if (requireEmailVerification && !smtpOperational) {
+    console.error(
+      '⚠️ تفعيل البريد مطلوب صراحةً في الإعدادات لكن SMTP لا يعمل — لن يتمكّن أي مستخدم جديد من إكمال التسجيل.'
+    );
+  }
+
+  const shouldRequireEmailVerification = requireEmailVerification || smtpOperational;
 
   return {
     requireEmailVerification,
