@@ -24,8 +24,17 @@ digital-menu-saas/
 **تسلسل بناء Heroku:**
 
 1. `npm install` في الجذر (لا تبعيات فعلية هناك)
-2. `heroku-postbuild` → `npm ci` في `backend` و`frontend` ثم بناؤهما
+2. `heroku-postbuild` → `npm ci` في `backend` فقط، ثم بناؤه، ثم
+   `npm prune --omit=dev` لإسقاط أدوات البناء من الحزمة النهائية
 3. `npm start` → `node backend/dist/server.js`
+
+> **الواجهة لا تُبنى على Heroku.** تُخدم من Cloudflare خلف الـ Worker، ونسخة
+> Heroku منها كان لا يصل إليها أحد بينما تُكلّف دقائق بناء وعشرات الميغابايت
+> في الحزمة. راجع [frontend-cloudflare.md](./frontend-cloudflare.md).
+>
+> اضبط `SERVE_FRONTEND=false`. وحتى لو نسيت، لن يقدّم الخادم صفحة مكسورة:
+> شرط التقديم يتطلب وجود `assets/` لا `index.html` وحده (الأخير متتبَّع في
+> git بينما `assets/` ناتج بناء غير متتبَّع).
 
 ---
 

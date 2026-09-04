@@ -281,7 +281,13 @@ app.use('/api', apiNotFound);
 // تقديم الواجهة المبنية (نشر بتطبيق Heroku واحد)
 // ==============================================
 const FRONTEND_DIST = path.resolve(__dirname, '../../frontend/dist');
-const hasFrontendBuild = env.SERVE_FRONTEND && fs.existsSync(path.join(FRONTEND_DIST, 'index.html'));
+// وجود index.html وحده لا يكفي: الملف متتبَّع في git بينما مجلد assets ناتج
+// بناء غير متتبَّع. لو نُشر بلا بناء الواجهة (كما هو الحال حين تُخدم من
+// Cloudflare) لكان الخادم يقدّم صفحة مكسورة بمراجع مفقودة بدل أن يعمل كـ API.
+const hasFrontendBuild =
+  env.SERVE_FRONTEND &&
+  fs.existsSync(path.join(FRONTEND_DIST, 'index.html')) &&
+  fs.existsSync(path.join(FRONTEND_DIST, 'assets'));
 
 if (hasFrontendBuild) {
   // الأصول المُبصَمة (hashed) تُخزَّن طويلاً، وindex.html لا يُخزَّن إطلاقاً

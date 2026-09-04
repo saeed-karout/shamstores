@@ -12,7 +12,7 @@
     "build:backend": "npm --prefix backend run build",
     "build:frontend": "npm --prefix frontend run build",
     "build": "npm run build:backend && npm run build:frontend",
-    "heroku-postbuild": "npm --prefix backend ci --include=dev && npm --prefix frontend ci --include=dev && npm run build",
+    "heroku-postbuild": "npm --prefix backend ci --include=dev && npm run build:backend && npm --prefix backend prune --omit=dev",
     "start": "node backend/dist/server.js",
     "dev:backend": "npm --prefix backend run dev",
     "dev:frontend": "npm --prefix frontend run dev",
