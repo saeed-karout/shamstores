@@ -18,6 +18,19 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
+// ==================== حجم تجمّع الاتصالات ====================
+// Prisma يفتح افتراضياً (عدد الأنوية × 2 + 1) اتصالاً — على دينو Heroku قد
+// يبلغ 17، بينما خطة JawsDB المجانية تسمح بعشرة لكل مستخدم. النتيجة أن
+// التطبيق يبتلع الحد كله: تفشل جلسات heroku run وأدوات الإدارة بـ
+// "max_user_connections", وتبدأ استعلامات التطبيق نفسها بالفشل تحت الضغط.
+//
+// نترك هامشاً للعمليات الإدارية. ارفع DB_CONNECTION_LIMIT مع خطة أكبر.
+if (process.env.DATABASE_URL && !/[?&]connection_limit=/.test(process.env.DATABASE_URL)) {
+  const limit = process.env.DB_CONNECTION_LIMIT || '5';
+  const separator = process.env.DATABASE_URL.includes('?') ? '&' : '?';
+  process.env.DATABASE_URL = `${process.env.DATABASE_URL}${separator}connection_limit=${limit}`;
+}
+
 const NODE_ENV = process.env.NODE_ENV || 'development';
 export const isProduction = NODE_ENV === 'production';
 export const isDevelopment = NODE_ENV === 'development';

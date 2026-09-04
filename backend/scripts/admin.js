@@ -34,6 +34,14 @@ if (!process.env.DATABASE_URL) {
   if (addonUrl) process.env.DATABASE_URL = addonUrl;
 }
 
+// أداة إدارية قصيرة العمر: اتصالان يكفيان. الخطة المجانية تسمح بعشرة لكل
+// مستخدم، ويستهلك التطبيق العامل معظمها — بلا هذا الحدّ يفشل السكربت بـ
+// max_user_connections.
+if (process.env.DATABASE_URL && !/[?&]connection_limit=/.test(process.env.DATABASE_URL)) {
+  const separator = process.env.DATABASE_URL.includes('?') ? '&' : '?';
+  process.env.DATABASE_URL = `${process.env.DATABASE_URL}${separator}connection_limit=2`;
+}
+
 const [command, ...args] = process.argv.slice(2);
 
 // العميل يُنشأ عند الحاجة فقط، حتى تعمل المساعدة بلا قاعدة بيانات
