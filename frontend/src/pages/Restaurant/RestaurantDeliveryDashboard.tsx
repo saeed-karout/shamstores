@@ -808,8 +808,7 @@ const AssignDriverModal: React.FC<{
         <div style={{ padding: 16, borderBottom: `1px solid ${C.border}`, background: 'linear-gradient(135deg, #2D1B69, #1E1145)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ fontSize: 18, fontWeight: 700, color: C.text, margin: 0 }}>تعيين سائق للطلب #{selectedOrder.orderNumber}</h3>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.text, cursor: 'pointer', padding: 4 }}>
-              aria-label="إغلاق"
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.text, cursor: 'pointer', padding: 4 }} aria-label="إغلاق">
               <IoClose size={24} />
             </button>
           </div>
@@ -920,8 +919,7 @@ const OrderDetailsModal: React.FC<{
                 {formatDate(order.createdAt)}
               </p>
             </div>
-            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: C.text, cursor: 'pointer', padding: 8, borderRadius: '50%' }}>
-              aria-label="إغلاق"
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: C.text, cursor: 'pointer', padding: 8, borderRadius: '50%' }} aria-label="إغلاق">
               <IoClose size={24} />
             </button>
           </div>

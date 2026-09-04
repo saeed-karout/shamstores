@@ -446,8 +446,7 @@ const MarketingSectionForm: React.FC<Props> = ({
               <h3 style={titleStyle}>
                 {initialData ? 'تعديل العنصر التسويقي' : 'إضافة عنصر تسويقي جديد'}
               </h3>
-              <button type="button" onClick={onClose} style={closeBtnStyle}>
-                aria-label="إغلاق"
+              <button type="button" onClick={onClose} style={closeBtnStyle} aria-label="إغلاق">
                 <IoClose size={20} />
               </button>
             </div>
@@ -485,8 +484,7 @@ const MarketingSectionForm: React.FC<Props> = ({
                     {imagePreview ? (
                       <div style={previewContainerStyle}>
                         <img src={imagePreview} alt="Preview" style={previewImageStyle} />
-                        <button type="button" onClick={handleRemoveImage} style={removeBtnStyle}>
-                          aria-label="حذف الصورة"
+                        <button type="button" onClick={handleRemoveImage} style={removeBtnStyle} aria-label="حذف الصورة">
                           <IoTrash size={14} />
                         </button>
                       </div>
