@@ -14,7 +14,9 @@ import {
   resetPlatformSettings,
   getMaintenanceMode,
   toggleMaintenanceMode,
-  getAllPlatformSettingsCombined
+  getAllPlatformSettingsCombined,
+  getExchangeRate,
+  updateExchangeRate
 } from '../controllers/platformSettingController';
 
 const router = Router();
@@ -28,6 +30,10 @@ router.use(authenticate);
 
 // ==================== مسارات السوبر أدمن فقط ====================
 router.use(authorize(['super_admin']));
+
+// سعر صرف الدولار — يسري على المنصة كلها
+router.get('/exchange-rate', getExchangeRate);
+router.put('/exchange-rate', updateExchangeRate);
 
 // وضع الصيانة (للسوبر أدمن)
 router.post('/maintenance-mode/toggle', toggleMaintenanceMode);

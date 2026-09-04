@@ -13,6 +13,7 @@ import {
   IoCode, IoShare, IoLogoTwitter, IoLogoFacebook
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+import ExchangeRateCard from '@/components/admin/ExchangeRateCard';
 
 const C = {
   bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
@@ -295,6 +296,10 @@ const AdminPlatformSettings: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* سعر الصرف — بطاقة مستقلة أعلى الصفحة: قيمتها تُضرب في كل سعر على
+          المنصة، فلا تصلح حقلاً بين أربعين إعداداً */}
+      <ExchangeRateCard colors={C} />
 
       {/* Maintenance Mode Toggle */}
       <div style={{ marginBottom: 24 }}>

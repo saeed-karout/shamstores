@@ -1,6 +1,13 @@
 // backend/src/controllers/platformSettingController.ts
 
 import { Response } from 'express';
+import {
+  getUsdRate,
+  setUsdRate,
+  BASE_CURRENCY,
+  MIN_USD_RATE,
+  MAX_USD_RATE
+} from '../services/currency.service';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 
@@ -815,4 +822,54 @@ export default {
   updatePlatformSettingsMain,
   getPlatformSettingSimple,
   resetPlatformSettings
+};
+
+// ==================== سعر صرف الدولار ====================
+//
+// نقطة مخصّصة لا تمرّ بالحفظ العام للإعدادات: هذه القيمة تضرب في كل سعر
+// على المنصة، وخانة زائدة أو ناقصة تغيّر أسعار كل التجّار دفعةً واحدة.
+// فتمرّ بـ setUsdRate الذي يفحص النطاق ويرفض ما دونه.
+
+export const getExchangeRate = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const rate = await getUsdRate();
+    res.json({
+      success: true,
+      data: {
+        usdRate: rate,
+        baseCurrency: BASE_CURRENCY,
+        minRate: MIN_USD_RATE,
+        maxRate: MAX_USD_RATE,
+        /** صحيح حين لا سعر مضبوط — عندها يتعذّر العرض بالدولار على المنصة كلها */
+        isConfigured: rate !== null
+      }
+    });
+  } catch (error) {
+    console.error('Error reading exchange rate:', error);
+    res.status(500).json({ success: false, error: 'تعذّر قراءة سعر الصرف' });
+  }
+};
+
+export const updateExchangeRate = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const result = await setUsdRate(req.body?.usdRate);
+
+    if (!result.ok) {
+      res.status(400).json({ success: false, error: result.error });
+      return;
+    }
+
+    console.warn(
+      `💱 سعر الصرف غُيّر إلى ${result.rate} ل.س للدولار — بواسطة ${req.user?.email || 'غير معروف'}`
+    );
+
+    res.json({
+      success: true,
+      message: 'تم تحديث سعر الصرف — يسري فوراً على المنصة كلها',
+      data: { usdRate: result.rate }
+    });
+  } catch (error) {
+    console.error('Error updating exchange rate:', error);
+    res.status(500).json({ success: false, error: 'تعذّر حفظ سعر الصرف' });
+  }
 };
