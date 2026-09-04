@@ -31,6 +31,8 @@ enum PaymentMethod {
   cash
   card
   online
+  /// شام كاش — محفظة سورية. يُفعّلها كل نشاط من إعداداته ويضع رقم حسابه.
+  sham_cash
 }
 
 enum OrderType {
@@ -231,6 +233,11 @@ model Restaurant {
   customDomainVerificationCode String?  @unique
   isActive       Boolean  @default(true)
   deliverySettings Json?
+  /// إعدادات طرق الدفع لكل نشاط: { shamCash: { enabled, accountNumber, accountName, note } }
+  paymentSettings  Json?
+  /// اللغات المفعّلة في واجهة الزبون، مثل ["ar"] أو ["ar","en"].
+  /// العربية وحدها متاحة بلا ميزة multi_language — راجع services/language.service.ts
+  enabledLanguages Json?
   subscriptionStart DateTime?
   subscriptionEnd   DateTime?
   createdAt      DateTime @default(now())
@@ -287,6 +294,8 @@ model Store {
   deliverySettings     Json?
   paymentSettings      Json?
   notificationSettings Json?
+  /// اللغات المفعّلة في واجهة الزبون — نفس قواعد المطعم
+  enabledLanguages     Json?
   
   subdomain       String   @unique
   customDomain    String?  @unique

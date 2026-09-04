@@ -3,44 +3,11 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../services/prisma';
 import { AuthRequest } from '../types';
+import { normalizeFeatureCode, getPlanFeatureCodes } from '../services/entitlement.service';
 
-const normalizeFeatureCode = (code: string): string => {
-  const normalized = code
-    .trim()
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/-/g, '_')
-    .toLowerCase();
-  return normalized.startsWith('has_') ? normalized.slice(4) : normalized;
-};
-
-const getPlanFeaturesFromPlan = (plan: any): string[] => {
-  const features: string[] = [];
-
-  if (plan?.hasWhatsapp) features.push('whatsapp');
-  if (plan?.hasOnlineOrders) features.push('online_orders');
-  if (plan?.hasCustomDomain) features.push('custom_domain');
-  if (plan?.hasAnalytics) features.push('analytics');
-  if (plan?.hasTableQr) features.push('table_qr');
-  if (plan?.hasMultiLanguage) features.push('multi_language');
-  if (plan?.hasPromotions) features.push('promotions');
-  if (plan?.hasCoupons) features.push('coupons');
-
-  if (plan?.features) {
-    try {
-      let parsedFeatures = plan.features;
-      if (typeof parsedFeatures === 'string') {
-        parsedFeatures = JSON.parse(parsedFeatures);
-      }
-      if (Array.isArray(parsedFeatures)) {
-        features.push(...parsedFeatures.map((f) => String(f)));
-      }
-    } catch (error) {
-      console.error('Error parsing plan features:', error);
-    }
-  }
-
-  return features;
-};
+// القواعد نفسها يستخدمها بقية الخادم — تعريفها في services/entitlement.service.ts
+// حتى لا تتباعد بوابات الخطة عن الميزات المُسندة لكل نشاط.
+const getPlanFeaturesFromPlan = getPlanFeatureCodes;
 
 export const checkPlanFeature = (featureCode: string) => {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
