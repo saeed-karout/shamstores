@@ -240,6 +240,30 @@ heroku run --app shamstores 'DATABASE_URL=$JAWSDB_URL npx prisma db push --schem
 
 ### الوصول اليدوي إلى قاعدة البيانات
 
+**الطريق الموثوق: من الدينو.** كثير من الشبكات تحجب المنفذ 3306 صادراً،
+فيفشل أي اتصال مباشر بـ `ETIMEDOUT` — بما فيه Prisma Studio وأي عميل MySQL —
+بينما الدينو يصل بلا مشكلة.
+
+```bash
+heroku run --app shamstores "node backend/scripts/admin.js list-users"
+```
+
+```bash
+heroku run --app shamstores "node backend/scripts/admin.js verify-user you@example.com"
+```
+
+| الأمر | الأثر |
+|---|---|
+| `list-users [عدد]` | آخر المستخدمين وحالة التفعيل |
+| `verify-user <بريد>` | تفعيل الحساب بلا رمز بريد |
+| `make-superadmin <بريد>` | ترقية إلى سوبر أدمن (ومُفعَّل) |
+| `reset-password <بريد>` | كلمة مرور مؤقتة، تُطبع مرة واحدة |
+
+**تصفّح بصري:** `heroku addons:open jawsdb` يفتح لوحة JawsDB في المتصفح —
+تعمل عبر خوادمهم فلا يعنيها حجب منفذك.
+
+**اتصال مباشر (إن كانت شبكتك تسمح):**
+
 ```bash
 powershell -ExecutionPolicy Bypass -File scripts/db-studio.ps1
 ```
