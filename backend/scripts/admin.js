@@ -168,6 +168,39 @@ const commands = {
     console.log(`✅ سعر الصرف الآن ${rate.toLocaleString('en-US')} ل.س للدولار.`);
   },
 
+  /**
+   * بذر الخطط لا يعمل إلا والجدول فارغ، فتبقى القواعد القائمة على تعريف
+   * قديم بعد أي تغيير في التسعير أو الحدود. هذا الأمر يوائمها مع
+   * src/config/plans.ts — المصدر الوحيد للتعريف.
+   */
+  async 'sync-plans'() {
+    let seeds;
+    try {
+      seeds = require(path.join(__dirname, '..', 'dist', 'config', 'plans')).PLAN_SEEDS;
+    } catch {
+      throw new Error('لم أجد dist/config/plans — ابنِ الباكيند أولاً (npm run build).');
+    }
+
+    const p = getPrisma();
+    for (const seed of seeds) {
+      const before = await p.plan.findUnique({ where: { id: seed.id } });
+      await p.plan.upsert({ where: { id: seed.id }, update: seed, create: seed });
+
+      if (!before) {
+        console.log(`+ ${seed.name}: أُنشئت — $${seed.price} · ${seed.maxProducts} منتج`);
+      } else if (before.price !== seed.price || before.maxProducts !== seed.maxProducts) {
+        console.log(
+          `~ ${seed.name}: $${before.price} → $${seed.price} · ` +
+          `${before.maxProducts} → ${seed.maxProducts} منتج`
+        );
+      } else {
+        console.log(`= ${seed.name}: بلا تغيير`);
+      }
+    }
+    console.log('');
+    console.log('✅ الخطط موائمة لـ src/config/plans.ts');
+  },
+
   async 'reset-password'() {
     const email = requireEmail();
     const user = await findUser(email);
@@ -194,6 +227,7 @@ const commands = {
       console.log('  reset-password <بريد>     كلمة مرور مؤقتة');
       console.log('  migrate-currency [من] [إلى]  ترحيل عملة الأنشطة (افتراضياً SAR→SYP)');
       console.log('  set-usd-rate <رقم>        سعر صرف الدولار العام');
+      console.log('  sync-plans                مواءمة الخطط مع تعريفها في الكود');
       process.exitCode = command ? 1 : 0;
       return;
     }

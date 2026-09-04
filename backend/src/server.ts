@@ -11,6 +11,7 @@ import hpp from 'hpp';
 import { PrismaClient } from '@prisma/client';
 import { initializeSocket } from './realtime/socket';
 import env, { isProduction } from './config/env';
+import { PLAN_SEEDS } from './config/plans';
 import {
   generalLimiter,
   authLimiter,
@@ -333,74 +334,7 @@ const seedPlans = async () => {
     if (plansCount === 0) {
       console.log('📦 جاري إدراج الخطط الأساسية...');
       
-      await prisma.plan.createMany({
-        data: [
-          {
-            id: '11111111-1111-1111-1111-111111111111',
-            name: 'free',
-            slug: 'free',
-            price: 0,
-            maxRestaurants: 1,
-            maxStores: 1,
-            maxUsers: 5,
-            maxMenuItems: 20,
-            maxProducts: 50,
-            maxOrders: 100,
-            isActive: true,
-            position: 1,
-            hasBrandingRemoval: false,
-            description: 'مناسب للمطاعم والمتاجر الصغيرة للبدء'
-          },
-          {
-            id: '22222222-2222-2222-2222-222222222222',
-            name: 'basic',
-            slug: 'basic',
-            price: 49.99,
-            maxRestaurants: 1,
-            maxStores: 1,
-            maxUsers: 10,
-            maxMenuItems: 100,
-            maxProducts: 500,
-            maxOrders: 1000,
-            isActive: true,
-            position: 2,
-            hasBrandingRemoval: false,
-            description: 'مناسب للمطاعم والمتاجر المتوسطة'
-          },
-          {
-            id: '33333333-3333-3333-3333-333333333333',
-            name: 'pro',
-            slug: 'pro',
-            price: 99.99,
-            maxRestaurants: 2,
-            maxStores: 2,
-            maxUsers: 20,
-            maxMenuItems: 500,
-            maxProducts: 5000,
-            maxOrders: 10000,
-            isActive: true,
-            position: 3,
-            hasBrandingRemoval: true,
-            description: 'مناسب للمطاعم والمتاجر الكبيرة'
-          },
-          {
-            id: '44444444-4444-4444-4444-444444444444',
-            name: 'enterprise',
-            slug: 'enterprise',
-            price: 199.99,
-            maxRestaurants: 999999,
-            maxStores: 999999,
-            maxUsers: 999999,
-            maxMenuItems: 999999,
-            maxProducts: 999999,
-            maxOrders: 999999,
-            isActive: true,
-            position: 4,
-            hasBrandingRemoval: true,
-            description: 'غير محدود مع جميع الميزات والدعم الأولوية'
-          }
-        ]
-      });
+      await prisma.plan.createMany({ data: PLAN_SEEDS });
       
       console.log('✅ تم إدراج الخطط بنجاح');
     }
