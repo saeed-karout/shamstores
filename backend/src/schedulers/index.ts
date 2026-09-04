@@ -2,6 +2,7 @@
 import cron from 'node-cron';
 import { checkAndUpdateExpiredSubscriptions, checkExpiringSubscriptions } from './subscriptionScheduler';
 import { createBackup, pruneOldBackups, checkBackupTarget } from '../services/backup.service';
+import emailService from '../services/emailService';
 
 /**
  * تشغيل جميع المهام المجدولة
@@ -54,6 +55,15 @@ export const startSchedulers = () => {
         if (pruned > 0) console.warn(`🧹 حُذفت ${pruned} نسخة قديمة`);
       } else {
         console.error('❌ فشلت النسخة الاحتياطية:', result.error);
+        // فشل صامت لا يراه مراقب خارجي: الموقع أخضر وتمرّ الأيام بلا نسخة
+        await emailService.sendAdminAlert(
+          'فشل النسخ الاحتياطي',
+          `تعذّر إنشاء النسخة اليومية.
+
+السبب: ${result.error}
+
+الوقت: ${new Date().toISOString()}`
+        );
       }
     } catch (error) {
       console.error('❌ فشلت النسخة الاحتياطية:', error);

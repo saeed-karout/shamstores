@@ -24,6 +24,8 @@ import {
 } from './middleware/security';
 import { isAllowedOrigin } from './config/origins';
 import { configureLogging } from './utils/logger';
+import { getReadiness, getFullHealth } from './services/health.service';
+import { authenticate, authorize } from './middleware/auth';
 
 // استيراد المسارات
 import authRoutes from './routes/authRoutes';
@@ -152,8 +154,23 @@ app.use(
 );
 
 // فحص الصحة — يستخدمه Heroku والمراقبة
+// مسبار إقلاع Heroku — سطحي عمداً: يقيس أن العملية حيّة وتستجيب، بأسرع ما
+// يمكن وبلا لمس قاعدة البيانات. لا تستخدمه للمراقبة الخارجية.
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', uptime: process.uptime(), env: env.NODE_ENV });
+});
+
+// نقطة المراقبة الخارجية: تفحص قاعدة البيانات فعلاً وتردّ 503 عند سقوطها.
+// بلا تفاصيل عمداً — نقطة مفتوحة للعالم لا تكشف بنيتك الداخلية ولا رسائل
+// أخطاء قاعدة البيانات.
+app.get('/health/ready', async (_req, res) => {
+  const { ready } = await getReadiness();
+  res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'unavailable' });
+});
+
+// الصورة الكاملة — للسوبر أدمن وحده
+app.get('/health/detail', authenticate, authorize(['super_admin']), async (_req, res) => {
+  res.json({ success: true, data: await getFullHealth() });
 });
 
 // استخراج الـ subdomain / النطاق المخصص
@@ -164,6 +181,8 @@ app.use(extractSubdomain);
 // ==============================================
 const MAINTENANCE_EXCLUDED = [
   '/health',
+  '/health/ready',
+  '/health/detail',
   '/api/auth/login',
   '/api/auth/me',
   '/api/platform-settings/public',

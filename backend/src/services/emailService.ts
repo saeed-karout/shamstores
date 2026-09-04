@@ -122,6 +122,35 @@ class EmailService {
     return code;
   }
 
+  /**
+   * تنبيه تشغيلي إلى مشرف المنصة.
+   *
+   * لأعطال تفشل صامتة ولا يراها مراقب خارجي — فشل النسخة الاحتياطية مثلاً:
+   * الموقع يعمل والمراقب أخضر، بينما تمرّ الأيام بلا نسخة واحدة.
+   *
+   * يُرسَل إلى SMTP_ALERT_EMAIL أو إلى المُرسِل نفسه إن لم يُضبط.
+   */
+  async sendAdminAlert(subject: string, body: string): Promise<boolean> {
+    try {
+      if (!this.transporter) await this.initializeTransporter();
+      if (!this.transporter || !this.config) return false;
+
+      const to = process.env.SMTP_ALERT_EMAIL || this.config.from;
+      if (!to) return false;
+
+      await this.transporter.sendMail({
+        from: this.config.from,
+        to,
+        subject: `[شام ستورز] ${subject}`,
+        text: body
+      });
+      return true;
+    } catch (error) {
+      console.error('تعذّر إرسال تنبيه المشرف:', error);
+      return false;
+    }
+  }
+
   async sendVerificationEmail(email: string, code: string): Promise<boolean> {
     try {
       if (!this.transporter) {
