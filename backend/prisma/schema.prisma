@@ -223,7 +223,7 @@ model Restaurant {
   
   // ✅ أضف هذه الحقول الجديدة هنا
   timezone        String  @default("Asia/Riyadh")
-  currency        String  @default("SAR")
+  currency        String  @default("SYP")
   language        String  @default("ar")
   
   subdomain      String?  @unique
@@ -283,7 +283,7 @@ model Store {
   accentColor     String  @default("#C8E235")
   fontFamily      String  @default("Cairo")
   timezone        String  @default("Asia/Riyadh")
-  currency        String  @default("SAR")
+  currency        String  @default("SYP")
   language        String  @default("ar")
   
   whatsapp   String?

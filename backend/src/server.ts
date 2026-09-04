@@ -446,7 +446,8 @@ const seedPlatformSettings = async () => {
         // إعدادات الدفع
         { keyName: 'enable_cash_on_delivery', value: 'true', type: 'boolean', settingGroup: 'payment', isPublic: true, isEditable: true, description: 'تفعيل الدفع عند الاستلام' },
         { keyName: 'enable_online_payment', value: 'false', type: 'boolean', settingGroup: 'payment', isPublic: true, isEditable: true, description: 'تفعيل الدفع الإلكتروني' },
-        { keyName: 'default_currency', value: 'SAR', type: 'string', settingGroup: 'payment', isPublic: true, isEditable: true, description: 'العملة الافتراضية' },
+        { keyName: 'default_currency', value: 'SYP', type: 'string', settingGroup: 'payment', isPublic: true, isEditable: true, description: 'العملة الافتراضية' },
+        { keyName: 'usd_exchange_rate', value: '0', type: 'number', settingGroup: 'payment', isPublic: true, isEditable: true, description: 'سعر صرف الدولار بالليرة السورية — يضبطه السوبر أدمن وحده ويسري على المنصة كلها' },
         { keyName: 'currency_symbol', value: 'ر.س', type: 'string', settingGroup: 'payment', isPublic: true, isEditable: true, description: 'رمز العملة' },
         
         // إعدادات التوصيل

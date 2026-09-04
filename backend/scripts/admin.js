@@ -122,6 +122,52 @@ const commands = {
     console.log(`✅ ${email}: ${user.role} → super_admin (ومُفعَّل).`);
   },
 
+  /**
+   * تغيير الافتراضي في المخطط لا يمسّ الصفوف القائمة: الأنشطة المُنشأة قبله
+   * تبقى على عملتها القديمة. هذا الأمر يرحّلها إلى عملة الأساس.
+   */
+  async 'migrate-currency'() {
+    const from = (args[0] || 'SAR').toUpperCase();
+    const to = (args[1] || 'SYP').toUpperCase();
+    const p = getPrisma();
+
+    const [restaurants, stores] = await Promise.all([
+      p.restaurant.count({ where: { currency: from } }),
+      p.store.count({ where: { currency: from } })
+    ]);
+
+    if (restaurants + stores === 0) {
+      console.log(`لا نشاط على ${from} — لا تغيير.`);
+      return;
+    }
+
+    console.log(`سيُنقل ${restaurants} مطعماً و${stores} متجراً من ${from} إلى ${to}`);
+    await Promise.all([
+      p.restaurant.updateMany({ where: { currency: from }, data: { currency: to } }),
+      p.store.updateMany({ where: { currency: from }, data: { currency: to } })
+    ]);
+    console.log('✅ تمّ.');
+  },
+
+  /** سعر صرف الدولار العام — يسري على المنصة كلها */
+  async 'set-usd-rate'() {
+    const raw = args[0];
+    const rate = Number(raw);
+    if (!Number.isFinite(rate) || rate < 1 || rate > 1000000) {
+      throw new Error('مرّر سعر صرف رقمياً بين 1 و1,000,000 (كم ليرة للدولار).');
+    }
+    await getPrisma().extendedPlatformSetting.upsert({
+      where: { keyName: 'usd_exchange_rate' },
+      update: { value: String(rate), type: 'number', settingGroup: 'payment', isPublic: true },
+      create: {
+        keyName: 'usd_exchange_rate', value: String(rate), type: 'number',
+        settingGroup: 'payment', isPublic: true, isEditable: true,
+        description: 'سعر صرف الدولار بالليرة السورية'
+      }
+    });
+    console.log(`✅ سعر الصرف الآن ${rate.toLocaleString('en-US')} ل.س للدولار.`);
+  },
+
   async 'reset-password'() {
     const email = requireEmail();
     const user = await findUser(email);
@@ -146,6 +192,8 @@ const commands = {
       console.log('  verify-user <بريد>        تفعيل الحساب بلا رمز بريد');
       console.log('  make-superadmin <بريد>    ترقية إلى سوبر أدمن');
       console.log('  reset-password <بريد>     كلمة مرور مؤقتة');
+      console.log('  migrate-currency [من] [إلى]  ترحيل عملة الأنشطة (افتراضياً SAR→SYP)');
+      console.log('  set-usd-rate <رقم>        سعر صرف الدولار العام');
       process.exitCode = command ? 1 : 0;
       return;
     }
