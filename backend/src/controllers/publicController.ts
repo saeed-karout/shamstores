@@ -4,6 +4,9 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
+import { getPublicPaymentOptions } from '../services/payment.service';
+import { resolveLanguageSettings } from '../services/language.service';
+import { getCurrencyContext } from '../services/currency.service';
 import {
   normalizeDomain,
   resolveBusinessByCustomDomain,
@@ -107,6 +110,10 @@ export const getBusinessBySlug = async (
           timezone: restaurant.timezone,
           currency: restaurant.currency,
           language: restaurant.language,
+          // طرق الدفع المفعّلة فقط، وبلا رقم المحفظة ما لم تكن مُفعّلة
+          paymentOptions: getPublicPaymentOptions(restaurant.paymentSettings),
+          languageSettings: await resolveLanguageSettings(restaurant, 'restaurant'),
+          currencyContext: await getCurrencyContext(restaurant.currency),
           isActive: restaurant.isActive,
           createdAt: restaurant.createdAt,
           updatedAt: restaurant.updatedAt,
@@ -182,11 +189,15 @@ export const getBusinessBySlug = async (
           fontFamily: store.fontFamily,
           // ✅ إعدادات إضافية
           deliverySettings: store.deliverySettings,
-          paymentSettings: store.paymentSettings,
+          // كان يُرسل paymentSettings خاماً: رقم المحفظة والملاحظات الداخلية
+          // لأي زائر، حتى وطريقة الدفع مطفأة. هذه البنية تكشف المسموح فقط.
+          paymentOptions: getPublicPaymentOptions(store.paymentSettings),
           notificationSettings: store.notificationSettings,
           timezone: store.timezone,
           currency: store.currency,
           language: store.language,
+          languageSettings: await resolveLanguageSettings(store, 'store'),
+          currencyContext: await getCurrencyContext(store.currency),
           isActive: store.isActive,
           createdAt: store.createdAt,
           updatedAt: store.updatedAt,

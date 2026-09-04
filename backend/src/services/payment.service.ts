@@ -60,9 +60,16 @@ export const parsePaymentSettings = (raw: unknown): PaymentSettings => {
   };
 };
 
-export type PaymentSettingsResult =
-  | { ok: true; value: PaymentSettings }
-  | { ok: false; error: string };
+/**
+ * ملاحظة: حقول اختيارية لا اتحاد مميَّز. المشروع يعمل على strict:false،
+ * وتضييق الاتحاد بـ `if (!result.ok)` لا يعمل تحته فيرفض المترجم قراءة
+ * result.error. لا تُعِده اتحاداً قبل تفعيل strict.
+ */
+export interface PaymentSettingsResult {
+  ok: boolean;
+  value?: PaymentSettings;
+  error?: string;
+}
 
 /** يتحقق من تعديل التاجر قبل الحفظ، ويُرجع رسالة عربية جاهزة للعرض. */
 export const validatePaymentSettings = (input: unknown): PaymentSettingsResult => {

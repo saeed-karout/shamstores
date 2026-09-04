@@ -87,9 +87,19 @@ export interface LanguageUpdateInput {
   enabledLanguages?: unknown;
 }
 
-export type LanguageUpdateResult =
-  | { ok: true; defaultLanguage: string; enabledLanguages: string[] }
-  | { ok: false; error: string; requiresUpgrade?: boolean };
+/**
+ * ملاحظة: حقول اختيارية لا اتحاد مميَّز. المشروع يعمل على strict:false،
+ * وتضييق الاتحاد بـ `if (!result.ok)` لا يعمل تحته فيرفض المترجم قراءة
+ * result.error. لا تُعِده اتحاداً قبل تفعيل strict.
+ */
+export interface LanguageUpdateResult {
+  ok: boolean;
+  defaultLanguage?: string;
+  enabledLanguages?: string[];
+  error?: string;
+  /** الرفض بسبب غياب الميزة لا بسبب مدخل خاطئ — تعرض الواجهة دعوة ترقية */
+  requiresUpgrade?: boolean;
+}
 
 /**
  * يتحقق من تعديل التاجر لإعدادات اللغة قبل حفظه.

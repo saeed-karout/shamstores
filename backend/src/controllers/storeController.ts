@@ -4,6 +4,9 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import { UserService } from '../services/user.service';
 import prisma from '../services/prisma';
+import { validatePaymentSettings } from '../services/payment.service';
+import { validateLanguageUpdate } from '../services/language.service';
+import { isDisplayCurrency } from '../services/currency.service';
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
 import slugify from '../utils/slugify';
@@ -495,7 +498,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       textColor, mutedColor, accentColor, fontFamily,
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
-      deliverySettings, paymentSettings, notificationSettings,
+      deliverySettings, paymentSettings, notificationSettings, enabledLanguages,
       isActive 
     } = req.body;
     
@@ -526,14 +529,47 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (latitude !== undefined) updateData.latitude = latitude ? parseFloat(latitude) : null;
     if (longitude !== undefined) updateData.longitude = longitude ? parseFloat(longitude) : null;
     if (timezone !== undefined) updateData.timezone = timezone;
-    if (currency !== undefined) updateData.currency = currency;
-    if (language !== undefined) updateData.language = language;
+    // الأسعار تُخزَّن بالليرة؛ هذا الحقل عملة **العرض** لا التخزين.
+    if (currency !== undefined) {
+      if (!isDisplayCurrency(currency)) {
+        res.status(400).json({ success: false, error: 'عملة العرض غير مدعومة. المتاح: الليرة السورية أو الدولار.' });
+        return;
+      }
+      updateData.currency = String(currency).toUpperCase();
+    }
+    if (language !== undefined || enabledLanguages !== undefined) {
+      const existingStore = await prisma.store.findUnique({
+        where: { id: storeId },
+        select: { enabledLanguages: true }
+      });
+      const languageResult = await validateLanguageUpdate(storeId, 'store', {
+        defaultLanguage: language,
+        enabledLanguages: enabledLanguages ?? existingStore?.enabledLanguages
+      });
+      if (!languageResult.ok) {
+        res.status(languageResult.requiresUpgrade ? 403 : 400).json({
+          success: false,
+          error: languageResult.error,
+          requiresUpgrade: languageResult.requiresUpgrade === true
+        });
+        return;
+      }
+      updateData.language = languageResult.defaultLanguage;
+      updateData.enabledLanguages = languageResult.enabledLanguages;
+    }
     if (whatsapp !== undefined) updateData.whatsapp = whatsapp;
     if (instagram !== undefined) updateData.instagram = instagram;
     if (facebook !== undefined) updateData.facebook = facebook;
     if (tiktok !== undefined) updateData.tiktok = tiktok;
     if (deliverySettings !== undefined) updateData.deliverySettings = deliverySettings;
-    if (paymentSettings !== undefined) updateData.paymentSettings = paymentSettings;
+    if (paymentSettings !== undefined) {
+      const paymentResult = validatePaymentSettings(paymentSettings);
+      if (!paymentResult.ok) {
+        res.status(400).json({ success: false, error: paymentResult.error });
+        return;
+      }
+      updateData.paymentSettings = paymentResult.value;
+    }
     if (notificationSettings !== undefined) updateData.notificationSettings = notificationSettings;
     if (isActive !== undefined && req.user?.role === 'super_admin') updateData.isActive = isActive;
     
@@ -1209,7 +1245,7 @@ export const updateGeneralSettings = async (req: AuthRequest, res: Response): Pr
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
     }
-    const { name, email, phone, address, description, timezone, currency, language } = req.body;
+    const { name, email, phone, address, description, timezone, currency, language, enabledLanguages } = req.body;
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
@@ -1217,8 +1253,34 @@ export const updateGeneralSettings = async (req: AuthRequest, res: Response): Pr
     if (address !== undefined) updateData.address = address;
     if (description !== undefined) updateData.description = description;
     if (timezone !== undefined) updateData.timezone = timezone;
-    if (currency !== undefined) updateData.currency = currency;
-    if (language !== undefined) updateData.language = language;
+    // الأسعار تُخزَّن بالليرة؛ هذا الحقل عملة **العرض** لا التخزين.
+    if (currency !== undefined) {
+      if (!isDisplayCurrency(currency)) {
+        res.status(400).json({ success: false, error: 'عملة العرض غير مدعومة. المتاح: الليرة السورية أو الدولار.' });
+        return;
+      }
+      updateData.currency = String(currency).toUpperCase();
+    }
+    if (language !== undefined || enabledLanguages !== undefined) {
+      const existingStore = await prisma.store.findUnique({
+        where: { id: storeId },
+        select: { enabledLanguages: true }
+      });
+      const languageResult = await validateLanguageUpdate(storeId, 'store', {
+        defaultLanguage: language,
+        enabledLanguages: enabledLanguages ?? existingStore?.enabledLanguages
+      });
+      if (!languageResult.ok) {
+        res.status(languageResult.requiresUpgrade ? 403 : 400).json({
+          success: false,
+          error: languageResult.error,
+          requiresUpgrade: languageResult.requiresUpgrade === true
+        });
+        return;
+      }
+      updateData.language = languageResult.defaultLanguage;
+      updateData.enabledLanguages = languageResult.enabledLanguages;
+    }
     const updatedStore = await prisma.store.update({ where: { id: storeId }, data: updateData });
     res.json({ success: true, message: 'تم تحديث الإعدادات العامة', data: updatedStore });
   } catch (error) {

@@ -3,6 +3,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { isPaymentMethodAllowed } from '../services/payment.service';
 import { verifyToken } from '../config/auth';
 import { emitOrderRealtimeEvent, RealtimeOrderPayload } from '../realtime/socket';
 
@@ -292,6 +293,20 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    // طريقة الدفع تأتي من العميل، فتُفحص على الخادم لا في الواجهة وحدها:
+    // إخفاء الخيار لا يمنع أحداً من إرساله مباشرة إلى الـ API.
+    const businessPaymentSettings = restaurantId
+      ? (await prisma.restaurant.findUnique({ where: { id: restaurantId }, select: { paymentSettings: true } }))?.paymentSettings
+      : (await prisma.store.findUnique({ where: { id: storeId! }, select: { paymentSettings: true } }))?.paymentSettings;
+
+    if (!isPaymentMethodAllowed(businessPaymentSettings, paymentMethod)) {
+      res.status(400).json({
+        success: false,
+        error: 'طريقة الدفع المختارة غير متاحة لهذا النشاط.'
+      });
+      return;
+    }
+
     // التحقق من الكوبون
     let coupon = null;
     if (couponCode) {
@@ -439,7 +454,10 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       deliveryDistance: finalDeliveryDistance,
       orderSource: orderSource,
       status: 'pending',
-      isPaid: paymentMethod !== 'cash'
+      // النقد وشام كاش كلاهما يُحصَّل خارج النظام: النقد عند التسليم،
+      // وشام كاش تحويل يدوي إلى محفظة التاجر. وضعهما «مدفوعاً» تلقائياً
+      // يعني طلباً يظهر مسدَّداً بلا أن يصل قرش — التاجر هو من يؤكّد.
+      isPaid: paymentMethod !== 'cash' && paymentMethod !== 'sham_cash'
     };
 
     if (userId) orderData.createdBy = userId;

@@ -2,6 +2,9 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { validatePaymentSettings } from '../services/payment.service';
+import { validateLanguageUpdate } from '../services/language.service';
+import { isDisplayCurrency } from '../services/currency.service';
 import fs from 'fs';
 import path from 'path';
 import slugify from '../utils/slugify';
@@ -272,7 +275,8 @@ export const updateProfile = async (
       latitude, longitude, 
       primaryColor, secondaryColor, backgroundColor, cardColor, surfaceColor,
       textColor, mutedColor, accentColor, fontFamily,
-      subdomain, customDomain, isActive, deliverySettings
+      subdomain, customDomain, isActive, deliverySettings,
+      paymentSettings, currency, language, enabledLanguages
     } = req.body;
 
     let restaurant = null;
@@ -356,6 +360,45 @@ export const updateProfile = async (
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
     
     if (deliverySettings !== undefined) updateData.deliverySettings = deliverySettings;
+
+    // ===== الدفع =====
+    if (paymentSettings !== undefined) {
+      const result = validatePaymentSettings(paymentSettings);
+      if (!result.ok) {
+        res.status(400).json({ success: false, error: result.error });
+        return;
+      }
+      updateData.paymentSettings = result.value;
+    }
+
+    // ===== العملة =====
+    // الأسعار تُخزَّن بالليرة؛ هذا الحقل عملة **العرض** لا التخزين.
+    if (currency !== undefined) {
+      if (!isDisplayCurrency(currency)) {
+        res.status(400).json({ success: false, error: 'عملة العرض غير مدعومة. المتاح: الليرة السورية أو الدولار.' });
+        return;
+      }
+      updateData.currency = String(currency).toUpperCase();
+    }
+
+    // ===== اللغات =====
+    if (language !== undefined || enabledLanguages !== undefined) {
+      const businessId = restaurant.id;
+      const result = await validateLanguageUpdate(businessId, 'restaurant', {
+        defaultLanguage: language,
+        enabledLanguages: enabledLanguages ?? restaurant.enabledLanguages
+      });
+      if (!result.ok) {
+        res.status(result.requiresUpgrade ? 403 : 400).json({
+          success: false,
+          error: result.error,
+          requiresUpgrade: result.requiresUpgrade === true
+        });
+        return;
+      }
+      updateData.language = result.defaultLanguage;
+      updateData.enabledLanguages = result.enabledLanguages;
+    }
     if (customDomain !== undefined && req.user?.role === 'super_admin') updateData.customDomain = customDomain;
     if (isActive !== undefined && req.user?.role === 'super_admin') updateData.isActive = isActive;
     

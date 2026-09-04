@@ -41,7 +41,16 @@ export const getUsdRate = async (): Promise<number | null> => {
   return raw;
 };
 
-export type RateUpdateResult = { ok: true; rate: number } | { ok: false; error: string };
+/**
+ * ملاحظة: حقول اختيارية لا اتحاد مميَّز. المشروع يعمل على strict:false،
+ * وتضييق الاتحاد بـ `if (!result.ok)` لا يعمل تحته فيرفض المترجم قراءة
+ * result.error. لا تُعِده اتحاداً قبل تفعيل strict.
+ */
+export interface RateUpdateResult {
+  ok: boolean;
+  rate?: number;
+  error?: string;
+}
 
 /** يتحقق من مدخل السوبر أدمن قبل حفظه. يُرجع رسالة عربية جاهزة للعرض. */
 export const validateUsdRate = (input: unknown): RateUpdateResult => {
