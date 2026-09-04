@@ -13,6 +13,8 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import MultiImageUploader from '@/components/settings/MultiImageUploader';
+import { getDiscountPercent } from '@/utils/catalogBadges';
+import { formatPrice } from '@/utils/currency';
 
 // ✅ الألوان الثابتة فقط للعناصر التي لا تتغير (الأحمر، الأزرق، إلخ)
 const staticColors = {
@@ -32,7 +34,10 @@ interface Product {
   description?: string;
   descriptionEn?: string;
   price: number;
-  discountedPrice?: number;
+  /** سعر ما قبل الخصم — أعلى من price وإلا فلا خصم */
+  originalPrice?: number | null;
+  isPopular?: boolean;
+  images?: string[];
   imageUrl?: string;
   stock: number;
   sku?: string;
@@ -174,7 +179,7 @@ const StoreProductsPage: React.FC = () => {
           branchName: branch.name,
           branchLabel: branch.label,
           price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
-          discountedPrice: product.discountedPrice ? (typeof product.discountedPrice === 'string' ? parseFloat(product.discountedPrice) : product.discountedPrice) : null,
+          originalPrice: (product as any).originalPrice ?? null,
           stock: typeof product.stock === 'string' ? parseInt(product.stock) : product.stock,
         }));
 
@@ -519,9 +524,11 @@ const StoreProductsPage: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 20 }}>
             {products.map((product) => {
               const stockStatus = getStockStatus(product.stock);
-              const hasDiscount = product.discountedPrice && product.discountedPrice > 0;
-              const finalPrice = hasDiscount ? product.discountedPrice : product.price;
-              const discountPercent = hasDiscount ? Math.round(((product.price - product.discountedPrice!) / product.price) * 100) : 0;
+              // price هو ما يُحصَّل دائماً، وoriginalPrice سعر ما قبل الخصم.
+              // النسبة تُشتق من نفس قواعد الخادم بدل حسابها هنا بمعيار ثانٍ.
+              const discountPercent = getDiscountPercent(product.price, (product as any).originalPrice);
+              const hasDiscount = discountPercent !== null;
+              const finalPrice = product.price;
               
               return (
                 <div key={product.id} style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}
@@ -577,14 +584,14 @@ const StoreProductsPage: React.FC = () => {
                     <div style={{ marginTop: 8 }}>
                       {hasDiscount ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{finalPrice.toFixed(2)} ر.س</span>
-                          <span style={{ color: dynamicColors.muted, fontSize: 11, textDecoration: 'line-through' }}>{product.price.toFixed(2)} ر.س</span>
+                          <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{formatPrice(finalPrice)}</span>
+                          <span style={{ color: dynamicColors.muted, fontSize: 11, textDecoration: 'line-through' }}>{formatPrice((product as any).originalPrice)}</span>
                           <span style={{ background: `${dynamicColors.accent}20`, color: dynamicColors.accent, fontSize: 11, padding: '1px 6px', borderRadius: 10 }}>
                             -{discountPercent}%
                           </span>
                         </div>
                       ) : (
-                        <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{product.price.toFixed(2)} ر.س</span>
+                        <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{formatPrice(product.price)}</span>
                       )}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: `1px solid ${dynamicColors.border}` }}>
