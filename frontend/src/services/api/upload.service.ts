@@ -8,10 +8,16 @@ export interface UploadOptions {
   subType?: string;
 }
 
+/**
+ * شكل ما يُرجعه الخادم فعلاً من POST /api/upload.
+ *
+ * كان معلَناً هنا بحقل `url` لا وجود له في الاستجابة — الخادم يُرجع
+ * `imageUrl`. أي مستدعٍ يثق بالنوع ويقرأ `.url` كان يحصل على undefined.
+ */
 export interface UploadedImage {
-  url: string;
+  imageUrl: string;
   imageId: string;
-  fullUrl: string;
+  fullUrl?: string;
 }
 
 export interface UploadedVideo {

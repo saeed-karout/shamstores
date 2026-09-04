@@ -149,7 +149,13 @@ const MarketingSectionForm: React.FC<Props> = ({
 
     try {
       const uploadType = businessType === 'restaurant' ? 'restaurant' : 'store';
-      const response = await uploadService.uploadImage(file, `marketing_${uploadType}`);
+      // الوسيط الثاني كائن خيارات لا سلسلة: تمريرها نصاً كان يجعل type
+      // undefined فتهبط الصورة في misc/ بدل مجلد النشاط.
+      const response = await uploadService.uploadImage(file, {
+        type: uploadType === 'restaurant' ? 'restaurants' : 'stores',
+        id: businessId,
+        subType: 'gallery'
+      });
       
       if (response && response.imageUrl) {
         setFormData(prev => ({ ...prev, imageUrl: response.imageUrl }));

@@ -6,6 +6,8 @@ import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
+import ImageUploadField from '@/components/common/ImageUploadField';
+import { formatPrice } from '@/utils/currency';
 
 const C = {
   bg: '#082E24',
@@ -150,7 +152,7 @@ const AdminAdvertisements: React.FC = () => {
     }
     
     if (!formData.imageUrl.trim()) {
-      toast.error('الرجاء إدخال رابط الصورة');
+      toast.error('ارفع صورة الإعلان أولاً');
       return;
     }
 
@@ -415,7 +417,7 @@ const AdminAdvertisements: React.FC = () => {
                       </td>
                       <td style={{ padding: '12px 16px', color: C.text, fontWeight: 500 }}>{ad.title}</td>
                       <td style={{ padding: '12px 16px', color: C.muted }}>{ad.position}</td>
-                      <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 600 }}>{ad.price} ر.س</td>
+                      <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 600 }}>{formatPrice(ad.price)}</td>
                       <td style={{ padding: '12px 16px', color: C.muted, fontSize: 12 }}>{ad.clientName || '-'}</td>
                       <td style={{ padding: '12px 16px', color: C.muted, fontSize: 11 }}>
                         {ad.startAt && new Date(ad.startAt).toLocaleDateString('ar-SA')}
@@ -509,20 +511,15 @@ const AdminAdvertisements: React.FC = () => {
               />
             </div>
             <div style={{ gridColumn: 'span 2' }}>
-              <label style={labelStyle}>رابط الصورة *</label>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                style={inputStyle}
+              <ImageUploadField
+                label="صورة الإعلان"
                 required
-                placeholder="https://example.com/image.jpg"
+                value={formData.imageUrl}
+                onChange={(url) => setFormData({ ...formData, imageUrl: url })}
+                uploadType="advertisements"
+                previewAspect="21 / 9"
+                hint="يُعرض كبانر بعرض الشاشة — يُفضَّل 1200×510 بكسل"
               />
-              {formData.imageUrl && (
-                <div style={{ marginTop: 8 }}>
-                  <img src={formData.imageUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: 100, borderRadius: 8 }} />
-                </div>
-              )}
             </div>
             <div style={{ gridColumn: 'span 2' }}>
               <label style={labelStyle}>رابط الوجهة (عند النقر)</label>
@@ -563,7 +560,7 @@ const AdminAdvertisements: React.FC = () => {
               />
             </div>
             <div>
-              <label style={labelStyle}>السعر (ر.س)</label>
+              <label style={labelStyle}>السعر (ل.س)</label>
               <input
                 type="number"
                 value={formData.price}
