@@ -55,6 +55,11 @@ foreach ($line in Get-Content $EnvFile -Encoding UTF8) {
       $val = $val.Substring(1, $val.Length - 2)
     }
   }
+  # كلمة مرور تطبيق Google تُعرض مقسّمة للقراءة (xxxx xxxx xxxx xxxx)، لكن
+  # مصادقة SMTP ترفض المسافات وتردّ 535 BadCredentials. نُطبّعها هنا لأن
+  # اللصق من صفحة Google يأتي بالمسافات دائماً.
+  if ($key -eq 'SMTP_PASSWORD') { $val = $val -replace ' ', '' }
+
   $envVars[$key] = $val
 }
 
