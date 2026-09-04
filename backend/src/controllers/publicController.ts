@@ -5,6 +5,7 @@ import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 import { getPublicPaymentOptions } from '../services/payment.service';
+import { getPublicImages } from '../services/media.service';
 import { resolveLanguageSettings } from '../services/language.service';
 import { getCurrencyContext } from '../services/currency.service';
 import {
@@ -383,9 +384,19 @@ export const getProductById = async (
           description: product.description,
           price: product.price,
           stock: product.stock,
+          // ملاحظة: `cost` لا يخرج هنا إطلاقاً — هامش ربح التاجر ليس
+          // معلومة عامة.
+          nameEn: product.nameEn,
+          unit: product.unit,
           imageUrl: product.imageUrl,
+          // مصفوفة مضمونة: المنتجات القديمة بصورة مفردة تعود بها هنا
+          images: getPublicImages(product, 'imageUrl'),
           isAvailable: product.isAvailable,
-          category: category?.name || null
+          // إشارة توفّر جاهزة للعرض بدل أن تعيد الواجهة اشتقاقها
+          inStock: product.isAvailable && product.stock > 0,
+          category: category?.name || null,
+          currency: store.currency,
+          currencyContext: await getCurrencyContext(store.currency)
         }
       }
     });

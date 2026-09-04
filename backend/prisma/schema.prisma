@@ -355,7 +355,10 @@ model MenuItem {
   descriptionEn String?
   price        Float
   originalPrice Float?
+  /// صورة الغلاف — مشتقة من images[0]، أُبقيت للتوافق مع القراءات القائمة.
   image        String?
+  /// مصفوفة روابط الصور. الغلاف أولها.
+  images       Json?
   isAvailable  Boolean   @default(true)
   isPopular    Boolean   @default(false)
   isNew        Boolean   @default(false)
@@ -387,7 +390,11 @@ model Product {
   reservedStock Int     @default(0)
   minStockLevel Int     @default(5)
   maxStockLevel Int?
+  /// صورة الغلاف — تبقى مشتقة من images[0]. لم تُستبدل لأن 131 موضعاً
+  /// يقرأها، واستبدالها دفعةً واحدة مخاطرة بلا مقابل.
   imageUrl    String?
+  /// مصفوفة روابط الصور. الغلاف أولها.
+  images      Json?
   categoryId  String?
   isAvailable Boolean   @default(true)
   unit        String    @default("piece")

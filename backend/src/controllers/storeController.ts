@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import { UserService } from '../services/user.service';
 import prisma from '../services/prisma';
+import { buildImageUpdate, getPublicImages } from '../services/media.service';
 import { validatePaymentSettings } from '../services/payment.service';
 import { validateLanguageUpdate } from '../services/language.service';
 import { isDisplayCurrency } from '../services/currency.service';
@@ -676,7 +677,9 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
         isAvailable: isAvailable !== false,
         unit: unit || 'piece',
         reservedStock: 0,
-        minStockLevel: 5
+        minStockLevel: 5,
+        // الصور تمرّ بالتطبيع دائماً، فلا يتباعد الغلاف عن المصفوفة
+        ...(buildImageUpdate(req.body, 'imageUrl') || {})
       },
       include: { category: true }
     });
@@ -718,6 +721,12 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
     if (unit !== undefined) updateData.unit = unit;
     
+
+    // null يعني أن الطلب لم يمسّ الصور — لا نمحو صوراً قائمة لأن التاجر
+    // عدّل السعر وحده.
+    const imageUpdate = buildImageUpdate(req.body, 'imageUrl');
+    if (imageUpdate) Object.assign(updateData, imageUpdate);
+
     const updatedProduct = await prisma.product.update({ 
       where: { id }, 
       data: updateData,
