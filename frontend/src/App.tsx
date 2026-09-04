@@ -4,6 +4,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import SkipToContent from '@/components/a11y/SkipToContent';
+import GlobalNotifications from '@/components/GlobalNotifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { IoWarning } from 'react-icons/io5';
@@ -242,6 +243,9 @@ const MainApp: React.FC = () => {
     <>
       <SEOHead />
       <SkipToContent />
+      {/* مستمع الإشعارات — مرة واحدة لكل التطبيق. كان الاتصال يقوم في
+          صفحتَي الطلبات فقط، فالمشرف على أي شاشة أخرى بلا سوكِت إطلاقاً. */}
+      <GlobalNotifications token={localStorage.getItem('token')} />
 
       <Suspense fallback={<RouteFallback />}>
         <main id="main-content" tabIndex={-1}>

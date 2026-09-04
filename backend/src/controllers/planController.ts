@@ -2,6 +2,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { emitPlatformNotification, ADMIN_ROOM } from '../realtime/socket';
 
 // دالة مساعدة للحصول على businessId (مطعم أو متجر)
 const getBusinessId = async (req: AuthRequest): Promise<{ type: 'restaurant' | 'store', id: string } | null> => {
@@ -393,6 +394,23 @@ export const createUpgradeRequest = async (req: AuthRequest, res: Response): Pro
         status: 'pending',
         requestedAt: new Date()
       }
+    });
+
+    // إشعار فوري للمشرفين — كان الطلب يصل بلا صوت فلا يُرى إلا بتحديث الصفحة
+    const requester = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true }
+    });
+    const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { name: true } });
+
+    emitPlatformNotification({
+      rooms: [ADMIN_ROOM],
+      type: 'upgrade_request',
+      event: 'upgrade_request.created',
+      title: 'طلب ترقية جديد',
+      message: `${requester?.name || requester?.email || 'مستخدم'} يطلب الترقية إلى ${plan?.name || 'خطة أعلى'}`,
+      link: '/admin/upgrade-requests',
+      entityId: upgradeRequest.id
     });
 
     res.json({ success: true, message: 'تم إرسال طلب الترقية بنجاح', data: upgradeRequest });

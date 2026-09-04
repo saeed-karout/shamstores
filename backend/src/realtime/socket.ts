@@ -66,6 +66,15 @@ export const getUserRoom = (userId: string): string => `user:${userId}`;
 export const getDriverRoom = (driverId: string): string => `driver:${driverId}`;
 export const getOrderRoom = (orderId: string): string => `order:${orderId}`;
 
+/**
+ * غرفة مشرفي المنصة.
+ *
+ * لم تكن موجودة: السوكِت ينضمّ لغرف المستخدم والمطعم والمتجر والسائق فقط،
+ * فلا قناة تصل السوبر أدمن إطلاقاً. أي حدث يخصّ المنصة كلها — طلب ترقية،
+ * تذكرة دعم — كان يحتاج تحديث الصفحة يدوياً ليُرى.
+ */
+export const ADMIN_ROOM = 'admins';
+
 const extractToken = (socket: Socket): string | null => {
   const authToken = typeof socket.handshake.auth?.token === 'string' ? socket.handshake.auth.token : undefined;
   const headerToken = typeof socket.handshake.headers?.authorization === 'string'
@@ -201,6 +210,10 @@ const bindConnectionHandlers = (socket: RealtimeSocket): void => {
   }
 
   socket.join(getUserRoom(user.id));
+
+  if (user.role === 'super_admin') {
+    socket.join(ADMIN_ROOM);
+  }
 
   if (user.restaurantId) {
     socket.join(getRestaurantRoom(user.restaurantId));
@@ -338,3 +351,43 @@ export const emitEntityRealtimeEvent = (params: RealtimeEntityEventParams): void
   });
 };
 
+// ==================== إشعارات عامة ====================
+
+export interface PlatformNotification {
+  /** غرف الوجهة — استخدم ADMIN_ROOM أو getUserRoom(id) */
+  rooms: string[];
+  /** تصنيف الإشعار: upgrade_request، ticket، ... */
+  type: string;
+  event: string;
+  title: string;
+  message: string;
+  /** مسار تفتحه الواجهة عند النقر */
+  link?: string;
+  entityId?: string;
+  extraData?: Record<string, unknown>;
+}
+
+/**
+ * يبثّ إشعاراً إلى غرف محدّدة.
+ *
+ * منفصل عن emitEntityRealtimeEvent عمداً: ذاك يبثّ `data:changed` لتُحدِّث
+ * الواجهة بياناتها بصمت، وهذا يبثّ `notification:new` ليظهر للمستخدم.
+ * خلطهما يعني إما إشعاراً لكل تغيير بيانات، أو تغييراً بلا إشعار.
+ */
+export const emitPlatformNotification = (params: PlatformNotification): void => {
+  if (!io) return;
+
+  const rooms = params.rooms.filter(Boolean);
+  if (rooms.length === 0) return;
+
+  io.to(rooms).emit(SOCKET_EVENTS.notification, {
+    type: params.type,
+    event: params.event,
+    title: params.title,
+    message: params.message,
+    link: params.link || null,
+    entityId: params.entityId || null,
+    timestamp: new Date().toISOString(),
+    ...params.extraData
+  });
+};
