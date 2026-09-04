@@ -136,6 +136,7 @@ const StoreDriversPage: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button
+            aria-label="تحديث قائمة السائقين"
             onClick={fetchDrivers}
             style={{ padding: 8, background: C.surf, border: '1px solid ' + C.border, borderRadius: 12, cursor: 'pointer', color: C.muted }}
           >

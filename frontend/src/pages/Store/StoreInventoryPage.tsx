@@ -410,6 +410,7 @@ const StoreInventoryPage: React.FC = () => {
                         {isEditing ? (
                           <div style={{ display: 'flex', gap: 8 }}>
                             <button
+                              aria-label="حفظ الكمية"
                               disabled={saving}
                               onClick={updateInventory}
                               style={{ padding: 8, background: C.accent, color: C.bg, border: 'none', borderRadius: 8, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}

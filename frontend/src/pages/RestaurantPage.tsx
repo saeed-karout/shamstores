@@ -97,6 +97,7 @@ const RestaurantPage: React.FC = () => {
                     {restaurant.name}
                   </h1>
                   <button onClick={shareRestaurant} style={{ background: 'none', border: 'none', color: '#9DC4AC', cursor: 'pointer', padding: 8, borderRadius: '50%' }}>
+                    aria-label="مشاركة المطعم"
                     <IoShare size={20} />
                   </button>
                 </div>

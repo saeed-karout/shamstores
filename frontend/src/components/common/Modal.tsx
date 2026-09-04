@@ -66,6 +66,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             </h3>
             <button
               onClick={onClose}
+              aria-label="إغلاق"
               style={{
                 background: `${colors.accent}14`, border: 'none', borderRadius: 8,
                 color: colors.muted, cursor: 'pointer', padding: 6, display: 'flex',
@@ -82,6 +83,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
           {!title && (
             <button
               onClick={onClose}
+              aria-label="إغلاق"
               style={{
                 float: 'left', background: `${colors.accent}14`, border: 'none',
                 borderRadius: 8, color: colors.muted, cursor: 'pointer', padding: 6,

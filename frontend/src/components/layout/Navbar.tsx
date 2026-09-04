@@ -28,6 +28,7 @@ const Navbar: React.FC<NavbarProps> = ({ onMenuOpen, title }) => {
     >
       {/* Mobile menu toggle */}
       <button
+        aria-label="فتح القائمة"
         onClick={onMenuOpen}
         className="lg:hidden"
         style={{ background: 'none', border: 'none', color: '#9DC4AC', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex' }}

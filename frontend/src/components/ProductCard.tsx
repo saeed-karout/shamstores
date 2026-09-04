@@ -151,6 +151,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
       {/* Favorite Button */}
       <button
         onClick={handleFavoriteClick}
+        aria-label={isFavorite ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
+        aria-pressed={isFavorite}
         className="absolute top-2 left-2 p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-md hover:scale-110 transition-transform z-10"
       >
         {isFavorite ? (
@@ -249,6 +251,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <button
             onClick={handleAddToCart}
             disabled={isOutOfStock}
+            aria-label="إضافة إلى السلة"
             className={`md:hidden p-2 rounded-full transition-colors ${
               isOutOfStock
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'

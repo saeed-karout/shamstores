@@ -242,7 +242,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
         <body>
           <div class="qr-card">
             <div class="qr-container">
-              ${qrData.svg || `<img src="data:image/png;base64,${qrData.png}" class="qr-code" />`}
+              ${qrData.svg || `<img src="data:image/png;base64,${qrData.png}" class="qr-code" alt="رمز QR" />`}
             </div>
             ${design.includeText ? `<div class="url">${qrData.url}</div>` : ''}
           </div>

@@ -3,6 +3,7 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import SkipToContent from '@/components/a11y/SkipToContent';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { IoWarning } from 'react-icons/io5';
@@ -209,10 +210,13 @@ const SubdomainApp: React.FC = () => {
               error: { iconTheme: { primary: '#EF4444', secondary: '#FFFFFF' } },
             }}
           />
-          <Routes>
-            {/* ✅ جميع المسارات الأخرى تذهب إلى PublicRouter */}
-            <Route path="*" element={<PublicRouter />} />
-          </Routes>
+          <SkipToContent />
+          <main id="main-content" tabIndex={-1}>
+            <Routes>
+              {/* ✅ جميع المسارات الأخرى تذهب إلى PublicRouter */}
+              <Route path="*" element={<PublicRouter />} />
+            </Routes>
+          </main>
         </Router>
       </QueryClientProvider>
     </HelmetProvider>
@@ -237,8 +241,10 @@ const MainApp: React.FC = () => {
   return (
     <>
       <SEOHead />
+      <SkipToContent />
 
       <Suspense fallback={<RouteFallback />}>
+        <main id="main-content" tabIndex={-1}>
         <Routes>
         {/* ==================== مسارات عامة (بدون مصادقة) ==================== */}
         <Route path="/" element={<HomePage />} />
@@ -358,6 +364,7 @@ const MainApp: React.FC = () => {
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        </main>
       </Suspense>
     </>
   );

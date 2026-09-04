@@ -178,6 +178,7 @@ const CartModal: React.FC<CartModalProps> = ({
             </h3>
             <button
               onClick={onClose}
+              aria-label="إغلاق السلة"
               className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-all"
             >
               <IoClose size={24} />
@@ -220,7 +221,7 @@ const CartModal: React.FC<CartModalProps> = ({
                       خصم {appliedCoupon.discountValue}{appliedCoupon.discountType === 'percentage' ? '%' : ' ر.س'}
                     </p>
                   </div>
-                  <button onClick={handleRemoveCoupon} className="text-red-500 hover:text-red-700">
+                  <button onClick={handleRemoveCoupon} aria-label="إزالة الكوبون" className="text-red-500 hover:text-red-700">
                     <IoClose size={20} />
                   </button>
                 </div>

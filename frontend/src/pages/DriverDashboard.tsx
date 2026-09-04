@@ -293,6 +293,7 @@ const DriverDashboard: React.FC = () => {
                 <IoRefresh size={20} style={refreshing ? { animation: 'spin 1s linear infinite' } : {}} />
               </button>
               <button
+                aria-label="تسجيل الخروج"
                 onClick={logout}
                 style={{ background: 'rgba(255,107,107,0.15)', border: 'none', padding: 8, borderRadius: 8, cursor: 'pointer', color: C.red }}
               >

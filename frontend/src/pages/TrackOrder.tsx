@@ -207,6 +207,7 @@ const TrackOrder: React.FC = () => {
             <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700 }}>تتبع الطلب</h1>
             <button
               onClick={shareOrder}
+              aria-label="مشاركة الطلب"
               style={{ padding: 8, background: C.surf, border: 'none', borderRadius: '50%', cursor: 'pointer', color: C.text }}
             >
               <IoShare size={22} />
@@ -225,6 +226,7 @@ const TrackOrder: React.FC = () => {
                 <p style={{ color: C.text, fontSize: 28, fontWeight: 700, fontFamily: 'monospace' }}>{order.orderNumber}</p>
                 <button
                   onClick={copyOrderNumber}
+                  aria-label="نسخ رقم الطلب"
                   style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: C.muted }}
                 >
                   <IoCopy size={18} />

@@ -154,7 +154,7 @@ const TablesPage: React.FC = () => {
     const qrCodes = tables.map(table => `
       <div style="display: inline-block; margin: 20px; text-align: center; page-break-inside: avoid;">
         <h3>${table.name}</h3>
-        ${table.qrSvg ? table.qrSvg : `<img src="data:image/png;base64,${table.qrCode}" style="width: 200px; height: 200px;" />`}
+        ${table.qrSvg ? table.qrSvg : `<img src="data:image/png;base64,${table.qrCode}" style="width: 200px; height: 200px;" alt="رمز QR للطاولة ${table.name}" />`}
       </div>
     `).join('');
 

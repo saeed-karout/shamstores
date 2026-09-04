@@ -77,6 +77,7 @@ const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
             )}
             {onRemoveLogo && (previewLogo || logo) && (
               <button
+                aria-label="حذف الشعار"
                 type="button"
                 onClick={onRemoveLogo}
                 className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
@@ -120,6 +121,7 @@ const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
             )}
             {onRemoveCover && (previewCover || coverImage) && (
               <button
+                aria-label="حذف صورة الغلاف"
                 type="button"
                 onClick={onRemoveCover}
                 className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"

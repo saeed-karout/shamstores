@@ -102,6 +102,7 @@ const MaintenanceToggle: React.FC = () => {
         </div>
         
         <button
+          aria-label="تبديل وضع الصيانة"
           onClick={toggleMaintenance}
           disabled={saving}
           className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none ${

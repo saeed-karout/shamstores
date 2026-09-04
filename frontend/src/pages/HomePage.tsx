@@ -339,6 +339,7 @@ const HomePage: React.FC = () => {
         {/* Scroll to Top */}
         {showScrollTop && (
           <button onClick={scrollToTop} className="fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }}>
+            aria-label="العودة إلى أعلى الصفحة"
             <IoArrowUp size={22} />
           </button>
         )}

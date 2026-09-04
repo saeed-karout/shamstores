@@ -75,7 +75,7 @@ const TableQR: React.FC<TableQRProps> = ({ table, isOpen, onClose }) => {
         <body>
           <div class="qr-container">
             <div class="title">${table.name}</div>
-            ${table.qrSvg ? table.qrSvg : `<img src="data:image/png;base64,${table.qrCode}" style="width: 300px;" />`}
+            ${table.qrSvg ? table.qrSvg : `<img src="data:image/png;base64,${table.qrCode}" style="width: 300px;" alt="رمز QR للطاولة ${table.name}" />`}
             <div class="url">${qrUrl}</div>
           </div>
         </body>

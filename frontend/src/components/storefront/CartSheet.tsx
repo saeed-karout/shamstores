@@ -518,6 +518,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     type="button"
                     onClick={handleApplyCoupon}
                     disabled={!couponInput.trim() || applyingCoupon}
+                    aria-label="تطبيق الكوبون"
                     style={{
                       minHeight: 46,
                       padding: '0 18px',
