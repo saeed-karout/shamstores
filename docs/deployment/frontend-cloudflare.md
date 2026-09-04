@@ -93,6 +93,14 @@ VITE_MAX_VIDEO_MB=100
   `.env` التطويرية ويدفن `localhost:5000` في حزمة الإنتاج.
 - بقية المتغيرات (Firebase، WhatsApp) تُورَّث من `frontend/.env`.
 
+> ⚠️ **`frontend/.env` شرط للبناء الإنتاجي، وهو متجاهَل في git.** إعدادات
+> Firebase تأتي منه، وبدونها لا يُهيَّأ Firebase إطلاقاً:
+> `firebaseConfig.ts` يفحص `VITE_FIREBASE_API_KEY` و`VITE_FIREBASE_PROJECT_ID`
+> ويتخطّى التهيئة إن غابا. الزر يبقى ظاهراً في صفحة الدخول لكن الضغط عليه
+> يفشل برسالة عامة — وهذا ما حدث فعلاً في النشر السابق.
+>
+> من يبني على جهاز جديد بلا هذا الملف سيكسر تسجيل الدخول بجوجل صامتاً.
+
 > لو تعطّل الـ Worker أو لم يُربط بالمسارات، بدّل مؤقتاً إلى رابط مطلق
 > (`VITE_API_URL=https://<app>.herokuapp.com/api` و`VITE_BASE_URL` مثله)
 > وأعد البناء. الخادم يسمح بالأصول عبر CORS في هذه الحالة.
@@ -138,6 +146,12 @@ grep -ro "herokuapp.com" frontend/dist/assets/ | wc -l
 
 ```bash
 grep -ro "pub-0f129677" frontend/dist/assets/ | wc -l
+```
+
+وهذا يجب أن يكون **أكبر من صفر** وإلا تعطّل تسجيل الدخول بجوجل:
+
+```bash
+grep -ro "firebaseapp.com" frontend/dist/assets/ | wc -l
 ```
 
 أما `localhost:5000` فوجوده طبيعي: فروع تطوير محروسة بفحص `isLocal` لا
