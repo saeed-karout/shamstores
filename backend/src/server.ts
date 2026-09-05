@@ -411,7 +411,7 @@ const seedPlatformSettings = async () => {
         { keyName: 'estimated_delivery_time', value: '45', type: 'number', settingGroup: 'delivery', isPublic: true, isEditable: true, description: 'وقت التوصيل المتوقع بالدقائق' },
         
         // إعدادات الأمان
-        { keyName: 'enable_2fa', value: 'false', type: 'boolean', settingGroup: 'security', isPublic: false, isEditable: true, description: 'تفعيل المصادقة ذات العاملين' },
+        { keyName: 'enable_2fa', value: 'false', type: 'boolean', settingGroup: 'auth', isPublic: false, isEditable: false, description: 'التحقق بخطوتين — غير مُنفَّذ بعد. المفتاح معطّل عمداً حتى لا يوحي بحماية غير موجودة' },
         { keyName: 'prevent_weak_passwords', value: 'true', type: 'boolean', settingGroup: 'security', isPublic: false, isEditable: true, description: 'منع كلمات المرور الضعيفة' },
         
         // إعدادات التحليلات

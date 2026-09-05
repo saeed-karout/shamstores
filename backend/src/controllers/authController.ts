@@ -8,6 +8,7 @@ import { LoginRequest, RegisterRequest, ApiResponse, AuthRequest } from '../type
 import bcrypt from 'bcrypt';
 import settingsService from '../services/settingsService';
 import prisma from '../services/prisma';
+import { getLoginPolicy } from '../services/securityPolicy.service';
 import { validateRegistration, validatePassword, isValidEmail, normalizeEmail, sanitizeText } from '../utils/validation';
 
 const getEmailVerificationRequirement = async () => {
@@ -342,7 +343,8 @@ export const login = async (
   try {
     const { email, password } = req.body;
     
-    const maxLoginAttempts = await settingsService.getNumber('max_login_attempts', 5);
+    // نفس المصدر الذي يستخدمه القفل نفسه — قراءتهما من مكانين تُنتج تناقضاً
+    const { maxAttempts: maxLoginAttempts } = await getLoginPolicy();
 
     const user = await UserService.findByEmail(email);
     

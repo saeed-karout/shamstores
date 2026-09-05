@@ -1,6 +1,7 @@
 // backend/src/services/user.service.ts
 
 import prisma from './prisma';
+import { getLoginPolicy } from './securityPolicy.service';
 import bcrypt from 'bcrypt';
 
 export type UserRoleType = 'super_admin' | 'owner' | 'staff' | 'user' | 'delivery_driver';
@@ -107,15 +108,26 @@ export class UserService {
     });
   }
 
+  /**
+   * يزيد عدّاد المحاولات ويقفل الحساب عند بلوغ الحدّ.
+   *
+   * العتبة والمدّة تأتيان من سياسة الأمان لا من أرقام مكتوبة هنا: كانت
+   * `>= 4` و15 دقيقة ثابتتين بينما الفحص عند الدخول يقرأ إعداد المشرف،
+   * فرفع الحدّ فوق خمسة كان يُعطّل القفل كلياً.
+   */
   static async incrementLoginAttempts(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new Error('User not found');
 
+    const { maxAttempts, lockoutMinutes } = await getLoginPolicy();
+    const attempts = (user.loginAttempts || 0) + 1;
+
     return prisma.user.update({
       where: { id: userId },
       data: {
-        loginAttempts: (user.loginAttempts || 0) + 1,
-        lockedUntil: (user.loginAttempts || 0) >= 4 ? new Date(Date.now() + 15 * 60 * 1000) : undefined
+        loginAttempts: attempts,
+        lockedUntil:
+          attempts >= maxAttempts ? new Date(Date.now() + lockoutMinutes * 60 * 1000) : undefined
       }
     });
   }

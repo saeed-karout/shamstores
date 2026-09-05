@@ -20,7 +20,16 @@ const COMMON_PASSWORDS = new Set([
   'abc12345', 'letmein1', 'welcome1', 'shamstores', 'p@ssw0rd'
 ]);
 
-export const validatePassword = (password: unknown): ValidationResult => {
+/**
+ * فحص كلمة المرور.
+ *
+ * `strict` يعكس إعداد prevent_weak_passwords — وكان الإعداد بلا أثر إطلاقاً:
+ * القواعد تُفرض دائماً، فالمشرف يُطفئه ولا يتغيّر شيء.
+ *
+ * **الطول الأدنى مفروض في الحالتين**: إطفاء الإعداد يُرخي قائمة الشائع
+ * واشتراط حرف ورقم، ولا يفتح الباب لكلمة مرور من محرف واحد.
+ */
+export const validatePassword = (password: unknown, strict: boolean = true): ValidationResult => {
   if (typeof password !== 'string' || password.length === 0) {
     return { valid: false, error: 'كلمة المرور مطلوبة' };
   }
@@ -30,12 +39,14 @@ export const validatePassword = (password: unknown): ValidationResult => {
   if (password.length > 128) {
     return { valid: false, error: 'كلمة المرور طويلة جداً' };
   }
-  if (COMMON_PASSWORDS.has(password.toLowerCase())) {
-    return { valid: false, error: 'كلمة المرور شائعة جداً، اختر كلمة مرور أقوى' };
-  }
-  // على الأقل حرف ورقم — توازن بين الأمان وسهولة الاستخدام
-  if (!/[a-zA-Z؀-ۿ]/.test(password) || !/[0-9]/.test(password)) {
-    return { valid: false, error: 'كلمة المرور يجب أن تحتوي على حرف ورقم على الأقل' };
+  if (strict) {
+    if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+      return { valid: false, error: 'كلمة المرور شائعة جداً، اختر كلمة مرور أقوى' };
+    }
+    // على الأقل حرف ورقم — توازن بين الأمان وسهولة الاستخدام
+    if (!/[a-zA-Z؀-ۿ]/.test(password) || !/[0-9]/.test(password)) {
+      return { valid: false, error: 'كلمة المرور يجب أن تحتوي على حرف ورقم على الأقل' };
+    }
   }
   return { valid: true };
 };
