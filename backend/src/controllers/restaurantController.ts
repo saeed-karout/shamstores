@@ -11,6 +11,7 @@ import slugify from '../utils/slugify';
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
+import { renameStorefront } from '../services/storefrontIdentity.service';
 
 // دالة مساعدة لإنشاء subdomain فريد
 const generateUniqueSubdomain = async (baseSubdomain: string, excludeId?: string): Promise<string> => {
@@ -410,9 +411,17 @@ export const updateProfile = async (
       updateData.longitude = longitude === '' || longitude === null ? null : parseFloat(longitude);
     }
     
-    if (subdomain !== undefined && req.user?.role === 'super_admin') {
-      const uniqueSubdomain = await generateUniqueSubdomain(subdomain, restaurant.id);
-      updateData.subdomain = uniqueSubdomain;
+    // اسم الواجهة: العمودان معاً، وبفحص تفرّد عبر المطاعم والمتاجر.
+    //
+    // كان يكتب `subdomain` وحده بفحص داخل جدول المطاعم فقط — فيبقى `slug`
+    // قديماً ويعمل الرابطان، ويمكن أن يتصادم مع متجر يحمل الاسم نفسه.
+    const handleInput = req.body?.slug ?? subdomain;
+    if (handleInput !== undefined && req.user?.role === 'super_admin') {
+      const renamed = await renameStorefront('restaurant', restaurant.id, handleInput);
+      if (!renamed.ok) {
+        res.status(renamed.status || 400).json({ success: false, error: renamed.error });
+        return;
+      }
     }
 
     // تصفية undefined values

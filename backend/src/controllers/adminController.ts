@@ -11,6 +11,7 @@ import { buildBranchSummary, getLinkedBranches } from '../services/businessBranc
 import slugify from '../utils/slugify';
 import { buildPlanPrice } from '../services/planPricing.service';
 import { getUsdRate } from '../services/currency.service';
+import { renameStorefront } from '../services/storefrontIdentity.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -1303,8 +1304,18 @@ export const updateStore = async (req: AuthRequest, res: Response): Promise<void
     if (planId !== undefined) updateData.planId = planId;
     if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
     if (secondaryColor !== undefined) updateData.secondaryColor = secondaryColor;
-    if (subdomain !== undefined) updateData.subdomain = subdomain;
-    
+
+    // كان يكتب `subdomain` وحده ويتجاهل `slug` تماماً، فيبقى الاسم القديم
+    // عاملاً ويردّ «تم التحديث بنجاح» ومعه القيمة القديمة.
+    const handleInput = req.body?.slug ?? subdomain;
+    if (handleInput !== undefined) {
+      const renamed = await renameStorefront('store', id, handleInput);
+      if (!renamed.ok) {
+        res.status(renamed.status || 400).json({ success: false, error: renamed.error });
+        return;
+      }
+    }
+
     const updated = await prisma.store.update({
       where: { id },
       data: updateData

@@ -14,8 +14,8 @@ import slugify from '../utils/slugify';
 import fs from 'fs';
 import path from 'path';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
-import { isReservedSubdomain, invalidateDomainCache } from '../services/domain.service';
 import env from '../config/env';
+import { renameStorefront } from '../services/storefrontIdentity.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -573,7 +573,22 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     }
     if (notificationSettings !== undefined) updateData.notificationSettings = notificationSettings;
     if (isActive !== undefined && req.user?.role === 'super_admin') updateData.isActive = isActive;
-    
+
+    // اسم الواجهة يُغيَّر بمسار خاص لا ضمن حقول التحديث العامة: يحتاج
+    // تحقّقاً وفحص تفرّد وإبطال ذاكرة النطاقات. قبوله هنا وتمريره إلى
+    // prisma.update مباشرةً كان سيتجاوز ذلك كله.
+    //
+    // وتجاهله بصمت — وهو ما كان يحدث — أسوأ: التاجر يرسل slug جديداً
+    // ويصله «تم التحديث بنجاح» ومعه الاسم القديم.
+    const handleInput = req.body?.slug ?? req.body?.subdomain;
+    if (handleInput !== undefined) {
+      const renamed = await renameStorefront('store', storeId, handleInput);
+      if (!renamed.ok) {
+        res.status(renamed.status || 400).json({ success: false, error: renamed.error });
+        return;
+      }
+    }
+
     const updatedStore = await prisma.store.update({ 
       where: { id: storeId }, 
       data: updateData,
@@ -1200,8 +1215,6 @@ export const getStoreSettings = async (req: AuthRequest, res: Response): Promise
   }
 };
 
-const SUBDOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$/;
-
 export const updateSubdomain = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
@@ -1210,50 +1223,24 @@ export const updateSubdomain = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
-    const subdomain = String(req.body?.subdomain || '').trim().toLowerCase();
+    // ⚠️ كان يكتب `subdomain` وحده ويترك `slug` على قيمته القديمة، فيبقى
+    // الرابط القديم عاملاً (البحث العام يطابق أيّهما) ويظنّ التاجر أن
+    // تغييره لم يُحفظ. الخدمة تكتب العمودين معاً.
+    const result = await renameStorefront('store', storeId, req.body?.subdomain);
 
-    if (!SUBDOMAIN_PATTERN.test(subdomain) || subdomain.length < 3 || subdomain.length > 63) {
-      res.status(400).json({
-        success: false,
-        error: 'الـ subdomain يجب أن يكون بين 3 و63 حرفاً، أحرف إنجليزية وأرقام وشرطات فقط'
-      });
+    if (!result.ok) {
+      res.status(result.status || 400).json({ success: false, error: result.error });
       return;
     }
-
-    // الأسماء المحجوزة تخص المنصة (api, admin, www...) ولا يجوز حجزها
-    if (isReservedSubdomain(subdomain)) {
-      res.status(400).json({ success: false, error: 'هذا الاسم محجوز، اختر اسماً آخر' });
-      return;
-    }
-
-    // التعارض يجب أن يُفحص عبر المتاجر والمطاعم معاً — كلاهما يتشارك مساحة الأسماء
-    const [existingStore, existingRestaurant] = await Promise.all([
-      prisma.store.findFirst({
-        where: { OR: [{ subdomain }, { slug: subdomain }], id: { not: storeId } },
-        select: { id: true }
-      }),
-      prisma.restaurant.findFirst({
-        where: { OR: [{ subdomain }, { slug: subdomain }] },
-        select: { id: true }
-      })
-    ]);
-
-    if (existingStore || existingRestaurant) {
-      res.status(409).json({ success: false, error: 'هذا الـ subdomain مستخدم بالفعل' });
-      return;
-    }
-
-    const updatedStore = await prisma.store.update({
-      where: { id: storeId },
-      data: { subdomain }
-    });
-
-    invalidateDomainCache();
 
     res.json({
       success: true,
-      message: 'تم تحديث الـ subdomain بنجاح',
-      data: { subdomain: updatedStore.subdomain, url: `https://${updatedStore.subdomain}.${env.APP_DOMAIN}` }
+      message: 'تم تحديث اسم المتجر بنجاح',
+      data: {
+        slug: result.slug,
+        subdomain: result.subdomain,
+        url: `https://${result.subdomain}.${env.APP_DOMAIN}`
+      }
     });
   } catch (error) {
     console.error('Error updating subdomain:', error);
