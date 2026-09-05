@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { IoRefresh, IoTime, IoCheckmarkCircle, IoCloseCircle, IoWarning, IoSend, IoSearch, IoBusiness, IoCalendar, IoCash, IoDiamond } from 'react-icons/io5';
 import { useSubscription } from '../../hooks/useSubscription';
+import CancelSubscriptionDialog, { CancelTarget } from '@/components/admin/CancelSubscriptionDialog';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
@@ -32,6 +33,7 @@ const AdminSubscriptions: React.FC = () => {
     checkExpired
   } = useSubscription();
 
+  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'expiring'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -215,6 +217,7 @@ const AdminSubscriptions: React.FC = () => {
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>الأيام المتبقية</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>الحالة</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>التذكير</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', color: C.muted, fontSize: 12 }}>إجراء</th>
                 </tr>
               </thead>
               <tbody>
@@ -274,6 +277,30 @@ const AdminSubscriptions: React.FC = () => {
                           <span style={{ color: C.muted, fontSize: 12 }}>—</span>
                         )}
                       </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        {sub.status === 'active' ? (
+                          <button
+                            type="button"
+                            onClick={() => setCancelTarget({
+                              id: sub.id,
+                              planName: sub.planName || 'الخطة',
+                              businessName: (sub as any).businessName,
+                              endDate: sub.endDate
+                            })}
+                            style={{
+                              padding: '6px 13px', borderRadius: 9, minHeight: 34,
+                              border: `1px solid ${C.red}55`, background: `${C.red}15`,
+                              color: C.red, fontSize: 12, fontWeight: 700,
+                              cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap'
+                            }}
+                          >
+                            إلغاء
+                          </button>
+                        ) : (
+                          // الملغى والمنتهي لا يُلغيان مجدداً — والخادم يرفض ذلك أيضاً
+                          <span style={{ color: C.muted, fontSize: 12 }}>—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -282,6 +309,13 @@ const AdminSubscriptions: React.FC = () => {
           </div>
         )}
       </div>
+
+      <CancelSubscriptionDialog
+        target={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onCancelled={refreshAll}
+        colors={C}
+      />
     </div>
   );
 };
