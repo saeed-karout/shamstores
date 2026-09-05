@@ -9,6 +9,8 @@ import { DriverService } from '../services/driver.service';
 import bcrypt from 'bcrypt';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 import slugify from '../utils/slugify';
+import { buildPlanPrice } from '../services/planPricing.service';
+import { getUsdRate } from '../services/currency.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -1899,13 +1901,97 @@ export const updatePlatformSettings = async (req: AuthRequest, res: Response): P
 
 // ==================== طلبات الترقية ====================
 
+/**
+ * يُلحق بطلبات الترقية أسماءَ من تخصّهم.
+ *
+ * الجدول لا يحمل سوى معرّفات (userId / storeId / planId)، ونموذج Prisma
+ * بلا علاقات فلا ينفع `include`. كان الردّ يُرسَل خاماً، فتظهر شاشة
+ * السوبر أدمن بصفوف فارغة: لا اسم ولا واتساب ولا خطة ولا مبلغ — وعليه أن
+ * يقبل أو يرفض طلباً لا يعرف صاحبه.
+ *
+ * أربعة استعلامات مُجمَّعة لا استعلام لكل صف: قائمة بمئة طلب كانت ستُنتج
+ * أربعمئة رحلة إلى قاعدة بيانات بعشرة اتصالات.
+ */
+const enrichUpgradeRequests = async (requests: any[]) => {
+  if (requests.length === 0) return [];
+
+  const ids = <T,>(list: (T | null | undefined)[]) => Array.from(new Set(list.filter(Boolean))) as T[];
+
+  const [users, plans, restaurants, stores, usdRate] = await Promise.all([
+    prisma.user.findMany({
+      where: { id: { in: ids(requests.map((r) => r.userId)) } },
+      select: { id: true, name: true, email: true, phone: true }
+    }),
+    prisma.plan.findMany({
+      where: { id: { in: ids([...requests.map((r) => r.currentPlanId), ...requests.map((r) => r.requestedPlanId)]) } },
+      select: { id: true, name: true, price: true }
+    }),
+    prisma.restaurant.findMany({
+      where: { id: { in: ids(requests.map((r) => r.restaurantId)) } },
+      select: { id: true, name: true, phone: true, whatsapp: true }
+    }),
+    prisma.store.findMany({
+      where: { id: { in: ids(requests.map((r) => r.storeId)) } },
+      select: { id: true, name: true, phone: true, whatsapp: true }
+    }),
+    getUsdRate()
+  ]);
+
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const planById = new Map(plans.map((p) => [p.id, p]));
+  const restaurantById = new Map(restaurants.map((r) => [r.id, r]));
+  const storeById = new Map(stores.map((r) => [r.id, r]));
+
+  return requests.map((request) => {
+    const user = userById.get(request.userId) || null;
+    const business = request.restaurantId
+      ? restaurantById.get(request.restaurantId)
+      : request.storeId
+        ? storeById.get(request.storeId)
+        : null;
+    const requestedPlan = planById.get(request.requestedPlanId) || null;
+    const currentPlan = planById.get(request.currentPlanId) || null;
+
+    return {
+      ...request,
+      user,
+      business: business
+        ? {
+            id: business.id,
+            name: business.name,
+            type: request.restaurantId ? 'restaurant' : 'store',
+            // واتساب النشاط، وإلا هاتفه، وإلا هاتف صاحبه — السوبر أدمن
+            // يحتاج طريقاً واحداً للتواصل لا ثلاثة حقول فارغة
+            whatsapp: business.whatsapp || business.phone || user?.phone || null
+          }
+        : null,
+      currentPlan,
+      requestedPlan,
+      // السعر مخزَّن بالدولار وحدة حساب — يُحوَّل هنا كما يراه التاجر تماماً
+      pricing: requestedPlan ? buildPlanPrice(requestedPlan.price, usdRate) : null,
+
+      // حقول مسطّحة بالأسماء التي تقرأها الشاشات القائمة. الإبقاء عليها
+      // يجعل الإصلاح يسري بلا انتظار نشر الواجهة — وهي أسماء العقد الفعلي
+      // بين الطرفين منذ البداية، وإن لم يملأها أحد.
+      userName: user?.name || null,
+      userEmail: user?.email || null,
+      userWhatsapp: business?.whatsapp || user?.phone || null,
+      businessName: business?.name || null,
+      currentPlanName: currentPlan?.name || null,
+      planName: requestedPlan?.name || null,
+      priceUsd: requestedPlan?.price ?? null,
+      priceSyp: requestedPlan ? buildPlanPrice(requestedPlan.price, usdRate).amountSyp : null
+    };
+  });
+};
+
 export const getUpgradeRequests = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const requests = await prisma.upgradeRequest.findMany({
       orderBy: { requestedAt: 'desc' }
     });
-    
-    res.json({ success: true, data: requests });
+
+    res.json({ success: true, data: await enrichUpgradeRequests(requests) });
   } catch (error) {
     console.error('Error fetching upgrade requests:', error);
     res.json({ success: true, data: [] });
@@ -1925,7 +2011,7 @@ export const getUserUpgradeRequests = async (req: AuthRequest, res: Response): P
       orderBy: { requestedAt: 'desc' }
     });
     
-    res.json({ success: true, data: requests });
+    res.json({ success: true, data: await enrichUpgradeRequests(requests) });
   } catch (error) {
     console.error('Error fetching user upgrade requests:', error);
     res.json({ success: true, data: [] });

@@ -53,14 +53,19 @@ interface Plan {
 interface UpgradeRequest {
   id: string;
   userId: string;
-  userName: string;
-  userEmail: string;
+  // ⚠️ اختيارية عمداً: الخادم يجمعها من جداول منفصلة (النموذج بلا علاقات)،
+  // وحساب محذوف أو خطة مُزالة تُنتج صفاً ناقصاً لا صفاً مفقوداً.
+  userName?: string | null;
+  userEmail?: string | null;
   userPhone?: string;
-  userWhatsapp?: string;
-  planId: string;
-  planName: string;
-  price: number;
-  currentPlanName?: string;
+  userWhatsapp?: string | null;
+  businessName?: string | null;
+  planId?: string;
+  planName?: string | null;
+  price?: number;
+  priceUsd?: number | null;
+  priceSyp?: number | null;
+  currentPlanName?: string | null;
   status: 'pending' | 'approved' | 'rejected';
   reason?: string;
   createdAt: string;
@@ -525,13 +530,18 @@ const AdminPlans: React.FC = () => {
                       style={{ borderBottom: '1px solid ' + C.border }}
                     >
                       <td style={{ padding: '12px 16px' }}>
-                        <p style={{ color: C.text, fontWeight: 600, margin: 0 }}>{req.userName}</p>
+                        <p style={{ color: C.text, fontWeight: 600, margin: 0 }}>
+                          {req.userName || 'مستخدم محذوف'}
+                        </p>
+                        {req.businessName && (
+                          <p style={{ color: C.accent, fontSize: 12, margin: 0 }}>{req.businessName}</p>
+                        )}
                         <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>{req.userEmail}</p>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         {req.userWhatsapp ? (
                           <button
-                            onClick={() => contactViaWhatsApp(req.userWhatsapp!, req.userName, req.planName)}
+                            onClick={() => contactViaWhatsApp(req.userWhatsapp!, req.userName || '', req.planName || '')}
                             style={{ display: 'flex', alignItems: 'center', gap: 4, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
                           >
                             <IoLogoWhatsapp size={16} />
@@ -544,8 +554,19 @@ const AdminPlans: React.FC = () => {
                       <td style={{ padding: '12px 16px', color: C.text, fontSize: 13 }}>
                         {req.currentPlanName || 'مجاني'}
                       </td>
-                      <td style={{ padding: '12px 16px', color: C.blue, fontWeight: 600 }}>{req.planName}</td>
-                      <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 700 }}>{req.price} ر.س</td>
+                      <td style={{ padding: '12px 16px', color: C.blue, fontWeight: 600 }}>
+                        {req.planName || '—'}
+                      </td>
+                      {/* ⚠️ كان مكتوباً «ر.س» ثابتاً. أسعار الخطط مخزَّنة
+                          بالدولار وحدة حساب، والتاجر يدفع بالليرة عبر سعر
+                          الصرف الموحّد — والخادم يرسل الرقمين معاً. */}
+                      <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        {req.priceSyp != null
+                          ? `${req.priceSyp.toLocaleString('en-US')} ل.س`
+                          : req.priceUsd != null
+                            ? `$${req.priceUsd}`
+                            : '—'}
+                      </td>
                       <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>
                         {format(new Date(req.createdAt), 'dd/MM/yyyy', { locale: ar })}
                       </td>
@@ -569,7 +590,7 @@ const AdminPlans: React.FC = () => {
                             </button>
                             {req.userWhatsapp && (
                               <button
-                                onClick={() => contactViaWhatsApp(req.userWhatsapp!, req.userName, req.planName)}
+                                onClick={() => contactViaWhatsApp(req.userWhatsapp!, req.userName || '', req.planName || '')}
                                 style={{ background: C.surf, color: C.muted, padding: '4px 10px', borderRadius: 8, border: '1px solid ' + C.border, cursor: 'pointer' }}
                                 title="تواصل عبر واتساب"
                               >

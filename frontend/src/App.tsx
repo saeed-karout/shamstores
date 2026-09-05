@@ -28,6 +28,7 @@ const RestaurantDriversPage = lazy(() => import('./pages/Restaurant/RestaurantDr
 const RestaurantSettingsPage = lazy(() => import('./pages/Restaurant/RestaurantSettingsPage'));
 const RestaurantAnalyticsPage = lazy(() => import('./pages/Restaurant/RestaurantAnalyticsPage'));
 const RestaurantPlansPage = lazy(() => import('./pages/Restaurant/RestaurantPlansPage'));
+const OwnerFeaturesPage = lazy(() => import('./pages/Owner/FeaturesPage'));
 const RestaurantCouponsPage = lazy(() => import('./pages/Restaurant/RestaurantCouponsPage'));
 // ==================== صفحات المتجر ====================
 const StoreProductsPage = lazy(() => import('./pages/Store/StoreProductsPage'));
@@ -284,6 +285,9 @@ const MainApp: React.FC = () => {
             <Route path="/coupons" element={<PlanRoute feature="coupons"><RestaurantCouponsPage /></PlanRoute>} />
             <Route path="/marketing" element={<PlanRoute feature="marketing"><BusinessMarketing /></PlanRoute>} />
             <Route path="/plans" element={<RestaurantPlansPage />} />
+            {/* صفحة شراء الميزات المفردة — بلا PlanRoute عمداً: حجبها عمّن
+                لا يملك الميزات يمنعه من شرائها، وهو عكس الغرض */}
+            <Route path="/features" element={<OwnerFeaturesPage />} />
             
             {/* مسارات المتجر */}
             <Route path="/store/products" element={<StoreProductsPage />} />

@@ -84,40 +84,40 @@ enum ContactMessageStatus {
 // ==================== MODELS ====================
 
 model User {
-  id                   String    @id @default(cuid())
-  restaurantId         String?
-  storeId              String?
-  name                 String
-  email                String    @unique
-  password             String
-  phone                String?
-  role                 UserRole
-  permissions          Json?
-  isActive             Boolean   @default(true)
-  isOnline             Boolean   @default(false)
-  lastLogin            DateTime?
-  lastLocationLat      Float?
-  lastLocationLng      Float?
-  lastLocationUpdate   DateTime?
-  driverRating         Float?    @default(0)
-  driverRatingCount    Int?      @default(0)
-  isEmailVerified      Boolean   @default(false)
-  loginAttempts        Int       @default(0)
-  lockedUntil          DateTime?
-  fcmToken             String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  restaurantId       String?
+  storeId            String?
+  name               String
+  email              String    @unique
+  password           String
+  phone              String?
+  role               UserRole
+  permissions        Json?
+  isActive           Boolean   @default(true)
+  isOnline           Boolean   @default(false)
+  lastLogin          DateTime?
+  lastLocationLat    Float?
+  lastLocationLng    Float?
+  lastLocationUpdate DateTime?
+  driverRating       Float?    @default(0)
+  driverRatingCount  Int?      @default(0)
+  isEmailVerified    Boolean   @default(false)
+  loginAttempts      Int       @default(0)
+  lockedUntil        DateTime?
+  fcmToken           String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // Relations
-  ownedStores  Store[]   @relation("StoreOwner")
-  ownedRestaurants Restaurant[] @relation("RestaurantOwner")
-  restaurant   Restaurant? @relation("RestaurantUsers", fields: [restaurantId], references: [id])
-  stores       Store[]   @relation("StoreUsers")
-  drivers      Driver[]
-  tickets      Ticket[]
-  orders       Order[]   @relation("CreatedOrders")
-  firebaseUser FirebaseUser?
-  notifications Notification[]
+  ownedStores      Store[]        @relation("StoreOwner")
+  ownedRestaurants Restaurant[]   @relation("RestaurantOwner")
+  restaurant       Restaurant?    @relation("RestaurantUsers", fields: [restaurantId], references: [id])
+  stores           Store[]        @relation("StoreUsers")
+  drivers          Driver[]
+  tickets          Ticket[]
+  orders           Order[]        @relation("CreatedOrders")
+  firebaseUser     FirebaseUser?
+  notifications    Notification[]
 
   @@index([email])
   @@index([restaurantId])
@@ -126,13 +126,13 @@ model User {
 }
 
 model EmailVerificationCode {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   email     String
-  code      String   @unique
+  code      String    @unique
   expiresAt DateTime
-  used      Boolean  @default(false)
+  used      Boolean   @default(false)
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([email])
   @@index([code])
@@ -140,14 +140,14 @@ model EmailVerificationCode {
 }
 
 model FirebaseUser {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  firebaseUid    String   @unique
-  displayName    String?
-  photoUrl       String?
-  authProvider   String   @default("google")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  firebaseUid  String   @unique
+  displayName  String?
+  photoUrl     String?
+  authProvider String   @default("google")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -156,35 +156,35 @@ model FirebaseUser {
 }
 
 model Plan {
-  id             String   @id @default(cuid())
-  name           String   @unique
-  slug           String   @unique
+  id             String  @id @default(cuid())
+  name           String  @unique
+  slug           String  @unique
   description    String?
   price          Float
   billingCycle   String?
-  maxRestaurants Int      @default(1)
-  maxStores      Int      @default(1)
-  maxUsers       Int      @default(5)
-  maxMenuItems   Int      @default(100)
-  maxProducts    Int      @default(100)
-  maxOrders      Int      @default(1000)
+  maxRestaurants Int     @default(1)
+  maxStores      Int     @default(1)
+  maxUsers       Int     @default(5)
+  maxMenuItems   Int     @default(100)
+  maxProducts    Int     @default(100)
+  maxOrders      Int     @default(1000)
   features       Json?
-  isActive       Boolean  @default(true)
-  position       Int      @default(0)
-  isPopular      Boolean  @default(false)
-  
-  hasWhatsapp      Boolean  @default(false)
-  hasOnlineOrders  Boolean  @default(false)
-  hasCustomDomain  Boolean  @default(false)
-  hasAnalytics     Boolean  @default(false)
-  hasTableQr       Boolean  @default(false)
-  hasMultiLanguage Boolean  @default(false)
-  hasPromotions    Boolean  @default(false)
-  hasCoupons       Boolean  @default(false)
+  isActive       Boolean @default(true)
+  position       Int     @default(0)
+  isPopular      Boolean @default(false)
+
+  hasWhatsapp        Boolean @default(false)
+  hasOnlineOrders    Boolean @default(false)
+  hasCustomDomain    Boolean @default(false)
+  hasAnalytics       Boolean @default(false)
+  hasTableQr         Boolean @default(false)
+  hasMultiLanguage   Boolean @default(false)
+  hasPromotions      Boolean @default(false)
+  hasCoupons         Boolean @default(false)
   hasBrandingRemoval Boolean @default(false)
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   restaurants Restaurant[]
@@ -194,150 +194,150 @@ model Plan {
 }
 
 model Restaurant {
-  id             String   @id @default(cuid())
-  planId         String
-  name           String
-  slug           String   @unique
-  email          String?
-  phone          String?
-  userId         String?
-  whatsapp       String?
-  address        String?
-  description    String?
-  logo           String?
-  coverImage     String?
-  instagram      String?
-  facebook       String?
-  tiktok         String?
-  latitude       Float?
-  longitude      Float?
-  showAllBranchesMenuItems Boolean  @default(false)
-  primaryColor   String   @default("#3B82F6")
-  secondaryColor String   @default("#10B981")
-  backgroundColor String  @default("#082E24")
-  cardColor       String  @default("#112E23")
-  surfaceColor    String  @default("#0F3D31")
-  textColor       String  @default("#E8F5E9")
-  mutedColor      String  @default("#9DC4AC")
-  accentColor     String  @default("#C8E235")
-  fontFamily      String  @default("Cairo")
-  
+  id                       String  @id @default(cuid())
+  planId                   String
+  name                     String
+  slug                     String  @unique
+  email                    String?
+  phone                    String?
+  userId                   String?
+  whatsapp                 String?
+  address                  String?
+  description              String?
+  logo                     String?
+  coverImage               String?
+  instagram                String?
+  facebook                 String?
+  tiktok                   String?
+  latitude                 Float?
+  longitude                Float?
+  showAllBranchesMenuItems Boolean @default(false)
+  primaryColor             String  @default("#3B82F6")
+  secondaryColor           String  @default("#10B981")
+  backgroundColor          String  @default("#082E24")
+  cardColor                String  @default("#112E23")
+  surfaceColor             String  @default("#0F3D31")
+  textColor                String  @default("#E8F5E9")
+  mutedColor               String  @default("#9DC4AC")
+  accentColor              String  @default("#C8E235")
+  fontFamily               String  @default("Cairo")
+
   // ✅ أضف هذه الحقول الجديدة هنا
-  timezone        String  @default("Asia/Riyadh")
-  currency        String  @default("SYP")
-  language        String  @default("ar")
-  
-  subdomain      String?  @unique
-  customDomain              String?   @unique
-  customDomainVerified      Boolean?  @default(false)
-  customDomainVerifiedAt    DateTime?
-  customDomainVerificationCode String?  @unique
-  isActive       Boolean  @default(true)
-  deliverySettings Json?
+  timezone String @default("Asia/Riyadh")
+  currency String @default("SYP")
+  language String @default("ar")
+
+  subdomain                    String?   @unique
+  customDomain                 String?   @unique
+  customDomainVerified         Boolean?  @default(false)
+  customDomainVerifiedAt       DateTime?
+  customDomainVerificationCode String?   @unique
+  isActive                     Boolean   @default(true)
+  deliverySettings             Json?
   /// إعدادات طرق الدفع لكل نشاط: { shamCash: { enabled, accountNumber, accountName, note } }
-  paymentSettings  Json?
+  paymentSettings              Json?
   /// اللغات المفعّلة في واجهة الزبون، مثل ["ar"] أو ["ar","en"].
   /// العربية وحدها متاحة بلا ميزة multi_language — راجع services/language.service.ts
-  enabledLanguages Json?
-  subscriptionStart DateTime?
-  subscriptionEnd   DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  enabledLanguages             Json?
+  subscriptionStart            DateTime?
+  subscriptionEnd              DateTime?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 
   // Relations
-  plan        Plan        @relation(fields: [planId], references: [id])
-  owner       User?       @relation("RestaurantOwner", fields: [userId], references: [id])
-  users       User[]      @relation("RestaurantUsers")
-  categories  Category[]
-  menuItems   MenuItem[]
-  tables      Table[]
-  orders      Order[]
-  coupons     Coupon[]
-  tickets     Ticket[]
+  plan       Plan       @relation(fields: [planId], references: [id])
+  owner      User?      @relation("RestaurantOwner", fields: [userId], references: [id])
+  users      User[]     @relation("RestaurantUsers")
+  categories Category[]
+  menuItems  MenuItem[]
+  tables     Table[]
+  orders     Order[]
+  coupons    Coupon[]
+  tickets    Ticket[]
 
   @@index([planId])
   @@index([slug])
 }
 
 model Store {
-  id          String   @id @default(cuid())
-  planId      String
-  name        String
-  slug        String   @unique
-  email       String?
-  phone       String?
-  userId      String?   // owner can have multiple stores
-  address     String?
-  description String?
-  logo        String?
-  coverImage  String?
-  latitude    Float?
-  longitude   Float?
-  showAllBranchesProducts Boolean  @default(false)
-  primaryColor   String   @default("#3B82F6")
-  secondaryColor String   @default("#10B981")
-  backgroundColor String  @default("#FFFFFF")
-  textColor       String  @default("#000000")
-  cardColor       String  @default("#112E23")
-  surfaceColor    String  @default("#0F3D31")
-  mutedColor      String  @default("#9DC4AC")
-  accentColor     String  @default("#C8E235")
-  fontFamily      String  @default("Cairo")
-  timezone        String  @default("Asia/Riyadh")
-  currency        String  @default("SYP")
-  language        String  @default("ar")
-  
-  whatsapp   String?
-  instagram  String?
-  facebook   String?
-  tiktok     String?
-  
+  id                      String  @id @default(cuid())
+  planId                  String
+  name                    String
+  slug                    String  @unique
+  email                   String?
+  phone                   String?
+  userId                  String? // owner can have multiple stores
+  address                 String?
+  description             String?
+  logo                    String?
+  coverImage              String?
+  latitude                Float?
+  longitude               Float?
+  showAllBranchesProducts Boolean @default(false)
+  primaryColor            String  @default("#3B82F6")
+  secondaryColor          String  @default("#10B981")
+  backgroundColor         String  @default("#FFFFFF")
+  textColor               String  @default("#000000")
+  cardColor               String  @default("#112E23")
+  surfaceColor            String  @default("#0F3D31")
+  mutedColor              String  @default("#9DC4AC")
+  accentColor             String  @default("#C8E235")
+  fontFamily              String  @default("Cairo")
+  timezone                String  @default("Asia/Riyadh")
+  currency                String  @default("SYP")
+  language                String  @default("ar")
+
+  whatsapp  String?
+  instagram String?
+  facebook  String?
+  tiktok    String?
+
   deliverySettings     Json?
   paymentSettings      Json?
   notificationSettings Json?
   /// اللغات المفعّلة في واجهة الزبون — نفس قواعد المطعم
   enabledLanguages     Json?
-  
-  subdomain       String   @unique
-  customDomain    String?  @unique
-  customDomainVerified   Boolean? @default(false)
-  customDomainVerifiedAt DateTime?
-  customDomainVerificationCode String? @unique
-  
-  isActive        Boolean  @default(true)
+
+  subdomain                    String    @unique
+  customDomain                 String?   @unique
+  customDomainVerified         Boolean?  @default(false)
+  customDomainVerifiedAt       DateTime?
+  customDomainVerificationCode String?   @unique
+
+  isActive          Boolean   @default(true)
   subscriptionStart DateTime?
   subscriptionEnd   DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // ✅ العلاقات - تم إصلاحها
-  plan        Plan        @relation(fields: [planId], references: [id])
-  owner       User?       @relation("StoreOwner", fields: [userId], references: [id])
-  users       User[]      @relation("StoreUsers")
-  categories  Category[]
-  products    Product[]
-  orders      Order[]
-  coupons     Coupon[]
-  drivers     Driver[]
-  tickets     Ticket[]
+  plan       Plan       @relation(fields: [planId], references: [id])
+  owner      User?      @relation("StoreOwner", fields: [userId], references: [id])
+  users      User[]     @relation("StoreUsers")
+  categories Category[]
+  products   Product[]
+  orders     Order[]
+  coupons    Coupon[]
+  drivers    Driver[]
+  tickets    Ticket[]
 
   @@index([planId])
   @@index([slug])
 }
 
 model Category {
-  id          String   @id @default(cuid())
-  storeId     String?
-  restaurantId String?
-  name        String
-  nameEn      String?
-  description String?
+  id            String   @id @default(cuid())
+  storeId       String?
+  restaurantId  String?
+  name          String
+  nameEn        String?
+  description   String?
   descriptionEn String?
-  image       String?
-  position    Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  image         String?
+  position      Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   store      Store?      @relation(fields: [storeId], references: [id])
@@ -347,31 +347,31 @@ model Category {
 }
 
 model MenuItem {
-  id           String    @id @default(cuid())
-  restaurantId String
-  categoryId   String?
-  name         String
-  nameEn       String?
-  description  String?
-  descriptionEn String?
-  price        Float
-  originalPrice Float?
+  id              String   @id @default(cuid())
+  restaurantId    String
+  categoryId      String?
+  name            String
+  nameEn          String?
+  description     String?
+  descriptionEn   String?
+  price           Float
+  originalPrice   Float?
   /// صورة الغلاف — مشتقة من images[0]، أُبقيت للتوافق مع القراءات القائمة.
-  image        String?
+  image           String?
   /// مصفوفة روابط الصور. الغلاف أولها.
-  images       Json?
-  isAvailable  Boolean   @default(true)
-  isPopular    Boolean   @default(false)
-  isNew        Boolean   @default(false)
-  preparationTime Int?    @default(0)
-  position     Int       @default(0)
-  ordersCount  Int       @default(0)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  images          Json?
+  isAvailable     Boolean  @default(true)
+  isPopular       Boolean  @default(false)
+  isNew           Boolean  @default(false)
+  preparationTime Int?     @default(0)
+  position        Int      @default(0)
+  ordersCount     Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
-  category   Category?  @relation(fields: [categoryId], references: [id])
+  restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
+  category   Category?   @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]
 
   @@index([restaurantId])
@@ -379,52 +379,52 @@ model MenuItem {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  storeId     String
-  name        String
-  nameEn      String?
-  sku         String    @unique
-  description String?
-  price       Float
+  id            String   @id @default(cuid())
+  storeId       String
+  name          String
+  nameEn        String?
+  sku           String   @unique
+  description   String?
+  price         Float
   /// السعر قبل التخفيض. أعلى من price يعني عرضاً؛ مساوٍ أو أقل يُتجاهَل.
   originalPrice Float?
-  cost        Float?
-  stock       Int       @default(0)
-  reservedStock Int     @default(0)
-  minStockLevel Int     @default(5)
+  cost          Float?
+  stock         Int      @default(0)
+  reservedStock Int      @default(0)
+  minStockLevel Int      @default(5)
   maxStockLevel Int?
   /// صورة الغلاف — تبقى مشتقة من images[0]. لم تُستبدل لأن 131 موضعاً
   /// يقرأها، واستبدالها دفعةً واحدة مخاطرة بلا مقابل.
-  imageUrl    String?
+  imageUrl      String?
   /// مصفوفة روابط الصور. الغلاف أولها.
-  images      Json?
-  categoryId  String?
-  isAvailable Boolean   @default(true)
-  unit        String    @default("piece")
-  sortOrder   Int       @default(0)
+  images        Json?
+  categoryId    String?
+  isAvailable   Boolean  @default(true)
+  unit          String   @default("piece")
+  sortOrder     Int      @default(0)
   /// يرفعه التاجر يدوياً — تناظراً مع MenuItem
-  isPopular   Boolean   @default(false)
+  isPopular     Boolean  @default(false)
   /// عدّاد مبيعات يُغذّي تصنيف «الرائج» بلا تدخّل يدوي
-  ordersCount Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  ordersCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
-  store     Store       @relation(fields: [storeId], references: [id])
-  category  Category?   @relation(fields: [categoryId], references: [id])
+  store      Store               @relation(fields: [storeId], references: [id])
+  category   Category?           @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]
-  movements InventoryMovement[]
+  movements  InventoryMovement[]
 }
 
 model InventoryMovement {
-  id          String   @id @default(cuid())
-  productId   String
-  quantity    Int
-  type        String
-  reason      String?
-  referenceId String?
+  id            String   @id @default(cuid())
+  productId     String
+  quantity      Int
+  type          String
+  reason        String?
+  referenceId   String?
   referenceType String?
-  createdAt   DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   // Relations
   product Product @relation(fields: [productId], references: [id])
@@ -475,15 +475,15 @@ model Order {
   updatedAt              DateTime      @updatedAt
 
   // Relations
-  restaurant   Restaurant?   @relation(fields: [restaurantId], references: [id])
-  store        Store?        @relation(fields: [storeId], references: [id])
-  table        Table?        @relation(fields: [tableId], references: [id])
-  driver       Driver?       @relation(fields: [assignedDriverId], references: [id])
-  creator      User?         @relation("CreatedOrders", fields: [createdBy], references: [id])
-  coupon       Coupon?       @relation(fields: [couponCode], references: [code])
-  items        OrderItem[]
+  restaurant    Restaurant?      @relation(fields: [restaurantId], references: [id])
+  store         Store?           @relation(fields: [storeId], references: [id])
+  table         Table?           @relation(fields: [tableId], references: [id])
+  driver        Driver?          @relation(fields: [assignedDriverId], references: [id])
+  creator       User?            @relation("CreatedOrders", fields: [createdBy], references: [id])
+  coupon        Coupon?          @relation(fields: [couponCode], references: [code])
+  items         OrderItem[]
   driverEarning DriverEarning?
-  deliveries   DriverDelivery[]
+  deliveries    DriverDelivery[]
 
   @@index([restaurantId])
   @@index([storeId])
@@ -494,22 +494,22 @@ model Order {
 }
 
 model OrderItem {
-  id          String    @id @default(cuid())
-  orderId     String
-  menuItemId  String?
-  productId   String?
-  quantity    Int       @default(1)
-  price       Float
-  size        String?
-  addons      Json?
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String   @id @default(cuid())
+  orderId    String
+  menuItemId String?
+  productId  String?
+  quantity   Int      @default(1)
+  price      Float
+  size       String?
+  addons     Json?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relations
-  order     Order     @relation(fields: [orderId], references: [id])
-  menuItem  MenuItem? @relation(fields: [menuItemId], references: [id])
-  product   Product?  @relation(fields: [productId], references: [id])
+  order    Order     @relation(fields: [orderId], references: [id])
+  menuItem MenuItem? @relation(fields: [menuItemId], references: [id])
+  product  Product?  @relation(fields: [productId], references: [id])
 
   @@index([orderId])
   @@index([menuItemId])
@@ -517,20 +517,20 @@ model OrderItem {
 }
 
 model Coupon {
-  id          String   @id @default(cuid())
-  storeId     String?
-  restaurantId String?
-  code        String   @unique
-  discountType String
-  discountValue Float
+  id             String    @id @default(cuid())
+  storeId        String?
+  restaurantId   String?
+  code           String    @unique
+  discountType   String
+  discountValue  Float
   minOrderAmount Float?
-  startDate   DateTime @default(now())
-  endDate     DateTime?
-  usageLimit  Int?
-  usageCount  Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  startDate      DateTime  @default(now())
+  endDate        DateTime?
+  usageLimit     Int?
+  usageCount     Int       @default(0)
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
   store      Store?      @relation(fields: [storeId], references: [id])
@@ -539,18 +539,18 @@ model Coupon {
 }
 
 model Table {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   restaurantId String
   name         String
   nameEn       String?
-  seats        Int       @default(2)
+  seats        Int      @default(2)
   qrCode       String?
-  sortOrder    Int       @default(0)
+  sortOrder    Int      @default(0)
   qrSvg        String?
   notes        String?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
   restaurant Restaurant @relation(fields: [restaurantId], references: [id])
@@ -572,9 +572,9 @@ model Ticket {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  user       User       @relation(fields: [userId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
   restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
-  store      Store?     @relation(fields: [storeId], references: [id])
+  store      Store?      @relation(fields: [storeId], references: [id])
 
   @@index([userId])
   @@index([restaurantId])
@@ -582,30 +582,30 @@ model Ticket {
 }
 
 model Driver {
-  id          String   @id @default(cuid())
-  userId      String
-  storeId     String?
-  vehicleType String?
-  vehiclePlate String?
-  licenseNumber String?
-  hourlyRate  Float    @default(0)
-  baseSalary  Float    @default(0)
-  isActive    Boolean  @default(true)
-  isOnline    Boolean  @default(false)
-  currentLat  Float?
-  currentLng  Float?
+  id                 String    @id @default(cuid())
+  userId             String
+  storeId            String?
+  vehicleType        String?
+  vehiclePlate       String?
+  licenseNumber      String?
+  hourlyRate         Float     @default(0)
+  baseSalary         Float     @default(0)
+  isActive           Boolean   @default(true)
+  isOnline           Boolean   @default(false)
+  currentLat         Float?
+  currentLng         Float?
   lastLocationUpdate DateTime?
-  lastActiveAt DateTime?
-  totalDeliveries Int   @default(0)
-  rating      Float    @default(5.0)
-  totalEarnings Float  @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  lastActiveAt       DateTime?
+  totalDeliveries    Int       @default(0)
+  rating             Float     @default(5.0)
+  totalEarnings      Float     @default(0)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // Relations
-  user       User          @relation(fields: [userId], references: [id])
-  store      Store?        @relation(fields: [storeId], references: [id])
-  orders     Order[]       @relation
+  user       User             @relation(fields: [userId], references: [id])
+  store      Store?           @relation(fields: [storeId], references: [id])
+  orders     Order[]          @relation
   earnings   DriverEarning[]
   shifts     DriverShift[]
   deliveries DriverDelivery[]
@@ -628,7 +628,7 @@ model DriverDelivery {
 
   // Relations
   driver Driver @relation(fields: [driverId], references: [id])
-  order  Order @relation(fields: [orderId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
 
   @@index([driverId])
   @@index([orderId])
@@ -636,41 +636,41 @@ model DriverDelivery {
 }
 
 model DriverLocationHistory {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   driverId   String
   latitude   Float
   longitude  Float
-  recordedAt DateTime  @default(now())
+  recordedAt DateTime @default(now())
 
   @@index([driverId])
   @@index([recordedAt])
 }
 
 model DriverEarning {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   driverId    String
-  orderId     String   @unique
+  orderId     String    @unique
   amount      Float
   type        String
   description String?
-  status      String   @default("pending")
+  status      String    @default("pending")
   paidAt      DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   // Relations
   driver Driver @relation(fields: [driverId], references: [id])
-  order  Order @relation(fields: [orderId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
 }
 
 model DriverShift {
-  id          String   @id @default(cuid())
-  driverId    String
-  startedAt   DateTime @default(now())
-  endedAt     DateTime?
-  duration    Int?
-  status      String   @default("active")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String    @id @default(cuid())
+  driverId  String
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  duration  Int?
+  status    String    @default("active")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   // Relations
   driver Driver @relation(fields: [driverId], references: [id])
@@ -679,27 +679,27 @@ model DriverShift {
 // ==================== باقي النماذج (بدون تغيير) ====================
 
 model Advertisement {
-  id          String   @id @default(cuid())
-  title       String
-  titleEn     String?
-  description String?  @db.Text
-  descriptionEn String? @db.Text
-  imageUrl    String
-  linkUrl     String?
-  position    Int      @default(0)
-  isActive    Boolean  @default(true)
-  startAt     DateTime?
-  endAt       DateTime?
-  price       Float    @default(0)
-  paid        Boolean  @default(false)
+  id               String    @id @default(cuid())
+  title            String
+  titleEn          String?
+  description      String?   @db.Text
+  descriptionEn    String?   @db.Text
+  imageUrl         String
+  linkUrl          String?
+  position         Int       @default(0)
+  isActive         Boolean   @default(true)
+  startAt          DateTime?
+  endAt            DateTime?
+  price            Float     @default(0)
+  paid             Boolean   @default(false)
   paymentReference String?
-  clientName  String?
-  clientEmail String?
-  clientPhone String?
-  approvedBy  String?
-  approvedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  clientName       String?
+  clientEmail      String?
+  clientPhone      String?
+  approvedBy       String?
+  approvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([isActive])
   @@index([startAt, endAt])
@@ -707,20 +707,20 @@ model Advertisement {
 }
 
 model Image {
-  id                String      @id @default(cuid())
-  userId            String?     @map("user_id")
-  businessType      String      @map("business_type")
-  businessId        String?     @map("business_id")
-  uploadType        String?     @map("upload_type")
-  subType           String?     @map("sub_type")
-  provider          String      @default("cloudflare")
-  imageUrl          String      @map("image_url")
-  cloudflareImageId String?     @map("cloudflare_image_id")
-  originalName      String?     @map("original_name")
-  mimeType          String?     @map("mime_type")
-  sizeBytes         Int?        @map("size_bytes")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
+  id                String   @id @default(cuid())
+  userId            String?  @map("user_id")
+  businessType      String   @map("business_type")
+  businessId        String?  @map("business_id")
+  uploadType        String?  @map("upload_type")
+  subType           String?  @map("sub_type")
+  provider          String   @default("cloudflare")
+  imageUrl          String   @map("image_url")
+  cloudflareImageId String?  @map("cloudflare_image_id")
+  originalName      String?  @map("original_name")
+  mimeType          String?  @map("mime_type")
+  sizeBytes         Int?     @map("size_bytes")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@index([businessType, businessId])
   @@index([uploadType, subType])
@@ -729,25 +729,25 @@ model Image {
 }
 
 model Subscription {
-  id               String   @id @default(cuid()) 
+  id               String    @id @default(cuid())
   businessType     String
   businessId       String
   planId           String
   planName         String
   months           Int
   price            Float
-  discount         Float    @default(0)
+  discount         Float     @default(0)
   totalPaid        Float
   startDate        DateTime
   endDate          DateTime
-  status           String   @default("active")
+  status           String    @default("active")
   paymentMethod    String
   paymentReference String?
   notes            String?
-  reminderSent     Boolean  @default(false)
+  reminderSent     Boolean   @default(false)
   reminderSentAt   DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // ✅ أضف هذه العلاقات
   // restaurant       Restaurant? @relation(fields: [businessId], references: [id], onDelete: Cascade)
@@ -791,37 +791,37 @@ model MarketingSettings {
 }
 
 model PlatformSetting {
-  id               String       @id @default(cuid())
-  key              String       @unique
-  value            String       @db.Text
-  type             SettingType  @default(string)
-  group            SettingGroup @default(general)
-  description      String?
-  isPublic         Boolean      @default(false)
-  contactPhone     String?
-  contactWhatsapp  String?
-  contactEmail     String?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  key             String       @unique
+  value           String       @db.Text
+  type            SettingType  @default(string)
+  group           SettingGroup @default(general)
+  description     String?
+  isPublic        Boolean      @default(false)
+  contactPhone    String?
+  contactWhatsapp String?
+  contactEmail    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   @@index([key])
   @@index([group])
 }
 
 model ExtendedPlatformSetting {
-  id             String       @id @default(cuid())
-  keyName        String       @unique
-  value          String       @db.Text
-  type           SettingType  @default(string)
-  settingGroup   SettingGroup @default(general)
-  description    String?
-  isPublic       Boolean      @default(false)
-  isEditable     Boolean      @default(true)
-  validation     Json?
-  createdBy      String?
-  updatedBy      String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  keyName      String       @unique
+  value        String       @db.Text
+  type         SettingType  @default(string)
+  settingGroup SettingGroup @default(general)
+  description  String?
+  isPublic     Boolean      @default(false)
+  isEditable   Boolean      @default(true)
+  validation   Json?
+  createdBy    String?
+  updatedBy    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@index([keyName])
   @@index([settingGroup])
@@ -885,44 +885,72 @@ model UpgradeRequest {
 }
 
 model Feature {
-  code          String   @id
-  name          String
-  nameEn        String?
-  description   String?  @db.Text
-  descriptionEn String?  @db.Text
-  category      String   @default("both")
-  group         String   @default("basic")
-  isCore        Boolean  @default(false)
-  isActive      Boolean  @default(true)
-  price         Float    @default(0)
-  isOneTime     Boolean  @default(false)
+  code           String   @id
+  name           String
+  nameEn         String?
+  description    String?  @db.Text
+  descriptionEn  String?  @db.Text
+  category       String   @default("both")
+  group          String   @default("basic")
+  isCore         Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  price          Float    @default(0)
+  isOneTime      Boolean  @default(false)
   defaultInPlans Json?
-  dependsOn     Json?
-  configSchema  Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  dependsOn      Json?
+  configSchema   Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([isActive])
   @@index([category])
 }
 
 model BusinessFeature {
-  id            String    @id @default(cuid())
-  businessId    String
-  businessType  String
-  featureCode   String
-  isEnabled     Boolean   @default(true)
-  isOverridden  Boolean   @default(false)
-  overrideReason String?  @db.Text
-  overriddenBy  String?
-  expiresAt     DateTime?
-  config        Json?
-  assignedBy    String?
-  assignedAt    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  businessId     String
+  businessType   String
+  featureCode    String
+  isEnabled      Boolean   @default(true)
+  isOverridden   Boolean   @default(false)
+  overrideReason String?   @db.Text
+  overriddenBy   String?
+  expiresAt      DateTime?
+  config         Json?
+  assignedBy     String?
+  assignedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@unique([businessId, businessType, featureCode])
+  @@index([businessId, businessType])
+  @@index([featureCode])
+}
+
+// طلب شراء ميزة مفردة.
+//
+// الميزات تُباع خارج الخطط: تاجر على المجانية قد يحتاج إخفاء شعار المنصة
+// وحده، ولا معنى لدفعه ثمن خطة كاملة لأجله. وبلا هذا الجدول لم يكن للتاجر
+// طريق إلى ميزة مفردة إطلاقاً — الإسناد يدوي من السوبر أدمن فقط.
+//
+// لا دفع إلكتروني: الطلب يُنشأ، ويتواصل السوبر أدمن، ثم يوافق فتُسند
+// الميزة. نفس مسار طلبات الترقية.
+model FeatureRequest {
+  id           String    @id @default(cuid())
+  userId       String
+  businessId   String
+  businessType String
+  featureCode  String
+  status       String    @default("pending")
+  note         String?   @db.Text
+  rejectReason String?   @db.Text
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([userId])
   @@index([businessId, businessType])
   @@index([featureCode])
 }
@@ -944,9 +972,9 @@ model Setting {
 /// أنه فاته شيء. التخزين هنا يجعل الإشعار حدثاً دائماً، والسوكِت مجرّد
 /// وسيلة توصيل فوري له.
 model Notification {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   /// المستقبِل. للإشعارات الإدارية يُنشأ صفّ لكل مشرف.
-  userId    String   @map("user_id")
+  userId    String    @map("user_id")
   /// تصنيف: upgrade_request، order، ticket…
   type      String
   /// الحدث الدقيق: upgrade_request.created أو .approved

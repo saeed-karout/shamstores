@@ -150,7 +150,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // بقية المداخل مشروطة بالاستحقاق فتختفي كلياً عمّن لا يملكها — فلا يعرف
     // صاحب الخطة المجانية أن الكوبونات موجودة أصلاً. وميزة مخفيّة لا تُباع:
     // إخفاؤها يحمي الواجهة من الفوضى ويكلّف كل فرصة ترقية.
-    items.push({ path: '/plans', icon: IoSparkles, label: 'الميزات والخطط' });
+    items.push({ path: '/features', icon: IoSparkles, label: 'الميزات', badge: 'جديد' });
+    items.push({ path: '/plans', icon: IoRocket, label: 'الخطط' });
     items.push({ path: '/settings', icon: IoSettings, label: 'الإعدادات' });
     return items;
   };
@@ -170,7 +171,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (hasOnlineOrders) items.push({ path: '/store/drivers', icon: IoCar, label: 'السائقين' });
     if (hasTableQr) items.push({ path: '/store/qr-codes', icon: IoQrCode, label: 'رموز QR' });
     if (hasMarketing) items.push({ path: '/store/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
-    items.push({ path: '/store/plans', icon: IoRocket, label: 'خطط الأسعار' });
+    items.push({ path: '/features', icon: IoSparkles, label: 'الميزات', badge: 'جديد' });
+    items.push({ path: '/store/plans', icon: IoRocket, label: 'الخطط' });
     items.push({ path: '/store/settings', icon: IoSettings, label: 'الإعدادات' });
     return items;
   };

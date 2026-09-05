@@ -13,6 +13,7 @@ import {
   IoCloseCircle
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+import FeatureRequestsPanel from '@/components/admin/FeatureRequestsPanel';
 
 const C = {
   bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
@@ -326,13 +327,19 @@ const AdminFeatures: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>⚙️ إدارة ميزات المنصة</h1>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إنشاء وتعديل الميزات المتاحة للمطاعم والمتاجر</p>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
+            تعريف الميزات وتسعيرها. الاختيار للتجّار — يشترونها من قسم
+            الميزات في لوحاتهم، وتصلك طلباتهم أدناه.
+          </p>
         </div>
         <Button variant="primary" onClick={() => handleOpenModal()}>
           <IoAdd style={{ display: 'inline', marginLeft: 4 }} />
           إضافة ميزة جديدة
         </Button>
       </div>
+
+      {/* ما يصل الإدارة من اختيار التجّار */}
+      <FeatureRequestsPanel />
 
       {/* Filters */}
       <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16, marginBottom: 24 }}>
