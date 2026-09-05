@@ -282,14 +282,20 @@ const commands = {
       await p.plan.upsert({ where: { id: seed.id }, update: seed, create: seed });
 
       if (!before) {
-        console.log(`+ ${seed.name}: أُنشئت — $${seed.price} · ${seed.maxProducts} منتج`);
-      } else if (before.price !== seed.price || before.maxProducts !== seed.maxProducts) {
-        console.log(
-          `~ ${seed.name}: $${before.price} → $${seed.price} · ` +
-          `${before.maxProducts} → ${seed.maxProducts} منتج`
-        );
+        console.log(`+ ${seed.name}: أُنشئت — $${seed.price} · ${seed.maxProducts} منتج · ${seed.maxOrders} طلب`);
       } else {
-        console.log(`= ${seed.name}: بلا تغيير`);
+        // كل حقل يتغيّر يُذكَر. المقارنة على السعر وعدد المنتجات وحدهما
+        // كانت تطبع «بلا تغيير» بينما الحصّة أو بوابة الطلبات تتبدّل —
+        // تقريرٌ يكذب أسوأ من غيابه.
+        const changes = [];
+        if (before.price !== seed.price) changes.push(`السعر $${before.price} → $${seed.price}`);
+        if (before.maxProducts !== seed.maxProducts) changes.push(`المنتجات ${before.maxProducts} → ${seed.maxProducts}`);
+        if (before.maxMenuItems !== seed.maxMenuItems) changes.push(`الأصناف ${before.maxMenuItems} → ${seed.maxMenuItems}`);
+        if (before.maxOrders !== seed.maxOrders) changes.push(`الطلبات ${before.maxOrders} → ${seed.maxOrders}`);
+        if (before.hasOnlineOrders !== !!seed.hasOnlineOrders) changes.push(`الطلبات أونلاين ${before.hasOnlineOrders ? 'نعم' : 'لا'} → ${seed.hasOnlineOrders ? 'نعم' : 'لا'}`);
+        if (before.hasBrandingRemoval !== !!seed.hasBrandingRemoval) changes.push(`إخفاء الشعار ${before.hasBrandingRemoval ? 'نعم' : 'لا'} → ${seed.hasBrandingRemoval ? 'نعم' : 'لا'}`);
+
+        console.log(changes.length ? `~ ${seed.name}: ${changes.join(' · ')}` : `= ${seed.name}: بلا تغيير`);
       }
     }
     console.log('');
