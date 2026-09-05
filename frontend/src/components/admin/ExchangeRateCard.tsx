@@ -36,8 +36,8 @@ const ExchangeRateCard: React.FC<{ colors: Palette }> = ({ colors: C }) => {
   useEffect(() => {
     (async () => {
       try {
-        const response: any = await api.get('/platform-settings/exchange-rate');
-        const data = response?.data?.data ?? response?.data;
+        // api.get يُرجع الحمولة مفكوكة التغليف — لا تفكّها مجدداً
+        const data: any = await api.get('/platform-settings/exchange-rate');
         setState(data);
         if (data?.usdRate) setInput(String(data.usdRate));
       } catch {

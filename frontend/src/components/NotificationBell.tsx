@@ -71,8 +71,10 @@ const NotificationBell: React.FC<{ colors: Palette }> = ({ colors: C }) => {
       if (unreadOnly) params.set('unread', 'true');
       if (filterType) params.set('type', filterType);
 
-      const response: any = await api.get(`/notifications?${params.toString()}`);
-      const data = response?.data?.data ?? response?.data;
+      // ⚠️ عقد عميل الـ API: `api.get` يُرجع `response.data.data` — أي
+      // الحمولة مفكوكة التغليف بالكامل. فكّها مجدداً هنا يُنتج undefined
+      // بصمت: لا خطأ ولا تحذير، فقط قائمة فارغة.
+      const data: any = await api.get(`/notifications?${params.toString()}`);
       setRows(data?.items || []);
       setUnreadCount(data?.unreadCount ?? 0);
       setTypes(data?.types || []);
@@ -85,8 +87,7 @@ const NotificationBell: React.FC<{ colors: Palette }> = ({ colors: C }) => {
 
   const refreshCount = useCallback(async () => {
     try {
-      const response: any = await api.get('/notifications/unread-count');
-      const data = response?.data?.data ?? response?.data;
+      const data: any = await api.get('/notifications/unread-count');
       setUnreadCount(data?.unreadCount ?? 0);
     } catch {
       /* صامت */
