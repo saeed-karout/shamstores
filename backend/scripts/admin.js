@@ -103,6 +103,54 @@ const findUser = async (email) => {
 
 const commands = {
   /**
+   * ينقل المتاجر من اللوحة القديمة المكسورة إلى لوحة المتجر الجديدة.
+   *
+   * الافتراضي القديم كان خلفية بيضاء ونصاً أسود مع بطاقات وأسطح داكنة —
+   * نصٌّ رمادي فاتح على أبيض وبطاقات سوداء عليه. تغيير الافتراضي في
+   * المخطط يصلح المتاجر الجديدة وحدها، وهذه للقائمة.
+   *
+   * ⚠️ يمسّ فقط ما طابق القيم القديمة حرفياً. متجر عدّل لونه عمداً — ولو
+   * إلى الأبيض — لا يُلمس: تفضيله أهمّ من اتّساقنا.
+   */
+  async 'restyle-stores'() {
+    const OLD = { backgroundColor: '#FFFFFF', textColor: '#000000' };
+    const NEW = {
+      primaryColor: '#6366F1',
+      secondaryColor: '#22C55E',
+      backgroundColor: '#0D1424',
+      textColor: '#E9EEF9',
+      cardColor: '#151E33',
+      surfaceColor: '#1C2742',
+      mutedColor: '#94A2BE',
+      accentColor: '#FFB020'
+    };
+
+    const p = getPrisma();
+    const candidates = await p.store.findMany({
+      where: OLD,
+      select: { id: true, name: true, accentColor: true, primaryColor: true }
+    });
+
+    if (candidates.length === 0) {
+      console.log('لا متجر على اللوحة القديمة — لا تغيير.');
+      return;
+    }
+
+    const dryRun = args.includes('--dry-run');
+    console.log(`${candidates.length} متجر على اللوحة القديمة:`);
+    for (const store of candidates) console.log(`  • ${store.name}`);
+
+    if (dryRun) {
+      console.log('');
+      console.log('(معاينة فقط — أعد الأمر بلا --dry-run للتنفيذ)');
+      return;
+    }
+
+    const result = await p.store.updateMany({ where: OLD, data: NEW });
+    console.log('');
+    console.log(`✅ حُدِّث ${result.count} متجر إلى لوحة المتجر الداكنة.`);
+  },
+  /**
    * يلحق نشاطاً تجارياً بحساب أُنشئ زبوناً بالخطأ.
    *
    * لإصلاح الحسابات التي سجّلت بغوغل قبل أن يقرأ firebaseSignIn نيّة
@@ -556,6 +604,7 @@ const commands = {
       console.log('  make-superadmin <بريد>    ترقية إلى سوبر أدمن');
       console.log('  reset-password <بريد>     كلمة مرور مؤقتة');
       console.log('  attach-business <بريد> <restaurant|store> <اسم>  إلحاق نشاط بحساب أُنشئ زبوناً');
+      console.log('  restyle-stores [--dry-run]  نقل المتاجر من اللوحة البيضاء المكسورة');
       console.log('  migrate-currency [من] [إلى]  ترحيل عملة الأنشطة (افتراضياً SAR→SYP)');
       console.log('  set-usd-rate <رقم>        سعر صرف الدولار العام');
       console.log('  sync-plans                مواءمة الخطط مع تعريفها في الكود');

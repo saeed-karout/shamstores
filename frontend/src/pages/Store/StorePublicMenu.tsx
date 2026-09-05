@@ -25,7 +25,6 @@ import { Link, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
-  IoSearchOutline,
   IoClose,
   IoSwapVerticalOutline,
   IoPersonCircleOutline,
@@ -40,8 +39,7 @@ import PublicMarketingSections from '@/components/public/PublicMarketingSections
 import PublicFooter from '@/components/public/PublicFooter';
 import OrderTrackingModal from '@/components/OrderTrackingModal';
 
-import StorefrontLayout from '@/components/storefront/StorefrontLayout';
-import StickyCategoryNav from '@/components/storefront/StickyCategoryNav';
+import ShopLayout from '@/components/storefront/ShopLayout';
 import ProductGridCard, { StorefrontProduct } from '@/components/storefront/ProductGridCard';
 import CartSheet, { StorefrontOrderType } from '@/components/storefront/CartSheet';
 import BottomCartBar from '@/components/storefront/BottomCartBar';
@@ -68,6 +66,7 @@ import type { CartItem } from '@/services/types';
 interface Category {
   id: string;
   name: string;
+  image?: string | null;
   position?: number;
 }
 
@@ -94,8 +93,6 @@ const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
   { key: 'price-high', label: 'السعر: من الأعلى' },
   { key: 'newest', label: 'الأحدث' }
 ];
-
-const MINI_HEADER_OFFSET = 56;
 
 /** قسم افتراضي للمنتجات بلا فئة — أفضل من إخفائها */
 const UNCATEGORIZED = '__other__';
@@ -189,7 +186,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         };
 
         setStore(merged);
-        applyStorefrontTheme(merged);
+        applyStorefrontTheme(merged, 'store');
         // ThemeContext يخدم بقية الصفحات — يبقى متزامناً مع متغيرات المتجر
         setThemeColors({
           primaryColor: merged.primaryColor,
@@ -310,12 +307,22 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
     const named = categories
       .filter((c) => (counts.get(c.id) || 0) > 0)
-      .map((c) => ({ id: c.id, name: c.name, count: counts.get(c.id) || 0 }));
+      .map((c) => ({ id: c.id, name: c.name, image: c.image, count: counts.get(c.id) || 0 }));
 
     if ((counts.get(UNCATEGORIZED) || 0) > 0) {
-      named.push({ id: UNCATEGORIZED, name: 'منتجات أخرى', count: counts.get(UNCATEGORIZED)! });
+      named.push({
+        id: UNCATEGORIZED,
+        name: 'منتجات أخرى',
+        image: null,
+        count: counts.get(UNCATEGORIZED)!
+      });
     }
-    return named;
+
+    // «الكل» بلاطة مثل غيرها: في نمط البلاطات لا يوجد شريط يحمل خياراً
+    // منفصلاً، فبلا هذه لا سبيل للعودة من قسم إلى كل المنتجات
+    return named.length > 1
+      ? [{ id: 'all', name: 'كل المنتجات', image: null, count: products.length }, ...named]
+      : named;
   }, [products, categories]);
 
   const discountedCount = useMemo(
@@ -535,22 +542,11 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     ? ['delivery', 'takeaway']
     : ['takeaway'];
 
-  const headerActions = (
-    <>
-      <button type="button" onClick={() => setSearchOpen(true)} aria-label="بحث" style={iconButtonStyle}>
-        <IoSearchOutline size={19} />
-      </button>
-      <button type="button" onClick={() => setSortSheetOpen(true)} aria-label="ترتيب" style={iconButtonStyle}>
-        <IoSwapVerticalOutline size={19} />
-      </button>
-    </>
-  );
-
   return (
     <>
       <StorefrontSeo business={store} type="store" itemCount={products.length} />
 
-      <StorefrontLayout
+      <ShopLayout
         name={store.name}
         description={store.description}
         logo={store.logo}
@@ -558,30 +554,19 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         phone={store.phone}
         whatsapp={store.whatsapp}
         address={store.address}
-        branchLabel={store.branchLabel}
         branches={branches.map((b: any) => ({
           id: b.id,
           name: b.name,
           url: b.url,
-          label: b.linkLabel,
           isCurrent: b.id === store.id
         }))}
-        headerActions={headerActions}
+        categories={isSearching ? [] : navCategories}
+        activeCategory={activeCategory}
+        onCategorySelect={setActiveCategory}
         cartCount={cartCount}
         onCartClick={() => setCartOpen(true)}
-        stickyNav={
-          !isSearching && navCategories.length > 1 ? (
-            <StickyCategoryNav
-              categories={navCategories}
-              activeId={activeCategory}
-              onSelect={setActiveCategory}
-              scrollSpy={false}
-              offsetTop={MINI_HEADER_OFFSET}
-              showAll
-              allLabel="كل المنتجات"
-            />
-          ) : null
-        }
+        onSearchClick={() => setSearchOpen(true)}
+        searchLabel={isSearching ? searchQuery : 'ابحث في المنتجات…'}
         footer={
           <PublicFooter
             businessName={store.name}
@@ -609,63 +594,38 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           />
         }
       >
-        {/* شريط الأدوات */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+        {/* شريط الأدوات — البحث انتقل إلى الشريط العلوي الدائم */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           <button
             type="button"
-            onClick={() => setSearchOpen(true)}
+            onClick={() => setSortSheetOpen(true)}
             style={{
-              flex: 1,
-              minHeight: 44,
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: 9,
-              padding: '0 14px',
-              borderRadius: 13,
+              gap: 7,
+              padding: '7px 13px',
+              minHeight: 36,
+              borderRadius: 999,
               border: `1px solid ${sf.border}`,
               background: sf.card,
               color: sf.muted,
-              fontSize: 13,
+              fontSize: 12.5,
+              fontWeight: 700,
               fontFamily: 'inherit',
-              cursor: 'pointer',
-              textAlign: 'start'
+              cursor: 'pointer'
             }}
           >
-            <IoSearchOutline size={17} />
-            {isSearching ? searchQuery : 'ابحث في المنتجات...'}
+            <IoSwapVerticalOutline size={15} />
+            {SORT_OPTIONS.find((o) => o.key === sortBy)?.label || 'ترتيب'}
           </button>
 
-          <button type="button" onClick={() => setSortSheetOpen(true)} style={iconButtonStyle} aria-label="ترتيب">
-            <IoSwapVerticalOutline size={19} />
-          </button>
-
-          {isAuthenticated ? (
-            <button
-              type="button"
-              onClick={() => {
-                fetchMyOrders();
-                setShowOrderTracking(true);
-              }}
-              style={iconButtonStyle}
-              aria-label="طلباتي"
-            >
-              <IoReceiptOutline size={19} />
-            </button>
-          ) : (
-            <Link to="/user/login" style={{ ...iconButtonStyle, textDecoration: 'none' }} aria-label="تسجيل الدخول (اختياري)">
-              <IoPersonCircleOutline size={19} />
-            </Link>
-          )}
-        </div>
-
-        {/* مرشّح العروض — يظهر فقط حين توجد عروض فعلاً */}
+          {/* مرشّح العروض — يظهر فقط حين توجد عروض فعلاً */}
         {discountedCount > 0 && (
           <button
             type="button"
             onClick={() => setOnlyDiscounted((v) => !v)}
             aria-pressed={onlyDiscounted}
             style={{
-              marginTop: 10,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 7,
@@ -686,6 +646,29 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             {onlyDiscounted && <IoClose size={14} />}
           </button>
         )}
+
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => {
+                fetchMyOrders();
+                setShowOrderTracking(true);
+              }}
+              style={{ ...iconButtonStyle, width: 36, height: 36, minWidth: 36, borderRadius: 999 }}
+              aria-label="طلباتي"
+            >
+              <IoReceiptOutline size={17} />
+            </button>
+          ) : (
+            <Link
+              to="/user/login"
+              style={{ ...iconButtonStyle, width: 36, height: 36, minWidth: 36, borderRadius: 999, textDecoration: 'none' }}
+              aria-label="تسجيل الدخول (اختياري)"
+            >
+              <IoPersonCircleOutline size={17} />
+            </Link>
+          )}
+        </div>
 
         {/* الشبكة */}
         <section style={{ marginTop: 16 }}>
@@ -759,7 +742,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             </div>
           </div>
         )}
-      </StorefrontLayout>
+      </ShopLayout>
 
       {/* ==================== شريط السلة ==================== */}
       <BottomCartBar

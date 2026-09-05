@@ -211,7 +211,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   // ---------- تطبيق ألوان التاجر ----------
   useEffect(() => {
     if (!restaurant) return;
-    return applyStorefrontTheme(restaurant);
+    return applyStorefrontTheme(restaurant, 'restaurant');
   }, [restaurant]);
 
   // ---------- تعبئة بيانات المستخدم إن كان مسجلاً (اختياري) ----------

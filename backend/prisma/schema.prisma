@@ -274,14 +274,19 @@ model Store {
   latitude                Float?
   longitude               Float?
   showAllBranchesProducts Boolean @default(false)
-  primaryColor            String  @default("#3B82F6")
-  secondaryColor          String  @default("#10B981")
-  backgroundColor         String  @default("#FFFFFF")
-  textColor               String  @default("#000000")
-  cardColor               String  @default("#112E23")
-  surfaceColor            String  @default("#0F3D31")
-  mutedColor              String  @default("#9DC4AC")
-  accentColor             String  @default("#C8E235")
+  // لوحة المتجر — ليل أزرق، تخالف عمداً أخضرَ واجهة المطعم.
+  //
+  // المتجر والقائمة الرقمية منتجان مختلفان ويجب أن يُرى الفرق. والأهم:
+  // كانت الخلفية بيضاء والنص أسود بينما البطاقات والأسطح داكنة — لوحة
+  // متناقضة تُنتج نصاً رمادياً على أبيض وبطاقات سوداء عليه.
+  primaryColor            String  @default("#6366F1")
+  secondaryColor          String  @default("#22C55E")
+  backgroundColor         String  @default("#0D1424")
+  textColor               String  @default("#E9EEF9")
+  cardColor               String  @default("#151E33")
+  surfaceColor            String  @default("#1C2742")
+  mutedColor              String  @default("#94A2BE")
+  accentColor             String  @default("#FFB020")
   fontFamily              String  @default("Cairo")
   timezone                String  @default("Asia/Riyadh")
   currency                String  @default("SYP")

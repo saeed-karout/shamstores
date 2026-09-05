@@ -15,7 +15,11 @@ export interface StorefrontBusiness {
   fontFamily?: string | null;
 }
 
-/** لوحة الاحتياط — نفس الألوان الافتراضية في قاعدة البيانات */
+export type StorefrontKind = 'restaurant' | 'store';
+
+/**
+ * لوحة المطعم — أخضر داكن. نفس الافتراضي في قاعدة البيانات.
+ */
 export const SF_FALLBACK = {
   primary: '#3B82F6',
   secondary: '#10B981',
@@ -27,6 +31,31 @@ export const SF_FALLBACK = {
   accent: '#C8E235',
   font: 'Cairo'
 } as const;
+
+/**
+ * لوحة المتجر — ليل أزرق وكهرماني.
+ *
+ * تخالف لوحة المطعم عمداً: القائمة الرقمية والمتجر منتجان مختلفان، ومن
+ * يفتح الاثنين يجب أن يرى الفرق قبل أن يقرأ كلمة.
+ *
+ * وهي لوحة **كاملة**: الافتراضي القديم كان خلفية بيضاء ونصاً أسود مع
+ * بطاقات وأسطح داكنة — فينتج نصٌّ رمادي فاتح على أبيض وبطاقات سوداء
+ * عليه. لوحة نصفها فاتح ونصفها داكن ليست خياراً جمالياً، بل عطل.
+ */
+export const SF_STORE_FALLBACK = {
+  primary: '#6366F1',
+  secondary: '#22C55E',
+  bg: '#0D1424',
+  card: '#151E33',
+  surface: '#1C2742',
+  text: '#E9EEF9',
+  muted: '#94A2BE',
+  accent: '#FFB020',
+  font: 'Cairo'
+} as const;
+
+const paletteFor = (kind?: StorefrontKind) =>
+  kind === 'store' ? SF_STORE_FALLBACK : SF_FALLBACK;
 
 const HEX_RE = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
@@ -88,21 +117,25 @@ export interface StorefrontTokens {
   onAccent: string;
 }
 
-export const resolveTokens = (business?: StorefrontBusiness | null): StorefrontTokens => {
-  const primary = safeColor(business?.primaryColor, SF_FALLBACK.primary);
-  const accent = safeColor(business?.accentColor, SF_FALLBACK.accent);
+export const resolveTokens = (
+  business?: StorefrontBusiness | null,
+  kind?: StorefrontKind
+): StorefrontTokens => {
+  const base = paletteFor(kind);
+  const primary = safeColor(business?.primaryColor, base.primary);
+  const accent = safeColor(business?.accentColor, base.accent);
 
   return {
     primary,
-    secondary: safeColor(business?.secondaryColor, SF_FALLBACK.secondary),
-    bg: safeColor(business?.backgroundColor, SF_FALLBACK.bg),
-    card: safeColor(business?.cardColor, SF_FALLBACK.card),
-    surface: safeColor(business?.surfaceColor, SF_FALLBACK.surface),
-    text: safeColor(business?.textColor, SF_FALLBACK.text),
-    muted: safeColor(business?.mutedColor, SF_FALLBACK.muted),
+    secondary: safeColor(business?.secondaryColor, base.secondary),
+    bg: safeColor(business?.backgroundColor, base.bg),
+    card: safeColor(business?.cardColor, base.card),
+    surface: safeColor(business?.surfaceColor, base.surface),
+    text: safeColor(business?.textColor, base.text),
+    muted: safeColor(business?.mutedColor, base.muted),
     accent,
     border: withAlpha(accent, 0.16),
-    font: (business?.fontFamily || SF_FALLBACK.font).trim() || SF_FALLBACK.font,
+    font: (business?.fontFamily || base.font).trim() || base.font,
     onPrimary: readableOn(primary),
     onAccent: readableOn(accent)
   };
@@ -129,12 +162,13 @@ const VAR_MAP: Record<keyof StorefrontTokens, string> = {
  */
 export const applyStorefrontTheme = (
   business?: StorefrontBusiness | null,
+  kind?: StorefrontKind,
   target?: HTMLElement | null
 ): (() => void) => {
   if (typeof document === 'undefined') return () => undefined;
 
   const root = target || document.documentElement;
-  const tokens = resolveTokens(business);
+  const tokens = resolveTokens(business, kind);
   const previous: Array<[string, string]> = [];
 
   (Object.keys(VAR_MAP) as Array<keyof StorefrontTokens>).forEach((key) => {
