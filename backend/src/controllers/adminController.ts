@@ -4,7 +4,7 @@ import { NextFunction, Response } from 'express';
 import { ContactMessageStatus, Prisma } from '@prisma/client';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
-import { emitPlatformNotification, getUserRoom } from '../realtime/socket';
+import { notifyUser } from '../services/notification.service';
 import { DriverService } from '../services/driver.service';
 import bcrypt from 'bcrypt';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
@@ -1919,24 +1919,20 @@ export const createUpgradeRequest = async (req: AuthRequest, res: Response): Pro
  * فشل البثّ لا يُسقط الطلب: القرار حُفظ في قاعدة البيانات، والإشعار راحة
  * إضافية. رمي خطأ هنا يعني ترقية نجحت وردّاً بالفشل.
  */
-const notifyRequester = (
+const notifyRequester = async (
   userId: string | null | undefined,
   params: { event: string; title: string; message: string; requestId: string }
-): void => {
-  if (!userId) return;
-  try {
-    emitPlatformNotification({
-      rooms: [getUserRoom(userId)],
-      type: 'upgrade_request',
-      event: params.event,
-      title: params.title,
-      message: params.message,
-      link: '/plans',
-      entityId: params.requestId
-    });
-  } catch (error) {
-    console.error('تعذّر بثّ إشعار قرار الترقية:', error);
-  }
+): Promise<void> => {
+  // notifyUser يحفظ ثم يبثّ، ويبتلع أخطاءه: القرار حُفظ في قاعدة البيانات
+  // وفشل الإشعار لا يجوز أن يُرجع فشلاً لترقية نجحت.
+  await notifyUser(userId, {
+    type: 'upgrade_request',
+    event: params.event,
+    title: params.title,
+    message: params.message,
+    link: '/plans',
+    entityId: params.requestId
+  });
 };
 
 export const approveUpgrade = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -1978,7 +1974,7 @@ export const approveUpgrade = async (req: AuthRequest, res: Response): Promise<v
     });
     
     // إشعار فوري لصاحب الطلب — القرار يخصّه وانتظاره بلا خبر أسوأ من الرفض
-    notifyRequester(updatedRequest.userId, {
+    await notifyRequester(updatedRequest.userId, {
       event: 'upgrade_request.approved',
       title: 'تمت الموافقة على ترقيتك',
       message: 'خطتك الجديدة فعّالة الآن. تصفّح ما فُتح لك من ميزات.',
@@ -2020,7 +2016,7 @@ export const rejectUpgrade = async (req: AuthRequest, res: Response): Promise<vo
       }
     });
     
-    notifyRequester(updatedRequest.userId, {
+    await notifyRequester(updatedRequest.userId, {
       event: 'upgrade_request.rejected',
       title: 'لم تتم الموافقة على طلب الترقية',
       // سبب المشرف يُعرض كما هو: «مرفوض» بلا سبب يترك التاجر بلا خطوة تالية

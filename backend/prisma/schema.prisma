@@ -117,6 +117,7 @@ model User {
   tickets      Ticket[]
   orders       Order[]   @relation("CreatedOrders")
   firebaseUser FirebaseUser?
+  notifications Notification[]
 
   @@index([email])
   @@index([restaurantId])
@@ -935,4 +936,35 @@ model Setting {
   updatedAt   DateTime @updatedAt
 
   @@index([keyName])
+}
+
+/// إشعارات المستخدمين.
+///
+/// البثّ عبر السوكِت وحده يضيع كلما كان المستخدم غير متصل — ولا يعرف بعده
+/// أنه فاته شيء. التخزين هنا يجعل الإشعار حدثاً دائماً، والسوكِت مجرّد
+/// وسيلة توصيل فوري له.
+model Notification {
+  id        String   @id @default(cuid())
+  /// المستقبِل. للإشعارات الإدارية يُنشأ صفّ لكل مشرف.
+  userId    String   @map("user_id")
+  /// تصنيف: upgrade_request، order، ticket…
+  type      String
+  /// الحدث الدقيق: upgrade_request.created أو .approved
+  event     String
+  title     String
+  message   String    @db.Text
+  /// مسار تفتحه الواجهة عند النقر
+  link      String?
+  /// معرّف الكيان المرتبط
+  entityId  String?   @map("entity_id")
+  isRead    Boolean   @default(false) @map("is_read")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// الاستعلام الغالب: إشعارات مستخدم مرتّبة بالأحدث
+  @@index([userId, isRead, createdAt])
+  @@index([type])
+  @@map("notifications")
 }

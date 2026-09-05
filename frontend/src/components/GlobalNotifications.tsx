@@ -30,6 +30,9 @@ const GlobalNotifications: React.FC<Props> = ({ token }) => {
     (data: NotificationEvent & { link?: string | null }) => {
       const destination = data.link || LINK_BY_TYPE[data.type] || null;
 
+      // يوقظ الجرس ليرفع عدّاده فوراً بلا انتظار فتح اللوحة
+      window.dispatchEvent(new CustomEvent('app:notification', { detail: data }));
+
       toast(
         (t) => (
           <div

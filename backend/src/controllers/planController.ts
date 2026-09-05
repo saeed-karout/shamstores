@@ -2,7 +2,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
-import { emitPlatformNotification, ADMIN_ROOM } from '../realtime/socket';
+import { notifyAdmins } from '../services/notification.service';
 
 // دالة مساعدة للحصول على businessId (مطعم أو متجر)
 const getBusinessId = async (req: AuthRequest): Promise<{ type: 'restaurant' | 'store', id: string } | null> => {
@@ -403,8 +403,7 @@ export const createUpgradeRequest = async (req: AuthRequest, res: Response): Pro
     });
     const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { name: true } });
 
-    emitPlatformNotification({
-      rooms: [ADMIN_ROOM],
+    await notifyAdmins({
       type: 'upgrade_request',
       event: 'upgrade_request.created',
       title: 'طلب ترقية جديد',
