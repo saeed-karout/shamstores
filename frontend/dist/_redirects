@@ -1,13 +1,1 @@
-# ⚠️ الترتيب مقصود.
-#
-# القاعدة الشاملة وحدها كانت تُرجع index.html بحالة 200 لأي مسار مفقود —
-# بما فيه جزء JS محذوف بعد نشر جديد. المتصفح يطلب
-# /assets/AdminUserDetails-<hash>.js فيتلقّى HTML بنوع text/html، فيرفضه:
-# «Failed to load module script… MIME type of text/html».
-#
-# الخطأ يبدو عطلاً في الكود بينما السبب أن التبويب مفتوح على نسخة قديمة.
-# إرجاع 404 صريح يجعل الفشل مقروءاً، ويسمح لمعالج vite:preloadError
-# بإعادة التحميل مرة واحدة (راجع main.tsx).
-/assets/* /404.html 404
-
 /* /index.html 200
