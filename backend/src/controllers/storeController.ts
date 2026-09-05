@@ -1782,11 +1782,23 @@ export const getPublicProduct = async (req: Request, res: Response) => {
     const { slug, productId } = req.params;
     const store = await prisma.store.findFirst({ where: { OR: [{ slug }, { subdomain: slug }], isActive: true } });
     if (!store) return res.status(404).json({ success: false, error: 'المتجر غير موجود' });
-    const product = await prisma.product.findFirst({ 
-      where: { id: productId, storeId: store.id, isAvailable: true },
+    // بلا شرط التوفّر في الاستعلام: «غير موجود» و«غير متاح» حالتان
+    // مختلفتان، ودمجهما يقول لزبون فتح رابطاً صحيحاً إن الرابط خطأ.
+    const product = await prisma.product.findFirst({
+      where: { id: productId, storeId: store.id },
       include: { category: true }
     });
     if (!product) return res.status(404).json({ success: false, error: 'المنتج غير موجود' });
+
+    if (!product.isAvailable) {
+      return res.status(410).json({
+        success: false,
+        error: 'هذا المنتج غير متاح حالياً',
+        unavailable: true,
+        productName: product.name
+      });
+    }
+
     res.json({ success: true, data: product });
   } catch (error) {
     console.error('Error getting public product:', error);

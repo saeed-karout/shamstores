@@ -100,6 +100,8 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   const [isFavorited, setIsFavorited] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  /** المنتج موجود لكن أوقفه التاجر — حالة مختلفة عن الرابط الخاطئ */
+  const [unavailable, setUnavailable] = useState<{ name?: string } | null>(null);
   const { addToCart } = useCart();
   const [showShareMenu, setShowShareMenu] = useState(false);
 
@@ -158,7 +160,13 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
         console.log('No related products');
         setRelatedProducts([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // 410 = موجود لكن موقوف. رسالة «غير موجود» هنا تقول لزبون فتح
+      // رابطاً صحيحاً إن الرابط خطأ، فيغادر بدل أن يسأل أو ينتظر.
+      if (error?.response?.status === 410) {
+        setUnavailable({ name: error.response?.data?.productName });
+        return;
+      }
       console.error('Error fetching product:', error);
       toast.error('حدث خطأ في تحميل بيانات المنتج');
     } finally {
@@ -231,7 +239,13 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
           setRelatedProducts([]);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      // 410 = موجود لكن موقوف. رسالة «غير موجود» هنا تقول لزبون فتح
+      // رابطاً صحيحاً إن الرابط خطأ، فيغادر بدل أن يسأل أو ينتظر.
+      if (error?.response?.status === 410) {
+        setUnavailable({ name: error.response?.data?.productName });
+        return;
+      }
       console.error('Error fetching product:', error);
       toast.error('حدث خطأ في تحميل بيانات المنتج');
     } finally {
@@ -375,6 +389,26 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   };
 
   if (loading) return <Loader fullScreen />;
+
+  if (unavailable) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'grid', placeItems: 'center', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+        <div style={{ textAlign: 'center', maxWidth: 380 }}>
+          <div style={{ fontSize: 46, marginBottom: 12 }}>🛒</div>
+          <h1 style={{ fontSize: 21, fontWeight: 800, color: C.text, marginBottom: 8 }}>
+            {unavailable.name ? `«${unavailable.name}» غير متاح حالياً` : 'هذا المنتج غير متاح حالياً'}
+          </h1>
+          <p style={{ color: C.muted, marginBottom: 18, lineHeight: 1.9, fontSize: 13.5 }}>
+            أوقفه المتجر مؤقتاً. رابطك صحيح — تصفّح بقية المنتجات أو تواصل مع
+            المتجر للسؤال عن عودته.
+          </p>
+          <Link to={`/${store?.slug || ''}`} style={{ color: C.accent, textDecoration: 'none', fontWeight: 700 }}>
+            تصفّح المتجر
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!product || !store) {
     return (

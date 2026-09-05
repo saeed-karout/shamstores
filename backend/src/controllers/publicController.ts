@@ -342,12 +342,23 @@ export const getProductById = async (
   try {
     const { productId } = req.params;
     
-    const product = await prisma.product.findFirst({
-      where: { id: productId, isAvailable: true }
-    });
-    
+    // البحث بلا شرط التوفّر: «غير موجود» و«غير متاح» حالتان مختلفتان،
+    // ودمجهما يقول لزبون فتح رابطاً صحيحاً إن الرابط خطأ — فيظنّ العطل
+    // في نفسه ويغادر بدل أن ينتظر عودة المنتج أو يسأل عنه.
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+
     if (!product) {
       res.status(404).json({ success: false, error: 'المنتج غير موجود' });
+      return;
+    }
+
+    if (!product.isAvailable) {
+      res.status(410).json({
+        success: false,
+        error: 'هذا المنتج غير متاح حالياً',
+        unavailable: true,
+        productName: product.name
+      });
       return;
     }
     

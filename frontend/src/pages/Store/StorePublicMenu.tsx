@@ -61,7 +61,6 @@ import { useCart } from '@/hooks/useCart';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useTheme } from '@/context/ThemeContext';
 import api, { getCurrentSubdomain } from '@/services/api';
-import { openWhatsApp } from '@/utils/helpers';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { calculateDistance } from '@/utils/distance';
@@ -483,6 +482,27 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       toast.error('السلة فارغة');
       return;
     }
+
+    /**
+     * الطلب من المتجر يتطلّب حساباً.
+     *
+     * يختلف عن المطعم عمداً: زبون المطعم جالس على طاولة ويطلب مرة واحدة،
+     * وإلزامه بالتسجيل هناك يعني هجر الطلب. أما طلب المتجر فيُشحن ويُتابَع
+     * ويُرجَع — وبلا حساب لا يملك الزبون سجلّاً يرجع إليه، ولا التاجر
+     * وسيلةً للتحقّق ممّن طلب.
+     *
+     * والمسار يُحفظ ليعود الزبون إلى سلّته بعد الدخول لا إلى الرئيسية.
+     */
+    if (!isAuthenticated) {
+      try {
+        localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
+      } catch {
+        /* وضع التصفّح الخاص قد يمنع التخزين — الدخول يبقى ممكناً */
+      }
+      toast('سجّل دخولك لإتمام الطلب ومتابعته', { icon: '🔐' });
+      navigate('/user/login');
+      return;
+    }
     if (!customerName.trim() || !customerPhone.trim()) {
       toast.error('الاسم ورقم الهاتف مطلوبان');
       return;
@@ -528,37 +548,23 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       const response: any = await api.post('/orders', orderData);
 
-      toast.success('تم إرسال طلبك بنجاح 🎉');
+      toast.success('تم إرسال طلبك — يتابعه المتجر الآن 🎉');
       clearCart();
       setCartOpen(false);
       setOrderNotes('');
       setCouponCode('');
       setDiscountAmount(0);
 
-      if (isAuthenticated) fetchMyOrders();
-
-      if (store?.whatsapp) {
-        const lines = [
-          `🆕 طلب جديد${response?.orderNumber ? ` #${response.orderNumber}` : ''}`,
-          `🏪 ${store.name}`,
-          `👤 ${customerName}`,
-          `📞 ${customerPhone}`,
-          orderType === 'delivery' ? '📦 توصيل' : '🛍️ استلام',
-          orderType === 'delivery' && deliveryLocation
-            ? `📍 ${deliveryLocation.address}\n🗺️ https://www.google.com/maps?q=${deliveryLocation.lat},${deliveryLocation.lng}`
-            : '',
-          '',
-          ...cart.map(
-            (item) =>
-              `• ${item.name} × ${item.quantity} — ${formatPrice(item.price * item.quantity, currency)}`
-          ),
-          '',
-          // العملة من إعدادات المتجر لا مكتوبة يدوياً: كانت «ر.س» ثابتة
-          // في رسالة تصل التاجر السوري كل مرة
-          `💰 الإجمالي: ${formatPrice(total, currency)}`
-        ].filter(Boolean);
-        openWhatsApp(store.whatsapp, lines.join('\n'));
-      }
+      // ⚠️ كان يفتح واتساب تلقائياً هنا.
+      //
+      // الطلب يصل لوحة التاجر ويُطلق إشعاراً فورياً عبر السوكِت — فتح
+      // واتساب لم يكن يُرسل شيئاً، بل يخطف متصفّح **الزبون** إلى تطبيق
+      // آخر برسالة عليه أن يرسلها بنفسه. فمن لم ينتبه ظنّ أن الطلب لم
+      // يُسجَّل، ومن أرسلها كرّر الطلب على التاجر.
+      //
+      // بدلها: تتبّع الطلب فوراً — وهو ما يريده الزبون بعد الضغط.
+      fetchMyOrders();
+      setShowOrderTracking(true);
     } catch (error: any) {
       console.error('Error submitting order:', error);
       toast.error(error?.response?.data?.error || 'تعذّر إرسال الطلب، حاول مجدداً');

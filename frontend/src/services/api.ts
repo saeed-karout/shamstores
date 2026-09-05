@@ -223,9 +223,19 @@ class ApiService {
           });
         }
         
-        if (error.response?.data?.error && !isSilentPath && error.response.status !== 401 && error.response.status !== 404) {
+        // 410 = المورد كان موجوداً وأُوقف. الصفحة تعرض الحالة بنفسها
+        // بشرح كامل، فرسالة حمراء عائمة فوقها تكرارٌ يوحي بعطل لا بحالة.
+        const handledByPage = error.response?.status === 410;
+
+        if (
+          error.response?.data?.error &&
+          !isSilentPath &&
+          !handledByPage &&
+          error.response.status !== 401 &&
+          error.response.status !== 404
+        ) {
           toast.error(error.response.data.error);
-        } else if (error.response?.status !== 401 && !isSilentPath && !isPublicPath && error.response?.status !== 403 && error.response?.status !== 404) {
+        } else if (!handledByPage && error.response?.status !== 401 && !isSilentPath && !isPublicPath && error.response?.status !== 403 && error.response?.status !== 404) {
           toast.error('حدث خطأ في الاتصال بالخادم');
         }
         

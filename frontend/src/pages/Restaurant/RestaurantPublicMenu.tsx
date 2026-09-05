@@ -37,7 +37,6 @@ import { useCart } from '@/hooks/useCart';
 import { useFavorites } from '@/hooks/useFavorites';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
-import { openWhatsApp } from '@/utils/helpers';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import type { CartItem } from '@/services/types';
@@ -396,26 +395,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       if (isAuthenticated) fetchMyOrders();
 
-      if (restaurant?.whatsapp) {
-        const lines = [
-          '🆕 طلب جديد',
-          `🏪 ${restaurant.name}`,
-          customerName ? `👤 ${customerName}` : '',
-          customerPhone ? `📞 ${customerPhone}` : '',
-          tableId ? `🪑 طاولة ${tableId}` : '',
-          '',
-          ...cart.map(
-            (item) =>
-              `• ${item.name}${item.size ? ` (${item.size})` : ''} × ${item.quantity} — ${formatPrice(
-                item.price * item.quantity,
-                currency
-              )}`
-          ),
-          '',
-          `💰 الإجمالي: ${formatPrice(subtotal, currency)}`
-        ].filter(Boolean);
-        openWhatsApp(restaurant.whatsapp, lines.join('\n'));
-      }
+      // ⚠️ كان يفتح واتساب تلقائياً هنا.
+      //
+      // الطلب يصل لوحة المطعم ويُطلق إشعاراً فورياً عبر السوكِت. فتح
+      // واتساب لا يُرسل شيئاً — يخطف متصفّح الزبون إلى تطبيق آخر برسالة
+      // عليه أن يرسلها بنفسه، فيظنّ من لم ينتبه أن طلبه لم يُسجَّل.
     } catch (error: any) {
       console.error('Error submitting order:', error);
       toast.error(error?.response?.data?.error || 'تعذّر إرسال الطلب، حاول مجدداً');
