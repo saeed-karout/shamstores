@@ -294,3 +294,56 @@ textarea:focus-visible,
 
 /* مسار الكاروسيل: التمرير الأصلي يعطي سحباً بإصبع أنعم من أي محاكاة */
 [aria-roledescription="carousel"] > div::-webkit-scrollbar { display: none; }
+
+/* ===== الداشبورد على الشاشات الضيقة ===== */
+
+/* الواجهة مبنية بأنماط سطرية (آلاف منها)، والنمط السطري لا يحتمل استعلام
+   وسائط. فالتجاوب هنا يحتاج تجاوزاً على مستوى الورقة — ولهذا !important:
+   ليست كسلاً بل الوسيلة الوحيدة لتجاوز نمط سطري.
+
+   والانتقاء بالسمة `[style*=...]` يستهدف ما قِسناه فعلاً لا كل شيء:
+   الحشوة 24 (128 موضعاً) والشبكات الثابتة (6). أما شبكات auto-fill
+   (84 موضعاً) فمتجاوبة أصلاً ولا تُمَسّ. */
+
+@media (max-width: 768px) {
+  /* الحشوة الكبيرة تلتهم ثُمن شاشة الهاتف */
+  [style*="padding: 24px"] { padding: 14px !important; }
+  [style*="padding: 20px"] { padding: 13px !important; }
+
+  /* شبكات بأعمدة ثابتة تنهار: عمودان بدل أربعة، لا عمود واحد — البطاقات
+     الصغيرة (إحصاءات مثلاً) تبدو ضائعة وحدها في سطر كامل. */
+  [style*="repeat(3,"],
+  [style*="repeat(4,"],
+  [style*="repeat(5,"],
+  [style*="repeat(6,"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* الجداول تمرّر داخل نفسها بدل دفع الصفحة كلها أفقياً */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  /* أي عرض ثابت أكبر من الشاشة يُقصّ */
+  main img,
+  main video,
+  main canvas,
+  main iframe { max-width: 100% !important; height: auto; }
+}
+
+@media (max-width: 480px) {
+  /* على الشاشات الأضيق: عمود واحد. عمودان بعرض 160 بكسل لا يتّسعان لرقم
+     وعنوانه معاً. */
+  [style*="repeat(2,"],
+  [style*="repeat(3,"],
+  [style*="repeat(4,"],
+  [style*="repeat(5,"],
+  [style*="repeat(6,"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  [style*="padding: 24px"] { padding: 11px !important; }
+}

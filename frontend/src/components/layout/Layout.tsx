@@ -68,12 +68,14 @@ const Layout: React.FC = () => {
 
       {/* Main content — offset by sidebar width on large screens */}
       <div
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}
+        // minWidth: 0 ضروري: عنصر flex لا ينكمش تحت محتواه افتراضياً، فأي
+        // جدول عريض كان يدفع الصفحة كلها أفقياً بدل أن يمرّر داخل نفسه.
+        style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}
         
       >
         <Navbar onMenuOpen={() => setSidebarOpen(true)} title={title} />
 
-        <main style={{ flex: 1, overflowY: 'auto' }}>
+        <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           <Outlet />
         </main>
       </div>
