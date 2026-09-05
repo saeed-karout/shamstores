@@ -13,6 +13,12 @@ import Loader from '../components/common/Loader';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { useCart } from '@/hooks/useCart';
+import ProductOptionsSheet, {
+  parseProductOptions,
+  hasOptions,
+  OptionsResult
+} from '@/components/storefront/ProductOptionsSheet';
 
 const C = {
   bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
@@ -80,6 +86,8 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   const [addedToCart, setAddedToCart] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const { addToCart } = useCart();
   const [showShareMenu, setShowShareMenu] = useState(false);
 
   const actualProductId = productIdParam || paramProductId;
@@ -218,38 +226,73 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     }
   };
 
+  /**
+   * الإضافة إلى السلة.
+   *
+   * ⚠️ كانت هذه الصفحة تكتب في مفتاح `cart_<slug>` الخاص بها، بينما واجهة
+   * المتجر تقرأ من `cart` عبر useCart — سلّتان لا تتحدّثان. الزبون يضيف من
+   * صفحة المنتج ثم يعود إلى المتجر فيجد سلّته فارغة.
+   *
+   * والمنتج بخيارات لا يُضاف بنقرة: يُفتح لوح الاختيار أولاً.
+   */
   const handleAddToCart = () => {
     if (!product) return;
 
     const productStock = typeof product.stock === 'number' ? product.stock : parseInt(String(product.stock)) || 0;
-
     if (productStock === 0) {
       toast.error('المنتج غير متوفر في المخزون');
       return;
     }
 
-    const cartKey = store?.slug ? `cart_${store.slug}` : 'cart';
-    const cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
-
-    const existingItem = cart.find((item: any) => item.id === product.id);
-    const productPrice = parsePrice(product.discountedPrice || product.price);
-
-    if (existingItem) {
-      existingItem.quantity += quantity;
-    } else {
-      cart.push({
-        id: product.id,
-        name: product.name,
-        price: productPrice,
-        imageUrl: product.imageUrl,
-        quantity: quantity
-      });
+    if (hasOptions((product as any).options)) {
+      setOptionsOpen(true);
+      return;
     }
 
-    localStorage.setItem(cartKey, JSON.stringify(cart));
-    setAddedToCart(true);
-    toast.success(`تم إضافة ${product.name} إلى السلة`);
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: parsePrice(product.price),
+      originalPrice: parsePrice(product.price),
+      quantity,
+      image: images[0] || product.imageUrl,
+      notes: ''
+    } as any);
 
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
+
+  /** يُضيف بعد اختيار الخيارات، ويحوّل الاختيار إلى size/addons */
+  const confirmOptions = (result: OptionsResult) => {
+    if (!product) return;
+
+    const addons: string[] = [];
+    let size: string | undefined;
+    parseProductOptions((product as any).options).forEach((group) => {
+      const picked = result.selection[group.name];
+      const labels = Array.isArray(picked) ? picked : picked ? [picked] : [];
+      labels.forEach((label) => {
+        if (group.type === 'single' && !size) size = label;
+        else addons.push(`${group.name}: ${label}`);
+      });
+    });
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: result.unitPrice,
+      originalPrice: parsePrice(product.price),
+      quantity: result.quantity,
+      image: images[0] || product.imageUrl,
+      notes: '',
+      size,
+      addons,
+      selectedOptions: result.selection
+    } as any);
+
+    setOptionsOpen(false);
+    setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
 
@@ -366,6 +409,21 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      {/* خيارات المنتج — الصورة تتبع اللون المختار */}
+      <ProductOptionsSheet
+        open={optionsOpen}
+        name={product.name}
+        basePrice={parsePrice(product.price)}
+        options={parseProductOptions((product as any).options)}
+        currency={currency}
+        onClose={() => setOptionsOpen(false)}
+        onConfirm={confirmOptions}
+        onPreviewImage={(image) => {
+          const index = images.findIndex((candidate) => candidate === image);
+          if (index >= 0) setCurrentImageIndex(index);
+        }}
+      />
+
       {/* Header */}
       <div style={{ background: '#082E24', borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ maxWidth: 1152, margin: '0 auto', padding: '12px 16px' }}>

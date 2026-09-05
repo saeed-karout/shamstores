@@ -18,6 +18,8 @@ import { formatPrice } from '@/utils/currency';
 export interface OptionValue {
   label: string;
   priceDelta: number;
+  /** صورة القيمة — تُعرض بدل الاسم المجرّد حين تتوفّر */
+  image?: string | null;
 }
 
 export interface OptionGroup {
@@ -45,6 +47,8 @@ interface Props {
   submitting?: boolean;
   onClose: () => void;
   onConfirm: (result: OptionsResult) => void;
+  /** تُستدعى حين يختار الزبون قيمة لها صورة — لتتبعها الصورة المعروضة */
+  onPreviewImage?: (image: string) => void;
 }
 
 /** يقرأ الخيارات بأي شكل وصلت به — مصفوفة أو نص JSON */
@@ -73,7 +77,8 @@ const ProductOptionsSheet: React.FC<Props> = ({
   currency = 'SYP',
   submitting,
   onClose,
-  onConfirm
+  onConfirm,
+  onPreviewImage
 }) => {
   const [selection, setSelection] = useState<OptionSelection>({});
   const [quantity, setQuantity] = useState(1);
@@ -115,6 +120,11 @@ const ProductOptionsSheet: React.FC<Props> = ({
   const unitPrice = basePrice + priceDelta;
 
   const toggle = (group: OptionGroup, label: string) => {
+    // الصورة تتبع الاختيار فوراً: زبون يضغط «أزرق» ويرى الأحمر أمامه
+    // يفقد الثقة بالصفحة كلها
+    const value = group.values.find((v) => v.label === label);
+    if (value?.image) onPreviewImage?.(value.image);
+
     setSelection((prev) => {
       if (group.type === 'single') {
         // إعادة اختيار نفس القيمة في مجموعة اختيارية تعني إلغاءها
@@ -155,6 +165,87 @@ const ProductOptionsSheet: React.FC<Props> = ({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {group.values.map((value) => {
                 const picked = isPicked(group, value.label);
+
+                // قيمة لها صورة تُعرض عيّنةً مصوّرة: «أزرق» كلمة، والأزرق
+                // درجات — والاسم وحده يُنتج طلباً يُرجَع
+                if (value.image) {
+                  return (
+                    <button
+                      key={value.label}
+                      type="button"
+                      onClick={() => toggle(group, value.label)}
+                      aria-pressed={picked}
+                      title={value.label}
+                      style={{
+                        width: 72,
+                        padding: 0,
+                        border: 'none',
+                        background: 'none',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 5
+                      }}
+                    >
+                      <span
+                        style={{
+                          position: 'relative',
+                          width: 64,
+                          height: 64,
+                          borderRadius: 12,
+                          overflow: 'hidden',
+                          border: `2px solid ${picked ? sf.accent : sf.border}`,
+                          background: sf.surface,
+                          display: 'block'
+                        }}
+                      >
+                        <img
+                          src={value.image}
+                          alt=""
+                          loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
+                        {picked && (
+                          <span
+                            style={{
+                              position: 'absolute',
+                              insetInlineEnd: 3,
+                              bottom: 3,
+                              width: 20,
+                              height: 20,
+                              borderRadius: '50%',
+                              background: sf.accent,
+                              color: sf.onAccent,
+                              display: 'grid',
+                              placeItems: 'center'
+                            }}
+                          >
+                            <IoCheckmark size={13} />
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: picked ? 800 : 600,
+                          color: picked ? sf.accent : sf.muted,
+                          textAlign: 'center',
+                          lineHeight: 1.4
+                        }}
+                      >
+                        {value.label}
+                        {value.priceDelta > 0 && (
+                          <span style={{ display: 'block', color: sf.muted, fontSize: 10.5, fontWeight: 600 }}>
+                            +{formatPrice(value.priceDelta, currency)}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                }
+
                 return (
                   <button
                     key={value.label}

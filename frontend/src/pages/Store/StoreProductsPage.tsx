@@ -753,6 +753,7 @@ const StoreProductsPage: React.FC = () => {
             <ProductOptionsEditor
               value={productForm.options}
               onChange={(options) => setProductForm({ ...productForm, options })}
+              productImages={productForm.images}
               colors={{
                 card: dynamicColors.card,
                 surf: dynamicColors.bg,

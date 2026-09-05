@@ -14,12 +14,15 @@ import {
   IoAddOutline,
   IoTrashOutline,
   IoCloseOutline,
-  IoOptionsOutline
+  IoOptionsOutline,
+  IoImageOutline
 } from 'react-icons/io5';
 
 export interface OptionValue {
   label: string;
   priceDelta: number;
+  /** صورة تمثّل القيمة — تُختار من صور المنتج نفسها */
+  image?: string | null;
 }
 
 export interface OptionGroup {
@@ -45,6 +48,13 @@ interface Props {
   onChange: (groups: OptionGroup[]) => void;
   colors: Palette;
   currencyLabel?: string;
+  /**
+   * صور المنتج المرفوعة — تُربط بها قيم اللون.
+   *
+   * الربط بصور المنتج لا برفع صور منفصلة: التاجر رفعها أصلاً، وصورة
+   * ثانية للّون نفسه تعني نسختين قد تتباعدان.
+   */
+  productImages?: string[];
 }
 
 /** يطابق حدّ الخادم — قائمة أطول لا تُقرأ على شاشة هاتف */
@@ -57,8 +67,16 @@ const PRESETS: Array<{ name: string; values: string[] }> = [
   { name: 'اللون', values: ['أسود', 'أبيض', 'أحمر', 'أزرق'] }
 ];
 
-const ProductOptionsEditor: React.FC<Props> = ({ value, onChange, colors: C, currencyLabel = 'ل.س' }) => {
+const ProductOptionsEditor: React.FC<Props> = ({
+  value,
+  onChange,
+  colors: C,
+  currencyLabel = 'ل.س',
+  productImages = []
+}) => {
   const [newValue, setNewValue] = useState<Record<number, string>>({});
+  // أي قيمة يُختار لها صورة الآن — «فهرس المجموعة:فهرس القيمة»
+  const [picking, setPicking] = useState<string | null>(null);
 
   const groups = Array.isArray(value) ? value : [];
 
@@ -99,6 +117,9 @@ const ProductOptionsEditor: React.FC<Props> = ({ value, onChange, colors: C, cur
       </label>
       <p style={{ color: C.muted, fontSize: 11.5, margin: '0 0 12px', lineHeight: 1.85 }}>
         ما يختاره الزبون قبل الطلب. بلا خيارات يُضاف المنتج إلى السلة مباشرةً.
+        {productImages.length > 0
+          ? ' واربط صورة بكل لون — «أزرق» كلمة، والأزرق درجات.'
+          : ' ارفع صور المنتج أولاً لتتمكّن من ربط صورة بكل لون.'}
       </p>
 
       {groups.map((group, index) => (
@@ -197,6 +218,36 @@ const ProductOptionsEditor: React.FC<Props> = ({ value, onChange, colors: C, cur
                   color: C.text
                 }}
               >
+                {productImages.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPicking(picking === `${index}:${valueIndex}` ? null : `${index}:${valueIndex}`)
+                    }
+                    aria-label={`صورة ${item.label}`}
+                    title="اربط صورة بهذه القيمة"
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      border: `1px dashed ${item.image ? 'transparent' : C.border}`,
+                      background: C.surf,
+                      padding: 0,
+                      cursor: 'pointer',
+                      display: 'grid',
+                      placeItems: 'center',
+                      color: C.muted,
+                      flexShrink: 0
+                    }}
+                  >
+                    {item.image ? (
+                      <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <IoImageOutline size={13} />
+                    )}
+                  </button>
+                )}
                 {item.label}
                 {/* فرق السعر اختياري: أكثر الخيارات بلا فرق، وحقلٌ إلزامي
                     لكل قيمة يُبطئ إدخال أربعة مقاسات بلا سبب */}
@@ -239,6 +290,57 @@ const ProductOptionsEditor: React.FC<Props> = ({ value, onChange, colors: C, cur
               </span>
             ))}
           </div>
+
+          {/* اختيار الصورة — يظهر عند الطلب فقط كي لا يزدحم الصفّ */}
+          {picking?.startsWith(`${index}:`) && productImages.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                gap: 7,
+                flexWrap: 'wrap',
+                padding: 10,
+                marginBottom: 9,
+                borderRadius: 10,
+                background: C.card,
+                border: `1px solid ${C.border}`
+              }}
+            >
+              <span style={{ width: '100%', color: C.muted, fontSize: 11.5, marginBottom: 2 }}>
+                اختر صورة لـ «{group.values[Number(picking.split(':')[1])]?.label}»
+              </span>
+
+              {productImages.map((image) => {
+                const valueIndex = Number(picking.split(':')[1]);
+                const active = group.values[valueIndex]?.image === image;
+                return (
+                  <button
+                    key={image}
+                    type="button"
+                    onClick={() => {
+                      update(index, {
+                        values: group.values.map((v, i) =>
+                          i === valueIndex ? { ...v, image: active ? null : image } : v
+                        )
+                      });
+                      setPicking(null);
+                    }}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: 9,
+                      overflow: 'hidden',
+                      padding: 0,
+                      cursor: 'pointer',
+                      border: `2px solid ${active ? C.accent : C.border}`,
+                      background: C.surf
+                    }}
+                  >
+                    <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: 7 }}>
             <input

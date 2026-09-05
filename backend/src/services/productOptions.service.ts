@@ -16,6 +16,13 @@ export interface OptionValue {
   label: string;
   /** يُضاف إلى سعر الوحدة. صفر أو أكثر. */
   priceDelta: number;
+  /**
+   * صورة تمثّل القيمة — للألوان خاصةً.
+   *
+   * «أزرق» كلمة؛ والأزرق الحقيقي درجات. الزبون الذي يرى الاسم وحده يطلب
+   * ثم يفاجأ، والمفاجأة تعني إرجاعاً. الصورة تحسم قبل الطلب لا بعده.
+   */
+  image?: string | null;
 }
 
 export interface OptionGroup {
@@ -73,9 +80,15 @@ export const normalizeOptions = (raw: unknown): OptionGroup[] => {
       const delta = Number(
         value && typeof value === 'object' ? (value as any).priceDelta ?? 0 : 0
       );
+      // الصورة رابط أو لا شيء — قيمة غير صالحة تُهمَل ولا تُسقط الحفظ
+      const rawImage =
+        value && typeof value === 'object' ? String((value as any).image ?? '').trim() : '';
+      const image = /^https?:\/\//i.test(rawImage) || rawImage.startsWith('/') ? rawImage.slice(0, 500) : null;
+
       values.push({
         label,
-        priceDelta: Number.isFinite(delta) && delta > 0 ? Math.round(delta) : 0
+        priceDelta: Number.isFinite(delta) && delta > 0 ? Math.round(delta) : 0,
+        image
       });
     }
 
