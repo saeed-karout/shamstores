@@ -1,38 +1,75 @@
-// src/pages/Store/StorePublicMenu.tsx
+// frontend/src/pages/Store/StorePublicMenu.tsx
+//
+// واجهة المتجر العامة — مبنية على مكونات storefront المشتركة.
+//
+// كانت هذه الصفحة تعيش بمعزل عن واجهة المطعم: رأس خاص بها، وسلة خاصة،
+// وألوان مكتوبة يدوياً، فتبدو المنصة منصتين. الآن كلتاهما على الهيكل نفسه
+// (StorefrontLayout / CartSheet / BottomCartBar) وتختلفان حيث يجب أن
+// تختلفا فقط: **المطعم قائمة، والمتجر شبكة**.
+//
+// الفرق ليس ذوقاً: زبون المطعم يقرأ الأسماء بحثاً عن صنف يعرفه، وزبون
+// المتجر يتصفّح بعينه. القائمة تعطي الصورة ثُمن المساحة، والشبكة تعطيها
+// الصدارة.
+//
+// وأُصلحت في الطريق أعطال كانت تمنع البيع أو تكذب على الزبون:
+//   • كان الطلب **يُلزم بتسجيل الدخول** بينما واجهة المطعم تقبل الضيف
+//     والخادم يقبله — حاجز أمام كل زبون جديد بلا سبب.
+//   • كانت العملة مكتوبة «ر.س» في رسالة واتساب ورسالة الكوبون، والمنصة
+//     تسعّر بالليرة.
+//   • كان **التوصيل** نوع الطلب الوحيد، فلا سبيل لطلب استلام.
+//   • كانت صورة السلة تُقرأ من `product.imageUrl` وهو حقل لا وجود له،
+//     فتظهر السلة بلا صور دائماً.
 
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  IoStorefront, IoCart, IoSearch, IoFilter, IoHeart, IoLogOut,
-  IoCall, IoLogoWhatsapp, IoArrowUp, IoClose, IoChevronDown,
-  IoChevronUp, IoPerson, IoLocation, IoNavigate,
-  IoHeartOutline, IoHeartSharp,
-  IoTime
-} from 'react-icons/io5';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import {
+  IoSearchOutline,
+  IoClose,
+  IoSwapVerticalOutline,
+  IoPersonCircleOutline,
+  IoReceiptOutline,
+  IoCheckmark,
+  IoPricetagsOutline
+} from 'react-icons/io5';
 
-import Loader from '@/components/common/Loader';
-import ProductCard from '@/components/ProductCard';
-import CartModal from '@/components/CartModal';
-import LocationPicker from '@/components/LocationPicker';
+import PublicAdvertisements from '@/components/public/PublicAdvertisements';
+import PublicOffers from '@/components/public/PublicOffers';
+import PublicMarketingSections from '@/components/public/PublicMarketingSections';
+import PublicFooter from '@/components/public/PublicFooter';
+import OrderTrackingModal from '@/components/OrderTrackingModal';
+
+import StorefrontLayout from '@/components/storefront/StorefrontLayout';
+import StickyCategoryNav from '@/components/storefront/StickyCategoryNav';
+import ProductGridCard, { StorefrontProduct } from '@/components/storefront/ProductGridCard';
+import CartSheet, { StorefrontOrderType } from '@/components/storefront/CartSheet';
+import BottomCartBar from '@/components/storefront/BottomCartBar';
+import BottomSheet from '@/components/storefront/BottomSheet';
+import StorefrontSkeleton from '@/components/storefront/StorefrontSkeleton';
+import StorefrontSeo from '@/components/storefront/StorefrontSeo';
+import PlatformBadge from '@/components/storefront/PlatformBadge';
+import { PickedLocation } from '@/components/storefront/LocationPickerMap';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { useFavorites } from '@/hooks/useFavorites';
-import api, { getCurrentSubdomain } from '@/services/api';
-import { getImageUrl } from '@/utils/imageHelpers';
-import { openWhatsApp } from '@/utils/helpers';
-import { DeliveryLocation } from '@/models/order';
-import { calculateDistance } from '@/utils/distance';
-import PublicMarketingSections, { MarketingData } from '@/components/public/PublicMarketingSections';
-import PublicAdvertisements from '@/components/public/PublicAdvertisements';
-import PublicOffers from '@/components/public/PublicOffers';
 import { useTheme } from '@/context/ThemeContext';
-import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
-import PublicFooter from '@/components/public/PublicFooter';
-import PlatformBadge from '@/components/storefront/PlatformBadge';
-import StorefrontSeo from '@/components/storefront/StorefrontSeo';
+import api, { getCurrentSubdomain } from '@/services/api';
+import { openWhatsApp } from '@/utils/helpers';
+import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
+import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { calculateDistance } from '@/utils/distance';
+import { resolveBadges } from '@/utils/catalogBadges';
+import type { CartItem } from '@/services/types';
+
+// ==================== الأنواع ====================
+
+interface Category {
+  id: string;
+  name: string;
+  position?: number;
+}
 
 interface StorePublicMenuProps {
   businessId?: string;
@@ -48,6 +85,23 @@ interface StorePublicMenuProps {
   businessSecondaryColor?: string;
 }
 
+type SortKey = 'featured' | 'price-low' | 'price-high' | 'newest' | 'discount';
+
+const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: 'featured', label: 'المقترح' },
+  { key: 'discount', label: 'الأكثر تخفيضاً' },
+  { key: 'price-low', label: 'السعر: من الأقل' },
+  { key: 'price-high', label: 'السعر: من الأعلى' },
+  { key: 'newest', label: 'الأحدث' }
+];
+
+const MINI_HEADER_OFFSET = 56;
+
+/** قسم افتراضي للمنتجات بلا فئة — أفضل من إخفائها */
+const UNCATEGORIZED = '__other__';
+
+// ==================== المكوّن ====================
+
 const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   businessId: propBusinessId,
   businessName: propBusinessName,
@@ -56,887 +110,901 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   businessCoverImage: propBusinessCoverImage,
   businessDescription: propBusinessDescription,
   businessPhone: propBusinessPhone,
-  businessWhatsapp: propBusinessWhatsapp,
-  businessPrimaryColor: propBusinessPrimaryColor,
-  businessSecondaryColor: propBusinessSecondaryColor,
+  businessWhatsapp: propBusinessWhatsapp
 }) => {
-  const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
-  const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
+  const { slug: urlSlug } = useParams();
+  const { user, isAuthenticated } = useAuth();
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart();
+  const { favorites, toggleFavorite } = useFavorites();
   const { setThemeColors } = useTheme();
-  
-  const {
-    cart,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getCartSubtotal,
-    getCartCount
-  } = useCart();
-  const {
-    isFavorite,
-    toggleFavorite,
-    getFavoritesCount,
-    loading: favoritesLoading
-  } = useFavorites();
 
-  // State
-  const [store, setStore] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [marketing, setMarketing] = useState<MarketingData | undefined>(undefined);
+  // ---------- الحالة ----------
+  const [store, setStore] = useState<any | null>(null);
+  const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState<'price-low' | 'price-high'>('price-low');
-  const [showSearch, setShowSearch] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showCartModal, setShowCartModal] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('featured');
+  const [sortSheetOpen, setSortSheetOpen] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [onlyDiscounted, setOnlyDiscounted] = useState(false);
 
-  // Order State
-  const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', notes: '' });
-  const [customerLocation, setCustomerLocation] = useState<DeliveryLocation | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [orderType, setOrderType] = useState<StorefrontOrderType>('delivery');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
+  const [address, setAddress] = useState('');
+  const [deliveryLocation, setDeliveryLocation] = useState<PickedLocation | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
 
-  // Coupon State
   const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [discountAmount, setDiscountAmount] = useState(0);
-  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
-  // الحصول على slug بشكل آمن
-  const currentSlug = propBusinessSlug || getCurrentSubdomain() || '';
+  const [showOrderTracking, setShowOrderTracking] = useState(false);
+  const [myOrders, setMyOrders] = useState<any[]>([]);
+  const [trackingOrder, setTrackingOrder] = useState<any>(null);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // Effects
+  const currentSlug = propBusinessSlug || urlSlug || getCurrentSubdomain();
+  const [identifier, setIdentifier] = useState<string | null | undefined>(currentSlug);
+
+  const currency = store?.currency || DEFAULT_CURRENCY;
+
+  // ---------- تحميل البيانات ----------
   useEffect(() => {
-    const handleScroll = () => setShowScrollTop(window.scrollY > 400);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    let cancelled = false;
+
+    const load = async () => {
+      const idToUse = identifier || currentSlug;
+      if (!idToUse) {
+        setLoading(false);
+        setLoadError('لا يوجد معرّف للمتجر');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setLoadError(null);
+
+        const response: any = await api.get(`/public/${encodeURIComponent(idToUse)}`);
+        const business = response?.data || response;
+
+        if (cancelled) return;
+        if (!business?.id) throw new Error('بيانات غير صالحة');
+
+        const merged = {
+          ...business,
+          name: business.name || propBusinessName,
+          logo: business.logo || propBusinessLogo,
+          coverImage: business.coverImage || propBusinessCoverImage,
+          description: business.description || propBusinessDescription,
+          phone: business.phone || propBusinessPhone,
+          whatsapp: business.whatsapp || propBusinessWhatsapp,
+          branchLabel: business.branchLabel || business.subdomain || business.slug
+        };
+
+        setStore(merged);
+        applyStorefrontTheme(merged);
+        // ThemeContext يخدم بقية الصفحات — يبقى متزامناً مع متغيرات المتجر
+        setThemeColors({
+          primaryColor: merged.primaryColor,
+          secondaryColor: merged.secondaryColor,
+          backgroundColor: merged.backgroundColor,
+          cardBgColor: merged.cardColor,
+          surfaceColor: merged.surfaceColor,
+          textColor: merged.textColor,
+          mutedColor: merged.mutedColor,
+          accentColor: merged.accentColor,
+          fontFamily: merged.fontFamily
+        } as any);
+
+        setCategories(business.categories || []);
+        setProducts(business.products || []);
+        setBranches(business.linkedBranches || []);
+        setIdentifier(business.slug || business.subdomain || idToUse);
+
+        // التوصيل ليس متاحاً دائماً — لا نبدأ بنوع طلب يرفضه المتجر
+        if (business.deliverySettings?.enableDelivery === false) {
+          setOrderType('takeaway');
+        }
+      } catch (error: any) {
+        if (cancelled) return;
+        console.error('Error fetching store data:', error);
+        setLoadError(
+          error?.response?.status === 404
+            ? 'هذا المتجر غير موجود أو تم إيقافه'
+            : 'تعذّر تحميل بيانات المتجر'
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSlug]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      setCustomerInfo(prev => ({
-        ...prev,
-        name: user.name || '',
-        phone: user.phone || ''
-      }));
+      setCustomerName((prev) => prev || user.name || '');
+      setCustomerPhone((prev) => prev || (user as any).phone || '');
     }
   }, [isAuthenticated, user]);
 
-  useEffect(() => {
-    fetchStoreData();
-  }, []);
+  // ---------- اشتقاقات ----------
+  const cartCount = getCartCount();
+  const cartTotal = useMemo(
+    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    [cart]
+  );
 
-  useEffect(() => {
-    if (customerLocation && store) {
-      calculateDelivery();
+  const quantityByProductId = useMemo(() => {
+    const map = new Map<string, number>();
+    cart.forEach((item) => map.set(item.id, (map.get(item.id) || 0) + item.quantity));
+    return map;
+  }, [cart]);
+
+  const searchTerm = searchQuery.trim().toLowerCase();
+  const isSearching = searchTerm.length > 0;
+
+  const sortProducts = useCallback(
+    (list: StorefrontProduct[]): StorefrontProduct[] => {
+      const copy = [...list];
+      switch (sortBy) {
+        case 'price-low':
+          return copy.sort((a, b) => a.price - b.price);
+        case 'price-high':
+          return copy.sort((a, b) => b.price - a.price);
+        case 'newest':
+          return copy.sort(
+            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+          );
+        case 'discount':
+          return copy.sort(
+            (a, b) => (resolveBadges(b).discountPercent || 0) - (resolveBadges(a).discountPercent || 0)
+          );
+        default:
+          // «المقترح»: المخفَّض ثم الرائج ثم الباقي — لا ترتيب عشوائي
+          return copy.sort((a, b) => score(b) - score(a));
+      }
+    },
+    [sortBy]
+  );
+
+  /** المنتجات بعد البحث والتصفية والترتيب */
+  const visibleProducts = useMemo(() => {
+    let list = products;
+
+    if (isSearching) {
+      list = list.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(searchTerm) ||
+          p.description?.toLowerCase().includes(searchTerm)
+      );
+    } else if (activeCategory !== 'all') {
+      list = list.filter((p) => ((p as any).categoryId || UNCATEGORIZED) === activeCategory);
     }
-  }, [customerLocation, cart, discountAmount, store]);
 
-  const fetchStoreData = async () => {
+    if (onlyDiscounted) {
+      list = list.filter((p) => resolveBadges(p).hasDiscount);
+    }
+
+    return sortProducts(list);
+  }, [products, isSearching, searchTerm, activeCategory, onlyDiscounted, sortProducts]);
+
+  /** الفئات التي تحوي منتجاً فعلاً — فئة فارغة في الشريط تُحبط الزبون */
+  const navCategories = useMemo(() => {
+    const counts = new Map<string, number>();
+    products.forEach((p) => {
+      const id = (p as any).categoryId || UNCATEGORIZED;
+      counts.set(id, (counts.get(id) || 0) + 1);
+    });
+
+    const named = categories
+      .filter((c) => (counts.get(c.id) || 0) > 0)
+      .map((c) => ({ id: c.id, name: c.name, count: counts.get(c.id) || 0 }));
+
+    if ((counts.get(UNCATEGORIZED) || 0) > 0) {
+      named.push({ id: UNCATEGORIZED, name: 'منتجات أخرى', count: counts.get(UNCATEGORIZED)! });
+    }
+    return named;
+  }, [products, categories]);
+
+  const discountedCount = useMemo(
+    () => products.filter((p) => resolveBadges(p).hasDiscount).length,
+    [products]
+  );
+
+  // ---------- السلة ----------
+  const toCartItem = (product: StorefrontProduct): CartItem =>
+    ({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: Number(product.originalPrice) || product.price,
+      quantity: 1,
+      // الصورة من نفس المصدر الذي تعرضه البطاقة — لا من حقل مخترع
+      image: coverOf(product),
+      notes: ''
+    } as CartItem);
+
+  // addToCart يعرض رسالته بنفسه — رسالة ثانية هنا تُظهر إشعارين لنقرة
+  const handleAdd = (product: StorefrontProduct) => addToCart(toCartItem(product));
+
+  const handleQuantityChange = (product: StorefrontProduct, next: number) => {
+    const line = cart.find((item) => item.id === product.id);
+    if (!line) {
+      if (next > 0) handleAdd(product);
+      return;
+    }
+    // ⚠️ useCart يعرّف السطر بـ (id, size) لا بمفتاح مركّب. تمرير مفتاح
+    // مركّب كمعرّف لا يطابق شيئاً، فتصمت الإزالة والتعديل بلا خطأ.
+    if (next < 1) removeFromCart(line.id, line.size);
+    else updateQuantity(line.id, next, line.size);
+  };
+
+  const applyCoupon = async (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
     try {
-      const identifier = currentSlug;
-      const response: any = await api.get(`/public/${identifier}`);
-      const businessData = response?.data || response;
-      
-      // ✅ تحديث ألوان ThemeProvider ديناميكياً
-      const storeColors = {
-        primaryColor: businessData.primaryColor || propBusinessPrimaryColor || '#3B82F6',
-        secondaryColor: businessData.secondaryColor || propBusinessSecondaryColor || '#10B981',
-        backgroundColor: businessData.backgroundColor || '#082E24',
-        cardBgColor: businessData.cardColor || '#112E23',
-        surfaceColor: businessData.surfaceColor || '#0F3D31',
-        textColor: businessData.textColor || '#E8F5E9',
-        mutedColor: businessData.mutedColor || '#9DC4AC',
-        accentColor: businessData.accentColor || '#C8E235',
-        fontFamily: businessData.fontFamily || 'Cairo, sans-serif',
-      };
-      
-      setThemeColors(storeColors);
-      
-      setStore(businessData);
-      setCategories(businessData.categories || []);
-      setProducts(businessData.products || []);
-      setMarketing(businessData.marketing || undefined);
-    } catch (error) {
-      console.error('Error fetching store:', error);
-      setStore({
-        id: propBusinessId,
-        name: propBusinessName,
-        slug: currentSlug,
-        logo: propBusinessLogo,
-        coverImage: propBusinessCoverImage,
-        description: propBusinessDescription,
-        phone: propBusinessPhone,
-        whatsapp: propBusinessWhatsapp,
-        branchLabel: currentSlug,
-        primaryColor: propBusinessPrimaryColor || '#3B82F6',
-        secondaryColor: propBusinessSecondaryColor || '#10B981',
-        backgroundColor: '#082E24',
-        cardColor: '#112E23',
-        surfaceColor: '#0F3D31',
-        textColor: '#E8F5E9',
-        mutedColor: '#9DC4AC',
-        accentColor: '#C8E235',
-        fontFamily: 'Cairo',
-        deliverySettings: {
-          enableDelivery: true,
-          baseFee: 5,
-          feePerKm: 2,
-          minDistance: 1,
-          maxDistance: 20,
-          freeDeliveryAbove: 100,
-          estimatedTime: 45
-        }
-      });
-      setMarketing(undefined);
-    } finally {
-      setLoading(false);
+      const data: any = await api.get(
+        `/coupons/validate/${encodeURIComponent(trimmed)}?orderTotal=${cartTotal}`
+      );
+      setCouponCode(trimmed);
+      setDiscountAmount(Number(data?.discountAmount) || 0);
+      toast.success(`طُبِّق الكوبون — خصم ${formatPrice(Number(data?.discountAmount) || 0, currency)}`);
+    } catch (error: any) {
+      setCouponCode('');
+      setDiscountAmount(0);
+      toast.error(error?.response?.data?.error || 'كوبون غير صالح');
     }
   };
 
-  const calculateDelivery = () => {
-    if (!customerLocation || !store?.latitude || !store?.longitude) return;
+  // ---------- التوصيل ----------
+  const deliveryFee = useMemo(() => {
+    if (orderType !== 'delivery') return 0;
+
+    const settings = store?.deliverySettings;
+    if (!settings) return 0;
+
+    const base = Number(settings.baseFee) || 0;
+    const afterDiscount = cartTotal - discountAmount;
+    if (settings.freeDeliveryAbove && afterDiscount >= Number(settings.freeDeliveryAbove)) return 0;
+
+    // بلا موقع محدَّد نعرض الرسم الأساس لا صفراً: صفرٌ يوهم الزبون
+    // بتوصيل مجاني ثم يفاجئه الرقم
+    if (!deliveryLocation || !store?.latitude || !store?.longitude) return Math.round(base);
 
     try {
       const distance = calculateDistance(
         parseFloat(store.latitude),
         parseFloat(store.longitude),
-        customerLocation.lat,
-        customerLocation.lng
+        deliveryLocation.lat,
+        deliveryLocation.lng
       );
-
-      setDeliveryDistance(Math.round(distance * 100) / 100);
-
-      const settings = store.deliverySettings || {
-        baseFee: 5,
-        feePerKm: 2,
-        minDistance: 1,
-        freeDeliveryAbove: 100
-      };
-
-      const currentSubtotal = getCartSubtotal() - discountAmount;
-      let fee = settings.baseFee;
-
-      if (currentSubtotal >= settings.freeDeliveryAbove) {
-        fee = 0;
-      } else if (distance > settings.minDistance) {
-        fee += (distance - settings.minDistance) * settings.feePerKm;
-      }
-
-      setDeliveryFee(Math.round(fee));
-    } catch (error) {
-      console.error('Error calculating delivery fee:', error);
-      setDeliveryFee(5);
+      const minDistance = Number(settings.minDistance) || 0;
+      const perKm = Number(settings.feePerKm) || 0;
+      const extra = distance > minDistance ? (distance - minDistance) * perKm : 0;
+      return Math.round(base + extra);
+    } catch {
+      return Math.round(base);
     }
-  };
+  }, [orderType, store, cartTotal, discountAmount, deliveryLocation]);
 
-  const handleAddToCart = (product: any) => {
-    addToCart({
-      id: product.id,
-      name: product.name,
-      originalPrice: product.price,
-      price:  product.price,
-      discountedPrice: product.discountedPrice,
-      quantity: 1,
-      image: product.imageUrl,
-      notes: '',
-    });
-    toast.success('تمت الإضافة إلى السلة');
-  };
-
-  const handleToggleFavorite = (product: any) => {
-    toggleFavorite({
-      id: product.id,
-      type: 'product',
-      name: product.name,
-      price: product.discountedPrice || product.price,
-      image: product.imageUrl
-    });
-  };
-
-  const validateCoupon = async (code: string) => {
-    if (!code || code.trim() === '') {
-      toast.error('يرجى إدخال كود الكوبون');
+  // ---------- إرسال الطلب ----------
+  const submitOrder = async () => {
+    if (cart.length === 0) {
+      toast.error('السلة فارغة');
+      return;
+    }
+    if (!customerName.trim() || !customerPhone.trim()) {
+      toast.error('الاسم ورقم الهاتف مطلوبان');
+      return;
+    }
+    if (orderType === 'delivery' && !deliveryLocation && !address.trim()) {
+      toast.error('حدّد موقع التوصيل أو اكتب العنوان');
       return;
     }
 
-    setValidatingCoupon(true);
-    try {
-      const subtotal = getCartSubtotal();
-
-      if (subtotal <= 0) {
-        toast.error('لا يمكن تطبيق الكوبون على سلة فارغة');
-        return;
-      }
-
-      const response: any = await api.get(`/coupons/validate/${code}?orderTotal=${subtotal}`);
-
-      setAppliedCoupon(response);
-      setDiscountAmount(response.discountAmount || 0);
-      setCouponCode(code);
-      toast.success(`تم تطبيق الكوبون! خصم ${response.discountValue}${response.discountType === 'percentage' ? '%' : ' ر.س'}`);
-    } catch (error: any) {
-      console.error('Coupon error:', error);
-      toast.error(error.response?.data?.error || 'كوبون غير صالح');
-      setAppliedCoupon(null);
-      setDiscountAmount(0);
-      setCouponCode('');
-    } finally {
-      setValidatingCoupon(false);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    setCouponCode('');
-    setAppliedCoupon(null);
-    setDiscountAmount(0);
-    toast.success('تم إزالة الكوبون');
-  };
-
-  const handleLocationSelect = (location: DeliveryLocation | null) => {
-    setCustomerLocation(location);
-    setShowLocationPicker(false);
-    if (location) {
-      toast.success('تم تحديد موقع التوصيل');
-    }
-  };
-
-  const validateOrder = () => {
-    if (cart.length === 0) {
-      toast.error('السلة فارغة');
-      return false;
-    }
-
-    if (!isAuthenticated) {
-      toast.error('يرجى تسجيل الدخول لإتمام الطلب');
-      localStorage.setItem('redirectAfterLogin', window.location.pathname);
-      navigate('/user/login');
-      return false;
-    }
-
-    if (!customerInfo.name || !customerInfo.phone) {
-      toast.error('يرجى إدخال الاسم ورقم الهاتف');
-      return false;
-    }
-
-    if (!customerLocation) {
-      toast.error('يرجى تحديد موقع التوصيل');
-      setShowLocationPicker(true);
-      return false;
-    }
-
-    return true;
-  };
-
-  const submitOrder = async () => {
-    if (!validateOrder()) return;
-
     setSubmitting(true);
     try {
-      const subtotal = getCartSubtotal();
-      const total = (subtotal - discountAmount) + (deliveryFee || 0);
+      const subtotal = cartTotal;
+      const total = subtotal - discountAmount + deliveryFee;
 
+      // الطلب كضيف — الخادم يقبل POST /api/orders علناً، وواجهة المطعم
+      // تفعلها منذ البداية. إلزام المتجر بتسجيل الدخول كان حاجزاً بلا سبب.
       const orderData = {
         storeId: store?.id,
-        customerName: customerInfo.name,
-        customerPhone: customerInfo.phone,
-        notes: customerInfo.notes,
-        items: cart.map(item => ({
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        notes: orderNotes.trim() || undefined,
+        items: cart.map((item) => ({
           productId: item.id,
           quantity: item.quantity,
           price: item.originalPrice,
           finalPrice: item.price,
-          notes: item.notes,
+          notes: item.notes
         })),
         subtotal,
         discountAmount,
-        couponCode: appliedCoupon?.code,
+        couponCode: couponCode || undefined,
         total,
         paymentMethod: 'cash',
-        orderType: 'delivery',
-        deliveryAddress: customerLocation?.address,
-        deliveryLat: customerLocation?.lat,
-        deliveryLng: customerLocation?.lng,
-        deliveryFee: deliveryFee || 0,
-        deliveryDistance: deliveryDistance,
+        orderType,
+        deliveryAddress:
+          orderType === 'delivery' ? deliveryLocation?.address || address.trim() : undefined,
+        deliveryLat: orderType === 'delivery' ? deliveryLocation?.lat : undefined,
+        deliveryLng: orderType === 'delivery' ? deliveryLocation?.lng : undefined,
+        deliveryFee: orderType === 'delivery' ? deliveryFee : 0
       };
 
       const response: any = await api.post('/orders', orderData);
-      toast.success('تم إرسال الطلب بنجاح');
+
+      toast.success('تم إرسال طلبك بنجاح 🎉');
+      clearCart();
+      setCartOpen(false);
+      setOrderNotes('');
+      setCouponCode('');
+      setDiscountAmount(0);
+
+      if (isAuthenticated) fetchMyOrders();
 
       if (store?.whatsapp) {
-        let message = `🆕 طلب جديد #${response?.orderNumber || 'N/A'}\n`;
-        message += `👤 ${customerInfo.name}\n📞 ${customerInfo.phone}\n`;
-        message += `💰 ${total} ر.س\n📦 توصيل\n`;
-        message += `📍 ${customerLocation?.address}\n`;
-        message += `🗺️ https://www.google.com/maps?q=${customerLocation?.lat},${customerLocation?.lng}\n\n`;
-        message += `🛒 المنتجات:\n`;
-        cart.forEach(item => {
-          message += `• ${item.name} x${item.quantity} = ${item.price * item.quantity} ر.س\n`;
-        });
-        openWhatsApp(store.whatsapp, message);
+        const lines = [
+          `🆕 طلب جديد${response?.orderNumber ? ` #${response.orderNumber}` : ''}`,
+          `🏪 ${store.name}`,
+          `👤 ${customerName}`,
+          `📞 ${customerPhone}`,
+          orderType === 'delivery' ? '📦 توصيل' : '🛍️ استلام',
+          orderType === 'delivery' && deliveryLocation
+            ? `📍 ${deliveryLocation.address}\n🗺️ https://www.google.com/maps?q=${deliveryLocation.lat},${deliveryLocation.lng}`
+            : '',
+          '',
+          ...cart.map(
+            (item) =>
+              `• ${item.name} × ${item.quantity} — ${formatPrice(item.price * item.quantity, currency)}`
+          ),
+          '',
+          // العملة من إعدادات المتجر لا مكتوبة يدوياً: كانت «ر.س» ثابتة
+          // في رسالة تصل التاجر السوري كل مرة
+          `💰 الإجمالي: ${formatPrice(total, currency)}`
+        ].filter(Boolean);
+        openWhatsApp(store.whatsapp, lines.join('\n'));
       }
-
-      clearCart();
-      setCouponCode('');
-      setAppliedCoupon(null);
-      setDiscountAmount(0);
-      setShowCartModal(false);
-      setCustomerInfo({ name: '', phone: '', notes: '' });
-      setCustomerLocation(null);
-      setDeliveryFee(null);
-
     } catch (error: any) {
       console.error('Error submitting order:', error);
-      toast.error(error.response?.data?.error || 'فشل إرسال الطلب');
+      toast.error(error?.response?.data?.error || 'تعذّر إرسال الطلب، حاول مجدداً');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getFilteredProducts = () => {
-    let filtered = [...products];
-
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(p => p.categoryId === selectedCategory);
+  const fetchMyOrders = async () => {
+    if (!isAuthenticated) return;
+    setLoadingOrders(true);
+    try {
+      const response: any = await api.get('/orders/my-orders');
+      const orders = response?.data || response || [];
+      setMyOrders(Array.isArray(orders) ? orders : []);
+    } catch {
+      /* غير حرج */
+    } finally {
+      setLoadingOrders(false);
     }
-
-    if (searchQuery) {
-      filtered = filtered.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.nameEn?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.sku?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    if (sortBy === 'price-low') {
-      filtered.sort((a, b) => (a.discountedPrice || a.price) - (b.discountedPrice || b.price));
-    } else if (sortBy === 'price-high') {
-      filtered.sort((a, b) => (b.discountedPrice || b.price) - (a.discountedPrice || a.price));
-    }
-
-    return filtered;
   };
 
-  const filteredProducts = getFilteredProducts();
+  // ---------- شاشات الحالة ----------
+  if (loading) return <StorefrontSkeleton />;
 
-  if (loading || favoritesLoading || planLoading) return <Loader fullScreen />;
-  if (!store) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>لا توجد بيانات</div>;
+  if (loadError || !store) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'grid',
+          placeItems: 'center',
+          background: sf.bg,
+          color: sf.text,
+          padding: 24,
+          textAlign: 'center',
+          fontFamily: sf.font
+        }}
+        dir="rtl"
+      >
+        <div style={{ maxWidth: 380 }}>
+          <div style={{ fontSize: 52, marginBottom: 14 }}>🛍️</div>
+          <h1 style={{ fontSize: 19, fontWeight: 800, marginBottom: 8 }}>{loadError}</h1>
+          <p style={{ color: sf.muted, fontSize: 13.5, lineHeight: 1.9 }}>
+            تأكد من صحة الرابط أو تواصل مع المتجر.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  // ✅ استخدام ألوان المتجر المخصصة
-  const primaryColor = store.primaryColor || '#3B82F6';
-  const secondaryColor = store.secondaryColor || '#10B981';
-  const backgroundColor = store.backgroundColor || '#082E24';
-  const cardColor = store.cardColor || '#112E23';
-  const surfColor = store.surfaceColor || '#0F3D31';
-  const textColor = store.textColor || '#E8F5E9';
-  const mutedColor = store.mutedColor || '#9DC4AC';
-  
-  // ✅ إنشاء ثيم ديناميكي بناءً على ألوان المتجر
-  const dynamicColors = {
-    bg: backgroundColor,
-    card: cardColor,
-    surf: surfColor,
-    accent: primaryColor,
-    secondary: secondaryColor,
-    text: textColor,
-    muted: mutedColor,
-    border: `rgba(200,226,53,0.15)`,
-    red: '#FF6B6B',
-    blue: '#60A5FA',
-    purple: '#A78BFA',
-    orange: '#FB923C',
-  };
+  const deliveryEnabled = store.deliverySettings?.enableDelivery !== false;
+  const availableOrderTypes: StorefrontOrderType[] = deliveryEnabled
+    ? ['delivery', 'takeaway']
+    : ['takeaway'];
 
-  const storeSlug = store.slug || currentSlug;
+  const headerActions = (
+    <>
+      <button type="button" onClick={() => setSearchOpen(true)} aria-label="بحث" style={iconButtonStyle}>
+        <IoSearchOutline size={19} />
+      </button>
+      <button type="button" onClick={() => setSortSheetOpen(true)} aria-label="ترتيب" style={iconButtonStyle}>
+        <IoSwapVerticalOutline size={19} />
+      </button>
+    </>
+  );
 
   return (
     <>
       <StorefrontSeo business={store} type="store" itemCount={products.length} />
 
-      <div style={{ background: dynamicColors.bg, minHeight: '100vh', fontFamily: store.fontFamily || 'Cairo, sans-serif' }} dir="rtl">
-        {/* Cover Image */}
-        {store.coverImage && (
-          <div
+      <StorefrontLayout
+        name={store.name}
+        description={store.description}
+        logo={store.logo}
+        coverImage={store.coverImage}
+        phone={store.phone}
+        whatsapp={store.whatsapp}
+        address={store.address}
+        branchLabel={store.branchLabel}
+        branches={branches.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          url: b.url,
+          label: b.linkLabel,
+          isCurrent: b.id === store.id
+        }))}
+        headerActions={headerActions}
+        cartCount={cartCount}
+        onCartClick={() => setCartOpen(true)}
+        stickyNav={
+          !isSearching && navCategories.length > 1 ? (
+            <StickyCategoryNav
+              categories={navCategories}
+              activeId={activeCategory}
+              onSelect={setActiveCategory}
+              scrollSpy={false}
+              offsetTop={MINI_HEADER_OFFSET}
+              showAll
+              allLabel="كل المنتجات"
+            />
+          ) : null
+        }
+        footer={
+          <PublicFooter
+            businessName={store.name}
+            businessType="store"
+            businessLogo={store.logo}
+            businessSlug={store.slug}
+            description={store.description}
+            socialLinks={{
+              facebook: store.facebook,
+              instagram: store.instagram,
+              whatsapp: store.whatsapp,
+              tiktok: store.tiktok
+            }}
+            contactInfo={{
+              phone: store.phone,
+              email: store.email,
+              address: store.address
+            }}
+            primaryColor={store.primaryColor}
+            secondaryColor={store.secondaryColor}
+            backgroundColor={store.backgroundColor}
+            textColor={store.textColor}
+            mutedColor={store.mutedColor}
+            accentColor={store.accentColor}
+          />
+        }
+      >
+        {/* شريط الأدوات */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
             style={{
-              height: 224,
-              backgroundImage: `url(${getImageUrl(store.coverImage)})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              position: 'relative'
+              flex: 1,
+              minHeight: 44,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 9,
+              padding: '0 14px',
+              borderRadius: 13,
+              border: `1px solid ${sf.border}`,
+              background: sf.card,
+              color: sf.muted,
+              fontSize: 13,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              textAlign: 'start'
             }}
           >
-            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${dynamicColors.bg} 0%, transparent 60%)` }} />
-          </div>
+            <IoSearchOutline size={17} />
+            {isSearching ? searchQuery : 'ابحث في المنتجات...'}
+          </button>
+
+          <button type="button" onClick={() => setSortSheetOpen(true)} style={iconButtonStyle} aria-label="ترتيب">
+            <IoSwapVerticalOutline size={19} />
+          </button>
+
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={() => {
+                fetchMyOrders();
+                setShowOrderTracking(true);
+              }}
+              style={iconButtonStyle}
+              aria-label="طلباتي"
+            >
+              <IoReceiptOutline size={19} />
+            </button>
+          ) : (
+            <Link to="/user/login" style={{ ...iconButtonStyle, textDecoration: 'none' }} aria-label="تسجيل الدخول (اختياري)">
+              <IoPersonCircleOutline size={19} />
+            </Link>
+          )}
+        </div>
+
+        {/* مرشّح العروض — يظهر فقط حين توجد عروض فعلاً */}
+        {discountedCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setOnlyDiscounted((v) => !v)}
+            aria-pressed={onlyDiscounted}
+            style={{
+              marginTop: 10,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 7,
+              padding: '7px 13px',
+              minHeight: 36,
+              borderRadius: 999,
+              border: `1px solid ${onlyDiscounted ? 'transparent' : sf.border}`,
+              background: onlyDiscounted ? '#FF6B6B' : sf.card,
+              color: onlyDiscounted ? '#fff' : sf.muted,
+              fontSize: 12.5,
+              fontWeight: 700,
+              fontFamily: 'inherit',
+              cursor: 'pointer'
+            }}
+          >
+            <IoPricetagsOutline size={15} />
+            العروض ({discountedCount})
+            {onlyDiscounted && <IoClose size={14} />}
+          </button>
         )}
 
-        {/* Store Header */}
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px', marginTop: store.coverImage ? -80 : 24, position: 'relative', zIndex: 10 }}>
-          <div style={{ background: dynamicColors.card, borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.4)', padding: '20px 24px', border: `1px solid ${dynamicColors.border}` }}>
-            <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-              {store.logo && (
-                <img
-                  src={getImageUrl(store.logo)}
-                  alt={store.name}
-                  style={{ width: 80, height: 80, borderRadius: 16, objectFit: 'cover', border: `3px solid ${dynamicColors.accent}`, boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}
-                />
-              )}
-              <div style={{ flex: 1 }}>
-                <h1 style={{ fontSize: 26, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>{store.name}</h1>
-                {store.branchLabel && (
-                  <div style={{ display: 'inline-flex', marginTop: 8, padding: '4px 10px', borderRadius: 999, background: 'rgba(200,226,53,0.12)', color: dynamicColors.accent, fontSize: 12, fontWeight: 700 }}>
-                    الفرع: {store.branchLabel}
-                  </div>
-                )}
-                {store.description && (
-                  <p style={{ color: dynamicColors.muted, fontSize: 14, marginTop: 4 }}>{store.description}</p>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {store.phone && (
-                  <a
-                    href={`tel:${store.phone}`}
-                    style={{ padding: 12, background: 'rgba(200,226,53,0.08)', border: `1px solid ${dynamicColors.border}`, borderRadius: '50%', color: dynamicColors.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <IoCall size={20} />
-                  </a>
-                )}
-                {store.whatsapp && (
-                  <button
-                    onClick={() => openWhatsApp(store.whatsapp, `مرحباً، أود الاستفسار عن ${store.name}`)}
-                    style={{ padding: 12, background: '#16A34A', color: '#fff', borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(22,163,74,0.4)' }}
-                  >
-                    <IoLogoWhatsapp size={20} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* الشبكة */}
+        <section style={{ marginTop: 16 }}>
+          <h2 style={sectionHeading}>
+            {isSearching
+              ? 'نتائج البحث'
+              : onlyDiscounted
+                ? 'العروض'
+                : activeCategory === 'all'
+                  ? 'كل المنتجات'
+                  : navCategories.find((c) => c.id === activeCategory)?.name || 'المنتجات'}
+            <span style={{ color: sf.muted, fontWeight: 600, fontSize: 12.5 }}>
+              {visibleProducts.length} منتج
+            </span>
+          </h2>
 
-        {/* ==================== الأقسام التسويقية ==================== */}
-        <PublicMarketingSections 
-          businessId={store.id}
-          businessType="store"
-          className="max-w-7xl mx-auto px-4 mt-4"
-        />
-
-        {/* ==================== العروض الخاصة ==================== */}
-        <PublicOffers 
-          businessId={store.id}
-          businessType="store"
-          className="max-w-7xl mx-auto px-4 mt-4"
-          limit={5}
-        />
-
-        {/* Search and Filters Bar */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 20, background: dynamicColors.card, borderBottom: `1px solid ${dynamicColors.border}`, marginTop: 24 }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 16px' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => setShowSearch(!showSearch)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '10px 16px',
-                    background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${dynamicColors.border}`,
-                    borderRadius: 12,
-                    color: dynamicColors.text,
-                    cursor: 'pointer',
-                    fontFamily: store.fontFamily || 'Cairo, sans-serif',
-                    fontSize: 14,
-                    fontWeight: 500
-                  }}
-                >
-                  <IoSearch size={18} />
-                  <span>بحث</span>
-                </button>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '10px 16px',
-                    background: 'rgba(200,226,53,0.08)',
-                    border: `1px solid ${dynamicColors.border}`,
-                    borderRadius: 12,
-                    color: dynamicColors.text,
-                    cursor: 'pointer',
-                    fontFamily: store.fontFamily || 'Cairo, sans-serif',
-                    fontSize: 14,
-                    fontWeight: 500
-                  }}
-                >
-                  <IoFilter size={18} />
-                  <span>ترتيب</span>
-                </button>
-              </div>
-
-              <button
-                onClick={() => navigate('/my-orders')}
-                style={{ padding: '10px 16px', background: dynamicColors.purple, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(167,139,250,0.3)' }}
-              >
-                <IoTime size={18} style={{ display: 'inline', marginLeft: 4 }} />
-                طلباتي
-              </button>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => navigate('/favorites')}
-                  style={{ position: 'relative', padding: '10px 16px', background: '#BE185D', color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, boxShadow: '0 2px 8px rgba(190,24,93,0.3)' }}
-                >
-                  <IoHeart size={18} style={{ display: 'inline', marginLeft: 4 }} />
-                  المفضلة
-                  {getFavoritesCount() > 0 && (
-                    <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {getFavoritesCount()}
-                    </span>
-                  )}
-                </button>
-
-                {isAuthenticated ? (
-                  <>
-                    <button
-                      onClick={() => setShowCartModal(true)}
-                      style={{ position: 'relative', padding: '10px 16px', background: dynamicColors.accent, color: dynamicColors.bg, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, fontWeight: 600 }}
-                    >
-                      <IoCart size={18} style={{ display: 'inline', marginLeft: 4 }} />
-                      سلة
-                      {getCartCount() > 0 && (
-                        <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {getCartCount()}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      onClick={logout}
-                      style={{ padding: '10px 16px', background: dynamicColors.red, color: '#fff', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                    >
-                      <IoLogOut size={18} style={{ display: 'inline', marginLeft: 4 }} />
-                      خروج
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    to="/user/login"
-                    style={{ padding: '10px 16px', background: dynamicColors.blue, color: '#fff', borderRadius: 12, textDecoration: 'none', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14 }}
-                  >
-                    <IoPerson size={18} style={{ display: 'inline', marginLeft: 4 }} />
-                    دخول
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {/* Search Input */}
-            <AnimatePresence>
-              {showSearch && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  style={{ overflow: 'hidden', marginTop: 12 }}
-                >
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="ابحث عن منتج..."
-                    style={{
-                      width: '100%',
-                      padding: 12,
-                      background: dynamicColors.surf,
-                      border: `2px solid ${dynamicColors.border}`,
-                      borderRadius: 12,
-                      color: dynamicColors.text,
-                      outline: 'none',
-                      fontFamily: store.fontFamily || 'Cairo, sans-serif',
-                      fontSize: 14,
-                      boxSizing: 'border-box',
-                      transition: 'border-color 0.2s'
-                    }}
-                    autoFocus
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Filters */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  style={{ overflow: 'hidden', marginTop: 12 }}
-                >
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    <button
-                      onClick={() => setSortBy('price-low')}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '8px 16px',
-                        borderRadius: 12,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontFamily: store.fontFamily || 'Cairo, sans-serif',
-                        fontSize: 13,
-                        transition: 'all 0.2s',
-                        background: sortBy === 'price-low' ? dynamicColors.accent : 'rgba(200,226,53,0.08)',
-                        color: sortBy === 'price-low' ? dynamicColors.bg : dynamicColors.text,
-                        boxShadow: sortBy === 'price-low' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
-                      }}
-                    >
-                      <IoChevronDown size={16} />
-                      السعر: من الأقل
-                    </button>
-                    <button
-                      onClick={() => setSortBy('price-high')}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '8px 16px',
-                        borderRadius: 12,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontFamily: store.fontFamily || 'Cairo, sans-serif',
-                        fontSize: 13,
-                        transition: 'all 0.2s',
-                        background: sortBy === 'price-high' ? dynamicColors.accent : 'rgba(200,226,53,0.08)',
-                        color: sortBy === 'price-high' ? dynamicColors.bg : dynamicColors.text,
-                        boxShadow: sortBy === 'price-high' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
-                      }}
-                    >
-                      <IoChevronUp size={16} />
-                      السعر: من الأعلى
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Categories */}
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 16px' }}>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12 }}>
-            <button
-              onClick={() => setSelectedCategory('all')}
-              style={{
-                padding: '10px 20px',
-                borderRadius: 12,
-                whiteSpace: 'nowrap',
-                fontWeight: 500,
-                border: selectedCategory === 'all' ? 'none' : `1px solid ${dynamicColors.border}`,
-                cursor: 'pointer',
-                fontFamily: store.fontFamily || 'Cairo, sans-serif',
-                fontSize: 14,
-                transition: 'all 0.2s',
-                background: selectedCategory === 'all' ? dynamicColors.accent : dynamicColors.card,
-                color: selectedCategory === 'all' ? dynamicColors.bg : dynamicColors.text,
-                boxShadow: selectedCategory === 'all' ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
-              }}
-            >
-              جميع المنتجات
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: 12,
-                  whiteSpace: 'nowrap',
-                  fontWeight: 500,
-                  border: selectedCategory === cat.id ? 'none' : `1px solid ${dynamicColors.border}`,
-                  cursor: 'pointer',
-                  fontFamily: store.fontFamily || 'Cairo, sans-serif',
-                  fontSize: 14,
-                  transition: 'all 0.2s',
-                  background: selectedCategory === cat.id ? dynamicColors.accent : dynamicColors.card,
-                  color: selectedCategory === cat.id ? dynamicColors.bg : dynamicColors.text,
-                  boxShadow: selectedCategory === cat.id ? '0 2px 8px rgba(0,0,0,0.3)' : 'none'
-                }}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Products Grid */}
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 16px 32px' }}>
-          {filteredProducts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '80px 24px', background: dynamicColors.card, borderRadius: 16, border: `1px solid ${dynamicColors.border}` }}>
-              <IoStorefront style={{ fontSize: 64, color: dynamicColors.muted, opacity: 0.3, display: 'block', margin: '0 auto 16px' }} />
-              <p style={{ color: dynamicColors.muted, fontSize: 17 }}>لا توجد منتجات</p>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  style={{ marginTop: 16, color: dynamicColors.accent, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: store.fontFamily || 'Cairo, sans-serif', fontSize: 14, fontWeight: 500 }}
-                >
-                  مسح البحث
-                </button>
-              )}
-            </div>
+          {visibleProducts.length === 0 ? (
+            <EmptyState
+              text={
+                isSearching
+                  ? 'لا توجد منتجات تطابق بحثك'
+                  : onlyDiscounted
+                    ? 'لا عروض حالياً'
+                    : 'لا توجد منتجات متاحة حالياً'
+              }
+            />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 20 }}>
-              {filteredProducts.map((product) => (
-                <ProductCard
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22 }}
+              style={gridStyle}
+            >
+              {visibleProducts.map((product) => (
+                <ProductGridCard
                   key={product.id}
-                  storeSlug={storeSlug}
-                  product={{
-                    id: product.id,
-                    name: product.name,
-                    nameEn: product.nameEn,
-                    price: product.price,
-                    discountedPrice: product.discountedPrice,
-                    imageUrl: product.imageUrl,
-                    stock: product.stock,
-                  }}
-                  isFavorite={isFavorite(product.id)}
-                  onToggleFavorite={() => handleToggleFavorite(product)}
-                  onAddToCart={() => handleAddToCart(product)}
+                  product={product}
+                  currency={currency}
+                  quantityInCart={quantityByProductId.get(product.id) || 0}
+                  onAdd={handleAdd}
+                  onQuantityChange={handleQuantityChange}
+                  isFavorite={favorites.has(product.id)}
+                  onToggleFavorite={(p) =>
+                    toggleFavorite({
+                      id: p.id,
+                      type: 'product',
+                      name: p.name,
+                      price: p.price,
+                      image: coverOf(p)
+                    } as any)
+                  }
                 />
               ))}
-            </div>
+            </motion.div>
           )}
-        </div>
+        </section>
 
-        {/* ==================== إعلانات أسفل الصفحة ==================== */}
-        <PublicAdvertisements 
-          businessId={store.id}
-          businessType="store"
-          currentPlan={currentPlan}
-          className="max-w-7xl mx-auto px-4 mt-8 mb-8"
-          limit={2}
-          position="bottom"
-        />
+        {/* المحتوى التسويقي بعد الشبكة — لا يزاحم المنتجات */}
+        {!isSearching && !onlyDiscounted && (
+          <div style={{ marginTop: 28 }}>
+            <PublicMarketingSections businessId={store.id} businessType="store" limitPerSection={6} />
+            <PublicOffers businessId={store.id} businessType="store" limit={4} />
+            <div style={{ marginTop: 24 }}>
+              <PublicAdvertisements
+                businessId={store.id}
+                businessType="store"
+                currentPlan={store.plan}
+                limit={2}
+                position="bottom"
+              />
+            </div>
+          </div>
+        )}
+      </StorefrontLayout>
 
-        {/* Floating Scroll Top Button */}
-        <AnimatePresence>
-          {showScrollTop && (
-            <motion.button
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0 }}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      {/* ==================== شريط السلة ==================== */}
+      <BottomCartBar
+        itemCount={cartCount}
+        total={cartTotal}
+        currency={currency}
+        onOpen={() => setCartOpen(true)}
+        hidden={cartOpen || sortSheetOpen || searchOpen}
+      />
+
+      {/* ==================== لوح البحث ==================== */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 90,
+              background: sf.bg,
+              padding: 16,
+              fontFamily: sf.font
+            }}
+            dir="rtl"
+          >
+            <div style={{ display: 'flex', gap: 9, alignItems: 'center' }}>
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث عن منتج..."
+                style={{
+                  flex: 1,
+                  minHeight: 46,
+                  padding: '0 14px',
+                  borderRadius: 13,
+                  border: `1px solid ${sf.border}`,
+                  background: sf.card,
+                  color: sf.text,
+                  fontSize: 14.5,
+                  fontFamily: 'inherit'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                style={iconButtonStyle}
+                aria-label="إغلاق البحث"
+              >
+                <IoClose size={20} />
+              </button>
+            </div>
+
+            <div style={{ marginTop: 14, overflowY: 'auto', maxHeight: 'calc(100vh - 90px)' }}>
+              <div style={gridStyle}>
+                {visibleProducts.map((product) => (
+                  <ProductGridCard
+                    key={product.id}
+                    product={product}
+                    currency={currency}
+                    quantityInCart={quantityByProductId.get(product.id) || 0}
+                    onAdd={handleAdd}
+                    onQuantityChange={handleQuantityChange}
+                    isFavorite={favorites.has(product.id)}
+                  />
+                ))}
+              </div>
+              {isSearching && visibleProducts.length === 0 && (
+                <EmptyState text="لا توجد منتجات تطابق بحثك" />
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ==================== لوح الترتيب ==================== */}
+      <BottomSheet open={sortSheetOpen} onClose={() => setSortSheetOpen(false)} title="ترتيب المنتجات">
+        <div style={{ padding: '4px 0 10px' }}>
+          {SORT_OPTIONS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => {
+                setSortBy(option.key);
+                setSortSheetOpen(false);
+              }}
               style={{
-                position: 'fixed', bottom: 96, right: 16, zIndex: 30,
-                width: 48, height: 48,
-                background: dynamicColors.accent,
-                color: dynamicColors.bg,
-                borderRadius: '50%',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '13px 4px',
+                minHeight: 48,
+                background: 'none',
                 border: 'none',
-                cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
+                borderBottom: `1px solid ${sf.border}`,
+                color: sortBy === option.key ? sf.accent : sf.text,
+                fontSize: 14,
+                fontWeight: sortBy === option.key ? 800 : 500,
+                fontFamily: 'inherit',
+                cursor: 'pointer'
               }}
             >
-              <IoArrowUp size={22} />
-            </motion.button>
-          )}
-        </AnimatePresence>
+              {option.label}
+              {sortBy === option.key && <IoCheckmark size={18} />}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
 
-        {/* Floating Cart Button */}
-        {cart.length > 0 && (
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0 }}
-            onClick={() => setShowCartModal(true)}
-            style={{
-              position: 'fixed', bottom: 24, left: 16, zIndex: 30,
-              background: `linear-gradient(135deg, ${dynamicColors.accent}, ${dynamicColors.accent}cc)`,
-              color: dynamicColors.bg,
-              padding: 16,
-              borderRadius: '50%',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
-            }}
-          >
-            <div style={{ position: 'relative' }}>
-              <IoCart size={26} />
-              <span style={{ position: 'absolute', top: -8, right: -8, background: dynamicColors.red, color: '#fff', fontSize: 11, width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                {getCartCount()}
-              </span>
-            </div>
-          </motion.button>
-        )}
+      {/* ==================== السلة ==================== */}
+      <CartSheet
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        items={cart}
+        currency={currency}
+        onQuantityChange={(item, next) => {
+          if (next < 1) removeFromCart(item.id, item.size);
+          else updateQuantity(item.id, next, item.size);
+        }}
+        onRemove={(item) => removeFromCart(item.id, item.size)}
+        onClear={clearCart}
+        availableOrderTypes={availableOrderTypes}
+        orderType={orderType}
+        onOrderTypeChange={setOrderType}
+        customerName={customerName}
+        customerPhone={customerPhone}
+        notes={orderNotes}
+        onCustomerNameChange={setCustomerName}
+        onCustomerPhoneChange={setCustomerPhone}
+        onNotesChange={setOrderNotes}
+        address={address}
+        onAddressChange={setAddress}
+        deliveryLocation={deliveryLocation}
+        onDeliveryLocationChange={setDeliveryLocation}
+        businessLocation={
+          store.latitude && store.longitude
+            ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+            : undefined
+        }
+        deliveryFee={deliveryFee}
+        discount={discountAmount}
+        couponCode={couponCode}
+        onCouponApply={applyCoupon}
+        onCouponRemove={() => {
+          setCouponCode('');
+          setDiscountAmount(0);
+        }}
+        submitting={submitting}
+        onSubmit={submitOrder}
+      />
 
-        {/* Cart Modal */}
-        <CartModal
-          isOpen={showCartModal}
-          onClose={() => setShowCartModal(false)}
-          cart={cart}
-          isOutside={true}
-          customerInfo={customerInfo}
-          onCustomerInfoChange={setCustomerInfo}
-          onSubmit={submitOrder}
-          onUpdateQuantity={updateQuantity}
-          onRemoveFromCart={removeFromCart}
-          onApplyCoupon={(code) => setCouponCode(code)}
-          onRemoveCoupon={handleRemoveCoupon}
-          validateCoupon={validateCoupon}
-          couponCode={couponCode}
-          appliedCoupon={appliedCoupon}
-          discountAmount={discountAmount}
-          validatingCoupon={validatingCoupon}
-          subtotal={getCartSubtotal()}
-          formatPrice={(price) => price.toLocaleString() + ' ر.س'}
-          getCartCount={getCartCount}
-          submitting={submitting}
-          restaurantLat={store?.latitude ? parseFloat(store.latitude) : undefined}
-          restaurantLng={store?.longitude ? parseFloat(store.longitude) : undefined}
-          customerLocation={customerLocation}
-          onCustomerLocationChange={setCustomerLocation}
-        />
-      </div>
-        <PublicFooter
-  businessName={store.name}
-  businessType="store"
-  businessLogo={store.logo}
-  businessSlug={store.slug}
-  description={store.description}
-  socialLinks={{
-    facebook: store.facebook,
-    instagram: store.instagram,
-    whatsapp: store.whatsapp,
-    tiktok: store.tiktok,
-  }}
-  contactInfo={{
-    phone: store.phone,
-    email: store.email,
-    address: store.address,
-    openingHours: store.openingHours,
-  }}
-  primaryColor={store.primaryColor}
-  secondaryColor={store.secondaryColor}
-  backgroundColor={store.backgroundColor}
-  textColor={store.textColor}
-  mutedColor={store.mutedColor}
-  accentColor={store.accentColor}
-  showNewsletter={false}
-  showQuickLinks={true}
-/>
-      {/* الشارة يحسمها الخادم: الخطة وحدها لا تكفي — قد تكون الميزة مشتراة
-          مفردةً على خطة مجانية، وهو ما لا تراه الواجهة */}
+      {/* ==================== تتبّع الطلبات ==================== */}
+      <OrderTrackingModal
+        isOpen={showOrderTracking}
+        onClose={() => {
+          setShowOrderTracking(false);
+          setTrackingOrder(null);
+        }}
+        trackingOrder={trackingOrder}
+        orders={myOrders}
+        onSelectOrder={setTrackingOrder}
+        formatPrice={(price: number) => formatPrice(price, currency)}
+        loading={loadingOrders}
+      />
+
+      {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}
       <PlatformBadge show={store?.showPlatformBadge} />
-
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
     </>
   );
+};
+
+// ==================== عناصر مساعدة ====================
+
+/** أول صورة صالحة — نفس منطق البطاقة كي لا تختلف صورة السلة عن الشبكة */
+const coverOf = (product: StorefrontProduct): string | undefined => {
+  const { images, image } = product;
+  if (Array.isArray(images) && images.length > 0) return images[0];
+  if (typeof images === 'string' && images.trim()) {
+    try {
+      const parsed = JSON.parse(images);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+    } catch {
+      return images;
+    }
+  }
+  return image || undefined;
+};
+
+/** ترتيب «المقترح»: المخفَّض أولاً ثم الرائج ثم الجديد */
+const score = (product: StorefrontProduct): number => {
+  const badges = resolveBadges(product);
+  return (
+    (badges.hasDiscount ? 1000 + (badges.discountPercent || 0) : 0) +
+    (badges.isTrending ? 500 : 0) +
+    (badges.isNew ? 100 : 0)
+  );
+};
+
+const EmptyState: React.FC<{ text: string }> = ({ text }) => (
+  <div
+    style={{
+      padding: '46px 20px',
+      textAlign: 'center',
+      color: sf.muted,
+      fontSize: 13.5,
+      lineHeight: 1.9
+    }}
+  >
+    {text}
+  </div>
+);
+
+const gridStyle: React.CSSProperties = {
+  display: 'grid',
+  // عمودان على الجوال ثم تتّسع الشبكة تلقائياً على الشاشات الأكبر
+  gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))',
+  gap: 12
+};
+
+const sectionHeading: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: 10,
+  color: sf.text,
+  fontSize: 15.5,
+  fontWeight: 800,
+  margin: '0 0 12px'
+};
+
+const iconButtonStyle: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  minWidth: 44,
+  borderRadius: 13,
+  border: `1px solid ${sf.border}`,
+  background: sf.card,
+  color: sf.text,
+  display: 'grid',
+  placeItems: 'center',
+  cursor: 'pointer',
+  flexShrink: 0
 };
 
 export default StorePublicMenu;
