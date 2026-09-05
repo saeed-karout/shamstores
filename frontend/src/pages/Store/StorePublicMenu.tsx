@@ -30,7 +30,9 @@ import {
   IoPersonCircleOutline,
   IoReceiptOutline,
   IoCheckmark,
-  IoPricetagsOutline
+  IoPricetagsOutline,
+  IoHeartOutline,
+  IoLogOutOutline
 } from 'react-icons/io5';
 
 import PublicAdvertisements from '@/components/public/PublicAdvertisements';
@@ -110,7 +112,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   businessWhatsapp: propBusinessWhatsapp
 }) => {
   const { slug: urlSlug } = useParams();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart();
   const { favorites, toggleFavorite } = useFavorites();
   const { setThemeColors } = useTheme();
@@ -131,6 +133,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [onlyDiscounted, setOnlyDiscounted] = useState(false);
 
   const [cartOpen, setCartOpen] = useState(false);
+  const [favoritesOpen, setFavoritesOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [orderType, setOrderType] = useState<StorefrontOrderType>('delivery');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -324,6 +328,18 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       ? [{ id: 'all', name: 'كل المنتجات', image: null, count: products.length }, ...named]
       : named;
   }, [products, categories]);
+
+  /**
+   * المفضّلة **من هذا المتجر وحده**.
+   *
+   * useFavorites يخزّن مفضّلة كل المتاجر في مفتاح واحد بالمتصفح. عرضها
+   * كلها هنا كان سيُظهر للزبون منتجات متجر آخر داخل هذا المتجر — ولا
+   * سبيل لإضافتها إلى سلته أصلاً.
+   */
+  const favoriteProducts = useMemo(
+    () => products.filter((p) => favorites.has(p.id)),
+    [products, favorites]
+  );
 
   const discountedCount = useMemo(
     () => products.filter((p) => resolveBadges(p).hasDiscount).length,
@@ -565,8 +581,13 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         onCategorySelect={setActiveCategory}
         cartCount={cartCount}
         onCartClick={() => setCartOpen(true)}
-        onSearchClick={() => setSearchOpen(true)}
-        searchLabel={isSearching ? searchQuery : 'ابحث في المنتجات…'}
+        favoritesCount={favoriteProducts.length}
+        onFavoritesClick={() => setFavoritesOpen(true)}
+        onAccountClick={() => setAccountOpen(true)}
+        accountLabel={isAuthenticated ? user?.name?.split(' ')[0] || 'حسابي' : 'دخول'}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchOpen={() => setSearchOpen(true)}
         footer={
           <PublicFooter
             businessName={store.name}
@@ -647,27 +668,6 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           </button>
         )}
 
-          {isAuthenticated ? (
-            <button
-              type="button"
-              onClick={() => {
-                fetchMyOrders();
-                setShowOrderTracking(true);
-              }}
-              style={{ ...iconButtonStyle, width: 36, height: 36, minWidth: 36, borderRadius: 999 }}
-              aria-label="طلباتي"
-            >
-              <IoReceiptOutline size={17} />
-            </button>
-          ) : (
-            <Link
-              to="/user/login"
-              style={{ ...iconButtonStyle, width: 36, height: 36, minWidth: 36, borderRadius: 999, textDecoration: 'none' }}
-              aria-label="تسجيل الدخول (اختياري)"
-            >
-              <IoPersonCircleOutline size={17} />
-            </Link>
-          )}
         </div>
 
         {/* الشبكة */}
@@ -697,10 +697,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             />
           ) : (
             <motion.div
+              className="shop-grid"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22 }}
-              style={gridStyle}
             >
               {visibleProducts.map((product) => (
                 <ProductGridCard
@@ -799,7 +799,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             </div>
 
             <div style={{ marginTop: 14, overflowY: 'auto', maxHeight: 'calc(100vh - 90px)' }}>
-              <div style={gridStyle}>
+              <div className="shop-grid">
                 {visibleProducts.map((product) => (
                   <ProductGridCard
                     key={product.id}
@@ -897,6 +897,117 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         onSubmit={submitOrder}
       />
 
+      {/* ==================== المفضلة ==================== */}
+      <BottomSheet open={favoritesOpen} onClose={() => setFavoritesOpen(false)} title="المفضلة">
+        {favoriteProducts.length === 0 ? (
+          <div style={{ padding: '30px 10px', textAlign: 'center', color: sf.muted, fontSize: 13, lineHeight: 1.9 }}>
+            لم تضف شيئاً بعد.
+            <br />
+            اضغط ♡ على أي منتج ليظهر هنا.
+          </div>
+        ) : (
+          <div className="shop-grid" style={{ padding: '4px 0 14px' }}>
+            {favoriteProducts.map((product) => (
+              <ProductGridCard
+                key={product.id}
+                product={product}
+                currency={currency}
+                quantityInCart={quantityByProductId.get(product.id) || 0}
+                onAdd={handleAdd}
+                onQuantityChange={handleQuantityChange}
+                isFavorite
+                onToggleFavorite={(p) =>
+                  toggleFavorite({
+                    id: p.id,
+                    type: 'product',
+                    name: p.name,
+                    price: p.price,
+                    image: coverOf(p)
+                  } as any)
+                }
+              />
+            ))}
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* ==================== الحساب ==================== */}
+      <BottomSheet
+        open={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        title={isAuthenticated ? user?.name || 'حسابي' : 'حسابك'}
+      >
+        <div style={{ display: 'grid', gap: 9, padding: '4px 0 14px' }}>
+          {isAuthenticated ? (
+            <>
+              <div style={{ color: sf.muted, fontSize: 12.5, lineHeight: 1.9, marginBottom: 4 }}>
+                {(user as any)?.email}
+              </div>
+              <SheetAction
+                icon={<IoReceiptOutline size={18} />}
+                label="طلباتي"
+                onClick={() => {
+                  setAccountOpen(false);
+                  fetchMyOrders();
+                  setShowOrderTracking(true);
+                }}
+              />
+              <SheetAction
+                icon={<IoHeartOutline size={18} />}
+                label="المفضلة"
+                onClick={() => {
+                  setAccountOpen(false);
+                  setFavoritesOpen(true);
+                }}
+              />
+              <SheetAction
+                icon={<IoLogOutOutline size={18} />}
+                label="تسجيل الخروج"
+                danger
+                onClick={() => {
+                  setAccountOpen(false);
+                  logout();
+                }}
+              />
+            </>
+          ) : (
+            <>
+              {/* الطلب لا يحتاج حساباً — نقولها صراحةً كي لا يهرب الزبون */}
+              <div style={{ color: sf.muted, fontSize: 12.5, lineHeight: 1.9 }}>
+                يمكنك الطلب كضيف بلا حساب. الحساب يحفظ طلباتك ويتيح تتبّعها.
+              </div>
+              <Link
+                to="/user/login"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  minHeight: 46,
+                  borderRadius: 12,
+                  background: sf.accent,
+                  color: sf.onAccent,
+                  fontWeight: 800,
+                  fontSize: 13.5,
+                  textDecoration: 'none'
+                }}
+              >
+                <IoPersonCircleOutline size={18} />
+                تسجيل الدخول
+              </Link>
+              <SheetAction
+                icon={<IoHeartOutline size={18} />}
+                label="المفضلة"
+                onClick={() => {
+                  setAccountOpen(false);
+                  setFavoritesOpen(true);
+                }}
+              />
+            </>
+          )}
+        </div>
+      </BottomSheet>
+
       {/* ==================== تتبّع الطلبات ==================== */}
       <OrderTrackingModal
         isOpen={showOrderTracking}
@@ -958,12 +1069,38 @@ const EmptyState: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-const gridStyle: React.CSSProperties = {
-  display: 'grid',
-  // عمودان على الجوال ثم تتّسع الشبكة تلقائياً على الشاشات الأكبر
-  gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 1fr))',
-  gap: 12
-};
+/** إجراء داخل لوح سفلي */
+const SheetAction: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}> = ({ icon, label, onClick, danger }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      width: '100%',
+      minHeight: 46,
+      padding: '0 14px',
+      borderRadius: 12,
+      border: `1px solid ${sf.border}`,
+      background: sf.card,
+      color: danger ? '#FF6B6B' : sf.text,
+      fontSize: 13.5,
+      fontWeight: 700,
+      fontFamily: 'inherit',
+      cursor: 'pointer',
+      textAlign: 'start'
+    }}
+  >
+    {icon}
+    {label}
+  </button>
+);
 
 const sectionHeading: React.CSSProperties = {
   display: 'flex',

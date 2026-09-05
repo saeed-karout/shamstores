@@ -347,3 +347,87 @@ textarea:focus-visible,
 
   [style*="padding: 24px"] { padding: 11px !important; }
 }
+
+/* ============================================================
+   واجهة المتجر — التجاوب بالفئات لا بالسمات.
+   ============================================================
+   قواعد `[style*=...]` أعلاه تفرض عموداً واحداً تحت 480 بكسل على أي
+   شبكة `repeat(N,...)`. شبكة المنتجات لا يصلح لها ذلك: عمود واحد يُخفي
+   المقارنة بين منتجين، وهي فعل التسوّق نفسه. فالفئات هنا تتجنّب ذلك
+   الانتقاء وتتحكم بنقاط التوقّف صراحةً.
+
+   والمقاسات تصاعدية من الجوال: عمودان ثم ثلاثة… حتى ستة على الشاشات
+   العريضة. شبكة بعمودين على لابتوب تترك ثلثي الشاشة فارغاً. */
+
+.shop-shell {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: 14px;
+  box-sizing: border-box;
+}
+
+.shop-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 560px) { .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 820px) { .shop-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; } }
+@media (min-width: 1100px) { .shop-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 1440px) { .shop-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; } }
+
+@media (min-width: 820px) {
+  .shop-shell { padding-inline: 24px; }
+}
+
+/* البانر: ملء العرض على الجوال، ومحتوًى مستدير على الشاشات الأكبر */
+.shop-banner {
+  position: relative;
+  overflow: hidden;
+  /* ⚠️ العرض الصريح ضروري: مع `aspect-ratio` وحده يحكم `max-height`
+     العرضَ أيضاً، فيضيق البانر عن الشبكة تحته ويبدو الاثنان غير محاذيين.
+     بعرض صريح يُحسب الارتفاع منه ثم يُقصّ، ويبقى العرض كاملاً. */
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 240px;
+}
+
+@media (min-width: 820px) {
+  .shop-banner {
+    aspect-ratio: 32 / 9;
+    max-height: 300px;
+    border-radius: 18px;
+  }
+}
+
+/* التنقّل بين الأقسام: بلاطات بصور على الجوال، شريط نصّي على اللابتوب */
+.shop-tiles { display: flex; }
+.shop-navbar { display: none; }
+
+@media (min-width: 1024px) {
+  .shop-tiles { display: none; }
+  .shop-navbar { display: flex; }
+}
+
+/* حقل البحث الكامل يظهر على اللابتوب، وزرّه المختصر على الجوال */
+.shop-search-full { display: none; }
+.shop-search-compact { display: flex; }
+
+@media (min-width: 1024px) {
+  .shop-search-full { display: flex; }
+  .shop-search-compact { display: none; }
+}
+
+.shop-only-wide { display: none; }
+@media (min-width: 1024px) { .shop-only-wide { display: inline-flex; } }
+
+/* غلاف البانر: بلا حشوة على الجوال ليملأ العرض، وبحشوة الحاوية على
+   اللابتوب حيث يبدو الالتصاق بالحافتين خاماً لا جريئاً. */
+.shop-banner-wrap { padding-inline: 0; padding-top: 0; }
+@media (min-width: 820px) { .shop-banner-wrap { padding-inline: 24px; padding-top: 16px; } }
+
+.shop-brand-name { max-width: 84px; }
+@media (min-width: 560px) { .shop-brand-name { max-width: 150px; } }
+@media (min-width: 1024px) { .shop-brand-name { max-width: 200px; } }
