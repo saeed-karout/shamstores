@@ -80,6 +80,9 @@ const AdminUserDetails: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [updatingPassword, setUpdatingPassword] = useState(false);
   const [changingRole, setChangingRole] = useState(false);
+  const [newBusinessType, setNewBusinessType] = useState<'store' | 'restaurant'>('store');
+  const [newBusinessName, setNewBusinessName] = useState('');
+  const [creatingBusiness, setCreatingBusiness] = useState(false);
 
   useEffect(() => {
     fetchUserDetails();
@@ -130,6 +133,25 @@ const AdminUserDetails: React.FC = () => {
       toast.error('فشل تحديث دور المستخدم');
     } finally {
       setChangingRole(false);
+    }
+  };
+
+  const handleCreateBusiness = async () => {
+    const name = newBusinessName.trim();
+    if (name.length < 2) {
+      toast.error('أدخل اسم النشاط');
+      return;
+    }
+    setCreatingBusiness(true);
+    try {
+      await api.post(`/admin/users/${id}/business`, { type: newBusinessType, name });
+      toast.success(newBusinessType === 'store' ? 'أُنشئ المتجر ورُبط بالحساب' : 'أُنشئ المطعم ورُبط بالحساب');
+      setNewBusinessName('');
+      fetchUserDetails();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'فشل إنشاء النشاط');
+    } finally {
+      setCreatingBusiness(false);
     }
   };
 
@@ -447,11 +469,68 @@ const AdminUserDetails: React.FC = () => {
                 style={{ ...inputStyle }}
               >
                 <option value="user">مستخدم عادي</option>
-                <option value="owner">مالك مطعم</option>
+                <option value="owner">صاحب مطعم أو متجر</option>
                 <option value="staff">موظف</option>
                 <option value="delivery_driver">مندوب توصيل</option>
               </select>
               {changingRole && <p style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>جاري التحديث...</p>}
+            </div>
+          )}
+
+          {/* إنشاء نشاط — الدور وحده لا يصنع تاجراً */}
+          {user.role !== 'super_admin' && !user.restaurant && !user.store && (
+            <div style={cardStyle}>
+              <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IoStorefront style={{ color: C.accent }} /> إنشاء نشاط لهذا الحساب
+              </h2>
+              <p style={{ color: C.muted, fontSize: 12.5, margin: '0 0 14px', lineHeight: 1.9 }}>
+                دور «صاحب مطعم أو متجر» وحده لا يكفي: من يحمله بلا نشاط مرتبط
+                تردّه لوحة التحكم إلى الصفحة الرئيسية. الإنشاء هنا يربط النشاط
+                ويرفع الدور معاً.
+              </p>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                {([
+                  { key: 'store' as const, label: 'متجر' },
+                  { key: 'restaurant' as const, label: 'مطعم' }
+                ]).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setNewBusinessType(key)}
+                    aria-pressed={newBusinessType === key}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer',
+                      border: `2px solid ${newBusinessType === key ? C.accent : C.border}`,
+                      background: newBusinessType === key ? 'rgba(200,226,53,0.1)' : C.surf,
+                      color: newBusinessType === key ? C.accent : C.muted,
+                      fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <label style={labelStyle} htmlFor="new-business-name">
+                {newBusinessType === 'store' ? 'اسم المتجر' : 'اسم المطعم'}
+              </label>
+              <input
+                id="new-business-name"
+                value={newBusinessName}
+                onChange={(e) => setNewBusinessName(e.target.value)}
+                maxLength={80}
+                placeholder={newBusinessType === 'store' ? 'متجري الإلكتروني' : 'مطعمي المفضل'}
+                style={{ ...inputStyle, marginBottom: 10 }}
+              />
+              <Button
+                variant="primary"
+                onClick={handleCreateBusiness}
+                loading={creatingBusiness}
+                fullWidth
+              >
+                إنشاء وربط
+              </Button>
             </div>
           )}
 

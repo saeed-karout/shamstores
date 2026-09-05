@@ -11,29 +11,6 @@ import { firebaseAuth } from '@/services/firebaseConfig';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 
-export interface SignupIntent {
-  accountType: 'restaurant' | 'store' | 'customer';
-  businessName?: string;
-}
-
-/**
- * إما جلسة جاهزة، أو طلبٌ صريح بسؤال المستخدم عن نوع حسابه.
- *
- * حقول اختيارية لا اتحاد مُميَّز: `strict: false` في tsconfig يُعطّل تضييق
- * النوع، فالفرع الآخر يبقى مجهولاً بعد فحص `needsAccountType`.
- */
-export interface SignInOutcome {
-  needsAccountType: boolean;
-  /** حين needsAccountType */
-  idToken?: string;
-  email?: string | null;
-  name?: string | null;
-  missingBusinessName?: boolean;
-  /** حين الجلسة جاهزة */
-  token?: string;
-  user?: any;
-}
-
 interface FirebaseAuthState {
   user: FirebaseUser | null;
   loading: boolean;
@@ -48,23 +25,32 @@ export const useFirebaseAuth = () => {
   });
 
   /**
-   * يبادل رمز غوغل بجلسة على منصّتنا.
+   * دخول بغوغل — لمن ربط حسابه سابقاً فقط.
    *
-   * مستقلٌّ عن نافذة غوغل عمداً: حين يردّ الخادم `needsAccountType` تسأل
-   * الواجهة عن نوع الحساب ثم تستدعي هذه الدالة بالرمز نفسه — بلا فتح
-   * النافذة مرة ثانية وبلا مطالبة المستخدم بتسجيل الدخول من جديد.
+   * إنشاء الحسابات بغوغل موقوف: غوغل يثبت البريد لا نوع الحساب، فكان كل
+   * ضاغط للزر يصير زبوناً بما فيهم أصحاب المتاجر. بريد بلا حساب يردّ
+   * الخادمُ عليه بـ 404 ورسالة تدلّ على التسجيل بالبريد وكلمة المرور.
    */
-  const exchangeIdToken = useCallback(
-    async (idToken: string, intent?: SignupIntent): Promise<SignInOutcome> => {
-      // axios مباشرةً: عميل الـ API يفكّ التغليف ولا يمرّر حقولاً كـ needsAccountType
+  const signInWithGoogle = useCallback(async () => {
+    if (!firebaseAuth) {
+      toast.error('Firebase not configured');
+      return null;
+    }
+
+    setState(prev => ({ ...prev, loading: true, error: null }));
+
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(firebaseAuth, provider);
+      if (!result.user) return null;
+
+      const idToken = await result.user.getIdToken();
+
+      // axios مباشرةً: عميل الـ API يفكّ التغليف فيبتلع رسالة الخطأ
       const axios = (await import('axios')).default;
       const response = await axios.post(
         `${api.getApiBaseUrl()}/auth/firebase-signin`,
-        {
-          idToken,
-          accountType: intent?.accountType,
-          businessName: intent?.businessName
-        },
+        { idToken },
         { headers: { 'Content-Type': 'application/json' } }
       );
 
@@ -73,73 +59,30 @@ export const useFirebaseAuth = () => {
       }
 
       const data = response.data.data;
-      if (!data) throw new Error('Missing data in response');
-
-      // حساب جديد بلا نوع: الخادم لم يُنشئ شيئاً بعد وينتظر جواب المستخدم
-      if (data.needsAccountType) {
-        return {
-          needsAccountType: true,
-          idToken,
-          email: data.email ?? null,
-          name: data.name ?? null,
-          missingBusinessName: !!data.missingBusinessName
-        };
-      }
-
-      if (!data.token) throw new Error('Missing token in response');
+      if (!data?.token) throw new Error('Missing token in response');
 
       localStorage.setItem('token', data.token);
-      return { needsAccountType: false, token: data.token, user: data.user };
-    },
-    []
-  );
-
-  /**
-   * نيّة التسجيل: من أي صفحة ضُغط الزر وباسم أي نشاط.
-   *
-   * غوغل يثبت البريد لا نوع الحساب. بلا نيّة كان الخادم يُنشئ حساب زبون
-   * لكل من يضغط الزر، فيبقى صاحب المتجر بدور `user` بلا متجر وتردّه لوحة
-   * التحكم إلى الصفحة الرئيسية بلا تفسير. صار يسأل بدل أن يخمّن.
-   */
-  const signInWithGoogle = useCallback(
-    async (intent?: SignupIntent): Promise<SignInOutcome | null> => {
-      if (!firebaseAuth) {
-        toast.error('Firebase not configured');
+      setState(prev => ({ ...prev, user: result.user }));
+      return { token: data.token as string, user: data.user };
+    } catch (error: any) {
+      // إغلاق النافذة تراجعٌ لا عطل — لا يستحق رسالة خطأ حمراء
+      if (
+        error?.code === 'auth/popup-closed-by-user' ||
+        error?.code === 'auth/cancelled-popup-request'
+      ) {
         return null;
       }
 
-      setState(prev => ({ ...prev, loading: true, error: null }));
-
-      try {
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(firebaseAuth, provider);
-        if (!result.user) return null;
-
-        const idToken = await result.user.getIdToken();
-        const outcome = await exchangeIdToken(idToken, intent);
-        setState(prev => ({ ...prev, user: result.user }));
-        return outcome;
-      } catch (error: any) {
-        // إغلاق النافذة تراجعٌ لا عطل — لا يستحق رسالة خطأ حمراء
-        if (
-          error?.code === 'auth/popup-closed-by-user' ||
-          error?.code === 'auth/cancelled-popup-request'
-        ) {
-          return null;
-        }
-
-        const errorMessage =
-          error?.response?.data?.error || error?.message || 'Failed to sign in with Google';
-        console.error('Firebase sign-in error:', error);
-        setState(prev => ({ ...prev, error: errorMessage }));
-        toast.error(errorMessage);
-        return null;
-      } finally {
-        setState(prev => ({ ...prev, loading: false }));
-      }
-    },
-    [exchangeIdToken]
-  );
+      const errorMessage =
+        error?.response?.data?.error || error?.message || 'Failed to sign in with Google';
+      console.error('Firebase sign-in error:', error);
+      setState(prev => ({ ...prev, error: errorMessage }));
+      toast.error(errorMessage);
+      return null;
+    } finally {
+      setState(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
 
   const linkFirebaseAccount = useCallback(async (jwtToken: string) => {
     if (!firebaseAuth) {
@@ -211,7 +154,6 @@ export const useFirebaseAuth = () => {
   return {
     ...state,
     signInWithGoogle,
-    exchangeIdToken,
     linkFirebaseAccount,
     logout,
   };

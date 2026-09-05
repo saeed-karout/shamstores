@@ -8,6 +8,7 @@ import { notifyUser } from '../services/notification.service';
 import { DriverService } from '../services/driver.service';
 import bcrypt from 'bcrypt';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
+import slugify from '../utils/slugify';
 
 // ==================== دوال مساعدة ====================
 
@@ -1486,6 +1487,94 @@ export const updateUserRole = async (req: AuthRequest, res: Response): Promise<v
   } catch (error) {
     console.error('Error updating user role:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في تحديث دور المستخدم' });
+  }
+};
+
+/**
+ * ينشئ نشاطاً تجارياً لمستخدم قائم ويرفعه إلى مالك.
+ *
+ * دور `owner` وحده لا يصنع تاجراً: من يحمله بلا نشاط مرتبط تردّه لوحة
+ * التحكم إلى الصفحة الرئيسية بلا تفسير. لذلك الإنشاء والربط ورفع الدور
+ * عملية واحدة لا ثلاث خطوات يدوية قد تتوقف في منتصفها.
+ */
+export const createBusinessForUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const type = String(req.body?.type || '');
+    const name = String(req.body?.name || '').trim();
+
+    if (type !== 'restaurant' && type !== 'store') {
+      res.status(400).json({ success: false, error: 'النوع يجب أن يكون restaurant أو store' });
+      return;
+    }
+    if (name.length < 2) {
+      res.status(400).json({ success: false, error: 'اسم النشاط قصير جداً' });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+      return;
+    }
+
+    // نشاط واحد لكل حساب: الربط الثاني كان سيهجر الأول بلا مالك
+    if (user.restaurantId || user.storeId) {
+      res.status(400).json({ success: false, error: 'المستخدم مرتبط بنشاط بالفعل' });
+      return;
+    }
+
+    // المطاعم والمتاجر تتقاسم فضاء النطاقات الفرعية — التفرّد عبر الجدولين
+    const baseSlug = slugify(name) || type;
+    let slug = baseSlug;
+    let counter = 1;
+    while (
+      (await prisma.restaurant.findUnique({ where: { slug } })) ||
+      (await prisma.store.findUnique({ where: { slug } }))
+    ) {
+      slug = `${baseSlug}-${counter++}`;
+    }
+
+    const data = {
+      name,
+      slug,
+      subdomain: slug,
+      email: user.email,
+      phone: user.phone || null,
+      userId: user.id,
+      planId: '11111111-1111-1111-1111-111111111111',
+      isActive: true
+    };
+
+    const business = type === 'restaurant'
+      ? await prisma.restaurant.create({ data })
+      : await prisma.store.create({ data });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        role: 'owner',
+        ...(type === 'restaurant' ? { restaurantId: business.id } : { storeId: business.id })
+      }
+    });
+
+    await notifyUser(user.id, {
+      type: 'account',
+      event: 'business.created',
+      title: type === 'restaurant' ? 'أُنشئ مطعمك' : 'أُنشئ متجرك',
+      message: `«${name}» جاهز — يمكنك إدارته من لوحة التحكم.`,
+      link: '/dashboard',
+      entityId: business.id
+    });
+
+    res.json({
+      success: true,
+      message: type === 'restaurant' ? 'أُنشئ المطعم ورُبط بالحساب' : 'أُنشئ المتجر ورُبط بالحساب',
+      data: { id: business.id, name, slug, type }
+    });
+  } catch (error) {
+    console.error('Error creating business for user:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إنشاء النشاط' });
   }
 };
 

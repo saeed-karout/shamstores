@@ -834,64 +834,12 @@ export const resendVerificationEmail = async (
 
 // ==================== Firebase Sign-In ====================
 
-/**
- * ينشئ نشاطاً تجارياً لمالك جديد قادم من تسجيل غوغل.
- *
- * يعكس ما يفعله registerStore/registerRestaurant، بما فيه فحص تفرّد
- * الاسم اللطيف عبر الجدولين معاً: مطعم ومتجر يتقاسمان فضاء النطاقات
- * الفرعية، وتصادمهما يُسقط الإنشاء.
- *
- * الفشل لا يُسقط تسجيل الدخول: الحساب قائم، ويمكن استكمال النشاط لاحقاً.
- */
-const createBusinessForOwner = async (
-  userId: string,
-  type: 'restaurant' | 'store',
-  businessName: string,
-  email: string
-): Promise<Record<string, string> | null> => {
-  try {
-    // اسم بلا حرف صالح (رموز فقط) يُنتج slug فارغاً — احتياط لا يكسر الإنشاء
-    const baseSlug = slugify(businessName) || (type === 'restaurant' ? 'restaurant' : 'store');
-    let uniqueSlug = baseSlug;
-    let counter = 1;
-    while (
-      (await prisma.restaurant.findUnique({ where: { slug: uniqueSlug } })) ||
-      (await prisma.store.findUnique({ where: { slug: uniqueSlug } }))
-    ) {
-      uniqueSlug = `${baseSlug}-${counter++}`;
-    }
-
-    const data = {
-      name: businessName,
-      slug: uniqueSlug,
-      subdomain: uniqueSlug,
-      email,
-      phone: null,
-      planId: '11111111-1111-1111-1111-111111111111',
-      userId,
-      isActive: true
-    };
-
-    if (type === 'restaurant') {
-      const restaurant = await prisma.restaurant.create({ data });
-      return { restaurantId: restaurant.id };
-    }
-
-    const store = await prisma.store.create({ data });
-    return { storeId: store.id };
-  } catch (error) {
-    console.error('تعذّر إنشاء النشاط عند تسجيل غوغل:', error);
-    return null;
-  }
-};
-
 export const firebaseSignIn = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    // نيّة التسجيل قادمة من الصفحة التي ضُغط منها زر غوغل
-    const { idToken, accountType, businessName } = req.body;
+    const { idToken } = req.body;
 
     if (!idToken) {
       res.status(400).json({
@@ -917,50 +865,21 @@ export const firebaseSignIn = async (
     // Check if user exists with this email
     let user = await UserService.findByEmail(email!);
 
-    const wantsBusiness = accountType === 'restaurant' || accountType === 'store';
-    const trimmedBusinessName = typeof businessName === 'string' ? businessName.trim() : '';
-    const createsBusiness = wantsBusiness && trimmedBusinessName.length > 0;
-
-    // غوغل يثبت البريد لا نوع الحساب. الاختيار الضمني كان يُنشئ حساب زبون
-    // لكل من يضغط الزر، فيجد صاحب المتجر نفسه بدور user بلا متجر — ولا
-    // سبيل لتصحيحه من الواجهة لأن الحساب صار موجوداً.
+    // ⛔ إنشاء الحسابات عبر غوغل موقوف.
     //
-    // فبدل التخمين: لا نُنشئ شيئاً، ونطلب من الواجهة أن تسأل. الطلب
-    // يُعاد بالنيّة فيُنشأ الحساب صحيحاً من أول مرة.
-    if (!user && !createsBusiness && accountType !== 'customer') {
-      res.json({
-        success: true,
-        data: {
-          needsAccountType: true,
-          email: email || null,
-          name: name || null,
-          // النوع مُرسَل بلا اسم نشاط — الواجهة تُعيد السؤال عن الاسم وحده
-          missingBusinessName: wantsBusiness
-        }
+    // غوغل يثبت البريد لا نوع الحساب، فكان كل ضاغط للزر يصير زبوناً — بما
+    // فيهم أصحاب المتاجر، ولا سبيل لتصحيحه من الواجهة بعد وجود الحساب.
+    // ونافذة غوغل نفسها تتعثّر خلف سياسة COOP في بعض المتصفحات.
+    //
+    // الدخول يبقى متاحاً لمن ربط حسابه سابقاً: حذف المسار كلياً كان
+    // سيحبس هؤلاء خارج المنصة، فكلمة مرورهم المخزَّنة نائبة لا تُستعمل.
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: 'لا حساب بهذا البريد. أنشئ حساباً بالبريد وكلمة المرور أولاً.'
       });
       return;
     }
-
-    if (!user) {
-      user = await UserService.create({
-        name: name || trimmedBusinessName || 'User',
-        email: email!,
-        password: `firebase_${uid}`, // placeholder password
-        phone: null,
-        role: createsBusiness ? 'owner' : 'user',
-      });
-
-      if (createsBusiness) {
-        const link = await createBusinessForOwner(user.id, accountType, trimmedBusinessName, email!);
-        if (link) {
-          user = await UserService.update(user.id, link);
-        }
-      }
-
-      console.log('✅ New user created from Firebase:', user.id, user.role);
-    }
-    // ⚠️ أمنياً: لا نرفع دور مستخدم قائم بناءً على وسيط من العميل. زبون
-    // يرسل accountType: "store" في طلب تسجيل الدخول كان سيصير مالكاً.
 
     // Create or update Firebase user link
     const firebaseUser = await prisma.firebaseUser.upsert({

@@ -5,7 +5,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useSettingsContext } from '../../hooks/SettingsContext';
 import Button from '../../components/common/Button';
-import GoogleSignInButton from '../../components/auth/GoogleSignInButton';
 import {
   IoRestaurant,
   IoMail,
@@ -473,23 +472,6 @@ const Register: React.FC = () => {
               </button>
             </div>
           </form>
-
-          {/* Google Sign-In */}
-          <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
-            <div style={{ position: 'relative', textAlign: 'center', marginBottom: '1rem' }}>
-              <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: C.border }} />
-              <span style={{ position: 'relative', background: C.card, padding: '0 0.75rem', fontSize: '0.875rem', color: C.muted }}>
-                أو استخدم
-              </span>
-            </div>
-            <GoogleSignInButton
-              text="إنشاء حساب عبر Google"
-              variant="secondary"
-              fullWidth
-              accountType={accountType}
-              businessName={formData.businessName}
-            />
-          </div>
 
           {/* رابط تسجيل الدخول */}
           <div style={{ marginTop: '1.5rem' }}>

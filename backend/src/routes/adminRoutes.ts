@@ -26,6 +26,7 @@ import {
   // إدارة المستخدمين
   getAllUsers,
   updateUserRole,
+  createBusinessForUser,
   toggleUserStatus,
   deleteUser,
   getUserDetails,
@@ -252,6 +253,7 @@ router.get('/users/:id', (req, res, next) => {
   checkPlatformStaffPermission(req, res, next, 'manage_users');
 }, getUserDetails);
 router.patch('/users/:id/role', authorize(['super_admin']), updateUserRole);
+router.post('/users/:id/business', authorize(['super_admin']), createBusinessForUser);
 router.patch('/users/:id/toggle', authorize(['super_admin']), toggleUserStatus);
 router.delete('/users/:id', authorize(['super_admin']), deleteUser);
 router.post('/users/:id/reset-password', authorize(['super_admin']), resetUserPassword);
