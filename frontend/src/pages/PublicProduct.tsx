@@ -14,15 +14,28 @@ import toast from 'react-hot-toast';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { useCart } from '@/hooks/useCart';
+import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import ProductOptionsSheet, {
   parseProductOptions,
   hasOptions,
   OptionsResult
 } from '@/components/storefront/ProductOptionsSheet';
 
+/**
+ * ألوان الصفحة = ألوان التاجر.
+ *
+ * كانت مكتوبة هنا بقيم ثابتة، فيغيّر التاجر هويته من إعداداته فتتبعه
+ * واجهة متجره وتبقى صفحة المنتج خضراء — وهي الصفحة التي يشارك رابطها.
+ *
+ * القيم متغيّرات CSS يضبطها applyStorefrontTheme عند تحميل المتجر، فتتبدّل
+ * الصفحة كلها بسطر واحد بدل تمرير لون إلى سبعين موضعاً.
+ *
+ * الألوان الدلالية (أحمر للخطأ، أزرق للمعلومة) تبقى ثابتة: معناها من
+ * العُرف لا من هوية التاجر، وتلوينها بلونه يُفقدها دلالتها.
+ */
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
+  bg: sf.bg, card: sf.card, surf: sf.surface, accent: sf.accent,
+  text: sf.text, muted: sf.muted, border: sf.border,
   red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
 };
 
@@ -296,6 +309,12 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     setTimeout(() => setAddedToCart(false), 2000);
   };
 
+  // ألوان التاجر تصير متغيّرات CSS، والتنظيف يعيدها عند مغادرة الصفحة.
+  //
+  // يعمل قبل وصول بيانات المتجر أيضاً (store = null): بلا ذلك تبقى
+  // المتغيّرات غير معرَّفة أثناء التحميل، فتظهر الصفحة بلا خلفية ولا نص.
+  useEffect(() => applyStorefrontTheme((store as any) || null, 'store'), [store]);
+
   const handleShare = () => {
     const url = window.location.href;
 
@@ -425,7 +444,8 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       />
 
       {/* Header */}
-      <div style={{ background: '#082E24', borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 20 }}>
+      {/* آخر لون ثابت بقي — كان يُبقي الرأس أخضر فوق صفحة بلون التاجر */}
+      <div style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ maxWidth: 1152, margin: '0 auto', padding: '12px 16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Link to={`/${store.slug}`} style={{ color: C.muted, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 15 }}>

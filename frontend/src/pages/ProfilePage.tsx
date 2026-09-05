@@ -69,13 +69,19 @@ const ProfilePage: React.FC = () => {
         setName(data?.name || '');
         setPhone(data?.phone || '');
         setAvatarUrl(data?.avatarUrl || null);
-      } catch {
+      } catch (err: any) {
+        // على نطاق التاجر الفرعي تُعرض هذه الصفحة بلا حارس مسار، فالحارس
+        // هنا: زائر بلا جلسة يُوجَّه إلى الدخول لا يُترك أمام حقول فارغة
+        if (err?.response?.status === 401) {
+          navigate('/user/login', { replace: true });
+          return;
+        }
         toast.error('تعذّر تحميل بيانات حسابك');
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [navigate]);
 
   const pickAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

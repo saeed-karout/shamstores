@@ -8,6 +8,7 @@ import UserRegister from '../pages/auth/UserRegister';
 import api from '../services/api';
 import TrackOrder from '@/pages/TrackOrder';
 import PublicProduct from '@/pages/PublicProduct';
+import ProfilePage from '@/pages/ProfilePage';
 
 // مكون داخلي لجلب البيانات
 const BusinessLoader: React.FC<{ children: (data: any) => React.ReactNode }> = ({ children }) => {
@@ -152,6 +153,12 @@ const PublicRouter: React.FC = () => {
       <Route path="/contact" element={<Navigate to="/" replace />} />
 
       {/* مسارات المصادقة */}
+      {/* ⚠️ كل مسار للزبون يجب أن يُذكر هنا صراحةً.
+          على نطاق التاجر الفرعي يتولّى PublicRouter التوجيه كاملاً، وقاعدة
+          `*` أسفله تُعيد أي مسار مجهول إلى الرئيسية. فصفحة الحساب كانت
+          تُفتح على النطاق الرئيسي وتُعاد إلى واجهة المتجر على النطاق
+          الفرعي — حيث يقف الزبون فعلاً. */}
+      <Route path="/profile" element={<ProfilePage />} />
       <Route path="/user/login" element={<UserLogin />} />
       <Route path="/user/register" element={<UserRegister />} />
       <Route path="/track/:orderId" element={<TrackOrder />} />
