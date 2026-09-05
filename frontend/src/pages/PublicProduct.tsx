@@ -11,7 +11,7 @@ import {
 import api from '../services/api';
 import Loader from '../components/common/Loader';
 import toast from 'react-hot-toast';
-import { getImageUrl } from '@/utils/imageHelpers';
+import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { useCart } from '@/hooks/useCart';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
@@ -500,7 +500,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             <div style={{ position: 'relative' }}>
               {images.length > 0 && images[0] ? (
                 <img
-                  src={getImageUrl(images[currentImageIndex])}
+                  src={getImageUrl(sizedImage(images[currentImageIndex], 'md'))}
                   alt={product.name}
                   style={{ width: '100%', height: 384, objectFit: 'cover', borderRadius: 12, display: 'block' }}
                 />

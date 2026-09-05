@@ -13,7 +13,7 @@
 import React from 'react';
 import { IoHeart, IoHeartOutline, IoAddOutline, IoImageOutline } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
-import { getImageUrl } from '@/utils/imageHelpers';
+import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { formatPrice } from '@/utils/currency';
 import { getVisualBadges } from '@/utils/catalogBadges';
 import QuantityStepper from './QuantityStepper';
@@ -78,7 +78,9 @@ const ProductGridCard: React.FC<Props> = ({
 }) => {
   const badges = getVisualBadges(product).slice(0, 2);
   const cover = coverImage(product);
-  const src = cover ? getImageUrl(cover) : null;
+  // النسخة الصغيرة تكفي بطاقةً عرضها مئتا بكسل — الكبيرة تُنزَّل بلا أن
+  // يظهر منها شيء إضافي
+  const src = cover ? getImageUrl(sizedImage(cover, 'sm')) : null;
 
   // النفاد يُعرض ولا يُخفى: منتج يختفي فجأة يجعل الزبون يظنّ الخطأ في عينه
   const tracked = product.trackStock === true;

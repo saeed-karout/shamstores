@@ -26,6 +26,34 @@ const normalizeR2Url = (url: string): string => {
   return `${R2_PUBLIC_URL}/${url.slice(markerIndex + R2_DEV_MARKER.length)}`;
 };
 
+// ==================== نسخ الصور ====================
+//
+// الخادم يرفع ثلاث نسخ بنفس المسار ولاحقات مختلفة (راجع
+// backend/services/imageVariants.service.ts). المخزَّن في قاعدة البيانات
+// هو المتوسطة، وهذه الدالة تشتقّ الصغيرة أو الكبيرة من اسمها.
+//
+// الاشتقاق مشروط بمطابقة النمط: الروابط القديمة — وهي أكثر ما في القاعدة —
+// لا تحمل اللاحقة فتُعاد كما هي. بلا هذا الشرط كنا سنطلب نسخة لا وجود لها
+// فتظهر بطاقات بلا صور.
+
+export type ImageSize = 'sm' | 'md' | 'orig';
+
+const VARIANT_RE = /__v_(sm|md|orig)\.webp$/;
+
+/** هل هذا الرابط من الصور المولَّدة بنسخ؟ */
+export const hasVariants = (url?: string | null): boolean => !!url && VARIANT_RE.test(url);
+
+/**
+ * يبدّل مقاس الصورة إن كانت مولَّدة، وإلا يُعيد الرابط كما هو.
+ *
+ * تُستعمل مع getImageUrl: `getImageUrl(sizedImage(src, 'sm'))`.
+ */
+export const sizedImage = (url?: string | null, size: ImageSize = 'md'): string => {
+  if (!url) return '';
+  if (!VARIANT_RE.test(url)) return url;
+  return url.replace(VARIANT_RE, `__v_${size}.webp`);
+};
+
 /**
  * الحصول على رابط صورة محسن (للاستخدام في upload.service)
  */

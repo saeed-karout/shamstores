@@ -2,6 +2,7 @@
 
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import fs from 'fs';
+import { renderVariants, isProcessable } from './imageVariants.service';
 import path from 'path';
 
 export type ImageEntity = 
@@ -106,37 +107,92 @@ class R2ImagesService {
     return fullPath;
   }
 
+  /**
+   * يرفع الصورة بثلاث نسخ: صغيرة ومتوسطة وكبيرة.
+   *
+   * الرابط المُعاد هو **المتوسطة**: هي ما يُعرض في أكثر المواضع، والواجهة
+   * تشتقّ الصغيرة أو الكبيرة من اسمه عند الحاجة (راجع
+   * services/imageVariants.service.ts).
+   *
+   * وإن تعذّرت المعالجة — صيغة لا يفهمها sharp أو ملف تالف — تُرفع الصورة
+   * كما هي. فشل التصغير لا يجوز أن يُسقط رفعاً ينتظره التاجر.
+   */
   async uploadImage(
     file: Express.Multer.File,
     options: UploadOptions
   ): Promise<{ id: string; url: string; variants: string[]; path: string }> {
     try {
       const ext = path.extname(file.originalname);
-      const filePath = this.generateImagePath(options, ext);
-      
       const fileContent = fs.readFileSync(file.path);
-      
-      const command = new PutObjectCommand({
-        Bucket: this.bucketName,
-        Key: filePath,
-        Body: fileContent,
-        ContentType: file.mimetype,
-      });
-      
-      await this.s3Client.send(command);
-      
+
+      let mainUrl: string | null = null;
+      let mainKey: string | null = null;
+      const variantUrls: string[] = [];
+
+      if (isProcessable(file.mimetype)) {
+        // مسار موحّد بلا امتداد — كل نسخة تضيف لاحقتها
+        const basePath = this.generateImagePath(options, '').replace(/\.$/, '');
+
+        try {
+          const rendered = await renderVariants(fileContent);
+
+          for (const variant of rendered) {
+            const key = `${basePath}${variant.suffix}`;
+            await this.s3Client.send(
+              new PutObjectCommand({
+                Bucket: this.bucketName,
+                Key: key,
+                Body: variant.buffer,
+                ContentType: variant.contentType,
+                // الصور مُبصمة بطابع زمني في اسمها، فالتخزين الطويل آمن
+                CacheControl: 'public, max-age=31536000, immutable'
+              })
+            );
+
+            const url = `${this.publicUrl}/${key}`;
+            variantUrls.push(url);
+            if (variant.key === 'md') {
+              mainUrl = url;
+              mainKey = key;
+            }
+          }
+
+          // بلا متوسطة (صورة صغيرة أصلاً) نأخذ أول ما تولّد
+          if (!mainUrl && variantUrls.length > 0) {
+            mainUrl = variantUrls[0];
+            mainKey = mainUrl.replace(`${this.publicUrl}/`, '');
+          }
+        } catch (processError) {
+          console.error('تعذّر تصغير الصورة — تُرفع كما هي:', processError);
+        }
+      }
+
+      if (!mainUrl) {
+        const filePath = this.generateImagePath(options, ext);
+        await this.s3Client.send(
+          new PutObjectCommand({
+            Bucket: this.bucketName,
+            Key: filePath,
+            Body: fileContent,
+            ContentType: file.mimetype,
+            CacheControl: 'public, max-age=31536000, immutable'
+          })
+        );
+        mainUrl = `${this.publicUrl}/${filePath}`;
+        mainKey = filePath;
+        variantUrls.push(mainUrl);
+      }
+
       // حذف الملف المؤقت
       try { fs.unlinkSync(file.path); } catch(e) {}
-      
-      const imageUrl = `${this.publicUrl}/${filePath}`;
-      
-      console.log(`✅ Image uploaded: ${imageUrl}`);
-      
+
+      console.log(`✅ Image uploaded (${variantUrls.length} نسخة): ${mainUrl}`);
+
       return {
-        id: filePath,
-        url: imageUrl,
-        variants: [imageUrl],
-        path: filePath,
+        id: mainKey!,
+        url: mainUrl,
+        variants: variantUrls,
+        path: mainKey!,
       };
     } catch (error) {
       console.error('Error uploading to R2:', error);
