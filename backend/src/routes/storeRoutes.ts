@@ -3,7 +3,7 @@
 import { Router } from 'express';
 import { authenticate, authorizeOwner } from '../middleware/auth';
 import { checkPlanFeature, requirePaidPlanForStaff } from '../middleware/checkPlan';
-import { upload } from '../middleware/upload';
+import { uploadSingleImage } from '../middleware/upload';
 import {
   getProfile,
   updateProfile,
@@ -91,8 +91,9 @@ router.put('/profile', updateProfile);
 
 
 // ==================== رفع الصور ====================
-router.post('/upload/logo', upload.single('logo'), uploadStoreLogo);
-router.post('/upload/cover', upload.single('cover'), uploadStoreCover);
+// الواجهة ترسل الملف باسم `image`؛ الأسماء الأخرى مقبولة للتوافق
+router.post('/upload/logo', uploadSingleImage('image', 'logo'), uploadStoreLogo);
+router.post('/upload/cover', uploadSingleImage('image', 'cover'), uploadStoreCover);
 
 // ==================== المنتجات ====================
 router.get('/products', getProducts);

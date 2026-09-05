@@ -45,6 +45,40 @@ export const upload = multer({
   fileFilter: fileFilter
 });
 
+/**
+ * يقبل ملفاً واحداً تحت أي اسم من الأسماء المذكورة.
+ *
+ * **العطل الذي يسدّه:** `api.upload` في الواجهة يرسل الملف دائماً باسم
+ * الحقل `image`، بينما مسارا شعار المتجر وغلافه كانا يطلبان `logo`
+ * و`cover`. multer يرى حقلاً غير متوقّع فيرمي LIMIT_UNEXPECTED_FILE، وبلا
+ * معالج على المسار يصير الردّ 500 «حدث خطأ في الخادم» — فلم يعمل رفع
+ * شعار متجر ولا غلافه قط.
+ *
+ * قبول الأسماء البديلة أبسط من تغيير عقد الواجهة، ويُبقي أي عميل قديم
+ * يرسل الاسم القديم عاملاً.
+ */
+export const uploadSingleImage = (...fieldNames: string[]) => {
+  const middleware = upload.fields(fieldNames.map((name) => ({ name, maxCount: 1 })));
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    middleware(req, res, (err: any) => {
+      if (err) return handleUploadError(err, req, res, next);
+
+      const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+      if (files) {
+        for (const name of fieldNames) {
+          if (files[name]?.[0]) {
+            // المتحكّمات تقرأ req.file — نملؤه مهما كان اسم الحقل الوارد
+            (req as any).file = files[name][0];
+            break;
+          }
+        }
+      }
+      next();
+    });
+  };
+};
+
 // ✅ معالج أخطاء الرفع (مع تصحيح نوع الخطأ)
 export const handleUploadError = (err: any, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {

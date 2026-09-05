@@ -13,6 +13,7 @@ import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 
 const C = {
   bg: '#082E24',
@@ -56,6 +57,10 @@ interface Pagination {
   limit: number;
   pages: number;
 }
+
+/** اسم النشاط: الخادم يرسله مسطّحاً، والشكل المتداخل يبقى للتوافق */
+const businessNameOf = (order: any): string | null =>
+  order?.businessName || order?.restaurant?.name || order?.store?.name || null;
 
 const AdminOrders: React.FC = () => {
   const navigate = useNavigate();
@@ -299,7 +304,65 @@ const AdminOrders: React.FC = () => {
         </div>
       ) : (
         <>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+          {/* بطاقات على الجوال.
+              الجدول بتسعة أعمدة يُمرَّر أفقياً على شاشة 375 بكسل: يرى
+              السوبر أدمن أربعة أعمدة ويجب أن يسحب ليرى الحالة والإجراء —
+              وهما ما جاء لأجلهما. البطاقة تعرضها كلها بلا سحب. */}
+          <div className="show-mobile" style={{ flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+            {orders.map((order) => (
+              <div
+                key={`m-${order.id}`}
+                style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 14 }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                  <span style={{ color: C.accent, fontWeight: 800, fontSize: 13 }}>{order.orderNumber}</span>
+                  {getStatusBadge(order.status)}
+                </div>
+
+                <div style={{ color: C.text, fontSize: 13.5, fontWeight: 600 }}>{order.customerName}</div>
+                <div style={{ color: C.muted, fontSize: 12 }} dir="ltr">{order.customerPhone}</div>
+
+                {businessNameOf(order) && (
+                  <div style={{ color: C.muted, fontSize: 12, marginTop: 4 }}>🏪 {businessNameOf(order)}</div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                  <span style={{ color: C.accent, fontWeight: 800, fontSize: 15 }}>
+                    {formatPrice(order.total, DEFAULT_CURRENCY)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedOrder(order);
+                      setShowDetailsModal(true);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '8px 14px',
+                      minHeight: 38,
+                      borderRadius: 10,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: `${C.accent}15`,
+                      color: C.accent,
+                      fontFamily: 'Cairo, sans-serif',
+                      fontWeight: 700,
+                      fontSize: 12.5
+                    }}
+                  >
+                    <IoEye size={15} /> التفاصيل
+                  </button>
+                </div>
+
+                <div style={{ color: C.muted, fontSize: 11, marginTop: 8 }}>
+                  {format(new Date(order.createdAt), 'dd/MM/yyyy hh:mm a', { locale: ar })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hide-mobile" style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -345,10 +408,19 @@ const AdminOrders: React.FC = () => {
                               <IoStorefront size={14} color={C.purple} />
                               <span>{order.store.name}</span>
                             </>
+                          ) : businessNameOf(order) ? (
+                            <>
+                              {(order as any).businessType === 'restaurant' ? (
+                                <IoRestaurant size={14} color={C.blue} />
+                              ) : (
+                                <IoStorefront size={14} color={C.purple} />
+                              )}
+                              <span>{businessNameOf(order)}</span>
+                            </>
                           ) : '-'}
                         </div>
                       </td>
-                      <td style={{ ...tdStyle, fontWeight: 700, color: C.accent }}>{order.total} ر.س</td>
+                      <td style={{ ...tdStyle, fontWeight: 700, color: C.accent }}>{formatPrice(order.total, DEFAULT_CURRENCY)}</td>
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           <span style={{ fontSize: 11 }}>
@@ -463,7 +535,7 @@ const AdminOrders: React.FC = () => {
               </div>
               <div style={{ background: C.surf, padding: 12, borderRadius: 10 }}>
                 <div style={{ color: C.muted, fontSize: 11, marginBottom: 4 }}>المبلغ</div>
-                <div style={{ color: C.accent, fontWeight: 700, fontSize: 20 }}>{selectedOrder.total} ر.س</div>
+                <div style={{ color: C.accent, fontWeight: 700, fontSize: 20 }}>{formatPrice(selectedOrder.total, DEFAULT_CURRENCY)}</div>
               </div>
             </div>
 

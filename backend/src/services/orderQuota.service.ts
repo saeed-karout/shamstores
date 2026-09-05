@@ -15,11 +15,19 @@
 // إلغاء طلب خطأً لا يجوز أن يستهلك من رصيد التاجر.
 
 import prisma from './prisma';
+import { OrderStatus } from '@prisma/client';
 
 export type BusinessType = 'restaurant' | 'store';
 
-/** حالات لا تُحمَّل على الحصّة */
-const UNCOUNTED_STATUSES = ['cancelled', 'rejected'];
+/**
+ * حالات لا تُحمَّل على الحصّة.
+ *
+ * ⚠️ `Order.status` **enum** في Prisma لا نصّ حر. قيمة خارج
+ * `enum OrderStatus` تُسقط الاستعلام كله بخطأ تحقّق — لا تُتجاهَل بصمت.
+ * وهذا ما حدث: `'rejected'` لا وجود له في التعداد، فكانت بطاقة الخطة
+ * تردّ 500 لكل تاجر. أي إضافة هنا تُقابَل بعضو في التعداد أولاً.
+ */
+const UNCOUNTED_STATUSES: OrderStatus[] = ['cancelled'];
 
 export interface OrderQuota {
   /** سقف الشهر — `null` يعني بلا حدّ */

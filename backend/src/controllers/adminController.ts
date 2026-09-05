@@ -1719,13 +1719,38 @@ export const getAllOrders = async (
       take: Number(limit),
       orderBy: { createdAt: 'desc' }
     });
-    
+
+    // اسم النشاط: الجدول يحمل معرّفاً فقط، وعمود «النشاط» في شاشة الإدارة
+    // كان يعرض «—» لكل صف. استعلامان مُجمَّعان لا استعلام لكل طلب.
+    const restaurantIds = Array.from(new Set(orders.map((o) => o.restaurantId).filter(Boolean))) as string[];
+    const storeIds = Array.from(new Set(orders.map((o) => o.storeId).filter(Boolean))) as string[];
+
+    const [restaurants, stores] = await Promise.all([
+      restaurantIds.length
+        ? prisma.restaurant.findMany({ where: { id: { in: restaurantIds } }, select: { id: true, name: true } })
+        : Promise.resolve([]),
+      storeIds.length
+        ? prisma.store.findMany({ where: { id: { in: storeIds } }, select: { id: true, name: true } })
+        : Promise.resolve([])
+    ]);
+
+    const nameById = new Map<string, string>([
+      ...restaurants.map((r) => [r.id, r.name] as [string, string]),
+      ...stores.map((r) => [r.id, r.name] as [string, string])
+    ]);
+
+    const enrichedOrders = orders.map((order) => ({
+      ...order,
+      businessName: nameById.get(order.restaurantId || order.storeId || '') || null,
+      businessType: order.restaurantId ? 'restaurant' : order.storeId ? 'store' : null
+    }));
+
     const total = await prisma.order.count({ where });
     
     res.json({
       success: true,
       data: {
-        orders,
+        orders: enrichedOrders,
         pagination: {
           total,
           page: Number(page),
