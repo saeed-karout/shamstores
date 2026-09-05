@@ -365,6 +365,39 @@ const seedPlans = async () => {
 };
 
 // ==============================================
+// ميزة إخفاء شارة المنصة
+// ==============================================
+//
+// تُباع مفردة لمن هو على خطة لا تمنحها. بلا صفّها في جدول الميزات لا
+// يستطيع التاجر شراءها ولا السوبر أدمن إسنادها — فتبقى الشارة ظاهرة على
+// كل واجهة مجانية بلا مخرج مدفوع، وهو نصف الغرض منها.
+//
+// `update: {}` مقصود: السوبر أدمن قد يغيّر السعر أو الوصف، وإقلاع الخادم
+// لا يجوز أن يمحو تعديله.
+const seedBrandingFeature = async () => {
+  try {
+    await prisma.feature.upsert({
+      where: { code: 'branding_removal' },
+      update: {},
+      create: {
+        code: 'branding_removal',
+        name: 'إخفاء شعار المنصة',
+        nameEn: 'Remove platform branding',
+        description: 'تختفي شارة «انضم لنا» من قائمتك أو متجرك، فتبدو الواجهة لك وحدك.',
+        category: 'both',
+        group: 'branding',
+        isCore: false,
+        isActive: true,
+        price: 2,
+        isOneTime: false
+      }
+    });
+  } catch (error) {
+    console.error('Error seeding branding feature:', error);
+  }
+};
+
+// ==============================================
 // إدراج إعدادات المنصة الافتراضية
 // ==============================================
 const seedPlatformSettings = async () => {
@@ -490,6 +523,7 @@ const startServer = async () => {
 
     // إدراج البيانات الأساسية
     await seedPlans();
+    await seedBrandingFeature();
     await seedPlatformSettings();
 
     startSchedulers();

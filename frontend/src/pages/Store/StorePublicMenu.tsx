@@ -31,6 +31,7 @@ import PublicOffers from '@/components/public/PublicOffers';
 import { useTheme } from '@/context/ThemeContext';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 import PublicFooter from '@/components/public/PublicFooter';
+import PlatformBadge from '@/components/storefront/PlatformBadge';
 
 interface StorePublicMenuProps {
   businessId?: string;
@@ -929,6 +930,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   showNewsletter={false}
   showQuickLinks={true}
 />
+      {/* الشارة يحسمها الخادم: الخطة وحدها لا تكفي — قد تكون الميزة مشتراة
+          مفردةً على خطة مجانية، وهو ما لا تراه الواجهة */}
+      <PlatformBadge show={store?.showPlatformBadge} />
+
       <style>{`
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

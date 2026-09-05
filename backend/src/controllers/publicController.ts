@@ -8,6 +8,7 @@ import { getPublicPaymentOptions } from '../services/payment.service';
 import { getPublicImages } from '../services/media.service';
 import { resolveLanguageSettings } from '../services/language.service';
 import { getCurrencyContext } from '../services/currency.service';
+import { shouldShowPlatformBadge } from '../services/branding.service';
 import {
   normalizeDomain,
   resolveBusinessByCustomDomain,
@@ -119,6 +120,8 @@ export const getBusinessBySlug = async (
           createdAt: restaurant.createdAt,
           updatedAt: restaurant.updatedAt,
           plan: restaurant.plan,
+          // الشارة يحسمها الخادم: الواجهة لا ترى الميزات المشتراة مفردةً
+          showPlatformBadge: await shouldShowPlatformBadge(restaurant.id, 'restaurant'),
           branchLabel: buildBranchSummary(restaurant).linkLabel,
           branchLinkType: buildBranchSummary(restaurant).linkType,
           linkedBranches,
@@ -203,6 +206,7 @@ export const getBusinessBySlug = async (
           createdAt: store.createdAt,
           updatedAt: store.updatedAt,
           plan: store.plan,
+          showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store'),
           branchLabel: buildBranchSummary(store).linkLabel,
           branchLinkType: buildBranchSummary(store).linkType,
           linkedBranches,

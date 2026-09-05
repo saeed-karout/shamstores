@@ -32,6 +32,8 @@ export const getPlanFeatureCodes = (plan: any): string[] => {
   if (plan?.hasMultiLanguage) features.push('multi_language');
   if (plan?.hasPromotions) features.push('promotions');
   if (plan?.hasCoupons) features.push('coupons');
+  // إخفاء شارة المنصة — تمنحه الخطط الأعلى، ويُشترى مفرداً في الأدنى
+  if (plan?.hasBrandingRemoval) features.push('branding_removal');
 
   if (plan?.features) {
     try {

@@ -41,6 +41,7 @@ import { openWhatsApp } from '@/utils/helpers';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import type { CartItem } from '@/services/types';
+import PlatformBadge from '@/components/storefront/PlatformBadge';
 
 // ==================== الأنواع ====================
 
@@ -938,6 +939,10 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         formatPrice={(price: number) => formatPrice(price, currency)}
         loading={loadingOrders}
       />
+
+      {/* الشارة يحسمها الخادم: الخطة وحدها لا تكفي — قد تكون الميزة مشتراة
+          مفردةً على خطة مجانية، وهو ما لا تراه الواجهة */}
+      <PlatformBadge show={restaurant?.showPlatformBadge} />
     </>
   );
 };
