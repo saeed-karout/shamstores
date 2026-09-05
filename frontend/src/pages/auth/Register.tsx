@@ -486,6 +486,8 @@ const Register: React.FC = () => {
               text="إنشاء حساب عبر Google"
               variant="secondary"
               fullWidth
+              accountType={accountType}
+              businessName={formData.businessName}
             />
           </div>
 

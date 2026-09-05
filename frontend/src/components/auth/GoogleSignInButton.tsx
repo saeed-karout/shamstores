@@ -11,20 +11,44 @@ interface GoogleSignInButtonProps {
   variant?: 'primary' | 'secondary';
   fullWidth?: boolean;
   text?: string;
+  /**
+   * نيّة التسجيل حين يُعرض الزر في صفحة إنشاء حساب تجاري.
+   *
+   * بدونها ينشئ الخادم حساب زبون عادي: صاحب متجر يسجّل بغوغل فيبقى بلا
+   * متجر ودوره `user`. تُمرَّر للحسابات الجديدة وحدها.
+   */
+  accountType?: 'restaurant' | 'store';
+  businessName?: string;
 }
 
 const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   variant = 'secondary',
   fullWidth = false,
   text = 'تسجيل الدخول عبر Google',
+  accountType,
+  businessName,
 }) => {
   const { signInWithGoogle, loading } = useFirebaseAuth();
   const navigate = useNavigate();
   const { setAuthData, login } = useAuth(); // ✅ تأكد من وجود setAuthData
 
   const handleClick = async () => {
+    // اسم النشاط مطلوب قبل الضغط: غوغل يعطينا بريداً واسماً شخصياً لا اسم
+    // متجر، ومتابعة بلا اسم تُنشئ حساب زبون — نفس العطل الذي نصلحه.
+    const trimmedName = businessName?.trim() || '';
+    if (accountType && !trimmedName) {
+      toast.error(
+        accountType === 'restaurant'
+          ? 'أدخل اسم المطعم أولاً ثم تابع عبر Google'
+          : 'أدخل اسم المتجر أولاً ثم تابع عبر Google'
+      );
+      return;
+    }
+
     try {
-      const result = await signInWithGoogle();
+      const result = await signInWithGoogle(
+        accountType ? { accountType, businessName: trimmedName } : undefined
+      );
       
       if (result && result.token) {
         console.log('✅ Google sign-in successful, storing token');

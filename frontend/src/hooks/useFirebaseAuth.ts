@@ -11,6 +11,11 @@ import { firebaseAuth } from '@/services/firebaseConfig';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 
+export interface SignupIntent {
+  accountType: 'restaurant' | 'store';
+  businessName: string;
+}
+
 interface FirebaseAuthState {
   user: FirebaseUser | null;
   loading: boolean;
@@ -24,7 +29,16 @@ export const useFirebaseAuth = () => {
     error: null,
   });
 
-  const signInWithGoogle = useCallback(async () => {
+  /**
+   * نيّة التسجيل: من أي صفحة ضُغط الزر وباسم أي نشاط.
+   *
+   * غوغل لا يعرف أن الزائر جاء ليفتح متجراً، فبلا هذه النيّة يُنشأ الحساب
+   * زبوناً عادياً — وهو ما كان يحدث: صاحب متجر يسجّل بغوغل فيبقى `user`
+   * بلا متجر، فتردّه لوحة التحكم إلى الصفحة الرئيسية بلا تفسير.
+   *
+   * الخادم يقرأها للحسابات الجديدة وحدها؛ لا ترفع دور حساب قائم.
+   */
+  const signInWithGoogle = useCallback(async (intent?: SignupIntent) => {
     if (!firebaseAuth) {
       toast.error('Firebase not configured');
       return null;
@@ -45,7 +59,11 @@ export const useFirebaseAuth = () => {
           const axios = (await import('axios')).default;
           const response = await axios.post(
             `${api.getApiBaseUrl()}/auth/firebase-signin`,
-            { idToken },
+            {
+              idToken,
+              accountType: intent?.accountType,
+              businessName: intent?.businessName
+            },
             { headers: { 'Content-Type': 'application/json' } }
           );
 
@@ -70,7 +88,6 @@ export const useFirebaseAuth = () => {
             
             localStorage.setItem('token', token);
             setState(prev => ({ ...prev, user }));
-            toast.success('تم تسجيل الدخول بنجاح');
             
             return { token, user: userData };
           } else {

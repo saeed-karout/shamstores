@@ -1,6 +1,6 @@
 {
-  "name": "Sham Stores",
-  "description": "منصة القوائم الرقمية والمتاجر — Express + Prisma + React على تطبيق Heroku واحد",
+  "name": "ShamStores",
+  "description": "منصة القوائم الرقمية والمتاجر — على تطبيق واحد",
   "repository": "https://github.com/saeed-karout/digital-menu-saas",
   "keywords": ["node", "express", "prisma", "react", "vite", "saas", "restaurant", "menu"],
   "stack": "heroku-24",
