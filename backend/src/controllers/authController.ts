@@ -921,6 +921,26 @@ export const firebaseSignIn = async (
     const trimmedBusinessName = typeof businessName === 'string' ? businessName.trim() : '';
     const createsBusiness = wantsBusiness && trimmedBusinessName.length > 0;
 
+    // غوغل يثبت البريد لا نوع الحساب. الاختيار الضمني كان يُنشئ حساب زبون
+    // لكل من يضغط الزر، فيجد صاحب المتجر نفسه بدور user بلا متجر — ولا
+    // سبيل لتصحيحه من الواجهة لأن الحساب صار موجوداً.
+    //
+    // فبدل التخمين: لا نُنشئ شيئاً، ونطلب من الواجهة أن تسأل. الطلب
+    // يُعاد بالنيّة فيُنشأ الحساب صحيحاً من أول مرة.
+    if (!user && !createsBusiness && accountType !== 'customer') {
+      res.json({
+        success: true,
+        data: {
+          needsAccountType: true,
+          email: email || null,
+          name: name || null,
+          // النوع مُرسَل بلا اسم نشاط — الواجهة تُعيد السؤال عن الاسم وحده
+          missingBusinessName: wantsBusiness
+        }
+      });
+      return;
+    }
+
     if (!user) {
       user = await UserService.create({
         name: name || trimmedBusinessName || 'User',
