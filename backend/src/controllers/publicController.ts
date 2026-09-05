@@ -9,6 +9,7 @@ import { getPublicImages } from '../services/media.service';
 import { resolveLanguageSettings } from '../services/language.service';
 import { getCurrencyContext } from '../services/currency.service';
 import { shouldShowPlatformBadge } from '../services/branding.service';
+import { parseOptions } from '../services/productOptions.service';
 import {
   normalizeDomain,
   resolveBusinessByCustomDomain,
@@ -395,6 +396,8 @@ export const getProductById = async (
           imageUrl: product.imageUrl,
           // مصفوفة مضمونة: المنتجات القديمة بصورة مفردة تعود بها هنا
           images: getPublicImages(product, 'imageUrl'),
+          // الخيارات مطبَّعة: صفحة المنتج تبني منها نموذج الاختيار
+          options: parseOptions((product as any).options),
           isAvailable: product.isAvailable,
           // إشارة توفّر جاهزة للعرض بدل أن تعيد الواجهة اشتقاقها
           inStock: product.isAvailable && product.stock > 0,

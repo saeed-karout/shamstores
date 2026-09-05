@@ -7,6 +7,7 @@ import { isPaymentMethodAllowed } from '../services/payment.service';
 import { verifyToken } from '../config/auth';
 import { emitOrderRealtimeEvent, RealtimeOrderPayload } from '../realtime/socket';
 import { canAcceptOrder } from '../services/orderQuota.service';
+import { validateSelection } from '../services/productOptions.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -366,6 +367,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       item.quantity = quantity;
 
       let price = item.price || 0;
+      // ما يختاره الزبون من خيارات المنتج — يُتحقّق منه ويُسعَّر على الخادم
+      let selectedSize: string | null = item.size || null;
+      let selectedAddons: string[] | null = Array.isArray(item.addons) ? item.addons : null;
 
       if (item.menuItemId) {
         const menuItem = await prisma.menuItem.findUnique({ where: { id: item.menuItemId } });
@@ -384,6 +388,17 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
         // ⚠️ السعر يُحسب من قاعدة البيانات فقط. هذا مسار عام بلا مصادقة،
         // وقبول السعر من العميل كان يسمح بشراء أي صنف بأي مبلغ.
         price = Number(menuItem.price) || 0;
+
+        const picked = validateSelection((menuItem as any).options, item.selectedOptions);
+        if (!picked.ok) {
+          res.status(400).json({ success: false, error: `${menuItem.name}: ${picked.error}` });
+          return;
+        }
+        if (item.selectedOptions !== undefined) {
+          price += picked.priceDelta;
+          selectedSize = picked.size ?? null;
+          selectedAddons = picked.addons && picked.addons.length > 0 ? picked.addons : null;
+        }
       }
       else if (item.productId) {
         const product = await prisma.product.findUnique({ where: { id: item.productId } });
@@ -404,6 +419,17 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           return;
         }
         price = Number(product.price) || 0;
+
+        // ⚠️ فرق سعر الخيار يُحسب هنا لا في المتصفح: «مقاس كبير +5000»
+        // قابل للتزوير في جسم الطلب لو صدّقناه.
+        const picked = validateSelection((product as any).options, item.selectedOptions);
+        if (!picked.ok) {
+          res.status(400).json({ success: false, error: `${product.name}: ${picked.error}` });
+          return;
+        }
+        price += picked.priceDelta;
+        selectedSize = picked.size ?? selectedSize;
+        selectedAddons = picked.addons && picked.addons.length > 0 ? picked.addons : selectedAddons;
       }
 
       const itemTotal = price * item.quantity;
@@ -414,8 +440,8 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
         productId: item.productId || null,
         quantity: item.quantity,
         price: price,
-        size: item.size || null,
-        addons: item.addons || null,
+        size: selectedSize,
+        addons: selectedAddons,
         notes: item.notes || null
       });
     }

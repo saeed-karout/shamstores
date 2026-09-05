@@ -40,6 +40,15 @@ export const useCart = () => {
     }
   }, [cart, isInitialized]);
 
+  /**
+   * هوية سطر السلة.
+   *
+   * كان التمييز بـ (id, size) وحدهما، فقميصان بنفس المقاس ولونين مختلفين
+   * يندمجان في سطر واحد — ويصل التاجر طلبٌ بلون واحد.
+   */
+  const lineKey = (item: Pick<CartItem, 'id' | 'size' | 'addons'>) =>
+    `${item.id}::${item.size || ''}::${(item.addons || []).slice().sort().join('|')}`;
+
   const addToCart = (item: CartItem) => {
     const validItem = {
       ...item,
@@ -49,13 +58,12 @@ export const useCart = () => {
     };
 
     setCart(prev => {
-      const existing = prev.find(i => 
-        i.id === item.id && i.size === item.size
-      );
-      
+      const key = lineKey(validItem);
+      const existing = prev.find(i => lineKey(i) === key);
+
       if (existing) {
-        return prev.map(i => 
-          i.id === item.id && i.size === item.size
+        return prev.map(i =>
+          lineKey(i) === key
             ? { ...i, quantity: i.quantity + validItem.quantity }
             : i
         );
@@ -66,19 +74,28 @@ export const useCart = () => {
     toast.success('✅ تمت الإضافة إلى السلة');
   };
 
-  const removeFromCart = (itemId: string, size?: string) => {
-    setCart(prev => prev.filter(i => !(i.id === itemId && i.size === size)));
+  // `addons` اختياري في التوقيع كي لا تتغيّر النداءات القائمة: بلا تمريره
+  // يُطابَق السطر بالمعرّف والمقاس كما كان.
+  const removeFromCart = (itemId: string, size?: string, addons?: string[]) => {
+    const key = lineKey({ id: itemId, size, addons });
+    setCart(prev =>
+      prev.filter(i => (addons === undefined ? !(i.id === itemId && i.size === size) : lineKey(i) !== key))
+    );
     toast.success('تمت الإزالة من السلة');
   };
 
-  const updateQuantity = (itemId: string, quantity: number, size?: string) => {
+  const updateQuantity = (itemId: string, quantity: number, size?: string, addons?: string[]) => {
     if (quantity < 1) {
-      removeFromCart(itemId, size);
+      removeFromCart(itemId, size, addons);
       return;
     }
-    setCart(prev => prev.map(i => 
-      i.id === itemId && i.size === size ? { ...i, quantity } : i
-    ));
+    const key = lineKey({ id: itemId, size, addons });
+    setCart(prev =>
+      prev.map(i => {
+        const match = addons === undefined ? i.id === itemId && i.size === size : lineKey(i) === key;
+        return match ? { ...i, quantity } : i;
+      })
+    );
   };
 
   const clearCart = () => {

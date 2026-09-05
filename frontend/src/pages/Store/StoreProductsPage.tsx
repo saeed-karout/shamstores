@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import MultiImageUploader from '@/components/settings/MultiImageUploader';
+import ProductOptionsEditor, { OptionGroup } from '@/components/settings/ProductOptionsEditor';
 import { getDiscountPercent } from '@/utils/catalogBadges';
 import { formatPrice } from '@/utils/currency';
 
@@ -125,6 +126,7 @@ const StoreProductsPage: React.FC = () => {
     imageUrl: '',
     stock: '',
     sku: '',
+    options: [] as OptionGroup[],
     isAvailable: true,
   });
 
@@ -205,7 +207,7 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const resetProductForm = () => {
-    setProductForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', isAvailable: true });
+    setProductForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', options: [], isAvailable: true });
     setSelectedProduct(null);
   };
 
@@ -240,6 +242,15 @@ const StoreProductsPage: React.FC = () => {
         imageUrl: product.imageUrl || '',
         stock: product.stock.toString(),
         sku: product.sku || '',
+        // الخيارات تصل مصفوفةً أو نصاً JSON حسب مسار الحفظ
+        options: (() => {
+          const raw = (product as any).options;
+          if (Array.isArray(raw)) return raw;
+          if (typeof raw === 'string' && raw.trim()) {
+            try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+          }
+          return [];
+        })(),
         isAvailable: product.isAvailable,
       });
     } else { resetProductForm(); }
@@ -729,6 +740,22 @@ const StoreProductsPage: React.FC = () => {
               colors={{
                 card: dynamicColors.card,
                 surf: dynamicColors.card,
+                accent: dynamicColors.accent,
+                bg: dynamicColors.bg,
+                text: dynamicColors.text,
+                muted: dynamicColors.muted,
+                border: dynamicColors.border,
+                red: staticColors.red
+              }}
+            />
+          </div>
+          <div>
+            <ProductOptionsEditor
+              value={productForm.options}
+              onChange={(options) => setProductForm({ ...productForm, options })}
+              colors={{
+                card: dynamicColors.card,
+                surf: dynamicColors.bg,
                 accent: dynamicColors.accent,
                 bg: dynamicColors.bg,
                 text: dynamicColors.text,

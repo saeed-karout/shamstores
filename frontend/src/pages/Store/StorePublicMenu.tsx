@@ -46,6 +46,11 @@ import ProductGridCard, { StorefrontProduct } from '@/components/storefront/Prod
 import CartSheet, { StorefrontOrderType } from '@/components/storefront/CartSheet';
 import BottomCartBar from '@/components/storefront/BottomCartBar';
 import BottomSheet from '@/components/storefront/BottomSheet';
+import ProductOptionsSheet, {
+  parseProductOptions,
+  hasOptions,
+  OptionsResult
+} from '@/components/storefront/ProductOptionsSheet';
 import StorefrontSkeleton from '@/components/storefront/StorefrontSkeleton';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
@@ -135,6 +140,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
   const [cartOpen, setCartOpen] = useState(false);
   const [favoritesOpen, setFavoritesOpen] = useState(false);
+  const [optionsProduct, setOptionsProduct] = useState<StorefrontProduct | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [orderType, setOrderType] = useState<StorefrontOrderType>('delivery');
   const [customerName, setCustomerName] = useState('');
@@ -370,8 +376,46 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       notes: ''
     } as CartItem);
 
+  /**
+   * الإضافة إلى السلة.
+   *
+   * منتج بخيارات لا يُضاف بنقرة: لونٌ أو مقاسٌ غير محدَّد يعني اتصالاً من
+   * التاجر ليسأل — والاتصال يُلغي نصف الطلبات. فيُفتح لوح الاختيار أولاً.
+   */
   // addToCart يعرض رسالته بنفسه — رسالة ثانية هنا تُظهر إشعارين لنقرة
-  const handleAdd = (product: StorefrontProduct) => addToCart(toCartItem(product));
+  const handleAdd = (product: StorefrontProduct) => {
+    if (hasOptions((product as any).options)) {
+      setOptionsProduct(product);
+      return;
+    }
+    addToCart(toCartItem(product));
+  };
+
+  const confirmOptions = (result: OptionsResult) => {
+    if (!optionsProduct) return;
+
+    // العرض بسعر الوحدة بعد الخيارات؛ الخادم يعيد حسابه من المخزَّن
+    const addons: string[] = [];
+    let size: string | undefined;
+    parseProductOptions((optionsProduct as any).options).forEach((group) => {
+      const picked = result.selection[group.name];
+      const labels = Array.isArray(picked) ? picked : picked ? [picked] : [];
+      labels.forEach((label) => {
+        if (group.type === 'single' && !size) size = label;
+        else addons.push(`${group.name}: ${label}`);
+      });
+    });
+
+    addToCart({
+      ...toCartItem(optionsProduct),
+      price: result.unitPrice,
+      quantity: result.quantity,
+      size,
+      addons,
+      selectedOptions: result.selection
+    });
+    setOptionsProduct(null);
+  };
 
   const handleQuantityChange = (product: StorefrontProduct, next: number) => {
     const line = cart.find((item) => item.id === product.id);
@@ -381,8 +425,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     }
     // ⚠️ useCart يعرّف السطر بـ (id, size) لا بمفتاح مركّب. تمرير مفتاح
     // مركّب كمعرّف لا يطابق شيئاً، فتصمت الإزالة والتعديل بلا خطأ.
-    if (next < 1) removeFromCart(line.id, line.size);
-    else updateQuantity(line.id, next, line.size);
+    if (next < 1) removeFromCart(line.id, line.size, line.addons);
+    else updateQuantity(line.id, next, line.size, line.addons);
   };
 
   const applyCoupon = async (code: string) => {
@@ -465,7 +509,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           quantity: item.quantity,
           price: item.originalPrice,
           finalPrice: item.price,
-          notes: item.notes
+          notes: item.notes,
+          // الخادم يتحقّق منها ويحسب فرق السعر — لا نرسل السعر النهائي حكماً
+          selectedOptions: item.selectedOptions
         })),
         subtotal,
         discountAmount,
@@ -875,10 +921,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         items={cart}
         currency={currency}
         onQuantityChange={(item, next) => {
-          if (next < 1) removeFromCart(item.id, item.size);
-          else updateQuantity(item.id, next, item.size);
+          if (next < 1) removeFromCart(item.id, item.size, item.addons);
+          else updateQuantity(item.id, next, item.size, item.addons);
         }}
-        onRemove={(item) => removeFromCart(item.id, item.size)}
+        onRemove={(item) => removeFromCart(item.id, item.size, item.addons)}
         onClear={clearCart}
         availableOrderTypes={availableOrderTypes}
         orderType={orderType}
@@ -908,6 +954,17 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         }}
         submitting={submitting}
         onSubmit={submitOrder}
+      />
+
+      {/* ==================== خيارات المنتج ==================== */}
+      <ProductOptionsSheet
+        open={!!optionsProduct}
+        name={optionsProduct?.name || ''}
+        basePrice={optionsProduct?.price || 0}
+        options={parseProductOptions((optionsProduct as any)?.options)}
+        currency={currency}
+        onClose={() => setOptionsProduct(null)}
+        onConfirm={confirmOptions}
       />
 
       {/* ==================== المفضلة ==================== */}

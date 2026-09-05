@@ -16,6 +16,7 @@ import path from 'path';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 import env from '../config/env';
 import { renameStorefront } from '../services/storefrontIdentity.service';
+import { normalizeOptions } from '../services/productOptions.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -700,6 +701,9 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
             ? parseFloat(originalPrice)
             : null,
         isPopular: isPopular === true,
+        // الخيارات تُطبَّع عند الحفظ لا عند القراءة: شكل فاسد في قاعدة
+        // البيانات يظهر لاحقاً في واجهة الزبون لا في شاشة التاجر
+        options: normalizeOptions(req.body?.options) as any,
         // الصور تمرّ بالتطبيع دائماً، فلا يتباعد الغلاف عن المصفوفة
         ...(buildImageUpdate(req.body, 'imageUrl') || {})
       },
@@ -754,6 +758,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
         Number.isFinite(before) && Number.isFinite(current) && before > current ? before : null;
     }
     if (isPopular !== undefined) updateData.isPopular = isPopular === true;
+    if (req.body?.options !== undefined) updateData.options = normalizeOptions(req.body.options) as any;
 
     const imageUpdate = buildImageUpdate(req.body, 'imageUrl');
     if (imageUpdate) Object.assign(updateData, imageUpdate);

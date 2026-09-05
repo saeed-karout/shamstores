@@ -371,6 +371,10 @@ model MenuItem {
   image           String?
   /// مصفوفة روابط الصور. الغلاف أولها.
   images          Json?
+  /// خيارات يختارها الزبون قبل الطلب: لون، مقاس، إضافات…
+  /// مصفوفة مجموعات: { name, type: single|multi, required, values: [{label, priceDelta}] }
+  /// راجع services/productOptions.service.ts — هو المرجع الوحيد لشكلها وتحقّقها.
+  options         Json?
   isAvailable     Boolean  @default(true)
   isPopular       Boolean  @default(false)
   isNew           Boolean  @default(false)
@@ -410,6 +414,8 @@ model Product {
   /// مصفوفة روابط الصور. الغلاف أولها.
   images        Json?
   categoryId    String?
+  /// خيارات يختارها الزبون قبل الطلب — راجع services/productOptions.service.ts
+  options       Json?
   isAvailable   Boolean  @default(true)
   unit          String   @default("piece")
   sortOrder     Int      @default(0)

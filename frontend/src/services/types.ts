@@ -199,6 +199,8 @@ export interface CartItem {
   notes?: string;
   size?: string;
   addons?: string[];
+  /** ما اختاره الزبون من خيارات المنتج — يُرسَل إلى الخادم ليُتحقّق ويُسعَّر */
+  selectedOptions?: Record<string, string | string[]>;
 }
   
   export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled';
