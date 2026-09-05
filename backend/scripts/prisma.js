@@ -17,6 +17,15 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
+// محلياً: DATABASE_URL في backend/.env لا في البيئة. الفحص أدناه كان يسبق
+// تحميل .env — فينجح الغلاف على Heroku (المتغير في البيئة) ويفشل محلياً
+// دائماً برسالة «لا DATABASE_URL» وهو موجود في الملف.
+try {
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+} catch {
+  /* dotenv غير مثبت — المتغيرات من البيئة */
+}
+
 if (!process.env.DATABASE_URL) {
   const addonUrl =
     process.env.JAWSDB_URL ||

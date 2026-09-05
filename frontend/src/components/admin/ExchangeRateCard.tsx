@@ -185,10 +185,13 @@ const ExchangeRateCard: React.FC<{ colors: Palette }> = ({ colors: C }) => {
         ) : valid ? (
           // معاينة ملموسة: رقم مجرّد لا يكشف الخطأ، ووجبة بسعر مألوف تكشفه
           <span style={{ color: C.muted }}>
-            بهذا السعر، وجبة بـ <strong style={{ color: C.text }}>50,000 ل.س</strong> تظهر
+            {/* مبلغ المعاينة بالعملة بعد إعادة التقويم (حذف صفرين): وجبة
+                بخمسة آلاف بالقديمة صارت خمسين بالجديدة. مثال بعملة قديمة
+                لا يعني شيئاً للتاجر اليوم. */}
+            بهذا السعر، وجبة بـ <strong style={{ color: C.text }}>500 ل.س</strong> تظهر
             للزبون بـ{' '}
             <strong style={{ color: C.accent, fontVariantNumeric: 'tabular-nums' }}>
-              ${(50000 / parsed).toFixed(2)}
+              ${(500 / parsed).toFixed(2)}
             </strong>
             {current === parsed && (
               <span style={{ color: C.muted, marginInlineStart: 8 }}>

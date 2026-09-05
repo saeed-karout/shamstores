@@ -57,6 +57,15 @@ const getPrisma = () => {
   return _prisma;
 };
 
+/** الخدمات مكتوبة بـ TypeScript — نقرأ نسخها المبنية من dist */
+const loadService = (name) => {
+  try {
+    return require(path.join(__dirname, '..', 'dist', 'services', name));
+  } catch {
+    throw new Error(`لم أجد dist/services/${name} — ابنِ الباكيند أولاً (npm run build).`);
+  }
+};
+
 /** خدمة النسخ مكتوبة بـ TypeScript — نقرأ نسختها المبنية */
 const loadBackupService = () => {
   try {
@@ -391,6 +400,54 @@ const commands = {
     console.log(created === 0 ? 'لا شيء للاستدراك.' : `✅ أُنشئ ${created} اشتراكاً.`);
   },
 
+  /** معاينة إعادة تقويم العملة — بلا أي كتابة */
+  async 'redenominate-preview'() {
+    const { planRedenomination, DIVISOR } = loadService('redenomination.service');
+    const plan = await planRedenomination();
+
+    if (plan.alreadyApplied) {
+      console.log(`⚠️  الترحيل نُفِّذ مسبقاً في ${plan.alreadyApplied}`);
+      console.log('   تنفيذه مجدداً يقسم على عشرة آلاف. لا تُعده.');
+      console.log('');
+    }
+
+    console.log(`سيُقسَم على ${DIVISOR}:`);
+    for (const c of plan.changes) {
+      const sample = c.sampleBefore !== null
+        ? `  (مثال: ${c.sampleBefore.toLocaleString()} → ${c.sampleAfter.toLocaleString()})`
+        : '';
+      console.log(`  ${c.table}.${c.field}: ${c.rows} صفاً${sample}`);
+    }
+
+    console.log('');
+    console.log('لن تُمَسّ:');
+    for (const s of plan.skipped) console.log(`  ${s.field} — ${s.reason}`);
+
+    console.log('');
+    console.log(`إجمالي الصفوف: ${plan.totalRows}`);
+    console.log('');
+    console.log('⚠️  خذ نسخة احتياطية أولاً: backup-now');
+    console.log('   ثم نفّذ: redenominate-apply');
+  },
+
+  /** ينفّذ إعادة التقويم — لا رجعة عنه */
+  async 'redenominate-apply'() {
+    const { applyRedenomination } = loadService('redenomination.service');
+    const force = args[0] === '--force';
+
+    console.log('جارٍ إعادة التقويم...');
+    const result = await applyRedenomination(force);
+
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+
+    console.log(`✅ حُدِّث ${result.updated} صفاً.`);
+    if (result.newUsdRate !== null) {
+      console.log(`   سعر الصرف الجديد: ${result.newUsdRate} ل.س للدولار`);
+    }
+  },
+
   async 'reset-password'() {
     const email = requireEmail();
     const user = await findUser(email);
@@ -423,6 +480,8 @@ const commands = {
       console.log('  schema-check              مقارنة قاعدة البيانات بالمخطط');
       console.log('  check-subscriptions       كشف طلبات مقبولة بلا اشتراك');
       console.log('  backfill-subscriptions    إنشاء الاشتراكات الناقصة');
+      console.log('  redenominate-preview      معاينة حذف صفرين من الأسعار');
+      console.log('  redenominate-apply        تنفيذه (لا رجعة)');
       process.exitCode = command ? 1 : 0;
       return;
     }
