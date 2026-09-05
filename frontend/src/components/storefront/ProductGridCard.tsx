@@ -111,10 +111,17 @@ const ProductGridCard: React.FC<Props> = ({
           }
         }}
         style={{
+          // مربّع ثابت لا ارتفاع تابع للصورة.
+          //
+          // صور التجّار مختلفة الأبعاد، وبلا قالب موحّد تتفاوت ارتفاعات
+          // البطاقات فتتكسّر الشبكة. و`padding-top: 100%` لا `aspect-ratio`
+          // وحدها: المتصفحات القديمة تتجاهل الأخيرة فينهار الصندوق إلى
+          // ارتفاع الصورة الطبيعي — وهو بالضبط ما نتجنّبه.
           position: 'relative',
-          // نسبة ثابتة: صور التجّار مختلفة الأبعاد، وبلا نسبة موحّدة
-          // تتفاوت ارتفاعات البطاقات فتتكسّر الشبكة
-          aspectRatio: '1 / 1',
+          width: '100%',
+          paddingTop: '100%',
+          height: 0,
+          overflow: 'hidden',
           background: sf.surface,
           cursor: onOpen ? 'pointer' : 'default'
         }}
@@ -124,10 +131,10 @@ const ProductGridCard: React.FC<Props> = ({
             src={src}
             alt={product.name}
             loading="lazy"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: sf.muted }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: sf.muted }}>
             <IoImageOutline size={30} />
           </div>
         )}
@@ -205,7 +212,9 @@ const ProductGridCard: React.FC<Props> = ({
       {/* النص */}
       <div style={{ padding: '10px 11px 12px', display: 'flex', flexDirection: 'column', flex: 1, gap: 6 }}>
         <h3
+          onClick={() => onOpen?.(product)}
           style={{
+            cursor: onOpen ? 'pointer' : 'default',
             color: sf.text,
             fontSize: 13.5,
             fontWeight: 700,

@@ -29,6 +29,7 @@ const RestaurantSettingsPage = lazy(() => import('./pages/Restaurant/RestaurantS
 const RestaurantAnalyticsPage = lazy(() => import('./pages/Restaurant/RestaurantAnalyticsPage'));
 const RestaurantPlansPage = lazy(() => import('./pages/Restaurant/RestaurantPlansPage'));
 const OwnerFeaturesPage = lazy(() => import('./pages/Owner/FeaturesPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const RestaurantCouponsPage = lazy(() => import('./pages/Restaurant/RestaurantCouponsPage'));
 // ==================== صفحات المتجر ====================
 const StoreProductsPage = lazy(() => import('./pages/Store/StoreProductsPage'));
@@ -266,6 +267,13 @@ const MainApp: React.FC = () => {
         <Route path="/delivery/login" element={<DeliveryLogin />} />
         <Route path="/orders/:orderId/track" element={<DeliveryTracking />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
+
+        {/* ==================== الحساب — لكل من سجّل دخوله ==================== */}
+        {/* بلا allowedRoles عمداً: الزبون يملك حساباً كالمالك، وحصرُ الصفحة
+            بدور واحد كان سيحرم أكثر المستخدمين عدداً من تعديل بياناتهم. */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
 
         {/* ==================== مسارات المالكين (Owner) - يجب أن تأتي أولاً ==================== */}
         <Route element={<ProtectedRoute allowedRoles={['owner']} />}>

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getMe, logout, registerDriver, resetPassword, forgotPassword, registerStore, resendVerificationEmail, verifyEmail, firebaseSignIn, linkFirebaseAccount } from '../controllers/authController';
+import { register, login, getMe, updateMyProfile, logout, registerDriver, resetPassword, forgotPassword, registerStore, resendVerificationEmail, verifyEmail, firebaseSignIn, linkFirebaseAccount } from '../controllers/authController';
 import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
@@ -24,6 +24,12 @@ router.post('/login', login);
  * @access  Private
  */
 router.get('/me', authenticate, getMe);
+
+/**
+ * @route   PATCH /api/auth/profile
+ * @desc    تعديل الاسم والهاتف وصورة الحساب — لا البريد ولا الدور
+ */
+router.patch('/profile', authenticate, updateMyProfile);
 
 /**
  * @route   POST /api/auth/logout

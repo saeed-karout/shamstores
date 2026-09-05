@@ -113,22 +113,28 @@ const commands = {
    * إلى الأبيض — لا يُلمس: تفضيله أهمّ من اتّساقنا.
    */
   async 'restyle-stores'() {
-    const OLD = { backgroundColor: '#FFFFFF', textColor: '#000000' };
+    // لوحتان قديمتان: البيضاء المكسورة، والزرقاء التي وصلت الإنتاج
+    // لفترة قصيرة قبل العودة إلى هوية المنصة.
+    const OLD_SETS = [
+      { backgroundColor: '#FFFFFF', textColor: '#000000' },
+      { backgroundColor: '#0D1424', textColor: '#E9EEF9' }
+    ];
+    const OLD = { OR: OLD_SETS };
     const NEW = {
-      primaryColor: '#6366F1',
-      secondaryColor: '#22C55E',
-      backgroundColor: '#0D1424',
-      textColor: '#E9EEF9',
-      cardColor: '#151E33',
-      surfaceColor: '#1C2742',
-      mutedColor: '#94A2BE',
-      accentColor: '#FFB020'
+      primaryColor: '#0D4A3A',
+      secondaryColor: '#10B981',
+      backgroundColor: '#082E24',
+      textColor: '#E8F5E9',
+      cardColor: '#112E23',
+      surfaceColor: '#0F3D31',
+      mutedColor: '#9DC4AC',
+      accentColor: '#C8E235'
     };
 
     const p = getPrisma();
     const candidates = await p.store.findMany({
       where: OLD,
-      select: { id: true, name: true, accentColor: true, primaryColor: true }
+      select: { id: true, name: true, backgroundColor: true }
     });
 
     if (candidates.length === 0) {
@@ -137,8 +143,8 @@ const commands = {
     }
 
     const dryRun = args.includes('--dry-run');
-    console.log(`${candidates.length} متجر على اللوحة القديمة:`);
-    for (const store of candidates) console.log(`  • ${store.name}`);
+    console.log(`${candidates.length} متجر على لوحة قديمة:`);
+    for (const store of candidates) console.log(`  • ${store.name} (${store.backgroundColor})`);
 
     if (dryRun) {
       console.log('');

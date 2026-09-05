@@ -524,6 +524,89 @@ export const getMe = async (
   }
 };
 
+// ==================== تحديث بيانات الحساب ====================
+
+/**
+ * يعدّل المستخدم بياناته الشخصية.
+ *
+ * **ثلاثة حقول فقط**: الاسم والهاتف والصورة. أما البريد والدور وارتباط
+ * النشاط فلا:
+ *   • البريد معرّف الدخول ومحلّ التحقّق — تغييره من هنا يعني حساباً
+ *     «مُفعَّلاً» ببريد لم يُثبَت أحدٌ ملكيّته.
+ *   • الدور وارتباط النشاط ترقيةُ صلاحية. قبولهما من جسم الطلب يعني أن
+ *     أي زبون يصير مالكاً بحقل واحد.
+ *
+ * فحقول أخرى في الجسم تُهمَل صامتةً لا تُكتب.
+ */
+export const updateMyProfile = async (
+  req: AuthRequest,
+  res: Response<ApiResponse>
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const updates: { name?: string; phone?: string | null; avatarUrl?: string | null } = {};
+
+    if (req.body?.name !== undefined) {
+      const name = sanitizeText(String(req.body.name));
+      if (name.length < 2 || name.length > 80) {
+        res.status(400).json({ success: false, error: 'الاسم يجب أن يكون بين حرفين و80 حرفاً' });
+        return;
+      }
+      updates.name = name;
+    }
+
+    if (req.body?.phone !== undefined) {
+      const phone = String(req.body.phone || '').trim();
+      // الفراغ حذفٌ مقصود لا خطأ — الهاتف اختياري
+      if (phone && !/^[0-9+][0-9\s-]{5,19}$/.test(phone)) {
+        res.status(400).json({ success: false, error: 'رقم الهاتف غير صالح' });
+        return;
+      }
+      updates.phone = phone || null;
+    }
+
+    if (req.body?.avatarUrl !== undefined) {
+      const url = String(req.body.avatarUrl || '').trim();
+      if (url && !/^https?:\/\//i.test(url)) {
+        res.status(400).json({ success: false, error: 'رابط الصورة غير صالح' });
+        return;
+      }
+      updates.avatarUrl = url || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      res.status(400).json({ success: false, error: 'لا حقول للتحديث' });
+      return;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updates,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        avatarUrl: true,
+        role: true,
+        restaurantId: true,
+        storeId: true,
+        isEmailVerified: true,
+        createdAt: true
+      }
+    });
+
+    res.json({ success: true, message: 'تم حفظ بياناتك', data: updated });
+  } catch (error) {
+    console.error('خطأ في تحديث بيانات الحساب:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في حفظ البيانات' });
+  }
+};
+
 // ==================== تسجيل الخروج ====================
 
 export const logout = (

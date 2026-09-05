@@ -11,6 +11,7 @@ import {
   IoReceipt,
   IoQrCode,
   IoPeople,
+  IoPerson,
   IoStatsChart,
   IoSettings,
   IoPricetag,
@@ -152,6 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     // إخفاؤها يحمي الواجهة من الفوضى ويكلّف كل فرصة ترقية.
     items.push({ path: '/features', icon: IoSparkles, label: 'الميزات', badge: 'جديد' });
     items.push({ path: '/plans', icon: IoRocket, label: 'الخطط' });
+    items.push({ path: '/profile', icon: IoPerson, label: 'حسابي' });
     items.push({ path: '/settings', icon: IoSettings, label: 'الإعدادات' });
     return items;
   };
@@ -173,6 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (hasMarketing) items.push({ path: '/store/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
     items.push({ path: '/features', icon: IoSparkles, label: 'الميزات', badge: 'جديد' });
     items.push({ path: '/store/plans', icon: IoRocket, label: 'الخطط' });
+    items.push({ path: '/profile', icon: IoPerson, label: 'حسابي' });
     items.push({ path: '/store/settings', icon: IoSettings, label: 'الإعدادات' });
     return items;
   };

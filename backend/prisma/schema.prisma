@@ -91,6 +91,9 @@ model User {
   email              String    @unique
   password           String
   phone              String?
+  /// صورة الحساب — رابط في R2. الاسم والهاتف والصورة وحدها يملكها المستخدم؛
+  /// البريد والدور وارتباط النشاط تُغيَّر من الإدارة لا من صفحة الحساب.
+  avatarUrl          String?
   role               UserRole
   permissions        Json?
   isActive           Boolean   @default(true)
@@ -274,19 +277,22 @@ model Store {
   latitude                Float?
   longitude               Float?
   showAllBranchesProducts Boolean @default(false)
-  // لوحة المتجر — ليل أزرق، تخالف عمداً أخضرَ واجهة المطعم.
+  // لوحة هوية شام ستورز — أخضر داكن وليموني، كواجهة القائمة الرقمية.
   //
-  // المتجر والقائمة الرقمية منتجان مختلفان ويجب أن يُرى الفرق. والأهم:
-  // كانت الخلفية بيضاء والنص أسود بينما البطاقات والأسطح داكنة — لوحة
-  // متناقضة تُنتج نصاً رمادياً على أبيض وبطاقات سوداء عليه.
-  primaryColor            String  @default("#6366F1")
-  secondaryColor          String  @default("#22C55E")
-  backgroundColor         String  @default("#0D1424")
-  textColor               String  @default("#E9EEF9")
-  cardColor               String  @default("#151E33")
-  surfaceColor            String  @default("#1C2742")
-  mutedColor              String  @default("#94A2BE")
-  accentColor             String  @default("#FFB020")
+  // الفرق بين المتجر والقائمة في **الهيكل** لا في اللون: شريط علوي دائم
+  // وبانر عريض وشبكة منتجات مقابل غلاف وقائمة صفوف. لونان مختلفان كانا
+  // سيجعلان المنصة تبدو منصتين لا منتجين لمنصة واحدة.
+  //
+  // (وكان الافتراضي قبلهما خلفية بيضاء ونصاً أسود مع بطاقات وأسطح داكنة —
+  // لوحة نصفها فاتح ونصفها داكن، أي نصٌّ رمادي على أبيض وبطاقات سوداء.)
+  primaryColor            String  @default("#0D4A3A")
+  secondaryColor          String  @default("#10B981")
+  backgroundColor         String  @default("#082E24")
+  textColor               String  @default("#E8F5E9")
+  cardColor               String  @default("#112E23")
+  surfaceColor            String  @default("#0F3D31")
+  mutedColor              String  @default("#9DC4AC")
+  accentColor             String  @default("#C8E235")
   fontFamily              String  @default("Cairo")
   timezone                String  @default("Asia/Riyadh")
   currency                String  @default("SYP")

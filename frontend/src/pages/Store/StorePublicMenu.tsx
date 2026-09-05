@@ -21,7 +21,7 @@
 //     فتظهر السلة بلا صور دائماً.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
@@ -112,6 +112,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   businessWhatsapp: propBusinessWhatsapp
 }) => {
   const { slug: urlSlug } = useParams();
+  const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart();
   const { favorites, toggleFavorite } = useFavorites();
@@ -152,6 +153,16 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [loadingOrders, setLoadingOrders] = useState(false);
 
   const currentSlug = propBusinessSlug || urlSlug || getCurrentSubdomain();
+
+  /**
+   * رابط صفحة المنتج.
+   *
+   * على نطاق التاجر الفرعي لا يوجد جزء slug في المسار — الواجهة تتعرّف
+   * على المتجر من المضيف. وعلى النطاق الرئيسي يلزم. بناء الرابط بصيغة
+   * واحدة كان سيُنتج 404 في أحد الوضعين.
+   */
+  const productPath = (productId: string) =>
+    urlSlug ? `/${urlSlug}/product/${productId}` : `/product/${productId}`;
   const [identifier, setIdentifier] = useState<string | null | undefined>(currentSlug);
 
   const currency = store?.currency || DEFAULT_CURRENCY;
@@ -710,6 +721,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   quantityInCart={quantityByProductId.get(product.id) || 0}
                   onAdd={handleAdd}
                   onQuantityChange={handleQuantityChange}
+                  onOpen={(p) => navigate(productPath(p.id))}
                   isFavorite={favorites.has(product.id)}
                   onToggleFavorite={(p) =>
                     toggleFavorite({
@@ -808,6 +820,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                     quantityInCart={quantityByProductId.get(product.id) || 0}
                     onAdd={handleAdd}
                     onQuantityChange={handleQuantityChange}
+                    onOpen={(p) => navigate(productPath(p.id))}
                     isFavorite={favorites.has(product.id)}
                   />
                 ))}
@@ -915,6 +928,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 quantityInCart={quantityByProductId.get(product.id) || 0}
                 onAdd={handleAdd}
                 onQuantityChange={handleQuantityChange}
+                onOpen={(p) => {
+                  setFavoritesOpen(false);
+                  navigate(productPath(p.id));
+                }}
                 isFavorite
                 onToggleFavorite={(p) =>
                   toggleFavorite({
@@ -943,6 +960,14 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               <div style={{ color: sf.muted, fontSize: 12.5, lineHeight: 1.9, marginBottom: 4 }}>
                 {(user as any)?.email}
               </div>
+              <SheetAction
+                icon={<IoPersonCircleOutline size={18} />}
+                label="بياناتي"
+                onClick={() => {
+                  setAccountOpen(false);
+                  navigate('/profile');
+                }}
+              />
               <SheetAction
                 icon={<IoReceiptOutline size={18} />}
                 label="طلباتي"

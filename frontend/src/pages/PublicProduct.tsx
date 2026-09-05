@@ -12,6 +12,7 @@ import api from '../services/api';
 import Loader from '../components/common/Loader';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '@/utils/imageHelpers';
+import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 
 const C = {
   bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
@@ -327,10 +328,41 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     );
   }
 
+  // عملة العرض من إعدادات المتجر — كانت «ر.س» مكتوبة في سبعة مواضع
+  const currency = (store as any)?.currency || DEFAULT_CURRENCY;
+
   const finalPrice = getFinalPrice();
   const discountPercent = getDiscountPercent();
   const productStock = typeof product.stock === 'number' ? product.stock : parseInt(String(product.stock)) || 0;
-  const images = [product.imageUrl].filter(Boolean);
+  /**
+   * كل صور المنتج لا الغلاف وحده.
+   *
+   * كانت الصفحة تقرأ `imageUrl` فقط، فيرى الزبون صورة واحدة لمنتج يشتريه
+   * بلا أن يلمسه — وحقل `images` المملوء يبقى بلا استعمال.
+   *
+   * والحقل يصل مصفوفةً أو نصاً JSON حسب مسار الحفظ، فيُقرأ الشكلان.
+   */
+  const images = ((): string[] => {
+    const raw = (product as any).images;
+    let list: string[] = [];
+
+    if (Array.isArray(raw)) {
+      list = raw.filter(Boolean).map(String);
+    } else if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        list = Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [raw];
+      } catch {
+        list = [raw];
+      }
+    }
+
+    if (product.imageUrl && !list.includes(product.imageUrl)) {
+      // الغلاف أولاً حتى لو لم يكن ضمن المصفوفة
+      list = [product.imageUrl, ...list];
+    }
+    return list.filter(Boolean);
+  })();
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
@@ -426,10 +458,10 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
               {discountPercent > 0 ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 28, fontWeight: 700, color: C.accent }}>
-                    {finalPrice.toFixed(2)} ر.س
+                    {formatPrice(finalPrice, currency)}
                   </span>
                   <span style={{ fontSize: 17, color: C.muted, textDecoration: 'line-through' }}>
-                    {getOriginalPrice().toFixed(2)} ر.س
+                    {formatPrice(getOriginalPrice(), currency)}
                   </span>
                   <span style={{ background: 'rgba(200,226,53,0.15)', color: C.accent, padding: '4px 8px', borderRadius: 20, fontSize: 13, border: `1px solid ${C.border}` }}>
                     وفر {discountPercent}%
@@ -437,7 +469,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 </div>
               ) : (
                 <span style={{ fontSize: 28, fontWeight: 700, color: C.accent }}>
-                  {finalPrice.toFixed(2)} ر.س
+                  {formatPrice(finalPrice, currency)}
                 </span>
               )}
             </div>
@@ -604,7 +636,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 {store.settings?.enableDelivery && store.settings.freeDeliveryAbove > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted }}>
                     <IoWallet size={16} style={{ color: C.accent }} />
-                    <span>توصيل مجاني للطلبات فوق {store.settings.freeDeliveryAbove} ر.س</span>
+                    <span>توصيل مجاني للطلبات فوق {formatPrice(store.settings.freeDeliveryAbove, currency)}</span>
                   </div>
                 )}
               </div>
@@ -647,15 +679,15 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                         {hasDiscount ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontWeight: 700, color: C.accent }}>
-                              {itemPrice.toFixed(2)} ر.س
+                              {formatPrice(itemPrice, currency)}
                             </span>
                             <span style={{ fontSize: 11, color: C.muted, textDecoration: 'line-through' }}>
-                              {itemOriginalPrice.toFixed(2)} ر.س
+                              {formatPrice(itemOriginalPrice, currency)}
                             </span>
                           </div>
                         ) : (
                           <span style={{ fontWeight: 700, color: C.accent }}>
-                            {itemPrice.toFixed(2)} ر.س
+                            {formatPrice(itemPrice, currency)}
                           </span>
                         )}
                       </div>
@@ -676,7 +708,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             style={{ width: '100%', padding: '12px 0', background: C.accent, color: C.bg, borderRadius: 12, border: 'none', fontWeight: 600, fontSize: 16, boxShadow: '0 4px 20px rgba(200,226,53,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
           >
             <IoCart size={20} />
-            أضف إلى السلة - {finalPrice.toFixed(2)} ر.س
+            أضف إلى السلة - {formatPrice(finalPrice, currency)}
           </button>
         </div>
       )}
