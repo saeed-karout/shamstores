@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
+import { useAuth } from '@/hooks/useAuth';
 import {
   IoMenu, IoClose, IoArrowForward, IoCheckmarkCircle,
   IoQrCode, IoCart, IoStatsChart, IoFlash, IoTrophy, IoShield,
@@ -11,13 +12,29 @@ import {
   IoLogoInstagram, IoLogoFacebook, IoLogoTwitter,
   IoArrowUp, IoRocket, IoBusiness, IoServer,
   IoStar, IoPeople, IoTime, IoWallet, IoAnalytics,
-  IoChatbubbles, IoLockClosed
+  IoChatbubbles, IoLockClosed, IoGrid, IoLogOut
 } from 'react-icons/io5';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  /**
+   * لوحة كل دور. الزبون العادي لا لوحة له فيبقى `null` — زرٌّ يقود إلى
+   * صفحة تردّه عنها أسوأ من غيابه.
+   */
+  const dashboardPath =
+    user?.role === 'super_admin' ? '/admin/dashboard'
+      : user?.role === 'owner' || user?.role === 'staff' ? '/dashboard'
+        : user?.role === 'delivery_driver' ? '/delivery/dashboard'
+          : null;
+
+  const handleLogout = () => {
+    setIsMenuOpen(false);
+    logout(); // يوجّه إلى الرئيسية ويعرض رسالته بنفسه
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -145,18 +162,43 @@ const HomePage: React.FC = () => {
                 ))}
               </div>
 
-              {/* Desktop Buttons */}
+              {/* أزرار سطح المكتب — دعوةٌ للتسجيل للزائر، وطريق عودة للمسجَّل */}
               <div className="hidden md:flex items-center gap-3">
-                <Link to="/user/login" className="px-4 py-2 text-sm font-medium transition-colors hover:text-[#C8E235]" style={{ color: '#9DC4AC' }}>
-                  تسجيل الدخول
-                </Link>
-                <Link
-                  to="/register"
-                  className="px-5 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
-                  style={{ background: '#C8E235', color: '#082E24' }}
-                >
-                  ابدأ مجاناً
-                </Link>
+                {isAuthenticated ? (
+                  <>
+                    {dashboardPath && (
+                      <Link
+                        to={dashboardPath}
+                        className="px-5 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105 flex items-center gap-2"
+                        style={{ background: '#C8E235', color: '#082E24' }}
+                      >
+                        <IoGrid size={16} />
+                        لوحة التحكم
+                      </Link>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="px-4 py-2 text-sm font-medium transition-colors hover:text-[#C8E235] flex items-center gap-2"
+                      style={{ color: '#9DC4AC' }}
+                    >
+                      <IoLogOut size={16} />
+                      تسجيل الخروج
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/user/login" className="px-4 py-2 text-sm font-medium transition-colors hover:text-[#C8E235]" style={{ color: '#9DC4AC' }}>
+                      تسجيل الدخول
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="px-5 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+                      style={{ background: '#C8E235', color: '#082E24' }}
+                    >
+                      ابدأ مجاناً
+                    </Link>
+                  </>
+                )}
               </div>
 
               {/* Mobile Menu Button */}
@@ -181,13 +223,41 @@ const HomePage: React.FC = () => {
                       {item}
                     </button>
                   ))}
+                  {/* على الموبايل هذه القائمة هي المكان الوحيد الذي يبلغه
+                      المستخدم — فبلا زر خروج هنا لا سبيل له إليه أصلاً */}
                   <div className="pt-3 space-y-2">
-                    <Link to="/user/login" className="block w-full text-center p-3 rounded-lg border transition-colors" style={{ borderColor: 'rgba(200,226,53,0.3)', color: '#C8E235' }}>
-                      تسجيل الدخول
-                    </Link>
-                    <Link to="/register" className="block w-full text-center p-3 rounded-lg font-semibold" style={{ background: '#C8E235', color: '#082E24' }}>
-                      ابدأ مجاناً
-                    </Link>
+                    {isAuthenticated ? (
+                      <>
+                        {dashboardPath && (
+                          <Link
+                            to={dashboardPath}
+                            onClick={() => setIsMenuOpen(false)}
+                            className="flex items-center justify-center gap-2 w-full text-center p-3 rounded-lg font-semibold"
+                            style={{ background: '#C8E235', color: '#082E24' }}
+                          >
+                            <IoGrid size={17} />
+                            لوحة التحكم
+                          </Link>
+                        )}
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center justify-center gap-2 w-full text-center p-3 rounded-lg border transition-colors"
+                          style={{ borderColor: 'rgba(255,107,107,0.4)', color: '#FF6B6B' }}
+                        >
+                          <IoLogOut size={17} />
+                          تسجيل الخروج
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link to="/user/login" className="block w-full text-center p-3 rounded-lg border transition-colors" style={{ borderColor: 'rgba(200,226,53,0.3)', color: '#C8E235' }}>
+                          تسجيل الدخول
+                        </Link>
+                        <Link to="/register" className="block w-full text-center p-3 rounded-lg font-semibold" style={{ background: '#C8E235', color: '#082E24' }}>
+                          ابدأ مجاناً
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -365,12 +435,22 @@ const HomePage: React.FC = () => {
             <h2 className="text-3xl md:text-5xl font-bold mb-4">جاهز لتحويل عملك إلى تجربة رقمية؟</h2>
             <p className="text-lg mb-8" style={{ color: '#9DC4AC' }}>ابدأ بخطة مجانية، وافتح متجرك اليوم. بلا بطاقة ائتمان وبلا التزام.</p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Link to="/register" className="px-8 py-3 rounded-xl font-semibold transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }}>
-                ابدأ الآن مجاناً
-              </Link>
-              <Link to="/user/login" className="px-8 py-3 rounded-xl font-semibold transition-all" style={{ border: '1px solid rgba(200,226,53,0.5)', color: '#C8E235' }}>
-                تسجيل الدخول
-              </Link>
+              {/* «ابدأ مجاناً» بلا معنى لمن هو مشترك أصلاً */}
+              {isAuthenticated && dashboardPath ? (
+                <Link to={dashboardPath} className="px-8 py-3 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2" style={{ background: '#C8E235', color: '#082E24' }}>
+                  <IoGrid size={18} />
+                  الذهاب إلى لوحة التحكم
+                </Link>
+              ) : (
+                <>
+                  <Link to="/register" className="px-8 py-3 rounded-xl font-semibold transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }}>
+                    ابدأ الآن مجاناً
+                  </Link>
+                  <Link to="/user/login" className="px-8 py-3 rounded-xl font-semibold transition-all" style={{ border: '1px solid rgba(200,226,53,0.5)', color: '#C8E235' }}>
+                    تسجيل الدخول
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </section>

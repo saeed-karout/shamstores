@@ -227,8 +227,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   return (
     <>
       {isOpen && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 40 }} />}
+      {/* ⚠️ `bottom: 0` لا `height: 100vh`.
+          على متصفحات الموبايل تشمل 100vh المساحة الواقعة خلف شريط العنوان
+          وشريط الأدوات السفلي، فيمتدّ العمود تحت حافة الشاشة المرئية —
+          ومحتواه يملؤه تماماً فلا يتمرّج. النتيجة أن آخر عنصر فيه، وهو زر
+          تسجيل الخروج، لا يُرى ولا يُنقر. */}
       <aside style={{
-        position: 'fixed', top: 0, right: 0, width: 280, height: '100vh', background: C.bg,
+        position: 'fixed', top: 0, bottom: 0, right: 0, width: 280, background: C.bg,
         borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflowY: 'auto',
         zIndex: 50, transform: sidebarTransform, transition: 'transform 0.3s ease-in-out', direction: 'rtl',
       }}>
@@ -330,8 +335,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         )}
 
         {/* Logout */}
-        <div style={{ borderTop: `1px solid ${C.border}`, padding: '10px 12px', flexShrink: 0 }}>
-          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 0', background: C.redBg, color: C.red, border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}><IoLogOut size={17} /><span>تسجيل خروج</span></button>
+        {/* الحشوة السفلية تُبعد الزر عن شريط الإيماءات في آيفون */}
+        <div style={{ borderTop: `1px solid ${C.border}`, padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0 }}>
+          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', minHeight: 44, background: C.redBg, color: C.red, border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}><IoLogOut size={17} /><span>تسجيل خروج</span></button>
         </div>
       </aside>
     </>
