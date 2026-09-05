@@ -32,6 +32,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 import PublicFooter from '@/components/public/PublicFooter';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
+import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 
 interface StorePublicMenuProps {
   businessId?: string;
@@ -459,11 +460,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
   return (
     <>
-      <Helmet>
-        <title>{store.name} - متجر إلكتروني</title>
-        <meta name="description" content={store.description} />
-        {store.logo && <meta property="og:image" content={getImageUrl(store.logo)} />}
-      </Helmet>
+      <StorefrontSeo business={store} type="store" itemCount={products.length} />
 
       <div style={{ background: dynamicColors.bg, minHeight: '100vh', fontFamily: store.fontFamily || 'Cairo, sans-serif' }} dir="rtl">
         {/* Cover Image */}

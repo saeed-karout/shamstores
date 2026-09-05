@@ -35,12 +35,17 @@ export default {
     //    /health لا يقلّ أهمية عن /api هنا: بدونه تذهب نقطة المراقبة إلى
     //    الواجهة الثابتة فتُرجع index.html بحالة 200 — فيرى المنبّه أخضر
     //    دائماً حتى لو سقط الخادم بالكامل. مراقبة تكذب أسوأ من غيابها.
+    //    و/sitemap.xml كذلك: تُبنى من قاعدة البيانات لأن واجهات التجّار
+    //    تتغيّر يومياً. الزواحف تطلبها من جذر النطاق ولا تبحث عنها في
+    //    مكان آخر، فلو تُركت للواجهة الثابتة لأعادت index.html بحالة 200
+    //    وقرأها الزاحف خريطةً فاسدة.
     if (
       pathname === '/api' ||
       pathname.startsWith('/api/') ||
       pathname.startsWith('/socket.io/') ||
       pathname === '/health' ||
-      pathname.startsWith('/health/')
+      pathname.startsWith('/health/') ||
+      pathname === '/sitemap.xml'
     ) {
       return proxyTo(request, API_HOST);
     }

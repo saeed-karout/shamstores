@@ -5,34 +5,98 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    
-    <!-- Dynamic SEO Tags - Will be updated by React -->
-    <title>shamstores</title>
-    <meta name="title" content="shamstores" />
-    <meta name="description" content="الحل الرقمي المتكامل للمطاعم والمتاجر" />
-    <meta name="keywords" content="قائمة رقمية, منيو مطعم, طلبات اونلاين" />
+    <meta name="theme-color" content="#082E24" />
+
+    <!-- ⚠️ هذه الوسوم ثابتة في الـ HTML عمداً.
+         التطبيق يُصيَّر في المتصفح، وكثير من الزواحف — ومنها زواحف نماذج
+         الذكاء الاصطناعي — لا تنفّذ جافاسكربت. ما يكتبه react-helmet لا
+         تراه، فما يبقى هو هذه الوسوم وحدها. لذلك تصف المنصة وصفاً كاملاً
+         قائماً بذاته، لا عنواناً مؤقتاً يستبدله التطبيق. -->
+    <title>شام ستورز — قائمة رقمية ومتجر إلكتروني للمطاعم والمتاجر السورية</title>
+    <meta
+      name="description"
+      content="منصة سورية تحوّل مطعمك أو متجرك إلى قائمة رقمية ومتجر إلكتروني: رمز QR للطاولات، طلبات أونلاين، أسعار بالليرة السورية، ودفع عبر شام كاش أو نقداً عند الاستلام. ابدأ مجاناً."
+    />
+    <meta
+      name="keywords"
+      content="قائمة رقمية, منيو الكتروني, منيو QR, متجر الكتروني سوريا, طلبات اونلاين, شام كاش, مطاعم سوريا, نظام إدارة مطاعم"
+    />
     <meta name="author" content="Sham Stores" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
     <link rel="canonical" href="https://shamstores.com/" />
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="شام ستورز" />
+    <meta property="og:locale" content="ar_SY" />
     <meta property="og:url" content="https://shamstores.com/" />
-    <meta property="og:title" content="shamstores" />
-    <meta property="og:description" content="الحل الرقمي المتكامل للمطاعم والمتاجر" />
-    <meta property="og:image" content="/og-image.jpg" />
-    
+    <meta property="og:title" content="شام ستورز — قائمة رقمية ومتجر إلكتروني للمطاعم والمتاجر السورية" />
+    <meta
+      property="og:description"
+      content="رمز QR للطاولات، طلبات أونلاين، أسعار بالليرة، ودفع عبر شام كاش. ابدأ مجاناً."
+    />
+    <!-- رابط مطلق: الروابط النسبية لا تُحلّ عند مشاركة الصفحة خارج الموقع -->
+    <meta property="og:image" content="https://shamstores.com/images/logo-width1.png" />
+
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://shamstores.com/" />
-    <meta property="twitter:title" content="shamstores" />
-    <meta property="twitter:description" content="الحل الرقمي المتكامل للمطاعم والمتاجر" />
-    <meta property="twitter:image" content="/og-image.jpg" />
-    
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://shamstores.com/" />
+    <meta name="twitter:title" content="شام ستورز — قائمة رقمية ومتجر إلكتروني" />
+    <meta
+      name="twitter:description"
+      content="رمز QR للطاولات، طلبات أونلاين، أسعار بالليرة، ودفع عبر شام كاش. ابدأ مجاناً."
+    />
+    <meta name="twitter:image" content="https://shamstores.com/images/logo-width1.png" />
+
+    <!-- بيانات منظَّمة: ما تقرأه محرّكات البحث والنماذج بلا تخمين من النص.
+         الأرقام هنا حقيقية — الخطة المجانية موجودة فعلاً. لا تُضَف تقييمات
+         ولا أعداد مستخدمين مُختلقة: البيانات المنظَّمة الكاذبة تُسقط الموقع
+         من نتائج البحث المنسّقة، ولا تُصلَح بسهولة بعد ذلك. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://shamstores.com/#organization",
+            "name": "شام ستورز",
+            "alternateName": "Sham Stores",
+            "url": "https://shamstores.com/",
+            "logo": "https://shamstores.com/images/logo-width1.png",
+            "description": "منصة سورية للقوائم الرقمية والمتاجر الإلكترونية للمطاعم والمتاجر.",
+            "areaServed": { "@type": "Country", "name": "سوريا" }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://shamstores.com/#website",
+            "url": "https://shamstores.com/",
+            "name": "شام ستورز",
+            "inLanguage": "ar",
+            "publisher": { "@id": "https://shamstores.com/#organization" }
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "شام ستورز",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "inLanguage": "ar",
+            "url": "https://shamstores.com/",
+            "description": "قائمة رقمية ورمز QR للطاولات، متجر إلكتروني، طلبات أونلاين، تسعير بالليرة السورية، ودفع عبر شام كاش أو نقداً عند الاستلام.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "خطة مجانية: قائمة رقمية ورمز QR حتى ١٠ أصناف."
+            }
+          }
+        ]
+      }
+    </script>
+
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <script type="module" crossorigin src="/assets/index-h6QU24D8.js"></script>
+    <script type="module" crossorigin src="/assets/index-CrS1tV80.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/vendor-query-Cdl-9iGO.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-charts-BMaJADYX.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-socket-BcxXcwBL.js">
@@ -40,6 +104,6 @@
     <link rel="stylesheet" crossorigin href="/assets/index-DwHmI4i7.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
   </body>
 </html>

@@ -1,0 +1,67 @@
+# شام ستورز — https://shamstores.com
+#
+# زواحف نماذج الذكاء الاصطناعي مذكورة صراحةً لا اعتماداً على القاعدة
+# العامة: بعضها يقرأ اسمه أولاً ويتجاهل `User-agent: *` إن وجد اسمه،
+# وبعض المنصات تعامل الغياب معاملة المنع. والتصريح يوثّق قراراً — أن
+# ظهور المنصة في إجابات النماذج مطلوب — بدل أن يكون سكوتاً مُفسَّراً.
+#
+# ملاحظة: هذا ليس منعاً تقنياً. من أراد الزحف رغم المنع يفعل.
+
+User-agent: *
+Allow: /
+
+# مسارات لا معنى لفهرستها: لوحات تحتاج تسجيل دخول، ونقاط API
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /delivery/
+Disallow: /staff/
+Disallow: /api/
+Disallow: /auth/email-verification
+Disallow: /orders/*/track
+
+# ===== زواحف نماذج الذكاء الاصطناعي =====
+
+# OpenAI
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# Google — علامة منفصلة عن Googlebot، تحكم استعمال المحتوى في Gemini والملخّصات
+User-agent: Google-Extended
+Allow: /
+
+# Perplexity
+User-agent: PerplexityBot
+Allow: /
+
+# Apple
+User-agent: Applebot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Meta
+User-agent: meta-externalagent
+Allow: /
+
+# Common Crawl — مصدر تدريب لكثير من النماذج
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://shamstores.com/sitemap.xml

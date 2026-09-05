@@ -42,6 +42,7 @@ import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import type { CartItem } from '@/services/types';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
+import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 
 // ==================== الأنواع ====================
 
@@ -492,14 +493,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
   return (
     <>
-      <Helmet>
-        <title>{restaurant.name} — القائمة الرقمية</title>
-        {restaurant.description && <meta name="description" content={restaurant.description} />}
-        <meta property="og:title" content={restaurant.name} />
-        {restaurant.description && <meta property="og:description" content={restaurant.description} />}
-        {restaurant.logo && <meta property="og:image" content={getImageUrl(restaurant.logo)} />}
-        <meta name="theme-color" content={restaurant.backgroundColor || '#082E24'} />
-      </Helmet>
+      <StorefrontSeo
+        business={restaurant}
+        type="restaurant"
+        itemCount={categories.reduce((sum, c) => sum + (c.menuItems?.length || 0), 0)}
+      />
 
       <StorefrontLayout
         name={restaurant.name}

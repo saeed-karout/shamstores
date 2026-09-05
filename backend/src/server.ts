@@ -12,6 +12,7 @@ import { PrismaClient } from '@prisma/client';
 import { initializeSocket } from './realtime/socket';
 import env, { isProduction } from './config/env';
 import { PLAN_SEEDS } from './config/plans';
+import { buildSitemap } from './services/sitemap.service';
 import {
   generalLimiter,
   authLimiter,
@@ -153,6 +154,25 @@ app.use(
     }
   })
 );
+
+// خريطة الموقع — على الجذر لا تحت /api.
+//
+// الزواحف تطلب /sitemap.xml من جذر النطاق ولا تبحث عنها في مكان آخر،
+// وrobots.txt يشير إليها هناك. الـ Worker يمرّر هذا المسار إلى هنا.
+//
+// التخزين المؤقت ساعة: بناؤها يقرأ كل المتاجر النشطة، وزاحف يعيد الطلب
+// كل دقيقة كان سيثقل خطة قاعدة بيانات بعشرة اتصالات.
+app.get('/sitemap.xml', async (_req, res) => {
+  try {
+    const xml = await buildSitemap();
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.status(200).send(xml);
+  } catch (error) {
+    console.error('Error building sitemap:', error);
+    res.status(500).send('sitemap unavailable');
+  }
+});
 
 // فحص الصحة — يستخدمه Heroku والمراقبة
 // مسبار إقلاع Heroku — سطحي عمداً: يقيس أن العملية حيّة وتستجيب، بأسرع ما
