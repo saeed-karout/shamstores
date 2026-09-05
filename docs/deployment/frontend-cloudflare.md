@@ -131,7 +131,19 @@ npm --prefix frontend run build
 ```
 
 ```bash
-npx wrangler pages deploy frontend/dist --project-name shamstores
+npx wrangler pages deploy frontend/dist --project-name shamstores --branch main
+```
+
+### ⚠️ `--branch` ليس زينة
+
+بلا هذا الوسيط يسِم wrangler النشر باسم فرع git الحالي. وفرعٌ غير فرع
+الإنتاج في Pages ينتج **نشر معاينة** على رابط مؤقت — يتمّ بنجاح تام،
+ويطبع رابطاً، ولا يغيّر `shamstores.com` بشيء.
+
+العَرَض: بعد نشر «ناجح» يبقى الموقع يخدم البناء القديم. للتأكد:
+
+```bash
+npx wrangler pages deployment list --project-name shamstores
 ```
 
 ### ⚠️ Pages لا Worker
