@@ -6,6 +6,7 @@ import prisma from '../services/prisma';
 import { isPaymentMethodAllowed } from '../services/payment.service';
 import { verifyToken } from '../config/auth';
 import { emitOrderRealtimeEvent, RealtimeOrderPayload } from '../realtime/socket';
+import { canAcceptOrder } from '../services/orderQuota.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -290,6 +291,20 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
 
     if (!restaurantId && !storeId) {
       res.status(400).json({ success: false, error: 'معرف المطعم أو المتجر غير موجود' });
+      return;
+    }
+
+    // حصّة الطلبات الشهرية — تُفحص قبل أي كتابة.
+    //
+    // كان `maxOrders` رقماً في جدول الخطط لا يقرأه أحد: خطة بصفر طلبات
+    // تقبل كل شيء. الفحص هنا لأنه آخر نقطة يُعرف فيها النشاط قبل الإنشاء.
+    const quotaCheck = await canAcceptOrder(
+      (restaurantId || storeId)!,
+      restaurantId ? 'restaurant' : 'store'
+    );
+    if (!quotaCheck.allowed) {
+      // 409 لا 403: الطلب سليم والمانع حالة مؤقتة تزول أول الشهر
+      res.status(409).json({ success: false, error: quotaCheck.error });
       return;
     }
 

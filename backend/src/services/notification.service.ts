@@ -40,11 +40,12 @@ const buildRow = (userId: string, input: CreateNotificationInput) => ({
  * فشل البثّ لا يُسقط العملية — الصفّ محفوظ وسيظهر في مركز الإشعارات عند أول
  * فتح. الإشعار الفوري راحة، والسجل هو الضمان.
  */
+/** يُرجع ما إن حُفظ الصفّ — يحتاجه من يرفع عَلَماً بعد إشعار ناجح */
 export const notifyUser = async (
   userId: string | null | undefined,
   input: CreateNotificationInput
-): Promise<void> => {
-  if (!userId) return;
+): Promise<boolean> => {
+  if (!userId) return false;
 
   try {
     const row = await prisma.notification.create({ data: buildRow(userId, input) });
@@ -59,8 +60,11 @@ export const notifyUser = async (
       entityId: row.id,
       extraData: { notificationId: row.id }
     });
+
+    return true;
   } catch (error) {
     console.error('تعذّر إنشاء الإشعار:', error);
+    return false;
   }
 };
 

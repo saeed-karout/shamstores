@@ -49,7 +49,7 @@ const resolveTargetPlan = async (
 };
 
 /** يجد مالك النشاط لإبلاغه — تغيير خطته قرار يخصّه */
-const findBusinessOwner = async (businessType: string, businessId: string): Promise<string | null> => {
+export const findBusinessOwner = async (businessType: string, businessId: string): Promise<string | null> => {
   if (businessType === 'restaurant') {
     const row = await prisma.restaurant.findUnique({ where: { id: businessId }, select: { userId: true } });
     return row?.userId || null;

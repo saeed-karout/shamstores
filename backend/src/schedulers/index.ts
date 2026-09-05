@@ -25,10 +25,11 @@ export const startSchedulers = () => {
   cron.schedule('0 */6 * * *', async () => {
     console.log('🔄 Running expiring subscriptions check...');
     try {
-      const expiring = await checkExpiringSubscriptions(3);
+      // notify: true — المجدول وحده يُرسل. القائمة كانت تُجلب ثم تُطبَع
+      // ولا يصل التاجر شيء: الاشتراك ينتهي فجأةً وتُغلق ميزاته بلا إنذار.
+      const expiring = await checkExpiringSubscriptions(3, true);
       if (expiring.length > 0) {
-        console.log(`📧 Found ${expiring.length} subscriptions expiring soon`);
-        // يمكن إضافة إرسال إيميلات هنا
+        console.log(`📧 نُبِّه ${expiring.length} تاجراً باقتراب انتهاء اشتراكه`);
       }
     } catch (error) {
       console.error('❌ Expiring check failed:', error);

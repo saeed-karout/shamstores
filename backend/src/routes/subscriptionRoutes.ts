@@ -5,6 +5,7 @@ import {
   createSubscription,
   getSubscriptions,
   getCurrentSubscription,
+  getPlanStatus,
   cancelSubscription,
   getExpiringSubscriptions,
   sendRenewalReminders,
@@ -30,6 +31,9 @@ router.get('/', authenticate, authorizeOwner, getSubscriptions);
  * @access  Private (Owner)
  */
 router.get('/current', authenticate, authorizeOwner, getCurrentSubscription);
+
+// حالة الخطة الكاملة: الحصّة المستهلكة وتاريخ الإغلاق في نداء واحد
+router.get('/plan-status', authenticate, authorizeOwner, getPlanStatus);
 
 /**
  * @route   POST /api/subscriptions

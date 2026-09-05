@@ -3,6 +3,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { cancelSubscription as cancelSubscriptionService } from '../services/subscriptionCancel.service';
+import { getOrderQuota } from '../services/orderQuota.service';
 
 // دالة مساعدة للحصول على businessId (مطعم أو متجر)
 const getBusinessId = async (req: AuthRequest): Promise<{ type: 'restaurant' | 'store', id: string } | null> => {
@@ -236,6 +237,78 @@ export const getCurrentSubscription = async (
       success: false,
       error: 'حدث خطأ في جلب الاشتراك الحالي' 
     });
+  }
+};
+
+// ==================== حالة الخطة للتاجر ====================
+
+/**
+ * كل ما يحتاج التاجر معرفته عن خطته في نداء واحد: ما يملكه، وكم استهلك،
+ * ومتى تُغلق.
+ *
+ * كانت هذه المعلومة موزّعة ولا تُعرض: الحصّة رقم في جدول الخطط لا يقرأه
+ * أحد، وتاريخ الانتهاء لا يظهر في الواجهة إطلاقاً. فيكتشف التاجر انتهاء
+ * اشتراكه حين تُغلق ميزاته فجأةً.
+ */
+export const getPlanStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = await getBusinessId(req);
+    if (!business) {
+      res.status(400).json({ success: false, error: 'معرف النشاط التجاري غير موجود' });
+      return;
+    }
+
+    const [plan, quota, subscription] = await Promise.all([
+      business.type === 'restaurant'
+        ? prisma.restaurant.findUnique({ where: { id: business.id }, select: { plan: true } }).then((r) => r?.plan || null)
+        : prisma.store.findUnique({ where: { id: business.id }, select: { plan: true } }).then((r) => r?.plan || null),
+      getOrderQuota(business.id, business.type as 'restaurant' | 'store'),
+      prisma.subscription.findFirst({
+        where: { businessType: business.type, businessId: business.id, status: 'active' },
+        orderBy: { endDate: 'desc' }
+      })
+    ]);
+
+    // الأيام المتبقية تُحسب من نهاية اليوم لا من اللحظة: اشتراك ينتهي بعد
+    // ساعتين ليس «صفر يوم» في ذهن التاجر، بل «اليوم».
+    let daysRemaining: number | null = null;
+    if (subscription?.endDate) {
+      const ms = subscription.endDate.getTime() - Date.now();
+      daysRemaining = Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
+    }
+
+    res.json({
+      success: true,
+      data: {
+        plan: plan
+          ? {
+              id: plan.id,
+              name: plan.name,
+              price: plan.price,
+              maxMenuItems: plan.maxMenuItems,
+              maxProducts: plan.maxProducts,
+              hasOnlineOrders: plan.hasOnlineOrders
+            }
+          : null,
+        orders: quota,
+        subscription: subscription
+          ? {
+              id: subscription.id,
+              planName: subscription.planName,
+              startDate: subscription.startDate,
+              endDate: subscription.endDate,
+              status: subscription.status,
+              daysRemaining,
+              // عتبة التنبيه هنا لا في الواجهة: قاعدة واحدة يقرأها المجدول
+              // وشاشة التاجر معاً، فلا تختلف الرسالة عن الإشعار
+              expiringSoon: daysRemaining !== null && daysRemaining <= 7
+            }
+          : null
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching plan status:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في جلب حالة الخطة' });
   }
 };
 

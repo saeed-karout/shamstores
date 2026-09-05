@@ -22,6 +22,7 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import PlanStatusCard from '@/components/dashboard/PlanStatusCard';
 
 const C = {
   bg:     '#082E24',
@@ -158,6 +159,8 @@ const RestaurantDashboard: React.FC = () => {
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: '1.5rem', color: C.text }} dir="rtl">
+
+      <PlanStatusCard />
 
       {/* الترحيب */}
       <div style={{ marginBottom: '2rem' }}>
