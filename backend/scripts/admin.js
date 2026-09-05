@@ -300,6 +300,97 @@ const commands = {
     }
   },
 
+  /**
+   * يكشف طلبات الترقية الموافَق عليها بلا صفّ اشتراك مقابل.
+   *
+   * approveUpgrade كان يغيّر الخطة ويقلب الحالة بلا إنشاء اشتراك. الإصلاح
+   * يعمل للأمام فقط — الطلبات المقبولة قبله تبقى بلا سجلّ.
+   */
+  async 'check-subscriptions'() {
+    const p = getPrisma();
+    const approved = await p.upgradeRequest.findMany({ where: { status: 'approved' } });
+    const total = await p.subscription.count();
+
+    console.log(`طلبات موافَق عليها: ${approved.length}`);
+    console.log(`صفوف اشتراك:        ${total}`);
+
+    const orphans = [];
+    for (const req of approved) {
+      const businessId = req.restaurantId || req.storeId;
+      if (!businessId) continue;
+      const match = await p.subscription.findFirst({
+        where: { businessId, planId: req.requestedPlanId }
+      });
+      if (!match) orphans.push(req);
+    }
+
+    if (orphans.length === 0) {
+      console.log('');
+      console.log('✅ كل طلب مقبول له اشتراك.');
+      return;
+    }
+
+    console.log('');
+    console.log(`⚠️  ${orphans.length} طلباً مقبولاً بلا اشتراك (عولجت بالكود القديم):`);
+    for (const o of orphans) {
+      console.log(`   ${o.id} — ${o.restaurantId ? 'مطعم' : 'متجر'} ${o.restaurantId || o.storeId}`);
+    }
+    console.log('');
+    console.log('لإنشائها: node backend/scripts/admin.js backfill-subscriptions');
+  },
+
+  /** ينشئ الاشتراكات الناقصة للطلبات المقبولة قديماً */
+  async 'backfill-subscriptions'() {
+    const p = getPrisma();
+    const approved = await p.upgradeRequest.findMany({ where: { status: 'approved' } });
+    let created = 0;
+
+    for (const req of approved) {
+      const businessId = req.restaurantId || req.storeId;
+      if (!businessId) continue;
+
+      const exists = await p.subscription.findFirst({
+        where: { businessId, planId: req.requestedPlanId }
+      });
+      if (exists) continue;
+
+      const plan = await p.plan.findUnique({ where: { id: req.requestedPlanId } });
+      if (!plan) {
+        console.log(`- تخطّي ${req.id}: الخطة لم تعد موجودة`);
+        continue;
+      }
+
+      // تاريخ البدء = تاريخ المراجعة الفعلي لا اليوم، وإلا بدا الاشتراك
+      // أحدث مما هو وتأخّر انتهاؤه بلا وجه حق
+      const startDate = req.reviewedAt || req.requestedAt || new Date();
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + 1);
+
+      await p.subscription.create({
+        data: {
+          businessType: req.restaurantId ? 'restaurant' : 'store',
+          businessId,
+          planId: plan.id,
+          planName: plan.name,
+          months: 1,
+          price: plan.price,
+          discount: 0,
+          totalPaid: 0,
+          startDate,
+          endDate,
+          status: endDate > new Date() ? 'active' : 'expired',
+          paymentMethod: 'manual',
+          notes: `استدراك — طلب ${req.id} قُبل قبل إصلاح إنشاء الاشتراك`
+        }
+      });
+      created++;
+      console.log(`+ ${plan.name} لـ ${businessId}`);
+    }
+
+    console.log('');
+    console.log(created === 0 ? 'لا شيء للاستدراك.' : `✅ أُنشئ ${created} اشتراكاً.`);
+  },
+
   async 'reset-password'() {
     const email = requireEmail();
     const user = await findUser(email);
@@ -330,6 +421,8 @@ const commands = {
       console.log('  backup-now                نسخة احتياطية فورية');
       console.log('  backup-list               عرض النسخ المتاحة');
       console.log('  schema-check              مقارنة قاعدة البيانات بالمخطط');
+      console.log('  check-subscriptions       كشف طلبات مقبولة بلا اشتراك');
+      console.log('  backfill-subscriptions    إنشاء الاشتراكات الناقصة');
       process.exitCode = command ? 1 : 0;
       return;
     }
