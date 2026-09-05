@@ -75,6 +75,15 @@ const loadBackupService = () => {
   }
 };
 
+/** slugify مكتوب بـ TypeScript — نعيد استعماله لا ننسخه */
+const loadSlugify = () => {
+  try {
+    return require(path.join(__dirname, '..', 'dist', 'utils', 'slugify')).default;
+  } catch {
+    throw new Error('لم أجد dist/utils/slugify — ابنِ الباكيند أولاً (npm run build).');
+  }
+};
+
 const requireEmail = () => {
   const email = (args[0] || '').trim().toLowerCase();
   if (!email || !email.includes('@')) {
@@ -93,6 +102,74 @@ const findUser = async (email) => {
 };
 
 const commands = {
+  /**
+   * يلحق نشاطاً تجارياً بحساب أُنشئ زبوناً بالخطأ.
+   *
+   * لإصلاح الحسابات التي سجّلت بغوغل قبل أن يقرأ firebaseSignIn نيّة
+   * التسجيل: بقيت role: 'user' بلا متجر، ولا سبيل لصاحبها لبلوغ لوحة
+   * التحكم إطلاقاً.
+   */
+  async 'attach-business'() {
+    const email = requireEmail();
+    const type = (args[1] || '').trim();
+    const name = args.slice(2).join(' ').trim();
+
+    if (type !== 'restaurant' && type !== 'store') {
+      throw new Error('النوع يجب أن يكون restaurant أو store.');
+    }
+    if (!name) throw new Error('مرّر اسم النشاط بعد النوع.');
+
+    const prisma = getPrisma();
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, role: true, restaurantId: true, storeId: true }
+    });
+    if (!user) throw new Error(`لا مستخدم بالبريد ${email}`);
+
+    // الإلحاق مرة واحدة: حساب له نشاط أصلاً يحتاج نقلاً لا إنشاءً
+    if (user.restaurantId || user.storeId) {
+      console.log(`ℹ️  ${email} مرتبط بنشاط مسبقاً — لا تغيير.`);
+      console.log(`      restaurantId: ${user.restaurantId || '—'} · storeId: ${user.storeId || '—'}`);
+      return;
+    }
+
+    // المطاعم والمتاجر تتقاسم فضاء النطاقات الفرعية — التفرّد عبر الجدولين
+    const slugify = loadSlugify();
+    const baseSlug = slugify(name) || type;
+    let slug = baseSlug;
+    let counter = 1;
+    while (
+      (await prisma.restaurant.findUnique({ where: { slug } })) ||
+      (await prisma.store.findUnique({ where: { slug } }))
+    ) {
+      slug = `${baseSlug}-${counter++}`;
+    }
+
+    const data = {
+      name,
+      slug,
+      subdomain: slug,
+      email: user.email,
+      userId: user.id,
+      planId: '11111111-1111-1111-1111-111111111111',
+      isActive: true
+    };
+
+    const business = type === 'restaurant'
+      ? await prisma.restaurant.create({ data })
+      : await prisma.store.create({ data });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        role: 'owner',
+        ...(type === 'restaurant' ? { restaurantId: business.id } : { storeId: business.id })
+      }
+    });
+
+    console.log(`✅ ${email}: ${user.role} → owner`);
+    console.log(`      ${type === 'restaurant' ? 'مطعم' : 'متجر'} «${name}» — النطاق: ${slug}`);
+  },
   async 'list-users'() {
     const limit = Number(args[0]) || 20;
     const users = await getPrisma().user.findMany({
@@ -472,6 +549,7 @@ const commands = {
       console.log('  verify-user <بريد>        تفعيل الحساب بلا رمز بريد');
       console.log('  make-superadmin <بريد>    ترقية إلى سوبر أدمن');
       console.log('  reset-password <بريد>     كلمة مرور مؤقتة');
+      console.log('  attach-business <بريد> <restaurant|store> <اسم>  إلحاق نشاط بحساب أُنشئ زبوناً');
       console.log('  migrate-currency [من] [إلى]  ترحيل عملة الأنشطة (افتراضياً SAR→SYP)');
       console.log('  set-usd-rate <رقم>        سعر صرف الدولار العام');
       console.log('  sync-plans                مواءمة الخطط مع تعريفها في الكود');
