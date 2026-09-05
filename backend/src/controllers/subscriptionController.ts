@@ -2,6 +2,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { cancelSubscription as cancelSubscriptionService } from '../services/subscriptionCancel.service';
 
 // دالة مساعدة للحصول على businessId (مطعم أو متجر)
 const getBusinessId = async (req: AuthRequest): Promise<{ type: 'restaurant' | 'store', id: string } | null> => {
@@ -240,71 +241,68 @@ export const getCurrentSubscription = async (
 
 // ==================== إلغاء اشتراك ====================
 
-export const cancelSubscription = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+/** إلغاء المالك — مقصور على اشتراكات نشاطه */
+export const cancelSubscription = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
     const business = await getBusinessId(req);
-    
     if (!business) {
-      res.status(400).json({ 
-        success: false,
-        error: 'معرف النشاط التجاري غير موجود' 
-      });
+      res.status(400).json({ success: false, error: 'معرف النشاط التجاري غير موجود' });
       return;
     }
 
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        id,
-        businessType: business.type,
-        businessId: business.id,
-        status: 'active'
-      }
+    const result = await cancelSubscriptionService(req.params.id, {
+      actorLabel: `المالك (${req.user?.email || req.user?.id})`,
+      reason: typeof req.body?.reason === 'string' ? req.body.reason : undefined,
+      restrictToBusiness: { type: business.type, id: business.id }
     });
 
-    if (!subscription) {
-      res.status(404).json({ 
-        success: false,
-        error: 'الاشتراك غير موجود' 
-      });
+    if (!result.ok) {
+      res.status(400).json({ success: false, error: result.error });
       return;
     }
 
-    // تحديث حالة الاشتراك
-    const cancelledSubscription = await prisma.subscription.update({
-      where: { id },
-      data: { status: 'cancelled' }
-    });
-
-    // تحديث خطة النشاط التجاري إلى المجانية
-    const freePlanId = '11111111-1111-1111-1111-111111111111';
-    
-    if (business.type === 'restaurant') {
-      await prisma.restaurant.update({
-        where: { id: business.id },
-        data: { planId: freePlanId }
-      });
-    } else {
-      await prisma.store.update({
-        where: { id: business.id },
-        data: { planId: freePlanId }
-      });
-    }
-
-    res.json({
-      success: true,
-      message: 'تم إلغاء الاشتراك بنجاح',
-      data: cancelledSubscription
-    });
+    res.json({ success: true, message: 'تم إلغاء الاشتراك', data: result });
   } catch (error) {
     console.error('Error cancelling subscription:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'حدث خطأ في إلغاء الاشتراك' 
+    res.status(500).json({ success: false, error: 'حدث خطأ في إلغاء الاشتراك' });
+  }
+};
+
+/**
+ * إلغاء السوبر أدمن — لأي اشتراك بلا قيد نشاط.
+ *
+ * لم يكن موجوداً إطلاقاً: قبول ترقية خاطئ لا رجعة عنه، ولا سبيل لتصحيح
+ * اشتراك أُنشئ بالخطأ أو لم يُدفع.
+ */
+export const adminCancelSubscription = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+
+    // السبب إلزامي للمشرف لا للمالك: إلغاء اشتراك شخص آخر يجب أن يُعلَّل،
+      // والتاجر يرى السبب في إشعاره.
+    if (!reason) {
+      res.status(400).json({ success: false, error: 'اذكر سبب الإلغاء — يظهر للتاجر في إشعاره.' });
+      return;
+    }
+
+    const result = await cancelSubscriptionService(req.params.id, {
+      actorLabel: `مشرف (${req.user?.email || req.user?.id})`,
+      reason
     });
+
+    if (!result.ok) {
+      res.status(400).json({ success: false, error: result.error });
+      return;
+    }
+
+    console.warn(
+      `⚠️ اشتراك ${result.subscriptionId} أُلغي بواسطة ${req.user?.email} — السبب: ${reason}`
+    );
+
+    res.json({ success: true, message: 'تم إلغاء الاشتراك وإبلاغ التاجر', data: result });
+  } catch (error) {
+    console.error('Error admin-cancelling subscription:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إلغاء الاشتراك' });
   }
 };
 

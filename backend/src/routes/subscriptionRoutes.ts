@@ -9,7 +9,8 @@ import {
   getExpiringSubscriptions,
   sendRenewalReminders,
   checkExpiredSubscriptions,
-  getAllSubscriptions 
+  getAllSubscriptions,
+  adminCancelSubscription 
 } from '../controllers/subscriptionController';
 
 const router = Router();
@@ -50,6 +51,9 @@ router.post('/:id/cancel', authenticate, authorizeOwner, cancelSubscription);
  * @access  Private (Super Admin)
  */
 router.get('/admin/all', authenticate, authorizeAdmin, getAllSubscriptions);
+
+// إلغاء أي اشتراك — للسوبر أدمن وحده، ويتطلّب سبباً
+router.post('/admin/:id/cancel', authenticate, authorizeAdmin, adminCancelSubscription);
 
 /**
  * @route   GET /api/subscriptions/admin/expiring
