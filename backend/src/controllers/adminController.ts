@@ -1952,32 +1952,73 @@ export const approveUpgrade = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
     
-    if (upgradeRequest.restaurantId) {
-      await prisma.restaurant.update({
-        where: { id: upgradeRequest.restaurantId },
-        data: { planId: upgradeRequest.requestedPlanId }
-      });
-    } else if (upgradeRequest.storeId) {
-      await prisma.store.update({
-        where: { id: upgradeRequest.storeId },
-        data: { planId: upgradeRequest.requestedPlanId }
-      });
+    const plan = await prisma.plan.findUnique({ where: { id: upgradeRequest.requestedPlanId } });
+    if (!plan) {
+      res.status(400).json({ success: false, error: 'الخطة المطلوبة لم تعد موجودة' });
+      return;
     }
-    
-    const updatedRequest = await prisma.upgradeRequest.update({
-      where: { id: requestId },
-      data: {
-        status: 'approved',
-        reviewedAt: new Date(),
-        reviewedBy: adminId
-      }
-    });
+
+    const businessType = upgradeRequest.restaurantId ? 'restaurant' : 'store';
+    const businessId = upgradeRequest.restaurantId || upgradeRequest.storeId;
+    if (!businessId) {
+      res.status(400).json({ success: false, error: 'الطلب بلا نشاط تجاري مرتبط' });
+      return;
+    }
+
+    const months = 1;
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + months);
+
+    // الثلاثة في معاملة واحدة: تغيير الخطة، وسجلّ الاشتراك، وحالة الطلب.
+    // كان سجلّ الاشتراك غائباً تماماً — تُقبل الترقية وتتغيّر الخطة بينما
+    // شاشة الاشتراكات فارغة، فلا أثر يُدقَّق ولا تاريخ انتهاء يُتابَع.
+    const [, , updatedRequest] = await prisma.$transaction([
+      upgradeRequest.restaurantId
+        ? prisma.restaurant.update({
+            where: { id: upgradeRequest.restaurantId },
+            data: { planId: plan.id }
+          })
+        : prisma.store.update({
+            where: { id: upgradeRequest.storeId! },
+            data: { planId: plan.id }
+          }),
+
+      prisma.subscription.create({
+        data: {
+          businessType,
+          businessId,
+          planId: plan.id,
+          planName: plan.name,
+          months,
+          price: plan.price,
+          discount: 0,
+          // ترقية وافق عليها مشرف يدوياً: التحصيل خارج النظام، فلا ندّعي
+          // مبلغاً مدفوعاً لم نره.
+          totalPaid: 0,
+          startDate,
+          endDate,
+          status: 'active',
+          paymentMethod: 'manual',
+          notes: `ترقية موافَق عليها من المشرف — طلب ${requestId}`
+        }
+      }),
+
+      prisma.upgradeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'approved',
+          reviewedAt: new Date(),
+          reviewedBy: adminId
+        }
+      })
+    ]);
     
     // إشعار فوري لصاحب الطلب — القرار يخصّه وانتظاره بلا خبر أسوأ من الرفض
     await notifyRequester(updatedRequest.userId, {
       event: 'upgrade_request.approved',
       title: 'تمت الموافقة على ترقيتك',
-      message: 'خطتك الجديدة فعّالة الآن. تصفّح ما فُتح لك من ميزات.',
+      message: `خطة ${plan.name} فعّالة حتى ${endDate.toLocaleDateString('ar')}.`,
       requestId: updatedRequest.id
     });
 
