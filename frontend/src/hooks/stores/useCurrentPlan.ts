@@ -78,23 +78,41 @@ export const useCurrentPlan = (): UseCurrentPlanReturn => {
   const [upgradeRequests, setUpgradeRequests] = useState<UpgradeRequest[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
 
-  // جلب الخطة الحالية
+  /**
+   * جلب الخطة الحالية.
+   *
+   * **المصدر يتبع مَن يسأل، لا الرابط الذي فُتحت منه الصفحة.**
+   *
+   * كان هذا يسأل دائماً `/plans/business/${getCurrentSubdomain()}`. ولوحة
+   * التحكّم تُفتح من `shamstores.com` — نطاق المنصّة لا نطاق تاجر — فتعيد
+   * الدالة `null`، ويُطلب `/plans/business/null` فيرتدّ 404. ثم يبتلع
+   * `catch` الخطأ ويضع **الخطة المجانية**: تاجرٌ على enterprise تُقفل في
+   * وجهه ميزات دفع ثمنها، وهو أسوأ من رسالة خطأ لأنه يبدو سلوكاً طبيعياً.
+   *
+   * المسار الموثَّق `/plans/current/me` يقرأ `restaurantId` أو `storeId` من
+   * المستخدم نفسه، فيصحّ للاثنين. والمسار العام يبقى للواجهة العلنية على
+   * نطاق تاجر حيث لا توكن أصلاً.
+   */
   const fetchCurrentPlan = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
-    try {
-      // ✅ المسار من planRoutes
-      const currentSlug = getCurrentSubdomain(); // أو استقبله كـ prop
-const response = await api.get(`/plans/business/${currentSlug}`);
 
-      
-      if (response && response.success !== false) {
-        const planData = response.data || response;
-        setPlan(planData);
-      } else {
-        throw new Error('فشل تحميل بيانات الخطة');
+    try {
+      const token = localStorage.getItem('token');
+      const currentSlug = getCurrentSubdomain();
+
+      if (!token && !currentSlug) {
+        // لا هوية ولا نطاق تاجر: لا شيء نسأل عنه
+        setPlan(getDefaultFreePlan());
+        return;
       }
+
+      const planData = token
+        ? await api.get<Plan>('/plans/current/me')
+        : await api.get<Plan>(`/plans/business/${currentSlug}`);
+
+      if (!planData) throw new Error('فشل تحميل بيانات الخطة');
+      setPlan(planData);
     } catch (err: any) {
       console.error('Error fetching current plan:', err);
       
