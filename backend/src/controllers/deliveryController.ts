@@ -187,6 +187,9 @@ export const acceptOrder = async (
 
 // ==================== تأكيد الدفع ====================
 
+/** طرق الدفع كما في تعداد Prisma */
+const PAYMENT_METHODS = ['cash', 'card', 'online', 'sham_cash'];
+
 export const confirmPayment = async (
   req: AuthRequest,
   res: Response
@@ -211,19 +214,49 @@ export const confirmPayment = async (
       return;
     }
 
-    // ملاحظة: حقل isPaid غير موجود في الـ schema، يمكن إضافته إذا لزم الأمر
-    // أو استخدام paymentCollectedAt كبديل
-    await prisma.order.update({
+    // التعليق الذي كان هنا يقول إن `isPaid` غير موجود في المخطّط — وهو
+    // موجود ومستعمل في كل شاشات المنصّة. فكان السائق يقبض المبلغ نقداً
+    // ويبقى الطلب «غير مدفوع» عند التاجر إلى الأبد، ويُحتسب كذلك في القسم
+    // المالي. تحصيلٌ لا يُسجَّل أسوأ من تحصيل لا يقع.
+    const collectedAt = new Date();
+    const method = typeof req.body?.paymentMethod === 'string' ? req.body.paymentMethod : null;
+
+    const updated = await prisma.order.update({
       where: { id: orderId },
       data: {
-        paymentCollectedAt: new Date()
+        paymentCollectedAt: collectedAt,
+        isPaid: true,
+        ...(method && PAYMENT_METHODS.includes(method) ? { paymentMethod: method as any } : {})
       }
     });
+
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.payment.collected',
+        title: 'تم تحصيل المبلغ',
+        message: `حصّل المندوب مبلغ الطلب ${updated.orderNumber}`,
+        actorId: driverId || null,
+        order: {
+          id: updated.id,
+          orderNumber: updated.orderNumber,
+          status: updated.status,
+          isPaid: true,
+          total: Number(updated.total),
+          orderType: updated.orderType,
+          restaurantId: updated.restaurantId,
+          storeId: updated.storeId,
+          createdBy: updated.createdBy,
+          assignedDriverId: updated.assignedDriverId
+        }
+      });
+    } catch (err) {
+      console.error('Error emitting payment event:', err);
+    }
 
     res.json({
       success: true,
       message: 'تم تأكيد الدفع',
-      data: { paymentCollectedAt: new Date() }
+      data: { paymentCollectedAt: collectedAt, isPaid: true }
     });
   } catch (error) {
     console.error('Error confirming payment:', error);
@@ -1117,7 +1150,11 @@ export const getDriverOrders = async (
             // `preparing` كانت ساقطة، والتعيين التلقائي يضع الطلب فيها
             // تحديداً — فالطلب يُعيَّن للسائق ولا يظهر عنده حتى ينقله
             // التاجر إلى `ready`. أي أن التعيين التلقائي كان بلا أثر مرئي.
-            status: { in: ['preparing', 'ready', 'delivering'] }
+            //
+            // و`pending` معها: طلبٌ عُيّن للسائق ولم يؤكّده التاجر بعد. عرضه
+            // يمنع سؤال «أين طلبي؟» — يراه السائق ويقرأ سبب انتظاره بدل أن
+            // يظنّ التطبيق لم يستلمه.
+            status: { in: ['pending', 'preparing', 'ready', 'delivering'] }
           },
           // الطلبات الجاهزة بلا سائق: بركةٌ يراها سائقو النشاط ويسبق
           // إليها أوّلهم. بدونها يبقى الطلب الذي أُنشئ ولا سائق متصل
@@ -1173,9 +1210,12 @@ export const completeOrder = async (
     const userRole = req.user?.role;
     const isOwner = userRole === 'owner' || userRole === 'super_admin';
 
+    // `delivered` مقبولة أيضاً: الشبكة تنقطع فيعيد السائق المحاولة، وطلبٌ
+    // أُكمل فعلاً يجب أن يردّ نجاحاً لا 404. والعملية بلا أثر جانبي عند
+    // التكرار.
     const where: any = {
       id: orderId,
-      status: 'delivering'
+      status: { in: ['delivering', 'delivered'] }
     };
 
     if (!isOwner) {
@@ -1192,13 +1232,24 @@ export const completeOrder = async (
       return;
     }
 
-    // التحقق من الدفع من خلال paymentCollectedAt
-    const hasPayment = order.paymentCollectedAt !== null;
+    if (order.status === 'delivered') {
+      res.json({
+        success: true,
+        message: 'الطلب مُكتمل بالفعل',
+        data: { status: 'delivered', alreadyCompleted: true }
+      });
+      return;
+    }
 
-    if (!hasPayment && order.paymentMethod === 'cash') {
+    // النقد وشام كاش يُحصَّلان يداً بيد عند الباب؛ غيرهما مدفوع مسبقاً.
+    // و`isPaid` يُقبل كإثبات أيضاً: التاجر قد يكون سجّل القبض من لوحته.
+    const collectedOnDelivery = order.paymentMethod === 'cash' || order.paymentMethod === 'sham_cash';
+    const hasPayment = order.paymentCollectedAt !== null || order.isPaid === true;
+
+    if (!hasPayment && collectedOnDelivery) {
       res.status(400).json({
         success: false,
-        error: 'يجب تحصيل الدفع أولاً قبل إكمال الطلب'
+        error: 'سجّل استلام المبلغ أولاً ثم أكمل الطلب'
       });
       return;
     }
@@ -1620,15 +1671,78 @@ export const getSupportContact = async (
       return;
     }
 
-    const platformSettings = await prisma.platformSetting.findFirst();
+    // **جهات الاتصال للطوارئ.**
+    //
+    // كانت الأرقام ثوابت سعودية في الشيفرة (`+966 123456789`) وبريداً
+    // (`support@digitalmenu.com`) لا يملكه أحد. سائقٌ في ورطة يضغط الزرّ
+    // فيتّصل برقمٍ لا وجود له — وهو أسوأ من زرٍّ غير موجود، لأنه يَعِد.
+    //
+    // والأهمّ: أقرب من يساعد السائق هو **المحلّ الذي يعمل عنده**، وكان
+    // غائباً عن القائمة كلّياً.
+    const [platformSettings, me] = await Promise.all([
+      prisma.platformSetting.findFirst(),
+      prisma.user.findUnique({
+        where: { id: driverId },
+        select: { restaurantId: true, storeId: true }
+      })
+    ]);
+
+    let business: { name: string; phone: string | null; whatsapp: string | null } | null = null;
+
+    if (me?.restaurantId) {
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: me.restaurantId },
+        select: { name: true, phone: true, whatsapp: true }
+      });
+      if (restaurant) business = restaurant;
+    } else if (me?.storeId) {
+      const store = await prisma.store.findUnique({
+        where: { id: me.storeId },
+        select: { name: true, phone: true, whatsapp: true }
+      });
+      if (store) business = store;
+    }
+
+    const contacts: Array<Record<string, unknown>> = [];
+
+    if (business?.phone) {
+      contacts.push({
+        key: 'business',
+        label: business.name || 'المحلّ',
+        hint: 'المكان الذي تستلم منه',
+        phone: business.phone,
+        whatsapp: business.whatsapp || null,
+        priority: 1
+      });
+    }
+
+    if (platformSettings?.contactPhone) {
+      contacts.push({
+        key: 'platform',
+        label: 'دعم شام ستورز',
+        hint: 'مشكلة في التطبيق أو الحساب',
+        phone: platformSettings.contactPhone,
+        whatsapp: platformSettings.contactWhatsapp || null,
+        priority: 2
+      });
+    }
+
+    // أرقام الطوارئ السورية — لا تأتي من قاعدة بيانات ولا تتغيّر
+    contacts.push(
+      { key: 'police', label: 'الشرطة', hint: 'حادث أو اعتداء', phone: '112', priority: 3 },
+      { key: 'ambulance', label: 'الإسعاف', hint: 'إصابة', phone: '110', priority: 3 },
+      { key: 'fire', label: 'الإطفاء', hint: 'حريق', phone: '113', priority: 3 }
+    );
 
     res.json({
       success: true,
       data: {
-        phone: platformSettings?.contactPhone || '+966 123456789',
-        whatsapp: platformSettings?.contactWhatsapp || '+966 123456789',
-        email: platformSettings?.contactEmail || 'support@digitalmenu.com',
-        openingHours: '9:00 ص - 9:00 م'
+        contacts,
+        // تبقى للتوافق مع أي نسخة قديمة من التطبيق
+        phone: business?.phone || platformSettings?.contactPhone || null,
+        whatsapp: business?.whatsapp || platformSettings?.contactWhatsapp || null,
+        email: platformSettings?.contactEmail || null,
+        businessName: business?.name || null
       }
     });
   } catch (error) {
