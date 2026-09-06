@@ -6,6 +6,7 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
+import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 
 const C = {
   bg: '#082E24',
@@ -1013,7 +1014,7 @@ const fetchBusinessesWithoutDrivers = async () => {
                   </div>
                   <div style={{ background: C.surf, padding: 12, borderRadius: 10, textAlign: 'center' }}>
                     <div style={{ fontSize: 24, fontWeight: 700, color: C.accent }}>
-                      {driverStats.stats?.totalEarnings || 0} ر.س
+                      {formatPrice(driverStats.stats?.totalEarnings || 0, DEFAULT_CURRENCY)}
                     </div>
                     <div style={{ fontSize: 11, color: C.muted }}>إجمالي الأرباح</div>
                   </div>
@@ -1047,7 +1048,13 @@ const fetchBusinessesWithoutDrivers = async () => {
                 </div>
                 <div style={{ background: C.surf, padding: 10, borderRadius: 8 }}>
                   <div style={{ fontSize: 11, color: C.muted }}>آخر تحديث</div>
-                  <div style={{ fontSize: 12, color: C.text }}>{new Date(driverStats.updatedAt).toLocaleString('ar-SA')}</div>
+                  {/* `new Date(undefined)` يطبع «Invalid Date» بلا اعتذار.
+                      وسائقٌ لم يتحرّك بعد ليس خطأً — لا تحديث عنده أصلاً. */}
+                  <div style={{ fontSize: 12, color: C.text }}>
+                    {driverStats.updatedAt && !isNaN(new Date(driverStats.updatedAt).getTime())
+                      ? new Date(driverStats.updatedAt).toLocaleString('ar-SY')
+                      : 'لا يوجد'}
+                  </div>
                 </div>
               </div>
             </div>

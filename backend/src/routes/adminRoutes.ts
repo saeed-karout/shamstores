@@ -28,6 +28,7 @@ import {
   updateUserRole,
   createBusinessForUser,
   toggleUserStatus,
+  setUserEmailVerified,
   deleteUser,
   getUserDetails,
   resetUserPassword,
@@ -255,6 +256,10 @@ router.get('/users/:id', (req, res, next) => {
 router.patch('/users/:id/role', authorize(['super_admin']), updateUserRole);
 router.post('/users/:id/business', authorize(['super_admin']), createBusinessForUser);
 router.patch('/users/:id/toggle', authorize(['super_admin']), toggleUserStatus);
+
+// تفعيل البريد يدوياً — للحسابات التي لا يمرّ بريدها بالتحقّق (سائقو التجّار،
+// حسابات الاختبار، ومن انقطع عنه SMTP)
+router.patch('/users/:id/email-verified', authorize(['super_admin']), setUserEmailVerified);
 router.delete('/users/:id', authorize(['super_admin']), deleteUser);
 router.post('/users/:id/reset-password', authorize(['super_admin']), resetUserPassword);
 

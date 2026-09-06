@@ -35,6 +35,7 @@ interface UserDetails {
   phone: string;
   role: 'super_admin' | 'owner' | 'staff' | 'user' | 'delivery_driver';
   isActive: boolean;
+  isEmailVerified?: boolean;
   lastLogin: string;
   createdAt: string;
   updatedAt: string;
@@ -152,6 +153,28 @@ const AdminUserDetails: React.FC = () => {
       toast.error(error?.response?.data?.error || 'فشل إنشاء النشاط');
     } finally {
       setCreatingBusiness(false);
+    }
+  };
+
+  const handleToggleEmailVerified = async () => {
+    if (!user) return;
+    const next = !user.isEmailVerified;
+    if (
+      !window.confirm(
+        next
+          ? `تفعيل بريد ${user.email} بدون رسالة تحقّق؟ سيتمكّن من تسجيل الدخول فوراً.`
+          : `إلغاء تفعيل بريد ${user.email}؟ سيُمنع من تسجيل الدخول.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await api.patch(`/admin/users/${id}/email-verified`, { isEmailVerified: next });
+      toast.success(next ? 'تم تفعيل البريد' : 'تم إلغاء تفعيل البريد');
+      fetchUserDetails();
+    } catch {
+      /* الرسالة تظهر عبر interceptor */
     }
   };
 
@@ -584,6 +607,45 @@ const AdminUserDetails: React.FC = () => {
               >
                 {user.isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}
               </button>
+
+              {/* تفعيل البريد قرارٌ مستقلّ عن تفعيل الحساب.
+                  الدخول محجوب على من لم يُفعّل بريده، وهناك حسابات لا يمرّ
+                  بريدها بالتحقّق أصلاً: سائقٌ يُنشئه التاجر بعنوان صوريّ، أو
+                  حسابُ اختبار، أو من انقطع عنه SMTP يوم تسجيله. */}
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ color: C.muted, fontSize: 14 }}>البريد الإلكتروني:</span>
+                  <span
+                    style={{
+                      background: user.isEmailVerified ? 'rgba(200,226,53,0.15)' : 'rgba(245,158,11,0.15)',
+                      color: user.isEmailVerified ? C.accent : '#F59E0B',
+                      borderRadius: 999,
+                      padding: '3px 10px',
+                      fontSize: 12,
+                      fontWeight: 700
+                    }}
+                  >
+                    {user.isEmailVerified ? 'مُفعَّل' : 'غير مُفعَّل'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleToggleEmailVerified}
+                  style={{
+                    width: '100%', padding: '10px 0', borderRadius: 10, cursor: 'pointer',
+                    fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14,
+                    ...(user.isEmailVerified
+                      ? { background: 'transparent', color: C.muted, border: `1px solid ${C.border}` }
+                      : { background: 'rgba(200,226,53,0.15)', color: C.accent, border: '1px solid rgba(200,226,53,0.35)' })
+                  }}
+                >
+                  {user.isEmailVerified ? 'إلغاء تفعيل البريد' : 'تفعيل البريد بدون رسالة'}
+                </button>
+                {!user.isEmailVerified && (
+                  <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.8, margin: '8px 0 0' }}>
+                    لن يستطيع تسجيل الدخول قبل تفعيل بريده.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

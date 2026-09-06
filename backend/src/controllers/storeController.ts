@@ -1444,6 +1444,18 @@ export {
 
 // ==================== دوال السائقين والموظفين والكوبونات ====================
 
+/**
+ * سائقو المتجر.
+ *
+ * **العلّة:** كان يقرأ جدول `Driver` وحده، والربط من لوحة الإدارة يكتب
+ * `User.storeId` ولا يُنشئ صفّ `Driver` أصلاً. فيربط المسؤول سائقاً بالمتجر،
+ * ويراه في لوحته مرتبطاً، ولا يظهر عند التاجر إطلاقاً — قائمة فارغة بلا
+ * سبب ظاهر، وسائقٌ لا يمكن تعيينه لأي طلب.
+ *
+ * المصدر الصحيح هو `User`: هو ما يُنشئه التسجيل، وما يربطه المسؤول، وما
+ * يسجّل به السائق دخوله. وصفّ `Driver` ملفٌّ إضافي (مركبة، تقييم، أرباح)
+ * يُضمّ إن وُجد ولا يُشترط.
+ */
 export const getStoreDrivers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
@@ -1451,10 +1463,64 @@ export const getStoreDrivers = async (req: AuthRequest, res: Response): Promise<
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
     }
-    const drivers = await prisma.driver.findMany({
-      where: { storeId },
-      include: { user: { select: { name: true, email: true, phone: true } } }
+
+    const users = await prisma.user.findMany({
+      where: { storeId, role: 'delivery_driver' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        isActive: true,
+        isOnline: true,
+        avatarUrl: true,
+        driverRating: true,
+        driverRatingCount: true,
+        lastLocationLat: true,
+        lastLocationLng: true,
+        lastLocationUpdate: true,
+        createdAt: true,
+        drivers: {
+          where: { storeId },
+          take: 1,
+          select: {
+            id: true,
+            vehicleType: true,
+            vehiclePlate: true,
+            totalDeliveries: true,
+            totalEarnings: true,
+            rating: true,
+            isOnline: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
     });
+
+    // الشكل يبقى كما كانت الواجهة تقرأه (`user` بداخله) حتى لا تنكسر
+    const drivers = users.map((user) => {
+      const profile = user.drivers[0] || null;
+      return {
+        id: user.id,
+        userId: user.id,
+        storeId,
+        vehicleType: profile?.vehicleType ?? null,
+        vehiclePlate: profile?.vehiclePlate ?? null,
+        totalDeliveries: profile?.totalDeliveries ?? 0,
+        totalEarnings: profile?.totalEarnings ?? 0,
+        rating: profile?.rating ?? user.driverRating ?? 0,
+        isActive: user.isActive,
+        isOnline: user.isOnline,
+        lastLocationLat: user.lastLocationLat,
+        lastLocationLng: user.lastLocationLng,
+        lastLocationUpdate: user.lastLocationUpdate,
+        createdAt: user.createdAt,
+        /** هل له ملفّ سائق كامل — بلاغه يفسّر غياب بيانات المركبة */
+        hasProfile: Boolean(profile),
+        user: { name: user.name, email: user.email, phone: user.phone }
+      };
+    });
+
     res.json({ success: true, data: drivers });
   } catch (error) {
     console.error('Error getting store drivers:', error);

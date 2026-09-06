@@ -1449,6 +1449,10 @@ export const getUserDetails = async (req: AuthRequest, res: Response): Promise<v
         role: true,
         isActive: true,
         isOnline: true,
+        // الواجهة تعرض حالة البريد وتتيح تفعيله؛ بلا هذا الحقل تقرأها
+        // `undefined` فتقول «غير مُفعَّل» لكل مستخدم
+        isEmailVerified: true,
+        lastLogin: true,
         createdAt: true,
         updatedAt: true,
         restaurantId: true,
@@ -1588,6 +1592,58 @@ export const createBusinessForUser = async (req: AuthRequest, res: Response): Pr
   } catch (error) {
     console.error('Error creating business for user:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في إنشاء النشاط' });
+  }
+};
+
+/**
+ * تفعيل بريد المستخدم يدوياً — بلا رسالة تحقّق.
+ *
+ * **لماذا يلزم:** الدخول محجوب على من لم يُفعّل بريده. وهناك حسابات لا يمرّ
+ * بريدها بالتحقّق أصلاً: سائقٌ يُنشئه التاجر بعنوان صوريّ، أو حسابُ اختبار،
+ * أو مستخدمٌ لم تصله الرسالة لأن SMTP كان معطّلاً يومها. وكان علاجها الوحيد
+ * سكربتاً على الخادم (`scripts/admin.js verify-user`) — أي أن كل حالة تنتظر
+ * من يفتح طرفية.
+ *
+ * لا يمسّ `isActive`: التفعيل والتعطيل قراران مختلفان، ودمجهما يجعل «فعِّل
+ * بريده» تعيد تشغيل حسابٍ عطّله المسؤول عمداً.
+ */
+export const setUserEmailVerified = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, name: true, email: true, isEmailVerified: true }
+    });
+
+    if (!user) {
+      res.status(404).json({ success: false, error: 'المستخدم غير موجود' });
+      return;
+    }
+
+    // بلا قيمة: تبديل — وهو ما يفعله زرّ واحد في الواجهة
+    const verified =
+      typeof req.body?.isEmailVerified === 'boolean'
+        ? req.body.isEmailVerified
+        : !user.isEmailVerified;
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: { isEmailVerified: verified },
+      select: { id: true, name: true, email: true, isEmailVerified: true }
+    });
+
+    console.log(
+      `[admin] ${req.user?.email} ${verified ? 'فعّل' : 'ألغى تفعيل'} بريد ${updated.email}`
+    );
+
+    res.json({
+      success: true,
+      message: verified ? 'تم تفعيل البريد — يمكنه تسجيل الدخول الآن' : 'تم إلغاء تفعيل البريد',
+      data: updated
+    });
+  } catch (error) {
+    console.error('Error setting email verification:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث حالة البريد' });
   }
 };
 
