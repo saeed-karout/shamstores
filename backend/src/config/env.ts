@@ -119,7 +119,21 @@ export const env = {
   SERVE_FRONTEND: process.env.SERVE_FRONTEND !== 'false',
   /** تعطيل حدود المعدل مؤقتاً (للاختبار فقط) */
   DISABLE_RATE_LIMIT: process.env.DISABLE_RATE_LIMIT === 'true',
-  TRUST_PROXY: process.env.TRUST_PROXY || (isProduction ? '1' : 'false')
+  TRUST_PROXY: process.env.TRUST_PROXY || (isProduction ? '1' : 'false'),
+
+  // ==================== Cloudflare for SaaS ====================
+  //
+  // ربط نطاق التاجر آلياً. بغيابها يبقى ربط النطاقات يدوياً من لوحة
+  // Cloudflare — والواجهة تقول ذلك للتاجر بدل أن ترتدّ بخطأ غامض.
+  //
+  // الرمز يحتاج صلاحية `Zone / SSL and Certificates / Edit` على المنطقة
+  // وحدها. راجع docs/deployment/custom-domains.md
+  CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN || '',
+  CLOUDFLARE_ZONE_ID: process.env.CLOUDFLARE_ZONE_ID || '',
+  /** الأصل الاحتياطي المضبوط في Custom Hostnames — ما تشير إليه نطاق التجّار */
+  CLOUDFLARE_FALLBACK_ORIGIN: (process.env.CLOUDFLARE_FALLBACK_ORIGIN || '')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
 };
 
 export default env;

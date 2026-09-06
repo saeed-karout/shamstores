@@ -15,6 +15,7 @@ import {
   stripWww,
   BusinessType
 } from '../services/domain.service';
+import cloudflare, { CustomHostnameState, buildCnameRecord } from '../services/cloudflareSaas.service';
 
 interface OwnedBusiness {
   type: BusinessType;
@@ -26,6 +27,11 @@ interface OwnedBusiness {
   customDomainVerified: boolean | null;
   customDomainVerifiedAt: Date | null;
   customDomainVerificationCode: string | null;
+  customDomainHostnameId: string | null;
+  customDomainStatus: string | null;
+  customDomainSslStatus: string | null;
+  customDomainCheckedAt: Date | null;
+  customDomainError: string | null;
 }
 
 const BUSINESS_SELECT = {
@@ -36,7 +42,12 @@ const BUSINESS_SELECT = {
   customDomain: true,
   customDomainVerified: true,
   customDomainVerifiedAt: true,
-  customDomainVerificationCode: true
+  customDomainVerificationCode: true,
+  customDomainHostnameId: true,
+  customDomainStatus: true,
+  customDomainSslStatus: true,
+  customDomainCheckedAt: true,
+  customDomainError: true
 } as const;
 
 /**
@@ -133,7 +144,197 @@ export const getDnsSettings = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
-// ==================== POST /verify-domain ====================
+
+// ==================== المزامنة مع Cloudflare ====================
+
+/**
+ * يقرأ حالة النطاق من Cloudflare ويكتبها عندنا.
+ *
+ * `customDomainVerified` هو ما يقرّر أن يُخدَم النطاق (راجع
+ * resolveBusinessByCustomDomain)، ولا يصحّ أن يُرفع إلا حين تصبح الشهادة
+ * صادرة فعلاً: نطاق مفعّل بلا شهادة يعطي الزائر تحذير أمان لا صفحة.
+ */
+const syncDomainState = async (business: OwnedBusiness): Promise<CustomHostnameState | null> => {
+  if (!business.customDomain || !cloudflare.isConfigured()) return null;
+
+  let state: CustomHostnameState | null = null;
+  try {
+    if (business.customDomainHostnameId) {
+      state = await cloudflare.getCustomHostname(business.customDomainHostnameId);
+    }
+    // التسجيل قد يكون موجوداً عندهم بلا معرّف عندنا (أُضيف يدوياً سابقاً)
+    if (!state) state = await cloudflare.findCustomHostname(business.customDomain);
+  } catch (error) {
+    console.error('تعذّرت مزامنة النطاق مع Cloudflare:', error);
+    return null;
+  }
+
+  if (!state) return null;
+
+  const wasVerified = business.customDomainVerified === true;
+
+  await updateBusiness(business.type, business.id, {
+    customDomainHostnameId: state.id,
+    customDomainStatus: state.status,
+    customDomainSslStatus: state.sslStatus,
+    customDomainCheckedAt: new Date(),
+    customDomainError: state.errors.length ? state.errors.join(' | ').slice(0, 1000) : null,
+    customDomainVerified: state.ready,
+    ...(state.ready && !business.customDomainVerifiedAt ? { customDomainVerifiedAt: new Date() } : {})
+  });
+
+  if (state.ready !== wasVerified) invalidateDomainCache(business.customDomain);
+
+  return state;
+};
+
+/** يمنع حجز نطاق يملكه نشاط آخر */
+const isDomainTaken = async (domain: string, business: OwnedBusiness): Promise<boolean> => {
+  const candidates = Array.from(new Set([domain, stripWww(domain), `www.${stripWww(domain)}`]));
+  const [takenByRestaurant, takenByStore] = await Promise.all([
+    prisma.restaurant.findFirst({
+      where: {
+        customDomain: { in: candidates },
+        NOT: business.type === 'restaurant' ? { id: business.id } : undefined
+      },
+      select: { id: true }
+    }),
+    prisma.store.findFirst({
+      where: {
+        customDomain: { in: candidates },
+        NOT: business.type === 'store' ? { id: business.id } : undefined
+      },
+      select: { id: true }
+    })
+  ]);
+  return Boolean(takenByRestaurant || takenByStore);
+};
+
+const stateResponse = (domain: string, state: CustomHostnameState | null, business: OwnedBusiness) => ({
+  customDomain: domain,
+  customDomainUrl: `https://${domain}`,
+  automatic: cloudflare.isConfigured(),
+  fallbackOrigin: cloudflare.fallbackOrigin(),
+  status: state?.status || business.customDomainStatus || 'pending',
+  sslStatus: state?.sslStatus || business.customDomainSslStatus || 'initializing',
+  ready: state ? state.ready : business.customDomainVerified === true,
+  // تعذّر الاتصال بـ Cloudflare لا يجوز أن يترك التاجر أمام شاشة انتظار
+  // بلا سجلّ يضيفه — قيمة CNAME ثابتة عندنا ولا تحتاجهم
+  records: state?.records?.length ? state.records : [buildCnameRecord(domain)],
+  errors: state?.errors || (business.customDomainError ? [business.customDomainError] : []),
+  checkedAt: new Date()
+});
+
+// ==================== POST /connect ====================
+
+/**
+ * يربط نطاق التاجر: يسجّله في Cloudflare ويعيد السجلّ الذي عليه إضافته.
+ *
+ * لا ينتظر اكتمال التحقّق — انتشار DNS يستغرق دقائق إلى ساعات، وإبقاء
+ * الطلب معلّقاً طوال ذلك يعني مهلة اتصال لا نتيجة. التاجر يضيف السجلّ
+ * والواجهة تسأل عن الحالة دورياً.
+ */
+export const connectCustomDomain = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = await getOwnedBusiness(req);
+    if (!business) {
+      res.status(404).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+      return;
+    }
+
+    const validation = validateCustomDomain(req.body?.customDomain);
+    if (!validation.valid) {
+      res.status(400).json({ success: false, error: validation.error });
+      return;
+    }
+
+    const domain = validation.domain;
+
+    if (await isDomainTaken(domain, business)) {
+      res.status(409).json({ success: false, error: 'هذا الدومين مستخدم بالفعل' });
+      return;
+    }
+
+    // بلا ربط آلي: نرجع إلى المسار اليدوي بسجلَّي TXT و CNAME
+    if (!cloudflare.isConfigured()) {
+      const verificationCode = await ensureVerificationCode(business);
+      const instructions = buildDnsInstructions(business.subdomain || business.slug, verificationCode, domain);
+      res.status(200).json({
+        success: true,
+        data: {
+          customDomain: domain,
+          automatic: false,
+          manualInstructions: instructions,
+          message: 'الربط الآلي غير مُفعّل على الخادم — أضف السجلّين ثم اضغط «تحقّق».'
+        }
+      });
+      return;
+    }
+
+    // نطاق مختلف عن المربوط سابقاً: نُنهي التسجيل القديم قبل الجديد
+    if (business.customDomainHostnameId && business.customDomain !== domain) {
+      await cloudflare.deleteCustomHostname(business.customDomainHostnameId);
+      invalidateDomainCache(business.customDomain || undefined);
+    }
+
+    let state: CustomHostnameState;
+    try {
+      state = await cloudflare.ensureCustomHostname(domain);
+    } catch (error: any) {
+      console.error('فشل تسجيل النطاق في Cloudflare:', error);
+      res.status(502).json({
+        success: false,
+        error: `تعذّر تسجيل النطاق: ${error?.message || 'خطأ من Cloudflare'}`
+      });
+      return;
+    }
+
+    await updateBusiness(business.type, business.id, {
+      customDomain: domain,
+      customDomainHostnameId: state.id,
+      customDomainStatus: state.status,
+      customDomainSslStatus: state.sslStatus,
+      customDomainCheckedAt: new Date(),
+      customDomainError: state.errors.length ? state.errors.join(' | ').slice(0, 1000) : null,
+      // لا يُخدَم النطاق قبل صدور الشهادة
+      customDomainVerified: state.ready,
+      ...(state.ready ? { customDomainVerifiedAt: new Date() } : {})
+    });
+
+    invalidateDomainCache(domain);
+    if (business.customDomain) invalidateDomainCache(business.customDomain);
+
+    res.json({ success: true, data: stateResponse(domain, state, business) });
+  } catch (error) {
+    console.error('Error connecting custom domain:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في ربط الدومين' });
+  }
+};
+
+// ==================== POST /refresh ====================
+
+/** يسأل Cloudflare عن الحالة الآن — يستدعيه زرّ «تحديث» ودورة الواجهة */
+export const refreshCustomDomain = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = await getOwnedBusiness(req);
+    if (!business) {
+      res.status(404).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+      return;
+    }
+    if (!business.customDomain) {
+      res.status(400).json({ success: false, error: 'لا يوجد دومين مربوط' });
+      return;
+    }
+
+    const state = await syncDomainState(business);
+    res.json({ success: true, data: stateResponse(business.customDomain, state, business) });
+  } catch (error) {
+    console.error('Error refreshing custom domain:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تحديث حالة الدومين' });
+  }
+};
+
+// ==================== POST /verify-domain (المسار اليدوي) ====================
 
 export const verifyCustomDomain = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -237,10 +438,21 @@ export const removeCustomDomain = async (req: AuthRequest, res: Response): Promi
 
     const previous = business.customDomain;
 
+    // بلا حذفه عندهم يبقى النطاق مسجّلاً في المنطقة إلى الأبد، ويمنع تاجراً
+    // آخر من ربطه، ويُحتسب في حصّة النطاقات المخصّصة.
+    if (business.customDomainHostnameId && cloudflare.isConfigured()) {
+      await cloudflare.deleteCustomHostname(business.customDomainHostnameId);
+    }
+
     await updateBusiness(business.type, business.id, {
       customDomain: null,
       customDomainVerified: false,
-      customDomainVerifiedAt: null
+      customDomainVerifiedAt: null,
+      customDomainHostnameId: null,
+      customDomainStatus: null,
+      customDomainSslStatus: null,
+      customDomainCheckedAt: null,
+      customDomainError: null
     });
 
     if (previous) invalidateDomainCache(previous);
@@ -262,6 +474,13 @@ export const getCustomDomainStatus = async (req: AuthRequest, res: Response): Pr
       return;
     }
 
+    // مزامنة صامتة ما دام النطاق لم يكتمل: التاجر يفتح الصفحة لأنه ينتظر
+    // نتيجة، فتحديثها عند الفتح أصدق من قيمة محفوظة قبل ساعة.
+    let state: CustomHostnameState | null = null;
+    if (business.customDomain && business.customDomainVerified !== true) {
+      state = await syncDomainState(business);
+    }
+
     res.json({
       success: true,
       data: {
@@ -271,9 +490,21 @@ export const getCustomDomainStatus = async (req: AuthRequest, res: Response): Pr
         slugUrl: `https://${env.APP_DOMAIN}/${business.slug}`,
         customDomain: business.customDomain,
         customDomainUrl: business.customDomain ? `https://${business.customDomain}` : null,
-        customDomainVerified: business.customDomainVerified === true,
+        customDomainVerified: state ? state.ready : business.customDomainVerified === true,
         customDomainVerifiedAt: business.customDomainVerifiedAt,
-        verificationCode: business.customDomainVerificationCode
+        verificationCode: business.customDomainVerificationCode,
+        // ما تحتاجه الواجهة لتعرض «قيد التفعيل» بدل «غير موثّق»
+        automatic: cloudflare.isConfigured(),
+        fallbackOrigin: cloudflare.fallbackOrigin(),
+        status: state?.status || business.customDomainStatus || null,
+        sslStatus: state?.sslStatus || business.customDomainSslStatus || null,
+        records: state?.records?.length
+          ? state.records
+          : business.customDomain
+          ? [buildCnameRecord(business.customDomain)]
+          : [],
+        errors: state?.errors || (business.customDomainError ? [business.customDomainError] : []),
+        checkedAt: business.customDomainCheckedAt
       }
     });
   } catch (error) {

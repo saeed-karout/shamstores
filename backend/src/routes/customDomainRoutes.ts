@@ -6,6 +6,8 @@ import { checkPlanFeature } from '../middleware/checkPlan';
 import { dnsLookupLimiter } from '../middleware/security';
 import {
   verifyCustomDomain,
+  connectCustomDomain,
+  refreshCustomDomain,
   removeCustomDomain,
   getDnsSettings,
   getCustomDomainStatus,
@@ -29,7 +31,14 @@ router.get('/status', getCustomDomainStatus);
 router.use(checkPlanFeature('custom_domain'));
 
 router.get('/dns-settings', getDnsSettings);
+
+// الربط الآلي عبر Cloudflare for SaaS: يسجّل النطاق ويعيد سجلّ CNAME واحداً
+router.post('/connect', dnsLookupLimiter, connectCustomDomain);
+router.post('/refresh', dnsLookupLimiter, refreshCustomDomain);
+
+// المسار اليدوي — يبقى لبيئة بلا رمز Cloudflare
 router.post('/verify-domain', dnsLookupLimiter, verifyCustomDomain);
+
 router.delete('/remove-domain', removeCustomDomain);
 
 export default router;

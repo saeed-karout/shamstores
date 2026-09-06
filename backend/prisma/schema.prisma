@@ -235,6 +235,16 @@ model Restaurant {
   customDomainVerified         Boolean?  @default(false)
   customDomainVerifiedAt       DateTime?
   customDomainVerificationCode String?   @unique
+  /// معرّف Custom Hostname في Cloudflare — به نقرأ الحالة ونحذف عند فكّ الربط
+  customDomainHostnameId       String?
+  /// حالة النطاق عند Cloudflare: pending / active / blocked …
+  customDomainStatus           String?
+  /// حالة شهادة TLS — النطاق لا يعمل على https قبل أن تصبح active
+  customDomainSslStatus        String?
+  /// آخر مزامنة مع Cloudflare
+  customDomainCheckedAt        DateTime?
+  /// آخر خطأ تحقّق، يُعرض للتاجر لأن سببه في إعداد نطاقه
+  customDomainError            String?   @db.Text
   isActive                     Boolean   @default(true)
   deliverySettings             Json?
   /// إعدادات طرق الدفع لكل نشاط: { shamCash: { enabled, accountNumber, accountName, note } }
@@ -314,6 +324,16 @@ model Store {
   customDomainVerified         Boolean?  @default(false)
   customDomainVerifiedAt       DateTime?
   customDomainVerificationCode String?   @unique
+  /// معرّف Custom Hostname في Cloudflare — به نقرأ الحالة ونحذف عند فكّ الربط
+  customDomainHostnameId       String?
+  /// حالة النطاق عند Cloudflare: pending / active / blocked …
+  customDomainStatus           String?
+  /// حالة شهادة TLS — النطاق لا يعمل على https قبل أن تصبح active
+  customDomainSslStatus        String?
+  /// آخر مزامنة مع Cloudflare
+  customDomainCheckedAt        DateTime?
+  /// آخر خطأ تحقّق، يُعرض للتاجر لأن سببه في إعداد نطاقه
+  customDomainError            String?   @db.Text
 
   isActive          Boolean   @default(true)
   subscriptionStart DateTime?

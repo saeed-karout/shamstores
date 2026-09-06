@@ -48,6 +48,14 @@ interface DomainStatus {
   customDomainUrl: string | null;
   customDomainVerified: boolean;
   customDomainVerifiedAt: string | null;
+  /** هل الربط الآلي مُفعّل على الخادم (Cloudflare for SaaS) */
+  automatic?: boolean;
+  fallbackOrigin?: string;
+  status?: string | null;
+  sslStatus?: string | null;
+  records?: DnsRecord[];
+  errors?: string[];
+  checkedAt?: string | null;
 }
 
 interface DnsRecord {
@@ -55,6 +63,8 @@ interface DnsRecord {
   name: string;
   value: string;
   ttl: number;
+  /** شرح يظهر تحت السجلّ — يأتي من الخادم في المسار الآلي */
+  hint?: string;
 }
 
 interface DnsSettings {
@@ -232,7 +242,7 @@ const LinkRow: React.FC<{ label: string; url: string; badge?: string; badgeColor
   </div>
 );
 
-const DnsRecordCard: React.FC<{ record: DnsRecord; hint: string }> = ({ record, hint }) => (
+const DnsRecordCard: React.FC<{ record: DnsRecord; hint?: string }> = ({ record, hint }) => (
   <div
     style={{
       background: C.surf,
@@ -256,7 +266,7 @@ const DnsRecordCard: React.FC<{ record: DnsRecord; hint: string }> = ({ record, 
       >
         {record.type}
       </span>
-      <span style={{ color: C.muted, fontSize: 11 }}>{hint}</span>
+      <span style={{ color: C.muted, fontSize: 11, lineHeight: 1.7 }}>{record.hint || hint}</span>
     </div>
 
     <div style={{ display: 'grid', gap: 8 }}>
@@ -312,6 +322,8 @@ const DomainManager: React.FC<DomainManagerProps> = ({
   // custom domain
   const [customDomain, setCustomDomain] = useState('');
   const [verifying, setVerifying] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [dns, setDns] = useState<DnsSettings | null>(null);
   const [dnsCheck, setDnsCheck] = useState<{ txtVerified: boolean; cnameVerified: boolean; aVerified: boolean } | null>(
     null
@@ -411,7 +423,56 @@ const DomainManager: React.FC<DomainManagerProps> = ({
     }
   };
 
-  // ---------- التحقق من الدومين المخصص ----------
+  // ---------- الربط الآلي (Cloudflare for SaaS) ----------
+  //
+  // نسجّل النطاق ثم نعطي التاجر سجلّاً واحداً يضيفه. لا ننتظر اكتمال
+  // التحقّق في نفس الطلب: انتشار DNS يستغرق دقائق إلى ساعات.
+  const connectDomain = async () => {
+    const value = customDomain.trim().toLowerCase();
+    if (!isValidCustomDomain(value)) {
+      toast.error('صيغة الدومين غير صالحة. مثال: mystore.com');
+      return;
+    }
+
+    setConnecting(true);
+    try {
+      const data = await api.post<any>('/custom-domain/connect', { customDomain: value });
+
+      if (data?.automatic === false) {
+        // خادم بلا رمز Cloudflare — نعود إلى المسار اليدوي
+        toast('الربط الآلي غير مُفعّل — أضف السجلّين ثم اضغط «تحقّق»', { icon: 'ℹ️' });
+        if (data?.manualInstructions) setDns(data.manualInstructions);
+        setShowInstructions(true);
+      } else {
+        toast.success('تم تسجيل نطاقك. أضف السجلّ أدناه وسيُفعَّل تلقائياً.');
+        setShowInstructions(true);
+      }
+      await loadStatus();
+      onChanged?.();
+    } catch {
+      /* الرسالة تظهر عبر interceptor */
+    } finally {
+      setConnecting(false);
+    }
+  };
+
+  const refreshDomain = useCallback(
+    async (silent = false) => {
+      if (!silent) setRefreshing(true);
+      try {
+        const data = await api.post<any>('/custom-domain/refresh', {});
+        setStatus((prev) => (prev ? { ...prev, ...data, customDomainVerified: !!data?.ready } : prev));
+        if (data?.ready && !silent) toast.success('النطاق مفعّل ويعمل 🎉');
+      } catch {
+        /* الرسالة تظهر عبر interceptor */
+      } finally {
+        if (!silent) setRefreshing(false);
+      }
+    },
+    []
+  );
+
+  // ---------- التحقق من الدومين المخصص (المسار اليدوي) ----------
   const verifyDomain = async () => {
     const value = customDomain.trim().toLowerCase();
     if (!isValidCustomDomain(value)) {
@@ -476,6 +537,17 @@ const DomainManager: React.FC<DomainManagerProps> = ({
   };
 
   const isVerified = !!status?.customDomainVerified && !!status?.customDomain;
+  const isAutomatic = status?.automatic !== false;
+  // مربوط ولم يكتمل بعد: هنا يجلس التاجر ينتظر
+  const isPending = !!status?.customDomain && !isVerified;
+
+  // سؤال دوري ما دام النطاق ينتظر التفعيل — التاجر أضاف السجلّ للتوّ ولا
+  // يعرف متى ينتشر، فتحديث الصفحة يدوياً كل دقيقة عبء لا داعي له.
+  useEffect(() => {
+    if (!isPending || !isAutomatic) return;
+    const timer = setInterval(() => refreshDomain(true), 20000);
+    return () => clearInterval(timer);
+  }, [isPending, isAutomatic, refreshDomain]);
 
   const subdomainPreview = useMemo(
     () => `${subdomain.trim().toLowerCase() || 'my-store'}.${APP_DOMAIN}`,
@@ -707,25 +779,132 @@ const DomainManager: React.FC<DomainManagerProps> = ({
                 value={customDomain}
                 onChange={(e) => setCustomDomain(e.target.value.trim().toLowerCase())}
                 placeholder="mystore.com"
-                disabled={!canEdit}
-                style={{ ...inputStyle, flex: '1 1 240px' }}
+                disabled={!canEdit || isPending}
+                style={{ ...inputStyle, flex: '1 1 240px', opacity: isPending ? 0.7 : 1 }}
               />
-              <button
-                type="button"
-                onClick={verifyDomain}
-                disabled={!canEdit || verifying || !customDomain.trim()}
-                style={{ ...btnPrimary, opacity: !canEdit || verifying || !customDomain.trim() ? 0.5 : 1 }}
-              >
-                <IoRefresh size={15} className={verifying ? 'spin' : undefined} />
-                {verifying ? 'جاري التحقق...' : 'تحقق وفعّل'}
-              </button>
-              {dns && (
+
+              {isAutomatic && !isPending && (
+                <button
+                  type="button"
+                  onClick={connectDomain}
+                  disabled={!canEdit || connecting || !customDomain.trim()}
+                  style={{ ...btnPrimary, opacity: !canEdit || connecting || !customDomain.trim() ? 0.5 : 1 }}
+                >
+                  <IoLinkOutline size={15} className={connecting ? 'spin' : undefined} />
+                  {connecting ? 'جاري الربط...' : 'اربط النطاق'}
+                </button>
+              )}
+
+              {isAutomatic && isPending && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => refreshDomain(false)}
+                    disabled={refreshing}
+                    style={{ ...btnPrimary, opacity: refreshing ? 0.6 : 1 }}
+                  >
+                    <IoRefresh size={15} className={refreshing ? 'spin' : undefined} />
+                    {refreshing ? 'جاري الفحص...' : 'فحص الحالة الآن'}
+                  </button>
+                  {canEdit && (
+                    <button type="button" onClick={removeDomain} disabled={removing} style={btnDanger}>
+                      <IoTrashOutline size={15} /> {removing ? 'جاري الإلغاء...' : 'إلغاء الربط'}
+                    </button>
+                  )}
+                </>
+              )}
+
+              {!isAutomatic && (
+                <button
+                  type="button"
+                  onClick={verifyDomain}
+                  disabled={!canEdit || verifying || !customDomain.trim()}
+                  style={{ ...btnPrimary, opacity: !canEdit || verifying || !customDomain.trim() ? 0.5 : 1 }}
+                >
+                  <IoRefresh size={15} className={verifying ? 'spin' : undefined} />
+                  {verifying ? 'جاري التحقق...' : 'تحقق وفعّل'}
+                </button>
+              )}
+
+              {(dns || (status?.records?.length ?? 0) > 0) && (
                 <button type="button" onClick={() => setShowInstructions((v) => !v)} style={btnGhost}>
                   <IoInformationCircleOutline size={15} />
                   {showInstructions ? 'إخفاء التعليمات' : 'تعليمات DNS'}
                 </button>
               )}
             </div>
+
+            {/* ---------- حالة الربط الآلي ---------- */}
+            {isAutomatic && isPending && (
+              <div
+                style={{
+                  marginTop: 14,
+                  background: 'rgba(251,191,36,0.08)',
+                  border: '1px solid rgba(251,191,36,0.28)',
+                  borderRadius: 12,
+                  padding: 14
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span
+                    style={{
+                      width: 14,
+                      height: 14,
+                      border: `2px solid ${C.yellow}55`,
+                      borderTopColor: C.yellow,
+                      borderRadius: '50%',
+                      display: 'inline-block',
+                      animation: 'sf-spin 0.9s linear infinite'
+                    }}
+                  />
+                  <span style={{ color: C.yellow, fontSize: 13, fontWeight: 800 }}>
+                    بانتظار انتشار السجلّ — {status?.customDomain}
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {[
+                    { label: 'تسجيل النطاق على المنصّة', ok: !!status?.status, pending: false },
+                    { label: 'التحقّق من ملكية النطاق', ok: status?.status === 'active', pending: true },
+                    { label: 'إصدار شهادة الحماية (https)', ok: status?.sslStatus === 'active', pending: true }
+                  ].map(({ label, ok }) => (
+                    <span
+                      key={label}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: ok ? C.green : C.muted, fontSize: 12 }}
+                    >
+                      {ok ? <IoCheckmarkCircle size={14} /> : <IoAlertCircleOutline size={14} />}
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                <p style={{ color: C.muted, fontSize: 11.5, lineHeight: 1.9, margin: '12px 0 0' }}>
+                  تُفحص الحالة تلقائياً كل ٢٠ ثانية. انتشار الـ DNS يستغرق عادةً دقائق، وقد يصل إلى ٢٤ ساعة
+                  حسب مزوّد نطاقك.
+                </p>
+
+                {(status?.errors?.length ?? 0) > 0 && (
+                  <div
+                    style={{
+                      marginTop: 12,
+                      background: 'rgba(255,107,107,0.08)',
+                      border: '1px solid rgba(255,107,107,0.25)',
+                      borderRadius: 10,
+                      padding: 10,
+                      color: C.red,
+                      fontSize: 11.5,
+                      lineHeight: 1.8,
+                      direction: 'ltr',
+                      textAlign: 'left'
+                    }}
+                  >
+                    {status!.errors!.map((e, i) => (
+                      <div key={i}>{e}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {dnsCheck && (
               <div style={{ display: 'flex', gap: 14, marginTop: 12, flexWrap: 'wrap' }}>
@@ -750,7 +929,35 @@ const DomainManager: React.FC<DomainManagerProps> = ({
               </div>
             )}
 
-            {(showInstructions || dnsCheck) && dns && (
+            {/* سجلّات الربط الآلي — سجلّ واحد في الغالب */}
+            {isAutomatic && (status?.records?.length ?? 0) > 0 && (showInstructions || isPending) && (
+              <div style={{ marginTop: 16 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    background: 'rgba(96,165,250,0.08)',
+                    border: '1px solid rgba(96,165,250,0.25)',
+                    borderRadius: 10,
+                    padding: 12,
+                    marginBottom: 14
+                  }}
+                >
+                  <IoInformationCircleOutline size={18} style={{ color: C.blue, flexShrink: 0, marginTop: 1 }} />
+                  <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.9 }}>
+                    أضف السجلّ التالي في لوحة إدارة نطاقك (Cloudflare، GoDaddy، Namecheap...). الباقي — إثبات
+                    الملكية وشهادة الحماية — يتمّ تلقائياً بلا أي خطوة منك.
+                  </div>
+                </div>
+
+                {status!.records!.map((record, index) => (
+                  <DnsRecordCard key={`${record.type}-${record.name}-${index}`} record={record} />
+                ))}
+              </div>
+            )}
+
+            {!isAutomatic && (showInstructions || dnsCheck) && dns && (
               <div style={{ marginTop: 16 }}>
                 <div
                   style={{
