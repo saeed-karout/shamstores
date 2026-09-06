@@ -1053,17 +1053,27 @@ export const getStoreOrders = async (req: AuthRequest, res: Response): Promise<v
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where,
-        include: { items: { take: 5 }, creator: true },
+        // ⚠️ كان `take: 5` على العناصر: طلبٌ بثمانية أصناف يصل بخمسة،
+        // فيقرأ التاجر عدداً خاطئاً ويجهّز طلباً ناقصاً. لا حدّ هنا —
+        // الحدّ على الطلبات لا على أصناف الطلب الواحد.
+        include: {
+          items: { include: { product: { select: { name: true, imageUrl: true } } } },
+          creator: true
+        },
         orderBy: { createdAt: 'desc' },
         take: Number(limit),
         skip: offset
       }),
       prisma.order.count({ where })
     ]);
-    
+
+    // العلاقة اسمها `items` في المخطط، والواجهة تقرأ `orderItems` — وهو
+    // الاسم الذي تستعمله بقية المسارات. الاسمان معاً حتى لا ينكسر أيّهما.
+    const shaped = orders.map((order) => ({ ...order, orderItems: order.items }));
+
     res.json({ 
       success: true, 
-      data: orders,
+      data: shaped,
       pagination: { page: Number(page), limit: Number(limit), total, pages: Math.ceil(total / Number(limit)) }
     });
   } catch (error) {
@@ -1129,20 +1139,28 @@ export const getStoreOrderById = async (req: AuthRequest, res: Response): Promis
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
     }
-    const order = await prisma.order.findFirst({ 
+    const order = await prisma.order.findFirst({
       where: { id, storeId },
-      include: { items: true, creator: true, driver: true }
+      include: {
+        items: { include: { product: { select: { name: true, imageUrl: true } } } },
+        creator: true,
+        driver: true
+      }
     });
     if (!order) {
       res.status(404).json({ success: false, error: 'الطلب غير موجود' });
       return;
     }
-    res.json({ success: true, data: order });
+    // العلاقة في المخطّط اسمها `items` والواجهة كلّها تقرأ `orderItems`
+    res.json({ success: true, data: { ...order, orderItems: order.items } });
   } catch (error) {
     console.error('Error getting order:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب الطلب' });
   }
 };
+
+/** حالات الطلب كما في تعداد Prisma — قيمة خارجها تُرفض قبل الكتابة */
+const ORDER_STATUSES = ['pending', 'preparing', 'ready', 'delivering', 'delivered', 'served', 'cancelled'];
 
 export const updateStoreOrderStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -1158,9 +1176,14 @@ export const updateStoreOrderStatus = async (req: AuthRequest, res: Response): P
       res.status(404).json({ success: false, error: 'الطلب غير موجود' });
       return;
     }
-    const updatedOrder = await prisma.order.update({ 
-      where: { id }, 
-      data: { status, ...(status === 'completed' ? { completedAt: new Date() } : {}) } 
+    if (!ORDER_STATUSES.includes(status)) {
+      res.status(400).json({ success: false, error: 'حالة الطلب غير معروفة' });
+      return;
+    }
+
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: { status }
     });
     res.json({ success: true, data: updatedOrder });
   } catch (error) {

@@ -6,11 +6,12 @@ import api from '../../services/api';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import StoreOrderDetails from '../../components/store/StoreOrderDetails';
-import { IoRefresh, IoFilter, IoWallet, IoCube, IoTime } from 'react-icons/io5';
+import { IoRefresh, IoFilter, IoWallet, IoCube, IoTime, IoArrowForward } from 'react-icons/io5';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useSocket } from '../../hooks/useSocket';
+import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 
 const C = {
   bg:     '#082E24',
@@ -45,7 +46,11 @@ interface StoreOrder {
     productId: string;
     quantity: number;
     price: number;
-    product?: { id: string; name: string; image?: string; };
+    // خيارات المنتج تصل من الخادم وتُعرض في التفاصيل: بلا اللون والمقاس
+    // يُجهَّز الطلب خطأً
+    size?: string | null;
+    addons?: string[] | null;
+    product?: { id?: string; name: string; image?: string; imageUrl?: string };
   }>;
 }
 
@@ -144,6 +149,14 @@ const StoreOrdersPage: React.FC = () => {
       console.error('Error updating order status:', error);
       toast.error('حدث خطأ في تحديث حالة الطلب');
     }
+  };
+
+  // بعد تحديث الدفع نعيد الجلب: الحالة المعروضة يجب أن تأتي من الخادم
+  const handlePaymentUpdated = async (isPaid: boolean, paymentMethod: string) => {
+    if (selectedOrder) {
+      setSelectedOrder({ ...selectedOrder, isPaid, paymentMethod });
+    }
+    await fetchOrders();
   };
 
   const getFilteredOrders = (): StoreOrder[] => {
@@ -267,7 +280,7 @@ const StoreOrdersPage: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
+      <div className="orders-split">
         {/* قائمة الطلبات */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, background: C.surf }}>
@@ -310,7 +323,7 @@ const StoreOrdersPage: React.FC = () => {
                       <IoTime size={12} />
                       {format(new Date(order.createdAt), 'hh:mm a', { locale: ar })}
                     </span>
-                    <span style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{Number(order.total).toFixed(2)} ر.س</span>
+                    <span style={{ color: C.accent, fontWeight: 700, fontSize: 13 }}>{formatPrice(order.total, DEFAULT_CURRENCY)}</span>
                   </div>
                 </div>
               ))
@@ -318,12 +331,37 @@ const StoreOrdersPage: React.FC = () => {
           </div>
         </div>
 
-        {/* تفاصيل الطلب */}
-        <div>
+        {/* تفاصيل الطلب — عمود على اللابتوب، وطبقة ملء الشاشة على الجوال */}
+        <div className={`orders-detail${selectedOrder ? ' is-open' : ''}`}>
+          {/* زرّ الرجوع للجوال حيث تملأ التفاصيل الشاشة */}
+          <button
+            type="button"
+            className="orders-detail-back"
+            onClick={() => setSelectedOrder(null)}
+            style={{
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 12,
+              padding: '9px 14px',
+              minHeight: 40,
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.surf,
+              color: C.text,
+              fontFamily: 'Cairo, sans-serif',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer'
+            }}
+          >
+            <IoArrowForward size={16} /> رجوع إلى القائمة
+          </button>
+
           {selectedOrder ? (
             <StoreOrderDetails
               order={selectedOrder}
               onUpdateStatus={(status) => updateOrderStatus(selectedOrder.id, status)}
+              onUpdatePayment={handlePaymentUpdated}
             />
           ) : (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '80px 24px', textAlign: 'center' }}>

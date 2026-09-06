@@ -431,3 +431,44 @@ textarea:focus-visible,
 .shop-brand-name { max-width: 84px; }
 @media (min-width: 560px) { .shop-brand-name { max-width: 150px; } }
 @media (min-width: 1024px) { .shop-brand-name { max-width: 200px; } }
+
+/* ============================================================
+   شاشات الطلبات — قائمة وتفاصيل
+   ============================================================
+   كان التخطيط `1fr 2fr` ثابتاً: على شاشة 375 بكسل تنال القائمة نحو 110
+   بكسل، فيصير رقم الطلب وحده سطرين. والتفاصيل تُزاحمها في الوقت نفسه.
+
+   على الجوال: القائمة وحدها بعرض الشاشة، والتفاصيل تفتح فوقها ملء الشاشة
+   بزرّ رجوع — نمط الهاتف المعتاد. ومن 1024 بكسل يعود العمودان معاً، وهو
+   ما يصلح لشاشة يراقب عليها التاجر الطلبات طوال اليوم. */
+
+.orders-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.orders-detail-back { display: flex; }
+
+@media (max-width: 1023px) {
+  /* التفاصيل مخفيّة حتى يُختار طلب، ثم تملأ الشاشة */
+  .orders-detail { display: none; }
+
+  .orders-detail.is-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: #082E24;
+    padding: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .orders-split { grid-template-columns: 1fr 2fr; gap: 24px; }
+  .orders-detail { display: block; }
+  /* زرّ الرجوع لا معنى له والعمودان ظاهران معاً */
+  .orders-detail-back { display: none; }
+}

@@ -5,11 +5,12 @@ import { Order, OrderStatus, PaymentMethod } from '../../services/types';
 import Loader from '../../components/common/Loader';
 import Button from '../../components/common/Button';
 import OrderDetails from '../../components/orders/OrderDetails';
-import { IoRefresh, IoFilter, IoWallet } from 'react-icons/io5';
+import { IoRefresh, IoFilter, IoWallet, IoArrowForward } from 'react-icons/io5';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useSocket } from '../../hooks/useSocket';
+import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 
 const C = {
   bg:     '#082E24',
@@ -142,7 +143,9 @@ const OrdersPage: React.FC = () => {
     switch (status) {
       case 'pending':   return { background: 'rgba(245,158,11,0.15)', color: C.yellow };
       case 'preparing': return { background: 'rgba(96,165,250,0.15)', color: C.blue };
-      case 'ready':     return { background: 'rgba(200,226,53,0.15)', color: C.accent };
+      case 'ready':     return { background: 'rgba(167,139,250,0.15)', color: C.purple };
+      case 'delivering': return { background: 'rgba(96,165,250,0.15)', color: C.blue };
+      case 'delivered':  return { background: 'rgba(200,226,53,0.15)', color: C.accent };
       case 'served':    return { background: 'rgba(157,196,172,0.15)', color: C.muted };
       case 'cancelled': return { background: 'rgba(255,107,107,0.15)', color: C.red };
       default:          return { background: 'rgba(157,196,172,0.15)', color: C.muted };
@@ -154,8 +157,11 @@ const OrdersPage: React.FC = () => {
       case 'pending':   return 'قيد الانتظار';
       case 'preparing': return 'قيد التحضير';
       case 'ready':     return 'جاهز';
+      case 'delivering': return 'قيد التوصيل';
+      case 'delivered':  return 'تم التوصيل';
       case 'served':    return 'مكتمل';
       case 'cancelled': return 'ملغي';
+      // حالة جديدة في التعداد بلا ترجمة هنا كانت تظهر بالإنجليزية للتاجر
       default:          return status;
     }
   };
@@ -220,7 +226,7 @@ const OrdersPage: React.FC = () => {
             <button onClick={() => setFilter('all')} style={filterBtnStyle(filter === 'all')}>
               الكل ({orders.length})
             </button>
-            {(['pending', 'preparing', 'ready', 'served', 'cancelled'] as OrderStatus[]).map(status => (
+            {(['pending', 'preparing', 'ready', 'delivering', 'delivered', 'served', 'cancelled'] as OrderStatus[]).map(status => (
               <button key={status} onClick={() => setFilter(status)} style={filterBtnStyle(filter === status)}>
                 {getStatusText(status)} ({orders.filter(o => o.status === status).length})
               </button>
@@ -240,13 +246,20 @@ const OrdersPage: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
+      <div className="orders-split">
         {/* Orders List */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}` }}>
             <h2 style={{ fontWeight: 600, color: C.text, margin: 0, fontSize: 16 }}>الطلبات</h2>
           </div>
           <div style={{ maxHeight: 600, overflowY: 'auto' }}>
+            {getFilteredOrders().length === 0 && (
+              <div style={{ padding: '44px 20px', textAlign: 'center', color: C.muted, fontSize: 13.5, lineHeight: 1.9 }}>
+                {orders.length === 0
+                  ? 'لا طلبات بعد. ستظهر هنا فور وصول أول طلب.'
+                  : 'لا طلبات بهذه التصفية.'}
+              </div>
+            )}
             {getFilteredOrders().map(order => (
               <div
                 key={order.id}
@@ -273,20 +286,45 @@ const OrdersPage: React.FC = () => {
                 <div style={{ fontSize: 13, color: C.muted, marginBottom: 6 }}>
                   {order.table?.name && `طاولة ${order.table.name} • `}
                   {order.customerName || 'زبون'}
+                  {order.orderItems ? ` • ${order.orderItems.length} صنف` : ''}
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                   <span style={{ color: C.muted }}>
                     {format(new Date(order.createdAt), 'hh:mm a', { locale: ar })}
                   </span>
-                  <span style={{ fontWeight: 700, color: C.accent }}>{Number(order.total).toFixed(2)} ل.س</span>
+                  <span style={{ fontWeight: 700, color: C.accent }}>{formatPrice(order.total, DEFAULT_CURRENCY)}</span>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Order Details */}
-        <div>
+        {/* التفاصيل — عمود على اللابتوب، وطبقة ملء الشاشة على الجوال */}
+        <div className={`orders-detail${selectedOrder ? ' is-open' : ''}`}>
+          {/* زرّ الرجوع للجوال حيث تملأ التفاصيل الشاشة */}
+          <button
+            type="button"
+            className="orders-detail-back"
+            onClick={() => setSelectedOrder(null)}
+            style={{
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 12,
+              padding: '9px 14px',
+              minHeight: 40,
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.surf,
+              color: C.text,
+              fontFamily: 'Cairo, sans-serif',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer'
+            }}
+          >
+            <IoArrowForward size={16} /> رجوع إلى القائمة
+          </button>
+
           {selectedOrder ? (
             <OrderDetails
               order={selectedOrder}

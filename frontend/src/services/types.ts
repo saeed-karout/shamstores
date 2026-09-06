@@ -203,8 +203,22 @@ export interface CartItem {
   selectedOptions?: Record<string, string | string[]>;
 }
   
-  export type OrderStatus = 'pending' | 'preparing' | 'ready' | 'served' | 'cancelled';
-  export type PaymentMethod = 'cash' | 'card' | 'online';
+  /**
+   * يطابق `enum OrderStatus` في المخطط.
+   *
+   * كان ينقصه `delivering` و`delivered` — وهما حالتان يكتبهما الخادم
+   * فعلاً. فكانت شاشة طلبات المطعم تعرضهما بالإنجليزية الخام لأن دالة
+   * الترجمة تسقط إلى `default: return status`.
+   */
+  export type OrderStatus =
+    | 'pending'
+    | 'preparing'
+    | 'ready'
+    | 'delivering'
+    | 'delivered'
+    | 'served'
+    | 'cancelled';
+  export type PaymentMethod = 'cash' | 'card' | 'online' | 'sham_cash';
   
   export interface Order {
     id: string;

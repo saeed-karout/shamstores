@@ -162,12 +162,20 @@ export const getOrders = async (req: AuthRequest, res: Response): Promise<void> 
     const orders = await prisma.order.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: Number(limit)
+      take: Number(limit),
+      // الواجهة تعرض «طاولة كذا» ولم تكن العلاقة تُرسَل أصلاً
+      include: { table: { select: { id: true, name: true } } }
     });
 
     const ordersWithItems = await Promise.all(orders.map(async (order) => {
+      // الاسم والصورة معاً: بلا الاسم يقرأ التاجر «×1» بلا أن يعرف ماذا
+      // يجهّز — وهو أول ما يحتاجه من الشاشة.
       const orderItems = await prisma.orderItem.findMany({
-        where: { orderId: order.id }
+        where: { orderId: order.id },
+        include: {
+          menuItem: { select: { name: true, image: true } },
+          product: { select: { name: true, imageUrl: true } }
+        }
       });
       return { ...order, orderItems };
     }));
@@ -192,14 +200,21 @@ export const getOrder = async (req: AuthRequest, res: Response): Promise<void> =
     if (business.type === 'restaurant') where.restaurantId = business.id;
     else where.storeId = business.id;
 
-    const order = await prisma.order.findFirst({ where });
+    const order = await prisma.order.findFirst({
+      where,
+      include: { table: { select: { id: true, name: true } } }
+    });
     if (!order) {
       res.status(404).json({ success: false, error: 'الطلب غير موجود' });
       return;
     }
 
     const orderItems = await prisma.orderItem.findMany({
-      where: { orderId: order.id }
+      where: { orderId: order.id },
+      include: {
+        menuItem: { select: { name: true, image: true } },
+        product: { select: { name: true, imageUrl: true } }
+      }
     });
 
     res.json({ success: true, data: { ...order, orderItems } });
@@ -623,6 +638,9 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
 
 // ==================== تحديث حالة الدفع ====================
 
+/** طرق الدفع كما في تعداد Prisma — قيمة خارجها ترتدّ 500 بلا سبب مفهوم */
+const PAYMENT_METHODS = ['cash', 'card', 'online', 'sham_cash'];
+
 export const updatePaymentStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const business = await getBusinessId(req);
@@ -632,7 +650,7 @@ export const updatePaymentStatus = async (req: AuthRequest, res: Response): Prom
     }
 
     const { id } = req.params;
-    const { isPaid } = req.body;
+    const { isPaid, paymentMethod } = req.body;
 
     const where: any = { id };
     if (business.type === 'restaurant') where.restaurantId = business.id;
@@ -644,9 +662,18 @@ export const updatePaymentStatus = async (req: AuthRequest, res: Response): Prom
       return;
     }
 
+    const data: any = { isPaid: Boolean(isPaid) };
+    if (paymentMethod) {
+      if (!PAYMENT_METHODS.includes(paymentMethod)) {
+        res.status(400).json({ success: false, error: 'طريقة دفع غير معروفة' });
+        return;
+      }
+      data.paymentMethod = paymentMethod;
+    }
+
     const updated = await prisma.order.update({
       where: { id },
-      data: { isPaid }
+      data
     });
 
     emitOrderRealtimeNotification(
@@ -657,7 +684,11 @@ export const updatePaymentStatus = async (req: AuthRequest, res: Response): Prom
       req.user?.id
     );
 
-    res.json({ success: true, message: 'تم تحديث حالة الدفع', data: { isPaid: updated.isPaid } });
+    res.json({
+      success: true,
+      message: 'تم تحديث حالة الدفع',
+      data: { isPaid: updated.isPaid, paymentMethod: updated.paymentMethod }
+    });
   } catch (error) {
     console.error('Error updating payment status:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في تحديث حالة الدفع' });
@@ -687,8 +718,14 @@ export const getTodayOrders = async (req: AuthRequest, res: Response): Promise<v
     });
 
     const ordersWithItems = await Promise.all(orders.map(async (order) => {
+      // الاسم والصورة معاً: بلا الاسم يقرأ التاجر «×1» بلا أن يعرف ماذا
+      // يجهّز — وهو أول ما يحتاجه من الشاشة.
       const orderItems = await prisma.orderItem.findMany({
-        where: { orderId: order.id }
+        where: { orderId: order.id },
+        include: {
+          menuItem: { select: { name: true, image: true } },
+          product: { select: { name: true, imageUrl: true } }
+        }
       });
       return { ...order, orderItems };
     }));
@@ -789,8 +826,14 @@ export const getMyOrders = async (req: AuthRequest, res: Response): Promise<void
     });
 
     const ordersWithItems = await Promise.all(orders.map(async (order) => {
+      // الاسم والصورة معاً: بلا الاسم يقرأ التاجر «×1» بلا أن يعرف ماذا
+      // يجهّز — وهو أول ما يحتاجه من الشاشة.
       const orderItems = await prisma.orderItem.findMany({
-        where: { orderId: order.id }
+        where: { orderId: order.id },
+        include: {
+          menuItem: { select: { name: true, image: true } },
+          product: { select: { name: true, imageUrl: true } }
+        }
       });
       return { ...order, orderItems };
     }));
