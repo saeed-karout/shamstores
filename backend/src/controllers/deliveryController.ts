@@ -94,11 +94,24 @@ export const acceptOrder = async (
       return;
     }
 
+    // نشاط السائق — لا يقبل طلب متجر لا يعمل عنده
+    const me = await prisma.user.findUnique({
+      where: { id: driverId },
+      select: { restaurantId: true, storeId: true }
+    });
+
+    const businessScope: any = me?.restaurantId
+      ? { restaurantId: me.restaurantId }
+      : me?.storeId
+      ? { storeId: me.storeId }
+      : {};
+
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        assignedDriverId: driverId,
-        status: 'ready'
+        status: 'ready',
+        // إمّا معيَّن له، وإمّا حرٌّ في بركة نشاطه
+        OR: [{ assignedDriverId: driverId }, { assignedDriverId: null, ...businessScope }]
       }
     });
 
@@ -110,13 +123,29 @@ export const acceptOrder = async (
       return;
     }
 
-    await prisma.order.update({
-      where: { id: orderId },
+    // **المطالبة ذرّية**: `updateMany` بشرطٍ في `where` يجعل قاعدة البيانات
+    // هي من يفصل حين يضغط سائقان في اللحظة نفسها. فحصٌ ثم كتابة كان يترك
+    // نافذةً يفوز فيها الاثنان، ويذهب أحدهما إلى طلبٍ ليس له.
+    const claimed = await prisma.order.updateMany({
+      where: {
+        id: orderId,
+        status: 'ready',
+        OR: [{ assignedDriverId: driverId }, { assignedDriverId: null }]
+      },
       data: {
+        assignedDriverId: driverId,
         status: 'delivering',
         driverAcceptedAt: new Date()
       }
     });
+
+    if (claimed.count === 0) {
+      res.status(409).json({
+        success: false,
+        error: 'سبقك سائق آخر إلى هذا الطلب'
+      });
+      return;
+    }
 
     try {
       emitOrderRealtimeEvent({
@@ -134,7 +163,7 @@ export const acceptOrder = async (
           restaurantId: order.restaurantId || null,
           storeId: order.storeId || null,
           createdBy: order.createdBy || null,
-          assignedDriverId: order.assignedDriverId || null
+          assignedDriverId: driverId || null
         },
         extraData: { previousStatus: 'ready' }
       });
@@ -1064,10 +1093,35 @@ export const getDriverOrders = async (
       return;
     }
 
+    // نشاط السائق — به نعرف أي طلبات غير معيَّنة يحقّ له رؤيتها
+    const me = await prisma.user.findUnique({
+      where: { id: driverId },
+      select: { restaurantId: true, storeId: true }
+    });
+
+    const businessScope: any = me?.restaurantId
+      ? { restaurantId: me.restaurantId }
+      : me?.storeId
+      ? { storeId: me.storeId }
+      : null;
+
     const orders = await prisma.order.findMany({
       where: {
-        assignedDriverId: driverId,
-        status: { in: ['ready', 'delivering'] }
+        OR: [
+          {
+            assignedDriverId: driverId,
+            // `preparing` كانت ساقطة، والتعيين التلقائي يضع الطلب فيها
+            // تحديداً — فالطلب يُعيَّن للسائق ولا يظهر عنده حتى ينقله
+            // التاجر إلى `ready`. أي أن التعيين التلقائي كان بلا أثر مرئي.
+            status: { in: ['preparing', 'ready', 'delivering'] }
+          },
+          // الطلبات الجاهزة بلا سائق: بركةٌ يراها سائقو النشاط ويسبق
+          // إليها أوّلهم. بدونها يبقى الطلب الذي أُنشئ ولا سائق متصل
+          // معلّقاً إلى الأبد — لا يراه أحد ولا يعيّنه أحد.
+          ...(businessScope
+            ? [{ ...businessScope, assignedDriverId: null, orderType: 'delivery' as const, status: 'ready' as const }]
+            : [])
+        ]
       },
       orderBy: { estimatedDeliveryTime: 'asc' },
       // كان الردّ صفوفاً عارية: لا أصناف، ولا اسم المحلّ، ولا إحداثياته.
@@ -1085,7 +1139,14 @@ export const getDriverOrders = async (
       }
     });
 
-    res.json({ success: true, data: orders.map(shapeDriverOrder) });
+    res.json({
+      success: true,
+      data: orders.map((order) => ({
+        ...shapeDriverOrder(order),
+        /** طلبٌ من البركة: لم يُعيَّن بعد، ويقبله السائق فيصير له */
+        isAvailable: order.assignedDriverId === null
+      }))
+    });
   } catch (error) {
     console.error('Error fetching driver orders:', error);
     res.status(500).json({
