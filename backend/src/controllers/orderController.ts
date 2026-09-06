@@ -382,6 +382,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       item.quantity = quantity;
 
       let price = item.price || 0;
+      // تكلفة الوحدة تُلتقط الآن لا وقت التقرير: قراءتها لاحقاً من المنتج
+      // تجعل أرباح الشهر الماضي تتغيّر كلّما عدّل التاجر سعر الشراء.
+      let unitCost: number | null = null;
       // ما يختاره الزبون من خيارات المنتج — يُتحقّق منه ويُسعَّر على الخادم
       let selectedSize: string | null = item.size || null;
       let selectedAddons: string[] | null = Array.isArray(item.addons) ? item.addons : null;
@@ -434,6 +437,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           return;
         }
         price = Number(product.price) || 0;
+        unitCost = product.cost === null || product.cost === undefined ? null : Number(product.cost);
 
         // ⚠️ فرق سعر الخيار يُحسب هنا لا في المتصفح: «مقاس كبير +5000»
         // قابل للتزوير في جسم الطلب لو صدّقناه.
@@ -455,6 +459,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
         productId: item.productId || null,
         quantity: item.quantity,
         price: price,
+        cost: unitCost,
         size: selectedSize,
         addons: selectedAddons,
         notes: item.notes || null
@@ -545,6 +550,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           productId: itemData.productId,
           quantity: itemData.quantity,
           price: itemData.price,
+          cost: itemData.cost,
           size: itemData.size,
           addons: itemData.addons,
           notes: itemData.notes

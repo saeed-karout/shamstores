@@ -35,6 +35,7 @@ const RestaurantCouponsPage = lazy(() => import('./pages/Restaurant/RestaurantCo
 const StoreProductsPage = lazy(() => import('./pages/Store/StoreProductsPage'));
 const StoreInventoryPage = lazy(() => import('./pages/Store/StoreInventoryPage'));
 const StoreOrdersPage = lazy(() => import('./pages/Store/StoreOrdersPage'));
+const FinancePage = lazy(() => import('./pages/FinancePage'));
 const StoreCouponsPage = lazy(() => import('./pages/Store/StoreCouponsPage'));
 const StoreDeliveryDashboard = lazy(() => import('./pages/Store/StoreDeliveryDashboard'));
 const StoreDriversPage = lazy(() => import('./pages/Store/StoreDriversPage'));
@@ -296,6 +297,10 @@ const MainApp: React.FC = () => {
             {/* صفحة شراء الميزات المفردة — بلا PlanRoute عمداً: حجبها عمّن
                 لا يملك الميزات يمنعه من شرائها، وهو عكس الغرض */}
             <Route path="/features" element={<OwnerFeaturesPage />} />
+
+            {/* القسم المالي — مشترك بين المطعم والمتجر، والخادم يستنتج أيّهما
+                من المستخدم. مسار واحد لأن الحساب والأعمدة واحدة. */}
+            <Route path="/finance" element={<FinancePage />} />
             
             {/* مسارات المتجر */}
             <Route path="/store/products" element={<StoreProductsPage />} />

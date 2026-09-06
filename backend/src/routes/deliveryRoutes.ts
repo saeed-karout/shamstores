@@ -50,11 +50,15 @@ router.get('/orders',
   getDeliveryOrders
 );
 
-// إحصائيات التوصيل
-router.get('/stats', 
-  authenticate, 
-  checkPlanFeature('online_orders'),
-  authorize(['owner', 'super_admin']), 
+// إحصائيات التوصيل — للتاجر أرقام نشاطه، وللسائق أرقامه هو.
+//
+// بوّابة الخطة تُفحص للتاجر وحده: خطة التاجر ليست شأن السائق، وإسقاطها
+// عليه كان يمنعه من رؤية أرباحه لأن متجراً غيره لم يدفع.
+router.get('/stats',
+  authenticate,
+  authorize(['owner', 'super_admin', 'delivery_driver']),
+  (req: any, res: any, next: any) =>
+    req.user?.role === 'delivery_driver' ? next() : checkPlanFeature('online_orders')(req, res, next),
   getDeliveryStats
 );
 

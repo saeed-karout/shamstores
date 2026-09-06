@@ -821,11 +821,22 @@ export const updateDeliveryStatus = async (
 
 // ==================== إحصائيات التوصيل ====================
 
+/**
+ * إحصائيات التوصيل.
+ *
+ * السائق يسأل نفس المسار الذي يسأله التاجر — هكذا يوثّقه تطبيق التوصيل.
+ * والمسار كان مقصوراً على المالك، فيرتدّ 403 على السائق: شاشة إحصائياته في
+ * التطبيق فارغة أبداً بلا سبب ظاهر. فيُحوَّل السائق إلى أرقامه هو.
+ */
 export const getDeliveryStats = async (
   req: AuthRequest,
   res: Response
 ): Promise<void> => {
   try {
+    if (req.user?.role === 'delivery_driver') {
+      return getDriverEarnings(req, res);
+    }
+
     const businessId = await getRestaurantId(req) || await getStoreId(req);
 
     if (!businessId) {

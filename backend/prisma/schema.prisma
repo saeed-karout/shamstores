@@ -497,6 +497,13 @@ model Order {
   driverAcceptedAt       DateTime?
   driverReachedAt        DateTime?
   paymentCollectedAt     DateTime?
+  /// المرتجع لا يُلغي الطلب ولا يغيّر حالته: البضاعة سُلّمت فعلاً ثم عادت.
+  /// دمجه في `status` كان سيمحو أن التسليم حدث، وهو ما يميّز المرتجع عن
+  /// الإلغاء في أي دفتر حسابات.
+  returnedAt             DateTime?
+  /// المبلغ المُعاد — قد يكون جزءاً من الطلب لا كلّه
+  returnAmount           Float?
+  returnReason           String?       @db.Text
   rating                 Int?          @default(0)
   ratingComment          String?
   ratedAt                DateTime?
@@ -537,6 +544,13 @@ model OrderItem {
   productId  String?
   quantity   Int      @default(1)
   price      Float
+  /// تكلفة الوحدة **لحظة البيع**.
+  ///
+  /// حسابها من `Product.cost` الحالي يجعل أرباح الشهر الماضي تتغيّر كلّما
+  /// عدّل التاجر سعر الشراء — تقرير مالي يعيد كتابة تاريخه ليس تقريراً.
+  /// وتبقى فارغة في الطلبات القديمة، فتُقرأ عندها من المنتج مع تعليم
+  /// التقدير في الواجهة.
+  cost       Float?
   size       String?
   addons     Json?
   notes      String?
