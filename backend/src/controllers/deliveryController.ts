@@ -521,6 +521,45 @@ export const assignDeliveryDriver = async (
 
 // ==================== تحديث موقع المندوب ====================
 
+/**
+ * تسجيل رمز الإشعارات.
+ *
+ * **لماذا مسارٌ مستقلّ:** الرمز كان يُرسَل ضمّاً مع تبديل الحضور وحده. لكنه
+ * يتغيّر بأوقات لا علاقة لها بالحضور — إعادة تثبيت، مسح بيانات التطبيق،
+ * تدوير دوري من Firebase — فيبقى عندنا رمزٌ ميّت ويصمت الإشعار بلا أن
+ * يلاحظ أحد. الآن يسجّله التطبيق عند كل إقلاع وعند كل تدوير.
+ *
+ * وإبطالُه عند الخروج مقصود: هاتفٌ سلّمه السائق لغيره لا يجوز أن تصله
+ * إشعارات طلبات.
+ */
+export const registerFcmToken = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+
+    const raw = req.body?.fcmToken;
+    const token = typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+
+    // رمزٌ فارغ يعني تسجيل خروج — نُبطله بدل أن نرفض الطلب
+    await prisma.user.update({
+      where: { id: userId },
+      data: { fcmToken: token }
+    });
+
+    res.json({
+      success: true,
+      message: token ? 'تم تسجيل رمز الإشعارات' : 'تم إلغاء رمز الإشعارات',
+      data: { registered: Boolean(token) }
+    });
+  } catch (error) {
+    console.error('Error registering FCM token:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في تسجيل رمز الإشعارات' });
+  }
+};
+
 export const updateDriverLocation = async (
   req: AuthRequest,
   res: Response

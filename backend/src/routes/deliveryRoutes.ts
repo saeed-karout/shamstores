@@ -6,6 +6,7 @@ import {
   assignDeliveryDriver,
   getDriverOrders,
   updateDriverLocation,
+  registerFcmToken,
   getDriverLocation,
   getMyDriverLocation,
   getDriverAvailability,
@@ -171,6 +172,14 @@ router.post('/driver/offline',
     req.body.isOnline = false;
     return updateDriverAvailability(req as any, res);
   }
+);
+
+// رمز الإشعارات — يتغيّر مع إعادة التثبيت والتدوير الدوري، فيُسجَّل عند كل
+// إقلاع لا مرّةً واحدة
+router.post('/driver/fcm-token',
+  authenticate,
+  authorize(['delivery_driver']),
+  registerFcmToken
 );
 
 // تحديث موقع السائق

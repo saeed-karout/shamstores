@@ -1116,10 +1116,23 @@ export const getDeliveryStats = async (req: AuthRequest, res: Response): Promise
 
 // ==================== تقييم الطلب ====================
 
+/**
+ * تقييم الزبون للطلب — وللمندوب معه.
+ *
+ * **ما كان ناقصاً:** ثلاثة أعمدة في المخطّط (`driverRating` و
+ * `driverRatingComment` و`driverRatedAt`) لم يكتبها شيء إطلاقاً. ودالّة
+ * `rateOrderAdvanced` التي تحدّث معدّل المندوب لم تكن موصولة بأي مسار —
+ * شيفرةٌ ميّتة. فمعدّل كل مندوب في المنصّة ثابتٌ على صفر مهما وصّل.
+ *
+ * **والمعدّل كان يُحسب خطأً:** `(القديم + الجديد) / 2` ليس متوسّطاً — هو
+ * متوسّط متحرّك يعطي آخر تقييم نصف الوزن إلى الأبد. مندوبٌ بخمس نجوم في
+ * مئة توصيلة يهبط إلى ٣ بتقييم واحد سيّئ. والعدد محفوظ عندنا
+ * (`driverRatingCount`) فالمتوسّط الصحيح متاح بلا كلفة.
+ */
 export const rateOrder = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { orderId } = req.params;
-    const { rating, comment } = req.body;
+    const { rating, comment, driverRating, driverComment } = req.body;
     const userId = req.user?.id;
 
     if (!rating || rating < 1 || rating > 5) {
@@ -1127,8 +1140,17 @@ export const rateOrder = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
+    if (driverRating !== undefined && driverRating !== null) {
+      if (driverRating < 1 || driverRating > 5) {
+        res.status(400).json({ success: false, error: 'تقييم المندوب يجب أن يكون بين 1 و 5' });
+        return;
+      }
+    }
+
+    // `served` مثل `delivered`: كلاهما نهاية المسار، والطلب في المطعم
+    // ينتهي عندها
     const order = await prisma.order.findFirst({
-      where: { id: orderId, createdBy: userId, status: 'delivered' }
+      where: { id: orderId, createdBy: userId, status: { in: ['delivered', 'served'] } }
     });
 
     if (!order) {
@@ -1136,16 +1158,54 @@ export const rateOrder = async (req: AuthRequest, res: Response): Promise<void> 
       return;
     }
 
-    const updated = await prisma.order.update({
+    if (order.ratedAt) {
+      res.status(409).json({ success: false, error: 'سبق أن قيّمت هذا الطلب' });
+      return;
+    }
+
+    await prisma.order.update({
       where: { id: orderId },
       data: {
         rating: rating,
         ratingComment: comment || null,
-        ratedAt: new Date()
+        ratedAt: new Date(),
+        ...(driverRating
+          ? {
+              driverRating,
+              driverRatingComment: driverComment || null,
+              driverRatedAt: new Date()
+            }
+          : {})
       }
     });
 
-    res.json({ success: true, message: 'شكراً لتقييمك', data: { rating, comment } });
+    // معدّل المندوب: متوسّطٌ حقيقي محسوبٌ من العدد المحفوظ
+    if (driverRating && order.assignedDriverId) {
+      const driver = await prisma.user.findUnique({
+        where: { id: order.assignedDriverId },
+        select: { driverRating: true, driverRatingCount: true }
+      });
+
+      if (driver) {
+        const count = driver.driverRatingCount || 0;
+        const sum = (driver.driverRating || 0) * count;
+        const nextCount = count + 1;
+
+        await prisma.user.update({
+          where: { id: order.assignedDriverId },
+          data: {
+            driverRating: Math.round(((sum + driverRating) / nextCount) * 100) / 100,
+            driverRatingCount: nextCount
+          }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'شكراً لتقييمك',
+      data: { rating, comment, driverRating: driverRating || null }
+    });
   } catch (error) {
     console.error('Error rating order:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في إرسال التقييم' });

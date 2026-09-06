@@ -1141,6 +1141,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         onSelectOrder={setTrackingOrder}
         formatPrice={(price: number) => formatPrice(price, currency)}
         loading={loadingOrders}
+        kind="store"
+        onRated={() => fetchMyOrders(true)}
       />
 
       {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}

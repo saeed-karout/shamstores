@@ -945,6 +945,8 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         onSelectOrder={setTrackingOrder}
         formatPrice={(price: number) => formatPrice(price, currency)}
         loading={loadingOrders}
+        kind="restaurant"
+        onRated={() => fetchMyOrders(true)}
       />
 
       {/* الشارة يحسمها الخادم: الخطة وحدها لا تكفي — قد تكون الميزة مشتراة
