@@ -77,10 +77,21 @@ heroku config --app shamstores | Select-String CLOUDFLARE
 
 ### 4. ترحيل قاعدة البيانات
 
-الحقول الجديدة على `Restaurant` و`Store`:
+الحقول الجديدة على `Restaurant` و`Store`. **على دينو Heroku لا في طرفيّتك**:
 
 ```bash
-npm --prefix backend run migration:run
+heroku run --app shamstores --no-tty "npm --prefix backend run prisma:db-push"
+```
+
+> ⚠️ تشغيل الأمر محلياً يذهب إلى قاعدتك المحلّية: `backend/scripts/prisma.js`
+> يقرأ `DATABASE_URL` من `backend/.env`. ونشرُ الكود بلا ترحيل الإنتاج يُسقط
+> **كل** الصفحات لا واحدة — كل استعلام على `Store` أو `Restaurant` يُحضر كل
+> الأعمدة، فيرتدّ `P2022: column does not exist`.
+
+للاطّلاع على SQL قبل تنفيذه (قراءة فقط):
+
+```bash
+heroku run --app shamstores --no-tty 'backend/node_modules/.bin/prisma migrate diff --from-url $JAWSDB_URL --to-schema-datamodel backend/prisma/schema.prisma --script'
 ```
 
 | الحقل | المعنى |
