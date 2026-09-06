@@ -8,7 +8,8 @@ import {
   getProductsBySlug,
   getMenuItemById,
   createContactMessage,
-  resolveHost
+  resolveHost,
+  getHostBrand
 } from '../controllers/publicController';
 
 const router = express.Router();
@@ -19,6 +20,9 @@ router.post('/contact-messages', createContactMessage);
 
 // حل النطاق المخصص/الفرعي إلى معرّف نشاط تجاري (يجب أن يسبق /:identifier)
 router.get('/resolve-host', resolveHost);
+
+// هوية التاجر لصفحات الدخول والتسجيل — قبل `/:identifier` وإلا ابتلعها
+router.get('/brand', getHostBrand);
 
 // ✅ هذا هو المسار المطلوب - جلب بيانات المطعم/المتجر (باستخدام slug أو subdomain)
 router.get('/:identifier', getBusinessBySlug);

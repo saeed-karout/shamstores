@@ -667,6 +667,91 @@ export const getMenuItemByShareToken = async (
  * ولا subdomain يمكن استخراجه، فنسأل الخادم عن النشاط التجاري لهذا المضيف.
  * يقرأ بيانات عامة فقط ولا يكشف أي نشاط غير موثّق أو غير نشط.
  */
+// ==================== هوية الواجهة من المضيف ====================
+
+/**
+ * هوية التاجر لصفحات لا تعرض بضاعة — الدخول والتسجيل والحساب.
+ *
+ * زبونٌ فتح `mystore.com` ثم ضغط «تسجيل الدخول» كان يجد اسم المنصّة وشعارها
+ * فجأة: يظنّ أنه غادر متجر من يثق به إلى موقع لا يعرفه، ويتردّد في كتابة
+ * رقمه. الصفحة يجب أن تلبس هوية النطاق الذي فُتحت منه.
+ *
+ * وهي مستقلّة عن `/public/:identifier` عمداً: تلك تُرجع الأصناف والمنتجات
+ * كلّها — حِمل لا معنى له خلف نموذج فيه حقلان.
+ */
+export const getHostBrand = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const queryHost = typeof req.query.host === 'string' ? req.query.host : '';
+    const headerHost = (req.headers['x-forwarded-host'] as string) || req.headers.host || '';
+    const host = normalizeDomain(queryHost || headerHost);
+
+    if (!host) {
+      res.status(400).json({ success: false, error: 'المضيف غير محدد' });
+      return;
+    }
+
+    const SELECT = {
+      id: true,
+      name: true,
+      slug: true,
+      subdomain: true,
+      logo: true,
+      primaryColor: true,
+      secondaryColor: true,
+      backgroundColor: true,
+      cardColor: true,
+      surfaceColor: true,
+      textColor: true,
+      mutedColor: true,
+      accentColor: true,
+      fontFamily: true,
+      isActive: true
+    } as const;
+
+    // النطاق المخصّص أولاً — هو الحالة التي لا يحمل فيها المضيف أي معرّف
+    const byCustomDomain = await resolveBusinessByCustomDomain(host);
+
+    let type: 'restaurant' | 'store' | null = byCustomDomain ? byCustomDomain.type : null;
+    let record: any = null;
+
+    if (byCustomDomain) {
+      record =
+        byCustomDomain.type === 'restaurant'
+          ? await prisma.restaurant.findUnique({ where: { id: byCustomDomain.id }, select: SELECT })
+          : await prisma.store.findUnique({ where: { id: byCustomDomain.id }, select: SELECT });
+    } else {
+      const identifier = extractSubdomainFromHost(host);
+      if (identifier) {
+        record = await prisma.store.findFirst({
+          where: { OR: [{ subdomain: identifier }, { slug: identifier }], isActive: true },
+          select: SELECT
+        });
+        type = record ? 'store' : null;
+
+        if (!record) {
+          record = await prisma.restaurant.findFirst({
+            where: { OR: [{ subdomain: identifier }, { slug: identifier }], isActive: true },
+            select: SELECT
+          });
+          type = record ? 'restaurant' : null;
+        }
+      }
+    }
+
+    if (!record) {
+      // النطاق الرئيسي ليس خطأً: الواجهة تفهم `null` على أنه «هوية المنصّة»
+      res.json({ success: true, data: null });
+      return;
+    }
+
+    res.json({ success: true, data: { ...record, type } });
+  } catch (error) {
+    console.error('خطأ في جلب هوية المضيف:', error);
+    // الفشل لا يمنع تسجيل الدخول — تُعرض هوية المنصّة
+    res.json({ success: true, data: null });
+  }
+};
+
 export const resolveHost = async (req: Request, res: Response): Promise<void> => {
   try {
     const queryHost = typeof req.query.host === 'string' ? req.query.host : '';

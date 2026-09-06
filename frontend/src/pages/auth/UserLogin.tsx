@@ -12,8 +12,10 @@ import {
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import { useSettingsContext } from '@/hooks/SettingsContext';
+import useHostBrand, { HostBrand } from '@/hooks/useHostBrand';
+import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 
-const C = {
+const PLATFORM_C = {
   bg:     '#082E24',
   card:   '#112E23',
   prim:   '#0D4A3A',
@@ -26,6 +28,31 @@ const C = {
   red:    '#FF6B6B',
 };
 
+/**
+ * ألوان التاجر تحلّ محلّ ألوان المنصّة حين تُفتح الصفحة من نطاقه.
+ *
+ * الاسم والشعار وحدهما لا يكفيان: صفحةٌ خضراء بشعار متجر أزرق تبدو صفحة
+ * مقحمة لا امتداداً للمتجر. و`border` يُشتقّ من لون التمييز لأنه ليس عموداً
+ * في قاعدة البيانات.
+ */
+const paletteFor = (brand: HostBrand | null) => {
+  if (!brand) return PLATFORM_C;
+  const accent = brand.accentColor || PLATFORM_C.accent;
+  return {
+    bg: brand.backgroundColor || PLATFORM_C.bg,
+    card: brand.cardColor || PLATFORM_C.card,
+    prim: brand.primaryColor || PLATFORM_C.prim,
+    surf: brand.surfaceColor || PLATFORM_C.surf,
+    accent,
+    acDk: brand.primaryColor || PLATFORM_C.acDk,
+    text: brand.textColor || PLATFORM_C.text,
+    muted: brand.mutedColor || PLATFORM_C.muted,
+    border: `${accent}26`,
+    red: PLATFORM_C.red
+  };
+};
+
+
 const UserLogin: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -37,6 +64,8 @@ const UserLogin: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isMaintenanceMode, platformName } = useSettingsContext();
+  const { brand } = useHostBrand();
+  const C = paletteFor(brand);
 
   useEffect(() => {
     const redirectTo = localStorage.getItem('redirectAfterLogin');
@@ -162,20 +191,48 @@ const UserLogin: React.FC = () => {
       }} />
 
       <div style={{ width: '100%', maxWidth: 420, position: 'relative', zIndex: 1 }}>
-        {/* Logo */}
+        {/* الهوية: هوية التاجر إن فُتحت الصفحة من نطاقه، وإلا هوية المنصّة.
+            الزبون جاء من متجر يثق به؛ رؤية اسم غريب فجأة تجعله يتردّد قبل
+            كتابة رقمه. */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          {brand?.logo ? (
+            <img
+              src={getImageUrl(sizedImage(brand.logo, 'sm'))}
+              alt={brand.name}
+              style={{
+                width: 62,
+                height: 62,
+                borderRadius: 16,
+                objectFit: 'cover',
+                margin: '0 auto 12px',
+                display: 'block',
+                background: C.surf,
+                border: `1px solid ${C.border}`
+              }}
+            />
+          ) : (
+            <div style={{
+              width: 50, height: 50,
+              background: C.accent,
+              borderRadius: 14,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 12px',
+              boxShadow: `0 0 24px rgba(200,226,53,0.35)`,
+            }}>
+              <span style={{ color: C.bg, fontWeight: 900, fontSize: 24, lineHeight: 1 }}>
+                {brand ? brand.name.trim().charAt(0) : 'S'}
+              </span>
+            </div>
+          )}
           <div style={{
-            width: 50, height: 50,
-            background: C.accent,
-            borderRadius: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 12px',
-            boxShadow: `0 0 24px rgba(200,226,53,0.35)`,
+            color: C.text,
+            fontWeight: 800,
+            fontSize: brand ? 19 : 20,
+            letterSpacing: brand ? 0 : 2
           }}>
-            <span style={{ color: C.bg, fontWeight: 900, fontSize: 24, lineHeight: 1 }}>S</span>
+            {brand ? brand.name : (platformName || 'SHAM STORES')}
           </div>
-          <div style={{ color: C.text, fontWeight: 800, fontSize: 20, letterSpacing: 2 }}>SHAM STORES</div>
-          <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>تسجيل الدخول كعميل</div>
+          <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{brand ? `تسجيل الدخول إلى ${brand.name}` : 'تسجيل الدخول كعميل'}</div>
         </div>
 
         {/* Card */}

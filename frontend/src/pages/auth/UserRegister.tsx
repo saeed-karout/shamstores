@@ -4,8 +4,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { IoMail, IoLockClosed, IoPerson, IoCall, IoWarning, IoPersonAdd } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import { useSettingsContext } from '@/hooks/SettingsContext';
+import useHostBrand, { HostBrand } from '@/hooks/useHostBrand';
+import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 
-const C = {
+const PLATFORM_C = {
   bg:     '#082E24',
   card:   '#112E23',
   prim:   '#0D4A3A',
@@ -18,12 +20,32 @@ const C = {
   red:    '#FF6B6B',
 };
 
+/** ألوان التاجر تحلّ محلّ ألوان المنصّة حين تُفتح الصفحة من نطاقه */
+const paletteFor = (brand: HostBrand | null) => {
+  if (!brand) return PLATFORM_C;
+  const accent = brand.accentColor || PLATFORM_C.accent;
+  return {
+    bg: brand.backgroundColor || PLATFORM_C.bg,
+    card: brand.cardColor || PLATFORM_C.card,
+    prim: brand.primaryColor || PLATFORM_C.prim,
+    surf: brand.surfaceColor || PLATFORM_C.surf,
+    accent,
+    acDk: brand.primaryColor || PLATFORM_C.acDk,
+    text: brand.textColor || PLATFORM_C.text,
+    muted: brand.mutedColor || PLATFORM_C.muted,
+    border: `${accent}26`,
+    red: PLATFORM_C.red
+  };
+};
+
 const UserRegister: React.FC = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '', phone: '' });
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
-  const { isMaintenanceMode } = useSettingsContext();
+  const { isMaintenanceMode, platformName } = useSettingsContext();
+  const { brand } = useHostBrand();
+  const C = paletteFor(brand);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -92,13 +114,31 @@ const UserRegister: React.FC = () => {
       </div>
 
       <div style={{ width: '100%', maxWidth: 440, position: 'relative' }}>
-        {/* Logo */}
+        {/* الهوية: هوية التاجر إن فُتحت الصفحة من نطاقه، وإلا هوية المنصّة */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ width: 56, height: 56, background: C.accent, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-            <span style={{ fontSize: 24, fontWeight: 900, color: C.bg }}>S</span>
+          {brand?.logo ? (
+            <img
+              src={getImageUrl(sizedImage(brand.logo, 'sm'))}
+              alt={brand.name}
+              style={{
+                width: 62, height: 62, borderRadius: 16, objectFit: 'cover',
+                margin: '0 auto 12px', display: 'block',
+                background: C.surf, border: `1px solid ${C.border}`
+              }}
+            />
+          ) : (
+            <div style={{ width: 56, height: 56, background: C.accent, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <span style={{ fontSize: 24, fontWeight: 900, color: C.bg }}>
+                {brand ? brand.name.trim().charAt(0) : 'S'}
+              </span>
+            </div>
+          )}
+          <div style={{ color: C.accent, fontWeight: 800, fontSize: brand ? 19 : 20, letterSpacing: brand ? 0 : 1 }}>
+            {brand ? brand.name : (platformName || 'SHAM STORES')}
           </div>
-          <div style={{ color: C.accent, fontWeight: 800, fontSize: 20, letterSpacing: 1 }}>SHAM STORES</div>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>إنشاء حساب عميل جديد</p>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
+            {brand ? `إنشاء حساب في ${brand.name}` : 'إنشاء حساب عميل جديد'}
+          </p>
         </div>
 
         {/* Card */}
