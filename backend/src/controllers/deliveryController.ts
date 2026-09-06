@@ -1026,6 +1026,29 @@ export const getDeliveryOrders = async (
 
 // ==================== طلبات مندوب التوصيل ====================
 
+/**
+ * يسطّح الطلب لتطبيق السائق.
+ *
+ * التطبيق يقرأ `restaurantName` و`restaurantLat` مهما كان مصدر الطلب مطعماً
+ * أو متجراً — لأن السائق لا يفرّق: كلاهما «محلّ يستلم منه». فنملأ الحقول من
+ * أيّهما وُجد بدل أن نطلب من التطبيق أن يعرف الفرق.
+ *
+ * و`orderItems` لا `items`: هو الاسم الذي تقرأه كل واجهات المنصّة.
+ */
+const shapeDriverOrder = (order: any) => {
+  const business = order.restaurant || order.store || null;
+  return {
+    ...order,
+    orderItems: order.items || [],
+    businessType: order.restaurantId ? 'restaurant' : 'store',
+    restaurantName: business?.name ?? null,
+    restaurantAddress: business?.address ?? null,
+    restaurantPhone: business?.phone ?? null,
+    restaurantLat: business?.latitude ?? null,
+    restaurantLng: business?.longitude ?? null
+  };
+};
+
 export const getDriverOrders = async (
   req: AuthRequest,
   res: Response
@@ -1046,10 +1069,23 @@ export const getDriverOrders = async (
         assignedDriverId: driverId,
         status: { in: ['ready', 'delivering'] }
       },
-      orderBy: { estimatedDeliveryTime: 'asc' }
+      orderBy: { estimatedDeliveryTime: 'asc' },
+      // كان الردّ صفوفاً عارية: لا أصناف، ولا اسم المحلّ، ولا إحداثياته.
+      // فيصل السائق إلى شاشة تقول «طلب #123» ولا تقول من أين يستلمه ولا ما
+      // يحمله — وهما أوّل ما يحتاجه قبل أن يتحرّك.
+      include: {
+        items: {
+          include: {
+            menuItem: { select: { name: true } },
+            product: { select: { name: true } }
+          }
+        },
+        restaurant: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } },
+        store: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } }
+      }
     });
 
-    res.json({ success: true, data: orders });
+    res.json({ success: true, data: orders.map(shapeDriverOrder) });
   } catch (error) {
     console.error('Error fetching driver orders:', error);
     res.status(500).json({
@@ -1378,10 +1414,37 @@ export const getDriverEarnings = async (
       ? totalEarnings / totalDeliveries
       : 0;
 
+    // أرقام اليوم مستقلّة عن المدى المطلوب: شاشة السائق تعرض «اليوم» دائماً
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayDeliveries = completedOrders.filter((o) => o.createdAt >= todayStart);
+    const todayEarnings = todayDeliveries.reduce((sum, o) => sum + (o.deliveryFee || 0), 0);
+
+    const [pendingCount, driver] = await Promise.all([
+      prisma.order.count({
+        where: { assignedDriverId: driverId, status: { in: ['ready', 'delivering'] } }
+      }),
+      prisma.user.findUnique({
+        where: { id: driverId },
+        select: { isOnline: true, driverRating: true }
+      })
+    ]);
+
     res.json({
       success: true,
       data: {
         period,
+        // الحقول المسطّحة يقرأها تطبيق السائق مباشرةً. كانت كلّها داخل
+        // `summary` بأسماء أخرى، فتُقرأ أصفاراً — شاشة إحصائيات لا تتحرّك
+        // أبداً تبدو تطبيقاً معطّلاً لا خادماً يردّ بشكل مختلف.
+        todayOrders: todayDeliveries.length,
+        activeOrders: pendingCount,
+        completedOrders: totalDeliveries,
+        todayEarnings,
+        totalEarnings,
+        rating: driver?.driverRating ?? 0,
+        isOnline: driver?.isOnline ?? false,
         summary: {
           totalDeliveries,
           totalEarnings,
@@ -1435,7 +1498,19 @@ export const getDriverOrderHistory = async (
         where,
         orderBy: { createdAt: 'desc' },
         take: Number(limit),
-        skip: offset
+        skip: offset,
+        // نفس تسطيح شاشة الطلبات: سجلٌّ بلا اسم المحلّ ولا الأصناف لا يقول
+        // للسائق ماذا وصّل، وهو كل غرض السجلّ
+        include: {
+          items: {
+            include: {
+              menuItem: { select: { name: true } },
+              product: { select: { name: true } }
+            }
+          },
+          restaurant: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } },
+          store: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } }
+        }
       }),
       prisma.order.count({ where })
     ]);
@@ -1443,7 +1518,7 @@ export const getDriverOrderHistory = async (
     res.json({
       success: true,
       data: {
-        orders,
+        orders: orders.map(shapeDriverOrder),
         pagination: {
           total: count,
           page: Number(page),
