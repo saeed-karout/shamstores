@@ -52,12 +52,25 @@
 اضبطها من لوحة Heroku (Settings ← Config Vars) أو من الطرفية عندك — لا
 تُرسل الرمز في أي محادثة أو ملف داخل المستودع:
 
+أمرٌ لكل متغيّر — والقيمة بين علامتَي تنصيص لأن PowerShell يعامل `<` و`>`
+كمؤثّرَي إعادة توجيه فيفشل الأمر بخطأ `RedirectionNotSupported`:
+
 ```bash
-heroku config:set CLOUDFLARE_API_TOKEN=<الرمز> CLOUDFLARE_ZONE_ID=<معرّف المنطقة> --app <اسم التطبيق>
+heroku config:set --app shamstores CLOUDFLARE_API_TOKEN="ضع_الرمز_هنا"
 ```
 
-`CLOUDFLARE_ZONE_ID` يظهر في لوحة Cloudflare أسفل يمين صفحة نظرة عامة على
-النطاق.
+```bash
+heroku config:set --app shamstores CLOUDFLARE_ZONE_ID="ضع_معرف_المنطقة_هنا"
+```
+
+`CLOUDFLARE_ZONE_ID` يظهر في لوحة Cloudflare: النطاق ← **Overview** ← أسفل
+العمود الأيمن تحت **API** (٣٢ حرفاً وأرقاماً).
+
+للتأكّد:
+
+```bash
+heroku config --app shamstores | Select-String CLOUDFLARE
+```
 
 `CLOUDFLARE_FALLBACK_ORIGIN` اختياري — بغيابه تُستعمل
 `fallback-origin.${APP_DOMAIN}`.
