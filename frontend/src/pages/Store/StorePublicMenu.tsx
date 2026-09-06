@@ -66,6 +66,7 @@ import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { calculateDistance } from '@/utils/distance';
 import { resolveBadges } from '@/utils/catalogBadges';
 import type { CartItem } from '@/services/types';
+import { useSocket } from '@/hooks/useSocket';
 
 // ==================== الأنواع ====================
 
@@ -573,9 +574,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     }
   };
 
-  const fetchMyOrders = async () => {
+  const fetchMyOrders = useCallback(async (silent = false) => {
     if (!isAuthenticated) return;
-    setLoadingOrders(true);
+    if (!silent) setLoadingOrders(true);
     try {
       const response: any = await api.get('/orders/my-orders');
       const orders = response?.data || response || [];
@@ -583,9 +584,41 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     } catch {
       /* غير حرج */
     } finally {
-      setLoadingOrders(false);
+      if (!silent) setLoadingOrders(false);
     }
-  };
+  }, [isAuthenticated]);
+
+  /**
+   * تحديث الطلب لحظياً.
+   *
+   * الخادم يبثّ `order:updated` إلى غرفة صاحب الطلب — وكان لا أحد يسمعه على
+   * الواجهة. فيجهّز التاجر الطلب ويخرج به السائق، والزبون ينظر إلى «قيد
+   * الانتظار» لأنه لم يحدّث الصفحة، فيتّصل بالمتجر ليسأل. وهو بالضبط ما
+   * تُفترض شاشة التتبّع أن تمنعه.
+   *
+   * والبطاقة المفتوحة تُحدَّث معها: تركُها على حالتها القديمة أسوأ من عدم
+   * التحديث، لأن الزبون يراها مفتوحةً أمامه فيصدّقها.
+   */
+  useSocket({
+    token: localStorage.getItem('token'),
+    enabled: isAuthenticated,
+    onOrderUpdated: (event) => {
+      const incoming = event?.order;
+      if (!incoming?.id) return;
+
+      setMyOrders((prev) =>
+        prev.some((o) => o.id === incoming.id)
+          ? prev.map((o) => (o.id === incoming.id ? { ...o, ...incoming } : o))
+          : prev
+      );
+      setTrackingOrder((prev: any) =>
+        prev && prev.id === incoming.id ? { ...prev, ...incoming } : prev
+      );
+
+      // ثم نُعيد الجلب بهدوء: حدث السوكِت يحمل رؤوس الطلب لا أصنافه
+      fetchMyOrders(true);
+    }
+  });
 
   // ---------- شاشات الحالة ----------
   if (loading) return <StorefrontSkeleton />;

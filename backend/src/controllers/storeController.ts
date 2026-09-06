@@ -4,6 +4,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import { UserService } from '../services/user.service';
 import prisma from '../services/prisma';
+import { emitOrderRealtimeEvent } from '../realtime/socket';
 import { buildImageUpdate, getPublicImages } from '../services/media.service';
 import { validatePaymentSettings } from '../services/payment.service';
 import { validateLanguageUpdate } from '../services/language.service';
@@ -1181,10 +1182,44 @@ export const updateStoreOrderStatus = async (req: AuthRequest, res: Response): P
       return;
     }
 
+    const previousStatus = order.status;
+
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: { status }
     });
+
+    // **البثّ اللحظي.**
+    //
+    // لم يكن في هذا الملفّ بثٌّ واحد. فيغيّر تاجر المتجر حالة الطلب ولا يعلم
+    // بها أحد: الزبون ينظر إلى «قيد الانتظار» بينما خرج طلبه فيتّصل ليسأل،
+    // والسائق لا يعرف أن الطلب صار جاهزاً للاستلام، ولوحة التاجر نفسها على
+    // جهاز آخر تبقى على القديم. والخادم يملك القناة ويستعملها في مسار
+    // المطاعم — وهذا الملفّ وحده كان صامتاً.
+    try {
+      emitOrderRealtimeEvent({
+        event: 'order.status.updated',
+        title: 'تحديث حالة الطلب',
+        message: `الطلب ${updatedOrder.orderNumber}: ${status}`,
+        actorId: req.user?.id || null,
+        order: {
+          id: updatedOrder.id,
+          orderNumber: updatedOrder.orderNumber,
+          status: updatedOrder.status,
+          isPaid: Boolean(updatedOrder.isPaid),
+          total: Number(updatedOrder.total),
+          orderType: updatedOrder.orderType,
+          restaurantId: updatedOrder.restaurantId,
+          storeId: updatedOrder.storeId,
+          createdBy: updatedOrder.createdBy,
+          assignedDriverId: updatedOrder.assignedDriverId
+        },
+        extraData: { previousStatus }
+      });
+    } catch (err) {
+      // البثّ ليس شرطاً لنجاح التحديث — الحالة حُفظت فعلاً
+      console.error('تعذّر بثّ تحديث حالة الطلب:', err);
+    }
     res.json({ success: true, data: updatedOrder });
   } catch (error) {
     console.error('Error updating order status:', error);

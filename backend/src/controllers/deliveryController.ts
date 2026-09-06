@@ -1074,7 +1074,11 @@ const shapeDriverOrder = (order: any) => {
     restaurantAddress: business?.address ?? null,
     restaurantPhone: business?.phone ?? null,
     restaurantLat: business?.latitude ?? null,
-    restaurantLng: business?.longitude ?? null
+    restaurantLng: business?.longitude ?? null,
+    // صورة صاحب الطلب: وجهٌ يبحث عنه السائق عند الباب. تُقرأ من الحساب الذي
+    // أنشأ الطلب — والطلبات كضيف بلا حساب، فتبقى فارغة والتطبيق يرسم الحرف
+    // الأول بدلها.
+    customerAvatar: order.creator?.avatarUrl ?? null
   };
 };
 
@@ -1135,7 +1139,8 @@ export const getDriverOrders = async (
           }
         },
         restaurant: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } },
-        store: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } }
+        store: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } },
+        creator: { select: { name: true, avatarUrl: true, phone: true } }
       }
     });
 
@@ -1570,7 +1575,8 @@ export const getDriverOrderHistory = async (
             }
           },
           restaurant: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } },
-          store: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } }
+          store: { select: { name: true, address: true, phone: true, latitude: true, longitude: true } },
+          creator: { select: { name: true, avatarUrl: true, phone: true } }
         }
       }),
       prisma.order.count({ where })

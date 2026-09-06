@@ -42,6 +42,7 @@ import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import type { CartItem } from '@/services/types';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
+import { useSocket } from '@/hooks/useSocket';
 
 // ==================== الأنواع ====================
 
@@ -408,9 +409,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     }
   };
 
-  const fetchMyOrders = async () => {
+  const fetchMyOrders = useCallback(async (silent = false) => {
     if (!isAuthenticated) return;
-    setLoadingOrders(true);
+    if (!silent) setLoadingOrders(true);
     try {
       const response: any = await api.get('/orders/my-orders');
       const orders = response?.data || response || [];
@@ -418,9 +419,33 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     } catch {
       /* غير حرج */
     } finally {
-      setLoadingOrders(false);
+      if (!silent) setLoadingOrders(false);
     }
-  };
+  }, [isAuthenticated]);
+
+  /**
+   * تحديث الطلب لحظياً — الخادم يبثّ `order:updated` إلى غرفة صاحب الطلب،
+   * وكان لا أحد يسمعه هنا. فيبقى الزبون على «قيد الانتظار» بينما خرج طلبه.
+   */
+  useSocket({
+    token: localStorage.getItem('token'),
+    enabled: isAuthenticated,
+    onOrderUpdated: (event) => {
+      const incoming = event?.order;
+      if (!incoming?.id) return;
+
+      setMyOrders((prev) =>
+        prev.some((o) => o.id === incoming.id)
+          ? prev.map((o) => (o.id === incoming.id ? { ...o, ...incoming } : o))
+          : prev
+      );
+      setTrackingOrder((prev: any) =>
+        prev && prev.id === incoming.id ? { ...prev, ...incoming } : prev
+      );
+
+      fetchMyOrders(true);
+    }
+  });
 
   // ---------- شاشات الحالة ----------
   if (loading) return <StorefrontSkeleton />;
