@@ -254,6 +254,10 @@ model Restaurant {
   /// اللغات المفعّلة في واجهة الزبون، مثل ["ar"] أو ["ar","en"].
   /// العربية وحدها متاحة بلا ميزة multi_language — راجع services/language.service.ts
   enabledLanguages             Json?
+  /// عملات العرض المفعّلة، مثل ["SYP"] أو ["SYP","USD"].
+  /// الأسعار تُخزَّن بالليرة دائماً؛ هذه عملات **عرض** لا تخزين، والدولار
+  /// منها يتطلّب سعر صرف مضبوطاً من السوبر أدمن — راجع services/currency.service.ts
+  enabledCurrencies            Json?
   subscriptionStart            DateTime?
   subscriptionEnd              DateTime?
   createdAt                    DateTime  @default(now())
@@ -320,6 +324,10 @@ model Store {
   notificationSettings Json?
   /// اللغات المفعّلة في واجهة الزبون — نفس قواعد المطعم
   enabledLanguages     Json?
+  /// عملات العرض المفعّلة، مثل ["SYP"] أو ["SYP","USD"].
+  /// الأسعار تُخزَّن بالليرة دائماً؛ هذه عملات **عرض** لا تخزين، والدولار
+  /// منها يتطلّب سعر صرف مضبوطاً من السوبر أدمن — راجع services/currency.service.ts
+  enabledCurrencies    Json?
 
   subdomain                    String    @unique
   customDomain                 String?   @unique

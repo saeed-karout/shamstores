@@ -15,6 +15,7 @@ import { IoHeart, IoHeartOutline, IoAddOutline, IoImageOutline } from 'react-ico
 import { sf } from '@/utils/storefrontTheme';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { formatPrice } from '@/utils/currency';
+import type { CurrencyInput } from '@/utils/currency';
 import { getVisualBadges } from '@/utils/catalogBadges';
 import QuantityStepper from './QuantityStepper';
 
@@ -36,7 +37,7 @@ export interface StorefrontProduct {
 
 interface Props {
   product: StorefrontProduct;
-  currency?: string;
+  currency?: CurrencyInput;
   quantityInCart?: number;
   onAdd: (product: StorefrontProduct) => void;
   onQuantityChange: (product: StorefrontProduct, next: number) => void;

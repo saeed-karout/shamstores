@@ -38,7 +38,9 @@ import { useFavorites } from '@/hooks/useFavorites';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
-import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { formatPrice } from '@/utils/currency';
+import useDisplayCurrency from '@/hooks/useDisplayCurrency';
+import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
 import type { CartItem } from '@/services/types';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
@@ -133,7 +135,18 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const currentSlug = propBusinessSlug || urlSlug || getCurrentSubdomain();
   const [identifier, setIdentifier] = useState<string | null | undefined>(currentSlug);
 
-  const currency = restaurant?.currency || DEFAULT_CURRENCY;
+  // عملة العرض: اختيار الزائر إن بدّل، وإلا افتراضيّ التاجر. الكائن يحمل
+  // سعر الصرف معه، فيحوّل `formatPrice` بدل أن يبدّل الرمز وحده.
+  const {
+    currency,
+    code: currencyCode,
+    setCode: setCurrencyCode,
+    options: currencyOptions,
+  } = useDisplayCurrency(
+    (restaurant as any)?.currencySettings,
+    (restaurant as any)?.id,
+    (restaurant as any)?.currency
+  );
 
   // ---------- تحميل البيانات ----------
   useEffect(() => {
@@ -481,6 +494,13 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   // ---------- إجراءات الرأس المصغّر ----------
   const headerActions = (
     <>
+      {/* العملة أوّلاً: قرارٌ يسبق البحث والترتيب — الزبون يريد أن يقرأ
+          السعر بعملته قبل أن يبحث فيه */}
+      <CurrencySwitcher
+        options={currencyOptions}
+        code={currencyCode}
+        onChange={setCurrencyCode}
+      />
       <button
         type="button"
         onClick={() => setSearchOpen(true)}

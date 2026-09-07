@@ -7,6 +7,7 @@ import BottomSheet from './BottomSheet';
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
+import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import type { StorefrontMenuItem } from './MenuItemListCard';
 
@@ -22,7 +23,7 @@ export interface SelectedOptions {
 export interface ItemOptionsSheetProps {
   item: StorefrontMenuItem | null;
   open: boolean;
-  currency?: string;
+  currency?: CurrencyInput;
   onClose: () => void;
   onConfirm: (item: StorefrontMenuItem, options: SelectedOptions) => void;
 }

@@ -12,6 +12,7 @@ import {
 } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
+import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import QuantityStepper from './QuantityStepper';
 
@@ -36,7 +37,7 @@ export interface StorefrontMenuItem {
 
 export interface MenuItemListCardProps {
   item: StorefrontMenuItem;
-  currency?: string;
+  currency?: CurrencyInput;
   /** الكمية الحالية في السلة (0 = غير مضاف) */
   quantityInCart?: number;
   onAdd: (item: StorefrontMenuItem) => void;

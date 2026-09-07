@@ -114,6 +114,155 @@ export const getCurrencyContext = async (displayCurrency?: string | null) => {
   };
 };
 
+/**
+ * إعدادات عرض العملة لواجهة زبون نشاطٍ بعينه.
+ *
+ * التاجر يختار **ما يُعرض** لا ما يُخزَّن: قد يعرض بالليرة وحدها، أو
+ * بالدولار وحده، أو بالاثنين ويترك الزبون يبدّل. والأخير هو الحاجة الفعلية
+ * في سوقٍ يتعامل الناس فيه بالعملتين معاً.
+ */
+export interface CurrencySettings {
+  /** عملة التخزين — ثابتة، وتُعرض للتاجر ليعرف أن التبديل عرضٌ لا إعادة تسعير */
+  baseCurrency: string;
+  /** ما يراه الزائر قبل أن يبدّل */
+  defaultCurrency: string;
+  /** ما يمكنه التبديل بينه */
+  enabledCurrencies: string[];
+  /** كم ليرة للدولار — الواجهة تحوّل به بدل نداء لكل سعر */
+  usdRate: number | null;
+  /** هل يُعرض زرّ التبديل أصلاً؟ عملةٌ واحدة لا تحتاج زرّاً */
+  canSwitch: boolean;
+  /**
+   * صحيحٌ حين اختار التاجر الدولار وسعر الصرف غير مضبوط.
+   *
+   * الواجهة عندها تعرض بالليرة: رقمٌ دولاري بلا سعر صرف ليس تقريباً بل
+   * خطأ بمئات الأضعاف.
+   */
+  usdUnavailable: boolean;
+}
+
+/** يقرأ قائمة العملات المخزّنة (Json حر) ويُرجع رموزاً مدعومة بلا تكرار */
+const parseStoredCurrencies = (raw: unknown): string[] => {
+  let value = raw;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(value)) return [];
+
+  const codes = value
+    .filter(isDisplayCurrency)
+    .map((code) => String(code).toUpperCase());
+
+  return Array.from(new Set(codes));
+};
+
+/**
+ * الإعدادات الفعلية المطبَّقة على واجهة الزبون.
+ *
+ * تُشتق من المخزَّن مقيّداً بالواقع: النشاط الذي فعّل الدولار ثم أُلغي سعر
+ * الصرف يعود تلقائياً إلى الليرة — بدل أن تبقى واجهته تعرض أرقاماً خاطئة.
+ */
+export const resolveCurrencySettings = async (business: {
+  currency?: string | null;
+  enabledCurrencies?: unknown;
+}): Promise<CurrencySettings> => {
+  const usdRate = await getUsdRate();
+
+  const stored = parseStoredCurrencies(business.enabledCurrencies);
+  // النشاط الذي لم يختر بعد: عملته المفردة القديمة هي إعداده الفعلي
+  const fallback = isDisplayCurrency(business.currency)
+    ? [String(business.currency).toUpperCase()]
+    : [BASE_CURRENCY];
+
+  const requested = stored.length > 0 ? stored : fallback;
+
+  // بلا سعر صرف يسقط الدولار من القائمة كلها — لا يُعرض ولا يُبدَّل إليه
+  const enabledCurrencies = usdRate
+    ? requested
+    : requested.filter((code) => code !== 'USD');
+
+  const effective = enabledCurrencies.length > 0 ? enabledCurrencies : [BASE_CURRENCY];
+
+  const storedDefault = isDisplayCurrency(business.currency)
+    ? String(business.currency).toUpperCase()
+    : null;
+
+  const defaultCurrency =
+    storedDefault && effective.includes(storedDefault) ? storedDefault : effective[0];
+
+  return {
+    baseCurrency: BASE_CURRENCY,
+    defaultCurrency,
+    enabledCurrencies: effective,
+    usdRate,
+    canSwitch: effective.length > 1,
+    usdUnavailable: requested.includes('USD') && !usdRate
+  };
+};
+
+export interface CurrencyUpdateInput {
+  defaultCurrency?: unknown;
+  enabledCurrencies?: unknown;
+}
+
+/**
+ * ملاحظة: حقول اختيارية لا اتحاد مميَّز — نفس سبب `RateUpdateResult` أعلاه.
+ */
+export interface CurrencyUpdateResult {
+  ok: boolean;
+  defaultCurrency?: string;
+  enabledCurrencies?: string[];
+  error?: string;
+  /** الرفض لغياب سعر الصرف لا لخطأ التاجر — تعرض الواجهة رسالة مختلفة */
+  needsExchangeRate?: boolean;
+}
+
+/** يتحقق من تعديل التاجر قبل حفظه. يُرجع رسالة عربية جاهزة للعرض. */
+export const validateCurrencyUpdate = async (
+  input: CurrencyUpdateInput
+): Promise<CurrencyUpdateResult> => {
+  const requested =
+    input.enabledCurrencies === undefined ? null : parseStoredCurrencies(input.enabledCurrencies);
+
+  if (requested !== null && requested.length === 0) {
+    return { ok: false, error: 'يجب تفعيل عملة عرض واحدة على الأقل.' };
+  }
+
+  const enabledCurrencies = requested ?? [BASE_CURRENCY];
+
+  const rawDefault = input.defaultCurrency;
+  if (rawDefault !== undefined && !isDisplayCurrency(rawDefault)) {
+    return { ok: false, error: 'عملة العرض غير مدعومة. المتاح: الليرة السورية أو الدولار.' };
+  }
+
+  const defaultCurrency = isDisplayCurrency(rawDefault)
+    ? String(rawDefault).toUpperCase()
+    : enabledCurrencies[0];
+
+  if (!enabledCurrencies.includes(defaultCurrency)) {
+    return { ok: false, error: 'العملة الافتراضية يجب أن تكون ضمن العملات المفعّلة.' };
+  }
+
+  // الدولار بلا سعر صرف يُرفض عند الحفظ لا عند العرض: التاجر يستحقّ أن
+  // يعرف السبب الآن، لا أن يحفظ ويجد واجهته بالليرة بلا تفسير
+  if (enabledCurrencies.includes('USD')) {
+    const usdRate = await getUsdRate();
+    if (!usdRate) {
+      return {
+        ok: false,
+        error: 'لم يُضبط سعر صرف الدولار على المنصّة بعد. تواصل مع الإدارة لتفعيل العرض بالدولار.',
+        needsExchangeRate: true
+      };
+    }
+  }
+
+  return { ok: true, defaultCurrency, enabledCurrencies };
+};
+
 export default {
   BASE_CURRENCY,
   DISPLAY_CURRENCIES,
@@ -125,5 +274,7 @@ export default {
   validateUsdRate,
   setUsdRate,
   convertFromBase,
-  getCurrencyContext
+  getCurrencyContext,
+  resolveCurrencySettings,
+  validateCurrencyUpdate
 };

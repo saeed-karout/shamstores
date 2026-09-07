@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
+import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
 import {
   IoRestaurant,
   IoColorPalette,
@@ -169,6 +170,9 @@ export const SettingsPage: React.FC = () => {
     tiktok: '',
     latitude: '',
     longitude: '',
+    // عملات العرض — عرضٌ لا تسعير: الأسعار محفوظة بالليرة دائماً
+    enabledCurrencies: ['SYP'] as string[],
+    currency: 'SYP',
   });
 
   // ✅ جميع ألوان المطعم
@@ -212,6 +216,15 @@ export const SettingsPage: React.FC = () => {
         tiktok: restaurant.tiktok || '',
         latitude: restaurant.latitude?.toString() || '',
         longitude: restaurant.longitude?.toString() || '',
+        // النشاط الذي لم يختر بعد: عملته المفردة القديمة هي إعداده الفعلي
+        enabledCurrencies:
+          (restaurant as any).currencySettings?.enabledCurrencies?.length
+            ? (restaurant as any).currencySettings.enabledCurrencies
+            : [(restaurant as any).currency || 'SYP'],
+        currency:
+          (restaurant as any).currencySettings?.defaultCurrency ||
+          (restaurant as any).currency ||
+          'SYP',
       });
 
       // ✅ تحميل جميع ألوان المطعم
@@ -649,6 +662,20 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
             <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>يمكنك الحصول على الإحداثيات من خرائط جوجل</p>
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <CurrencyDisplaySettings
+              settings={(restaurant as any)?.currencySettings}
+              enabledCurrencies={generalForm.enabledCurrencies}
+              defaultCurrency={generalForm.currency}
+              onChange={(next) => setGeneralForm({
+                ...generalForm,
+                enabledCurrencies: next.enabledCurrencies,
+                currency: next.defaultCurrency,
+              })}
+              colors={C}
+            />
           </div>
 
           <button style={saveBtn} onClick={handleSaveGeneral}>

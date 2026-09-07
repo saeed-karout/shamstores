@@ -6,11 +6,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { IoBagHandleOutline, IoChevronBack } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
+import type { CurrencyInput } from '@/utils/currency';
 
 export interface BottomCartBarProps {
   itemCount: number;
   total: number;
-  currency?: string;
+  currency?: CurrencyInput;
   onOpen: () => void;
   label?: string;
   /** إخفاء الشريط مؤقتاً (مثلاً عند فتح لوح سفلي) */

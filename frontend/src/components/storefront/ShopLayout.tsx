@@ -72,6 +72,14 @@ export interface ShopLayoutProps {
   onAccountClick?: () => void;
   accountLabel?: string;
 
+  /**
+   * عنصر يُعرض في الرأس قبل أيقونات الحساب — مبدّل العملة اليوم.
+   *
+   * منفذٌ لا خاصّية مخصّصة: الرأس ملك الصفحة، وحقنُ كل إضافة جديدة كخاصّية
+   * مستقلّة يجعل توقيع المكوّن يتضخّم بلا داعٍ.
+   */
+  headerExtra?: React.ReactNode;
+
   /** البحث: نص الحقل يُدار من الصفحة كي يبقى مصدر واحد للحقيقة */
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -99,6 +107,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
   onFavoritesClick,
   onAccountClick,
   accountLabel = 'حسابي',
+  headerExtra,
   searchValue = '',
   onSearchChange,
   onSearchOpen,
@@ -256,6 +265,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
 
           {/* الحساب · المفضلة · السلة */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+            {headerExtra}
             <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
             <IconAction
               icon={<IoHeartOutline size={19} />}

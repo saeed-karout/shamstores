@@ -9,6 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import Loader from '@/components/common/Loader';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
+import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
 import {
   IoStorefront,
   IoColorPalette,
@@ -162,6 +163,9 @@ const StoreSettingsPage: React.FC = () => {
     tiktok: '',
     latitude: '',
     longitude: '',
+    // عملات العرض — عرضٌ لا تسعير: الأسعار محفوظة بالليرة دائماً
+    enabledCurrencies: ['SYP'] as string[],
+    currency: 'SYP',
   });
 
   // ✅ بيانات التصميم - جميع الألوان
@@ -219,6 +223,12 @@ const StoreSettingsPage: React.FC = () => {
         tiktok: store.tiktok || '',
         latitude: store.latitude?.toString() || '',
         longitude: store.longitude?.toString() || '',
+        // النشاط الذي لم يختر بعد: عملته المفردة القديمة هي إعداده الفعلي
+        enabledCurrencies:
+          (store as any).currencySettings?.enabledCurrencies?.length
+            ? (store as any).currencySettings.enabledCurrencies
+            : [(store as any).currency || 'SYP'],
+        currency: (store as any).currencySettings?.defaultCurrency || (store as any).currency || 'SYP',
       });
 
       setDesignForm({
@@ -717,6 +727,21 @@ const StoreSettingsPage: React.FC = () => {
               </div>
             </div>
             <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>يمكنك الحصول على الإحداثيات من خرائط جوجل</p>
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <CurrencyDisplaySettings
+              settings={(store as any)?.currencySettings}
+              enabledCurrencies={generalForm.enabledCurrencies}
+              defaultCurrency={generalForm.currency}
+              onChange={(next) => setGeneralForm({
+                ...generalForm,
+                enabledCurrencies: next.enabledCurrencies,
+                currency: next.defaultCurrency,
+              })}
+              colors={{ ...C, warn: C.orange }}
+              disabled={!canUpdateSettings}
+            />
           </div>
 
           <button style={saveBtn} onClick={handleSaveGeneral} disabled={!canUpdateSettings}>

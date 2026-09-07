@@ -9,7 +9,7 @@ import { notifyDriversOfOrder } from '../services/driverPush.service';
 import { buildImageUpdate, getPublicImages } from '../services/media.service';
 import { validatePaymentSettings } from '../services/payment.service';
 import { validateLanguageUpdate } from '../services/language.service';
-import { isDisplayCurrency } from '../services/currency.service';
+import { validateCurrencyUpdate, resolveCurrencySettings } from '../services/currency.service';
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
 import slugify from '../utils/slugify';
@@ -503,6 +503,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
       deliverySettings, paymentSettings, notificationSettings, enabledLanguages,
+      enabledCurrencies,
       isActive 
     } = req.body;
     
@@ -534,12 +535,29 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (longitude !== undefined) updateData.longitude = longitude ? parseFloat(longitude) : null;
     if (timezone !== undefined) updateData.timezone = timezone;
     // الأسعار تُخزَّن بالليرة؛ هذا الحقل عملة **العرض** لا التخزين.
-    if (currency !== undefined) {
-      if (!isDisplayCurrency(currency)) {
-        res.status(400).json({ success: false, error: 'عملة العرض غير مدعومة. المتاح: الليرة السورية أو الدولار.' });
+    //
+    // التاجر يختار ما يُعرض: الليرة وحدها، أو الدولار وحده، أو الاثنين
+    // ويترك الزبون يبدّل — وهي الحاجة الفعلية في سوقٍ يتعامل الناس فيه
+    // بالعملتين معاً.
+    if (currency !== undefined || enabledCurrencies !== undefined) {
+      const currentCurrencies = await prisma.store.findUnique({
+        where: { id: storeId },
+        select: { enabledCurrencies: true }
+      });
+      const currencyResult = await validateCurrencyUpdate({
+        defaultCurrency: currency,
+        enabledCurrencies: enabledCurrencies ?? currentCurrencies?.enabledCurrencies
+      });
+      if (!currencyResult.ok) {
+        res.status(400).json({
+          success: false,
+          error: currencyResult.error,
+          needsExchangeRate: currencyResult.needsExchangeRate === true
+        });
         return;
       }
-      updateData.currency = String(currency).toUpperCase();
+      updateData.currency = currencyResult.defaultCurrency;
+      updateData.enabledCurrencies = currencyResult.enabledCurrencies;
     }
     if (language !== undefined || enabledLanguages !== undefined) {
       const existingStore = await prisma.store.findUnique({
@@ -1278,7 +1296,15 @@ export const getStoreSettings = async (req: AuthRequest, res: Response): Promise
       return;
     }
     const store = await prisma.store.findUnique({ where: { id: storeId } });
-    res.json({ success: true, data: store });
+    res.json({
+      success: true,
+      data: store && {
+        ...store,
+        // سعر الصرف عام للمنصّة ولا يملكه التاجر — بدونه لا تعرف صفحة
+        // الإعدادات لماذا الدولار غير متاح، فتعرض خياراً يفشل عند الحفظ
+        currencySettings: await resolveCurrencySettings(store)
+      }
+    });
   } catch (error) {
     console.error('Error getting store settings:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب الإعدادات' });
@@ -1327,7 +1353,7 @@ export const updateGeneralSettings = async (req: AuthRequest, res: Response): Pr
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
     }
-    const { name, email, phone, address, description, timezone, currency, language, enabledLanguages } = req.body;
+    const { name, email, phone, address, description, timezone, currency, enabledCurrencies, language, enabledLanguages } = req.body;
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
@@ -1336,12 +1362,29 @@ export const updateGeneralSettings = async (req: AuthRequest, res: Response): Pr
     if (description !== undefined) updateData.description = description;
     if (timezone !== undefined) updateData.timezone = timezone;
     // الأسعار تُخزَّن بالليرة؛ هذا الحقل عملة **العرض** لا التخزين.
-    if (currency !== undefined) {
-      if (!isDisplayCurrency(currency)) {
-        res.status(400).json({ success: false, error: 'عملة العرض غير مدعومة. المتاح: الليرة السورية أو الدولار.' });
+    //
+    // التاجر يختار ما يُعرض: الليرة وحدها، أو الدولار وحده، أو الاثنين
+    // ويترك الزبون يبدّل — وهي الحاجة الفعلية في سوقٍ يتعامل الناس فيه
+    // بالعملتين معاً.
+    if (currency !== undefined || enabledCurrencies !== undefined) {
+      const currentCurrencies = await prisma.store.findUnique({
+        where: { id: storeId },
+        select: { enabledCurrencies: true }
+      });
+      const currencyResult = await validateCurrencyUpdate({
+        defaultCurrency: currency,
+        enabledCurrencies: enabledCurrencies ?? currentCurrencies?.enabledCurrencies
+      });
+      if (!currencyResult.ok) {
+        res.status(400).json({
+          success: false,
+          error: currencyResult.error,
+          needsExchangeRate: currencyResult.needsExchangeRate === true
+        });
         return;
       }
-      updateData.currency = String(currency).toUpperCase();
+      updateData.currency = currencyResult.defaultCurrency;
+      updateData.enabledCurrencies = currencyResult.enabledCurrencies;
     }
     if (language !== undefined || enabledLanguages !== undefined) {
       const existingStore = await prisma.store.findUnique({

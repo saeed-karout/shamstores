@@ -16,6 +16,7 @@ import LocationPickerMap, { PickedLocation } from './LocationPickerMap';
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
+import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import type { CartItem } from '@/services/types';
 
@@ -25,7 +26,7 @@ export interface CartSheetProps {
   open: boolean;
   onClose: () => void;
   items: CartItem[];
-  currency?: string;
+  currency?: CurrencyInput;
 
   onQuantityChange: (item: CartItem, next: number) => void;
   onRemove: (item: CartItem) => void;

@@ -14,6 +14,7 @@ import BottomSheet from './BottomSheet';
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
+import type { CurrencyInput } from '@/utils/currency';
 
 export interface OptionValue {
   label: string;
@@ -43,7 +44,7 @@ interface Props {
   name: string;
   basePrice: number;
   options: OptionGroup[];
-  currency?: string;
+  currency?: CurrencyInput;
   submitting?: boolean;
   onClose: () => void;
   onConfirm: (result: OptionsResult) => void;

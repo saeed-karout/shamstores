@@ -7,7 +7,7 @@ import { buildBranchSummary, getLinkedBranches } from '../services/businessBranc
 import { getPublicPaymentOptions } from '../services/payment.service';
 import { getPublicImages } from '../services/media.service';
 import { resolveLanguageSettings } from '../services/language.service';
-import { getCurrencyContext } from '../services/currency.service';
+import { getCurrencyContext, resolveCurrencySettings } from '../services/currency.service';
 import { shouldShowPlatformBadge } from '../services/branding.service';
 import { parseOptions } from '../services/productOptions.service';
 import {
@@ -117,6 +117,9 @@ export const getBusinessBySlug = async (
           paymentOptions: getPublicPaymentOptions(restaurant.paymentSettings),
           languageSettings: await resolveLanguageSettings(restaurant, 'restaurant'),
           currencyContext: await getCurrencyContext(restaurant.currency),
+          // عملات العرض المفعّلة وسعر الصرف — بها تبدّل الواجهة بلا نداء
+          // لكل سعر، وبها تعرف هل تُظهر زرّ التبديل أصلاً
+          currencySettings: await resolveCurrencySettings(restaurant),
           isActive: restaurant.isActive,
           createdAt: restaurant.createdAt,
           updatedAt: restaurant.updatedAt,
@@ -203,6 +206,7 @@ export const getBusinessBySlug = async (
           language: store.language,
           languageSettings: await resolveLanguageSettings(store, 'store'),
           currencyContext: await getCurrencyContext(store.currency),
+          currencySettings: await resolveCurrencySettings(store),
           isActive: store.isActive,
           createdAt: store.createdAt,
           updatedAt: store.updatedAt,
@@ -414,7 +418,8 @@ export const getProductById = async (
           inStock: product.isAvailable && product.stock > 0,
           category: category?.name || null,
           currency: store.currency,
-          currencyContext: await getCurrencyContext(store.currency)
+          currencyContext: await getCurrencyContext(store.currency),
+          currencySettings: await resolveCurrencySettings(store)
         }
       }
     });

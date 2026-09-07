@@ -62,7 +62,9 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useTheme } from '@/context/ThemeContext';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
-import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { formatPrice } from '@/utils/currency';
+import useDisplayCurrency from '@/hooks/useDisplayCurrency';
+import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
 import { calculateDistance } from '@/utils/distance';
 import { resolveBadges } from '@/utils/catalogBadges';
 import type { CartItem } from '@/services/types';
@@ -171,7 +173,18 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     urlSlug ? `/${urlSlug}/product/${productId}` : `/product/${productId}`;
   const [identifier, setIdentifier] = useState<string | null | undefined>(currentSlug);
 
-  const currency = store?.currency || DEFAULT_CURRENCY;
+  // عملة العرض: اختيار الزائر إن بدّل، وإلا افتراضيّ التاجر. الكائن يحمل
+  // سعر الصرف معه، فيحوّل `formatPrice` بدل أن يبدّل الرمز وحده.
+  const {
+    currency,
+    code: currencyCode,
+    setCode: setCurrencyCode,
+    options: currencyOptions,
+  } = useDisplayCurrency(
+    (store as any)?.currencySettings,
+    (store as any)?.id,
+    (store as any)?.currency
+  );
 
   // ---------- تحميل البيانات ----------
   useEffect(() => {
@@ -680,6 +693,13 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         favoritesCount={favoriteProducts.length}
         onFavoritesClick={() => setFavoritesOpen(true)}
         onAccountClick={() => setAccountOpen(true)}
+        headerExtra={
+          <CurrencySwitcher
+            options={currencyOptions}
+            code={currencyCode}
+            onChange={setCurrencyCode}
+          />
+        }
         accountLabel={isAuthenticated ? user?.name?.split(' ')[0] || 'حسابي' : 'دخول'}
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}

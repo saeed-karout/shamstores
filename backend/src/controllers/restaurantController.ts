@@ -4,7 +4,7 @@ import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { validatePaymentSettings } from '../services/payment.service';
 import { validateLanguageUpdate } from '../services/language.service';
-import { isDisplayCurrency } from '../services/currency.service';
+import { validateCurrencyUpdate, resolveCurrencySettings } from '../services/currency.service';
 import fs from 'fs';
 import path from 'path';
 import slugify from '../utils/slugify';
@@ -207,7 +207,15 @@ export const getProfile = async (
 
     res.json({
       success: true,
-      data: { ...restaurant, plan, linkedBranches, ...buildBranchSummary(restaurant) }
+      data: {
+        ...restaurant,
+        plan,
+        linkedBranches,
+        // سعر الصرف عام للمنصّة ولا يملكه التاجر — بدونه لا تعرف صفحة
+        // الإعدادات لماذا الدولار غير متاح، فتعرض خياراً يفشل عند الحفظ
+        currencySettings: await resolveCurrencySettings(restaurant),
+        ...buildBranchSummary(restaurant)
+      }
     });
   } catch (error) {
     console.error('خطأ في جلب بيانات المطعم:', error);
@@ -253,7 +261,15 @@ export const getRestaurantById = async (
 
     res.json({
       success: true,
-      data: { ...restaurant, plan, linkedBranches, ...buildBranchSummary(restaurant) }
+      data: {
+        ...restaurant,
+        plan,
+        linkedBranches,
+        // سعر الصرف عام للمنصّة ولا يملكه التاجر — بدونه لا تعرف صفحة
+        // الإعدادات لماذا الدولار غير متاح، فتعرض خياراً يفشل عند الحفظ
+        currencySettings: await resolveCurrencySettings(restaurant),
+        ...buildBranchSummary(restaurant)
+      }
     });
   } catch (error) {
     console.error('خطأ في جلب المطعم:', error);
@@ -277,7 +293,7 @@ export const updateProfile = async (
       primaryColor, secondaryColor, backgroundColor, cardColor, surfaceColor,
       textColor, mutedColor, accentColor, fontFamily,
       subdomain, customDomain, isActive, deliverySettings,
-      paymentSettings, currency, language, enabledLanguages
+      paymentSettings, currency, enabledCurrencies, language, enabledLanguages
     } = req.body;
 
     let restaurant = null;
@@ -374,12 +390,25 @@ export const updateProfile = async (
 
     // ===== العملة =====
     // الأسعار تُخزَّن بالليرة؛ هذا الحقل عملة **العرض** لا التخزين.
-    if (currency !== undefined) {
-      if (!isDisplayCurrency(currency)) {
-        res.status(400).json({ success: false, error: 'عملة العرض غير مدعومة. المتاح: الليرة السورية أو الدولار.' });
+    //
+    // التاجر يختار ما يُعرض: الليرة وحدها، أو الدولار وحده، أو الاثنين
+    // ويترك الزبون يبدّل — وهي الحاجة الفعلية في سوقٍ يتعامل الناس فيه
+    // بالعملتين معاً.
+    if (currency !== undefined || enabledCurrencies !== undefined) {
+      const currencyResult = await validateCurrencyUpdate({
+        defaultCurrency: currency,
+        enabledCurrencies: enabledCurrencies ?? restaurant.enabledCurrencies
+      });
+      if (!currencyResult.ok) {
+        res.status(400).json({
+          success: false,
+          error: currencyResult.error,
+          needsExchangeRate: currencyResult.needsExchangeRate === true
+        });
         return;
       }
-      updateData.currency = String(currency).toUpperCase();
+      updateData.currency = currencyResult.defaultCurrency;
+      updateData.enabledCurrencies = currencyResult.enabledCurrencies;
     }
 
     // ===== اللغات =====
