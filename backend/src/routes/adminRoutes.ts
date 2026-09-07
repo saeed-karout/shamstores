@@ -1,6 +1,11 @@
 // backend/src/routes/adminRoutes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, authorize, requireBusinessOwnership } from '../middleware/auth';
+import {
+  previewAudience,
+  sendBroadcast,
+  getBroadcastHistory
+} from '../controllers/pushBroadcastController';
 import { 
   // إحصائيات عامة
   getPlatformStats,
@@ -364,4 +369,18 @@ router.patch('/branches/:id/plan', authorize(['super_admin']), updateBranchPlan)
 
 // حذف فرع
 router.delete('/branches/:id', authorize(['super_admin']), deleteBranch);
+
+// ==================== بثّ الإشعارات إلى التطبيقات ====================
+//
+// السوبر أدمن وحده: البثّ يصل إلى كل هاتف ولا يُسترجع. لا يُفتح لموظّفي
+// المنصّة بصلاحية جزئية.
+
+/** معاينة الجمهور قبل الإرسال — البثّ لا يُلغى بعد خروجه */
+router.get('/push/audience', authorize(['super_admin']), previewAudience);
+
+/** سجلّ ما أُرسل — البثّ الذي لا يُرى بعد إرساله يُعاد إرساله بالخطأ */
+router.get('/push/history', authorize(['super_admin']), getBroadcastHistory);
+
+router.post('/push/send', authorize(['super_admin']), sendBroadcast);
+
 export default router;

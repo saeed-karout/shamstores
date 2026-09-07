@@ -33,6 +33,7 @@ import {
   IoCheckmarkCircle,
   IoWarning,
   IoDocumentText,
+  IoNotifications,
 } from 'react-icons/io5';
 
 interface SidebarProps {
@@ -107,6 +108,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       { path: '/admin/staff', icon: IoKey, label: 'موظفي المنصة' },
       { path: '/admin/orders', icon: IoReceipt, label: 'الطلبات' },
       { path: '/admin/drivers', icon: IoCar, label: 'السائقين' },
+      { path: '/admin/push-notifications', icon: IoNotifications, label: 'بثّ الإشعارات', badge: 'جديد' },
       { path: '/admin/plans', icon: IoRocket, label: 'الخطط والاشتراكات' },
       { path: '/admin/qr-codes', icon: IoQrCode, label: 'رموز QR' },
       { path: '/admin/advertisements', icon: IoMegaphone, label: 'الإعلانات' },

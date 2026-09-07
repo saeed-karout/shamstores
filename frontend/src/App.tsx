@@ -63,6 +63,7 @@ const AdminStaffDetailsPage = lazy(() => import('./pages/Admin/AdminStaffDetails
 const AdminQRCodesPage = lazy(() => import('./pages/Admin/AdminQRCodesPage'));
 const AdminBusinessFeatures = lazy(() => import('./pages/Admin/AdminBusinessFeatures'));
 const AdminPlatformSettings = lazy(() => import('./pages/Admin/AdminPlatformSettings'));
+const AdminPushNotifications = lazy(() => import('./pages/Admin/AdminPushNotifications'));
 const AdminFeatures = lazy(() => import('./pages/Admin/AdminFeatures'));
 const AdminBusinessMarketing = lazy(() => import('./pages/Admin/AdminBusinessMarketing'));
 const AdminAdvertisements = lazy(() => import('./pages/Admin/AdminAdvertisements'));
@@ -360,6 +361,7 @@ const MainApp: React.FC = () => {
             <Route path="/admin/qr-codes" element={<AdminQRCodesPage />} />
             <Route path="/admin/features" element={<AdminFeatures />} />
             <Route path="/admin/platform-settings" element={<AdminPlatformSettings />} />
+            <Route path="/admin/push-notifications" element={<AdminPushNotifications />} />
             <Route path="/admin/business/:type/:id/features" element={<AdminBusinessFeatures />} />
             <Route path="/admin/advertisements" element={<AdminAdvertisements />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
