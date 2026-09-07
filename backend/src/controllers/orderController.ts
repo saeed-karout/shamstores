@@ -6,6 +6,7 @@ import prisma from '../services/prisma';
 import { isPaymentMethodAllowed } from '../services/payment.service';
 import { verifyToken } from '../config/auth';
 import { emitOrderRealtimeEvent, RealtimeOrderPayload } from '../realtime/socket';
+import { notifyDriversOfOrder, notifyCustomerOfOrder } from '../services/driverPush.service';
 import { canAcceptOrder } from '../services/orderQuota.service';
 import { validateSelection } from '../services/productOptions.service';
 
@@ -588,6 +589,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       { orderSource: order.orderSource }
     );
 
+    // التعيين التلقائي أعلاه يُسنِد الطلب إلى أقرب سائق متصل — وكان يفعل
+    // ذلك بصمت. فيبقى الطلب على شاشة السائق حتى يفتح التطبيق بنفسه.
+    // `void`: الردّ لا ينتظر Firebase.
+    void notifyDriversOfOrder(order);
+
     res.status(201).json({
       success: true,
       message: 'تم إنشاء الطلب بنجاح',
@@ -626,6 +632,12 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
       where: { id },
       data: { status }
     });
+
+    // حالةٌ لم تتغيّر لا تُشعِر أحداً: التاجر قد يضغط الزرّ نفسه مرّتين،
+    // وتنبيهٌ يتكرّر بلا جديد يعلّم السائق تجاهل التنبيهات
+    if (order.status !== updated.status) {
+      void notifyDriversOfOrder(updated);
+    }
 
     emitOrderRealtimeNotification(
       updated,
@@ -944,6 +956,8 @@ export const assignDeliveryDriver = async (req: AuthRequest, res: Response): Pro
       }
     });
 
+    void notifyDriversOfOrder(updated);
+
     emitOrderRealtimeNotification(
       updated,
       'order.driver.assigned',
@@ -1007,6 +1021,18 @@ export const updateDeliveryOrderStatus = async (req: AuthRequest, res: Response)
     let successMessage = 'تم تحديث حالة الطلب بنجاح';
     if (status === 'delivering') successMessage = 'تم قبول الطلب وبدء التوصيل';
     if (status === 'delivered') successMessage = 'تم إكمال التوصيل بنجاح';
+
+    if (order.status !== updated.status) {
+      void notifyDriversOfOrder(updated);
+    }
+
+    if (status === 'delivered') {
+      void notifyCustomerOfOrder(
+        updated,
+        'وصل طلبك',
+        `تم تسليم الطلب #${updated.orderNumber}. نتمنّى لك وجبةً هنيّة`
+      );
+    }
 
     emitOrderRealtimeNotification(
       updated,

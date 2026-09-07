@@ -4,7 +4,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { emitOrderRealtimeEvent } from '../realtime/socket';
-import firebaseService from '../services/firebaseService';
+import { pushToUser } from '../services/driverPush.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -45,6 +45,13 @@ function deg2rad(deg: number): number {
 
 // ==================== Firebase Notifications ====================
 
+/**
+ * غلافٌ للتوافق مع مواضع النداء القائمة.
+ *
+ * المنطق انتقل إلى `driverPush.service` ليكون موضعاً واحداً يمسح الرموز
+ * الميّتة ويعرف معرّف القناة الصحيح — كان هذا الملفّ يرسل `sound: 'default'`
+ * وقناةً لا ينشئها التطبيق، فيُسقط أندرويد الإشعار بصمت.
+ */
 export const sendNotificationToDriver = async (
   driverId: string,
   title: string,
@@ -52,21 +59,7 @@ export const sendNotificationToDriver = async (
   type: 'new_order' | 'order_status' | 'alert',
   orderId?: string
 ): Promise<void> => {
-  try {
-    const driver = await prisma.user.findUnique({ where: { id: driverId } });
-    if (!driver || !driver.fcmToken) return;
-
-    await firebaseService.sendToDevice(driver.fcmToken, {
-      title,
-      body,
-      type,
-      orderId,
-      sound: 'default',
-      click_action: 'FLUTTER_NOTIFICATION_CLICK'
-    });
-  } catch (error) {
-    console.error('Error sending notification to driver:', error);
-  }
+  await pushToUser(driverId, { title, body, type, orderId }, orderId ? { orderId } : undefined);
 };
 
 // ==================== قبول الطلب ====================
@@ -1628,7 +1621,7 @@ export const getDriverOrderHistory = async (
 ): Promise<void> => {
   try {
     const driverId = req.user?.id;
-    const { page = 1, limit = 20, status = 'delivered' } = req.query;
+    const { page = 1, limit = 20, status } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
     if (!driverId) {
@@ -1643,10 +1636,15 @@ export const getDriverOrderHistory = async (
       assignedDriverId: driverId
     };
 
-    if (status !== 'all') {
-      where.status = status as string;
-    } else {
+    // سجلّ السائق = ما انتهى. وكان الافتراض `delivered` وحدها، فتسقط
+    // `served` (طلبات المطاعم) و`cancelled` — أي أن السجلّ يخفي عن السائق
+    // نصف ما فعله، ولا يبقى له أثرٌ لطلبٍ أُلغي بعد أن تحرّك إليه.
+    if (!status) {
+      where.status = { in: ['delivered', 'served', 'cancelled'] };
+    } else if (status === 'all') {
       where.status = { not: 'pending' };
+    } else {
+      where.status = { in: String(status).split(',').map((s) => s.trim()).filter(Boolean) };
     }
 
     const [orders, count] = await Promise.all([

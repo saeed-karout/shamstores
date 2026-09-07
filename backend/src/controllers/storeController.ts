@@ -5,6 +5,7 @@ import { AuthRequest } from '../types';
 import { UserService } from '../services/user.service';
 import prisma from '../services/prisma';
 import { emitOrderRealtimeEvent } from '../realtime/socket';
+import { notifyDriversOfOrder } from '../services/driverPush.service';
 import { buildImageUpdate, getPublicImages } from '../services/media.service';
 import { validatePaymentSettings } from '../services/payment.service';
 import { validateLanguageUpdate } from '../services/language.service';
@@ -1188,6 +1189,12 @@ export const updateStoreOrderStatus = async (req: AuthRequest, res: Response): P
       where: { id },
       data: { status }
     });
+
+    // نقلُ الطلب إلى `ready` هو اللحظة التي يصير فيها للسائق شأنٌ به —
+    // وكانت تمرّ بلا إشعار. والسوكِت وحده لا يكفي: هاتفٌ مقفل لا سوكِت له.
+    if (previousStatus !== status) {
+      void notifyDriversOfOrder(updatedOrder);
+    }
 
     // **البثّ اللحظي.**
     //

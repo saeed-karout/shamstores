@@ -33,6 +33,8 @@ import {
 
 import { getDrivers, createDriver, updateDriverStatus, deleteDriver } from '../controllers/driverController';
 import { authenticate, authorize } from '../middleware/auth';
+import prisma from '../services/prisma';
+import firebaseService from '../services/firebaseService';
 import { checkPlanFeature } from '../middleware/checkPlan';
 
 const router = express.Router();
@@ -291,6 +293,57 @@ router.get('/support/tickets',
 
 // ==================== مسارات الإشعارات ====================
 
+/**
+ * تشخيص الإشعارات.
+ *
+ * إشعارٌ لا يصل له ثلاثة أسباب محتملة لا يفرّق بينها المستخدم: الخادم غير
+ * مهيّأ بـFirebase، أو السائق لم يسجّل رمزاً، أو الرمز ميّت. هذا المسار
+ * يقول أيّها — بلا أن يكشف الرمز نفسه.
+ */
+router.get('/notifications/diagnostics',
+  authenticate,
+  authorize(['delivery_driver', 'owner', 'super_admin']),
+  async (req: any, res) => {
+    try {
+      const targetId = (req.query.driverId as string) || req.user?.id;
+
+      const driver = targetId
+        ? await prisma.user.findUnique({
+            where: { id: targetId },
+            select: { id: true, name: true, role: true, isOnline: true, isActive: true, fcmToken: true }
+          })
+        : null;
+
+      res.json({
+        success: true,
+        data: {
+          firebaseConfigured: firebaseService.isConfigured,
+          driver: driver && {
+            id: driver.id,
+            name: driver.name,
+            role: driver.role,
+            isOnline: driver.isOnline,
+            isActive: driver.isActive,
+            hasToken: Boolean(driver.fcmToken),
+            // بصمة لا قيمة: تكفي لمعرفة أن الرمز تغيّر بين تشغيلين
+            tokenFingerprint: driver.fcmToken ? driver.fcmToken.slice(-8) : null
+          },
+          hint: !firebaseService.isConfigured
+            ? 'اضبط FIREBASE_PROJECT_ID و FIREBASE_CLIENT_EMAIL و FIREBASE_PRIVATE_KEY على الخادم'
+            : !driver?.fcmToken
+            ? 'لم يسجّل التطبيق رمز إشعارات — تأكّد من إذن الإشعارات ومن تسجيل الدخول'
+            : !driver.isOnline
+            ? 'السائق غير متصل، فلا تصله إشعارات البركة'
+            : 'الإعداد سليم'
+        }
+      });
+    } catch (error) {
+      console.error('notifications diagnostics failed:', error);
+      res.status(500).json({ success: false, error: 'فشل التشخيص' });
+    }
+  }
+);
+
 // إرسال إشعار تجريبي لمندوب (للتطوير والاختبار)
 router.post('/test-notification/:driverId',
   authenticate,
@@ -299,6 +352,22 @@ router.post('/test-notification/:driverId',
     try {
       const { driverId } = req.params;
       const { title, body } = req.body;
+
+      if (!firebaseService.isConfigured) {
+        res.status(503).json({ success: false, error: 'Firebase غير مهيّأ على الخادم' });
+        return;
+      }
+
+      const driver = await prisma.user.findUnique({
+        where: { id: driverId },
+        select: { fcmToken: true }
+      });
+
+      if (!driver?.fcmToken) {
+        res.status(400).json({ success: false, error: 'المندوب لم يسجّل رمز إشعارات' });
+        return;
+      }
+
       await sendNotificationToDriver(
         driverId,
         title || 'إشعار تجريبي',
