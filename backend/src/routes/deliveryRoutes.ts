@@ -318,6 +318,12 @@ router.get('/notifications/diagnostics',
         success: true,
         data: {
           firebaseConfigured: firebaseService.isConfigured,
+          // المشروع الذي يتبعه الخادم — يُقارَن بـ`project_id` في
+          // `google-services.json` داخل التطبيق. اختلافهما يعني أن كل
+          // إشعارٍ يُرفض وإن بدا كل شيء مضبوطاً.
+          serverProjectId: firebaseService.projectId,
+          credentialMismatch: firebaseService.hasCredentialMismatch,
+          lastSendError: firebaseService.lastError,
           driver: driver && {
             id: driver.id,
             name: driver.name,
@@ -330,6 +336,9 @@ router.get('/notifications/diagnostics',
           },
           hint: !firebaseService.isConfigured
             ? 'اضبط FIREBASE_PROJECT_ID و FIREBASE_CLIENT_EMAIL و FIREBASE_PRIVATE_KEY على الخادم'
+            : firebaseService.hasCredentialMismatch
+            ? `حساب الخدمة يتبع مشروع "${firebaseService.projectId}" بينما التطبيق بُني على مشروع آخر. ` +
+              'ولّد مفتاح حساب خدمة من مشروع التطبيق نفسه — راجع project_id في google-services.json'
             : !driver?.fcmToken
             ? 'لم يسجّل التطبيق رمز إشعارات — تأكّد من إذن الإشعارات ومن تسجيل الدخول'
             : !driver.isOnline

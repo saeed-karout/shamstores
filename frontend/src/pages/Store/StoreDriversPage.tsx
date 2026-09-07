@@ -48,7 +48,10 @@ const StoreDriversPage: React.FC = () => {
   const fetchDrivers = useCallback(async () => {
     try {
       const res = await api.get('/store/drivers');
-      setDrivers(res?.data || res?.drivers || []);
+      // `api.get` يفكّ التغليف أصلاً ويعيد المصفوفة. وقراءة `res.data` منها
+      // تعطي `undefined` دائماً، فتسقط إلى `[]` — الصفحة كانت فارغة مهما
+      // كان عدد السائقين، لا لعلّة في الخادم بل لفكّ تغليفٍ مرّتين.
+      setDrivers(Array.isArray(res) ? res : ((res as any)?.data ?? (res as any)?.drivers ?? []));
     } catch (error) {
       console.error('Error fetching drivers:', error);
       toast.error('فشل تحميل السائقين');

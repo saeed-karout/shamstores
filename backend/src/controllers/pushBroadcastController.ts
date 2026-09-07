@@ -100,7 +100,10 @@ export const previewAudience = async (req: AuthRequest, res: Response): Promise<
         total,
         reachable,
         withoutToken: total - reachable,
-        firebaseConfigured: firebaseService.isConfigured
+        firebaseConfigured: firebaseService.isConfigured,
+        // «مُهيّأ» لا يكفي: قد يكون الاعتماد لمشروعٍ آخر فتُرفض كل رسالة
+        credentialMismatch: firebaseService.hasCredentialMismatch,
+        serverProjectId: firebaseService.projectId
       }
     });
   } catch (error) {

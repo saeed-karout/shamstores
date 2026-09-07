@@ -79,6 +79,23 @@ export const ANDROID_ORDERS_CHANNEL = 'sham_orders_v2';
 /** اسم المورد الخام في التطبيق (`res/raw/notification.mp3`) — بلا لاحقة */
 const DEFAULT_SOUND = 'notification';
 
+/**
+ * خطأٌ في الاعتماد لا في الرمز.
+ *
+ * `mismatched-credential` يعني أن حساب الخدمة على الخادم يتبع **مشروع
+ * Firebase غير الذي بُني به التطبيق**. الرمز صحيح والإرسال صحيح، لكن
+ * المُرسِل غريبٌ عن المشروع الذي أصدر الرمز.
+ *
+ * وهو خطأٌ خبيث لأن كل الفحوص تمرّ: المتغيّرات مضبوطة، والتهيئة تنجح،
+ * و`isConfigured` صحيح — ولا يصل إشعارٌ واحد. لذلك يُرفع إلى حالةٍ ظاهرة
+ * لا سطرٍ في السجلّ.
+ */
+const CREDENTIAL_ERROR_CODES = new Set([
+  'messaging/mismatched-credential',
+  'messaging/third-party-auth-error',
+  'messaging/authentication-error'
+]);
+
 /** رموز FCM التي تعني أن الرمز لم يعد صالحاً */
 const DEAD_TOKEN_CODES = new Set([
   'messaging/registration-token-not-registered',
@@ -86,12 +103,34 @@ const DEAD_TOKEN_CODES = new Set([
   'messaging/invalid-argument'
 ]);
 
+/** آخر خطأ إرسال — يقرأه التشخيص فيقول ما لا يقوله «مُهيّأ» */
+let lastSendError: { code: string; at: string } | null = null;
+let credentialMismatch = false;
+
 class FirebaseService {
   // ==================== Messaging Methods ====================
 
   /** هل الإشعارات مُهيّأة فعلاً — تستعمله الفحوص الصحّية والتشخيص */
   get isConfigured(): boolean {
     return ready;
+  }
+
+  /** المشروع الذي يتبعه حساب الخدمة — يُقارن بمشروع التطبيق عند الشكّ */
+  get projectId(): string | null {
+    return (serviceAccount as { projectId?: string } | null)?.projectId || null;
+  }
+
+  /**
+   * صحيحٌ حين رفض FCM الإرسال لاختلاف المشروع.
+   *
+   * أخطر من الفشل الصريح: كل شيء يبدو سليماً ولا يصل شيء.
+   */
+  get hasCredentialMismatch(): boolean {
+    return credentialMismatch;
+  }
+
+  get lastError(): { code: string; at: string } | null {
+    return lastSendError;
   }
 
   private get messaging(): admin.messaging.Messaging | null {
@@ -154,9 +193,25 @@ class FirebaseService {
     } catch (error) {
       const code = (error as { code?: string })?.code || '';
       const invalidToken = DEAD_TOKEN_CODES.has(code);
+
       if (!invalidToken) {
+        lastSendError = { code: code || 'unknown', at: new Date().toISOString() };
+      }
+
+      if (CREDENTIAL_ERROR_CODES.has(code)) {
+        // مرّة واحدة بصوتٍ عالٍ: تكرارها مع كل طلب يغرق السجلّ ويخفيها
+        if (!credentialMismatch) {
+          credentialMismatch = true;
+          console.error(
+            `❌ Firebase: حساب الخدمة يتبع مشروع "${this.projectId}" بينما التطبيق ` +
+            'بُني على مشروع آخر (راجع google-services.json). لن يصل أي إشعار حتى ' +
+            'يُولَّد مفتاح حساب خدمة من مشروع التطبيق نفسه.'
+          );
+        }
+      } else if (!invalidToken) {
         console.error('Error sending notification:', code || error);
       }
+
       return { ok: false, invalidToken };
     }
   }

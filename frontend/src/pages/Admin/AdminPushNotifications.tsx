@@ -55,6 +55,9 @@ interface AudienceStats {
   reachable: number;
   withoutToken: number;
   firebaseConfigured: boolean;
+  /** الاعتماد يتبع مشروع Firebase غير الذي بُني به التطبيق */
+  credentialMismatch?: boolean;
+  serverProjectId?: string | null;
 }
 
 interface Business {
@@ -208,6 +211,25 @@ const AdminPushNotifications: React.FC = () => {
             </p>
           </div>
         </header>
+
+        {/* أخطر من الغياب: كل شيء يبدو مضبوطاً ولا يصل شيء */}
+        {stats?.credentialMismatch && (
+          <div style={{
+            background: `${C.red}18`, border: `1px solid ${C.red}55`, borderRadius: 14,
+            padding: 14, margin: '16px 0', display: 'flex', gap: 10, alignItems: 'flex-start',
+          }}>
+            <IoWarningOutline size={20} color={C.red} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+              <strong style={{ color: C.red }}>مشروع Firebase غير مطابق.</strong>{' '}
+              حساب الخدمة على الخادم يتبع مشروع{' '}
+              <code style={{ color: C.accent }}>{stats.serverProjectId || '—'}</code>{' '}
+              بينما التطبيق بُني على مشروع آخر، فترفض Google كل رسالة
+              (<code>messaging/mismatched-credential</code>). الرسائل ستُحفظ وتظهر داخل
+              التطبيق، لكنها <b>لن توقظ أي هاتف</b> حتى يُولَّد مفتاح حساب خدمة من
+              مشروع التطبيق نفسه.
+            </div>
+          </div>
+        )}
 
         {stats && !stats.firebaseConfigured && (
           <div style={{
