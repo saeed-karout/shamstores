@@ -690,11 +690,10 @@ export const getProduct = async (req: AuthRequest, res: Response): Promise<void>
 /**
  * هل هذا خطأ تعارضٍ على رمز المنتج؟
  *
- * `Product.sku` فريدٌ **عبر المنصّة كلّها** في المخطّط لا داخل المتجر. أي أن
- * تاجراً قد يُمنَع من استعمال باركود منتجٍ لأن متجراً آخر لا يراه سجّله
- * أوّلاً — وباركودات EAN المطبوعة واحدةٌ في العالم كلّه، فالتصادم مسألة وقت.
- * لا نستطيع إصلاح القيد هنا، لكن السكوت عنه بـ«حدث خطأ» ٥٠٠ يترك التاجر
- * يجرّب ويعيد بلا أن يعرف السبب.
+ * التفرّد صار `@@unique([storeId, sku])` — أي داخل المتجر وحده. فالتعارض
+ * الآن يعني أن **للتاجر نفسه** منتجاً بهذا الرمز، وهو خطأٌ يستطيع إصلاحه
+ * لأنه يرى الطرفين. لكن السكوت عنه بـ«حدث خطأ» ٥٠٠ كان يتركه يجرّب ويعيد
+ * بلا أن يعرف السبب.
  */
 const isSkuConflict = (error: unknown): boolean =>
   typeof error === 'object' &&
@@ -762,7 +761,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
     if (isSkuConflict(error)) {
       res.status(409).json({
         success: false,
-        error: 'رمز المنتج (SKU) مستعمل من قبل. جرّب رمزاً آخر أو أضف بادئة تخصّ متجرك.'
+        error: 'لديك منتج آخر بنفس رمز المنتج (SKU). لكل منتج رمزٌ واحد داخل متجرك.'
       });
       return;
     }
@@ -828,7 +827,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     if (isSkuConflict(error)) {
       res.status(409).json({
         success: false,
-        error: 'رمز المنتج (SKU) مستعمل من قبل. جرّب رمزاً آخر أو أضف بادئة تخصّ متجرك.'
+        error: 'لديك منتج آخر بنفس رمز المنتج (SKU). لكل منتج رمزٌ واحد داخل متجرك.'
       });
       return;
     }

@@ -14,9 +14,13 @@ export class ProductService {
     });
   }
 
-  static async findBySku(sku: string) {
+  /// البحث عن منتجٍ برمزه **داخل متجرٍ بعينه**.
+  ///
+  /// `storeId` إلزاميّ لا اختياريّ: الرمز لم يعد فريداً عبر المنصّة، وبحثٌ
+  /// بلا متجر يعني إرجاع منتج تاجرٍ آخر لتاجرٍ لا يملكه.
+  static async findBySku(storeId: string, sku: string) {
     return prisma.product.findUnique({
-      where: { sku }
+      where: { storeId_sku: { storeId, sku } }
     });
   }
 

@@ -581,7 +581,13 @@ model Product {
   storeId       String
   name          String
   nameEn        String?
-  sku           String   @unique
+  /// رمز المنتج للكاشير — يُمسح بالباركود.
+  ///
+  /// **فريدٌ داخل المتجر لا عبر المنصّة:** كان `@unique` عالمياً، وباركود
+  /// EAN المطبوع على العبوة واحدٌ في العالم كلّه — فمتجرٌ سجّل باركود
+  /// «بيبسي» كان يمنع كلّ متجرٍ آخر من استعماله، وهو متجرٌ لا يراه ولا
+  /// يعرف بوجوده. التفرّد في `@@unique([storeId, sku])` أسفل النموذج.
+  sku           String
   description   String?
   price         Float
   /// السعر قبل التخفيض. أعلى من price يعني عرضاً؛ مساوٍ أو أقل يُتجاهَل.
@@ -619,6 +625,8 @@ model Product {
   orderItems OrderItem[]
   movements  InventoryMovement[]
   reviews    ProductReview[]
+
+  @@unique([storeId, sku])
 }
 
 /// تقييم زبونٍ لصنفٍ اشتراه.
