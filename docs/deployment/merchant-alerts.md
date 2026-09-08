@@ -67,6 +67,15 @@ heroku config:set --app shamstores TELEGRAM_WEBHOOK_SECRET=$secret
 **بعد نشر الخادم لا قبله**: توصيلُه إلى مسارٍ لم يُنشر بعد يجعل تيليجرام
 يصطدم بـ404 ويُبطئ المحاولات.
 
+> 🛑 **العنوان أصل Heroku لا `shamstores.com`.**
+>
+> Cloudflare تحمي النطاق الرئيسي بتحدّي روبوتات، وخوادم تيليجرام عميلُ HTTP
+> عاديّ لا متصفّح — فترتدّ طلباتها بـ`403 Just a moment` ولا يصل تحديثٌ
+> واحد. قِسناها: النطاق الرئيسي يردّ 403، وأصل Heroku يردّ `200 {"ok":true}`.
+>
+> والعطل صامت تماماً: البوت يعمل، والرمز صحيح، والتاجر يضغط Start ولا يحدث
+> شيء — و`getWebhookInfo` وحده يكشفه.
+
 > ⚠️ `curl` في PowerShell اسمٌ مستعار لـ`Invoke-WebRequest`، ولا يفهم
 > `-X` ولا `-H` ولا `-d`. استعمل `Invoke-RestMethod` كما هنا.
 
@@ -75,8 +84,13 @@ $token = 'الرمز_من_BotFather'
 ```
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot$token/setWebhook" -ContentType 'application/json' -Body (@{ url = 'https://shamstores.com/api/telegram/webhook'; allowed_updates = @('message'); secret_token = $secret } | ConvertTo-Json)
+Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot$token/setWebhook" -ContentType 'application/json' -Body (@{ url = 'https://shamstores-5fa37cec9e6e.herokuapp.com/api/telegram/webhook'; allowed_updates = @('message'); secret_token = $secret; drop_pending_updates = $true } | ConvertTo-Json)
 ```
+
+> لنقله إلى `shamstores.com` لاحقاً: أضف في Cloudflare قاعدة
+> **WAF ← Custom rules** تتخطّى فحص الروبوتات للمسار
+> `/api/telegram/webhook`، ثم أعد `setWebhook` بالنطاق الرئيسي. وأبقِ
+> الحماية على بقية المسارات.
 
 للتحقّق:
 
