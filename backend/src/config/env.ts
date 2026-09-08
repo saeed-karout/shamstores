@@ -133,7 +133,24 @@ export const env = {
   /** الأصل الاحتياطي المضبوط في Custom Hostnames — ما تشير إليه نطاق التجّار */
   CLOUDFLARE_FALLBACK_ORIGIN: (process.env.CLOUDFLARE_FALLBACK_ORIGIN || '')
     .replace(/^https?:\/\//, '')
-    .replace(/\/$/, '')
+    .replace(/\/$/, ''),
+
+  // ==================== تنبيهات التاجر عبر تيليجرام ====================
+  //
+  // قناةٌ تصل التاجر والهاتف مقفل بلا إذن متصفّح ولا قيد iOS. بغيابها يبقى
+  // التنبيه على إشعار المتصفّح وحده — والواجهة تقول ذلك بدل أن تعرض زرّ
+  // ربطٍ لا يعمل.
+  //
+  // الرمز من BotFather، والاسم بلا `@`. راجع docs/deployment/merchant-alerts.md
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
+  TELEGRAM_BOT_USERNAME: (process.env.TELEGRAM_BOT_USERNAME || '').replace(/^@/, ''),
+  /**
+   * سرٌّ يرافق كل نداء webhook من تيليجرام.
+   *
+   * بدونه يستطيع أي أحد يعرف المسار أن يزعم أنه تيليجرام ويربط محادثته
+   * بحساب تاجر. تيليجرام يرسله في ترويسة `X-Telegram-Bot-Api-Secret-Token`.
+   */
+  TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET || ''
 };
 
 export default env;

@@ -7,6 +7,7 @@ import { isPaymentMethodAllowed } from '../services/payment.service';
 import { verifyToken } from '../config/auth';
 import { emitOrderRealtimeEvent, RealtimeOrderPayload } from '../realtime/socket';
 import { notifyDriversOfOrder, notifyCustomerOfOrder } from '../services/driverPush.service';
+import { alertMerchantOfNewOrder } from '../services/merchantAlerts.service';
 import { canAcceptOrder } from '../services/orderQuota.service';
 import { validateSelection } from '../services/productOptions.service';
 
@@ -593,6 +594,21 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     // ذلك بصمت. فيبقى الطلب على شاشة السائق حتى يفتح التطبيق بنفسه.
     // `void`: الردّ لا ينتظر Firebase.
     void notifyDriversOfOrder(order);
+
+    // والتاجر كذلك: السوكِت يبثّ الطلب، لكنه لا يبلغ من أغلق اللوحة. فيبرد
+    // الطلب حتى يلغيه الزبون، والتاجر لا يعلم أنه كان عنده طلب.
+    void alertMerchantOfNewOrder({
+      id: order.id,
+      orderNumber: order.orderNumber,
+      total: order.total,
+      orderType: order.orderType,
+      restaurantId: order.restaurantId,
+      storeId: order.storeId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      deliveryAddress: order.deliveryAddress,
+      itemCount: orderItemsToCreate.length
+    });
 
     res.status(201).json({
       success: true,

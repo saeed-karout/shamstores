@@ -36,6 +36,8 @@ import orderRoutes from './routes/orderRoutes';
 import tableRoutes from './routes/tableRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import alertChannelRoutes from './routes/alertChannelRoutes';
+import telegramRoutes from './routes/telegramRoutes';
 import planRoutes from './routes/planRoutes';
 import qrRoutes from './routes/qrRoutes';
 import adminRoutes from './routes/adminRoutes';
@@ -289,6 +291,10 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
+// قنوات التنبيه: أجهزة المتصفّح وربط تيليجرام — للمستخدم الحالي وحده
+app.use('/api/alert-channels', alertChannelRoutes);
+// تيليجرام لا يحمل رمزنا: الحماية بالسرّ في ترويسة النداء لا بالمصادقة
+app.use('/api/telegram', telegramRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);

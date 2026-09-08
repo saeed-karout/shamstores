@@ -107,7 +107,15 @@ model User {
   isEmailVerified    Boolean   @default(false)
   loginAttempts      Int       @default(0)
   lockedUntil        DateTime?
+  /// رمز إشعارات مفرد — يبقى للتوافق مع تطبيق السائق القديم.
+  /// الأجهزة المتعدّدة في `deviceTokens`: تاجرٌ يفتح اللوحة على الهاتف
+  /// والحاسوب معاً كان أحدهما يمحو رمز الآخر.
   fcmToken           String?
+  /// محادثة تيليجرام المرتبطة — بها يصله تنبيه الطلب والهاتف مقفل
+  telegramChatId     String?
+  /// رمز ربطٍ لمرّة واحدة يُمرَّر في رابط `t.me/bot?start=...`
+  telegramLinkCode   String?   @unique
+  telegramLinkedAt   DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -123,11 +131,35 @@ model User {
   orders           Order[]        @relation("CreatedOrders")
   firebaseUser     FirebaseUser?
   notifications    Notification[]
+  deviceTokens     DeviceToken[]
 
   @@index([email])
   @@index([restaurantId])
   @@index([storeId])
   @@index([role])
+}
+
+/// أجهزة المستخدم التي تستقبل إشعارات الدفع.
+///
+/// **لماذا جدول لا عمود:** `User.fcmToken` مفرد، فتاجرٌ يفتح اللوحة على
+/// الهاتف ثم على الحاسوب يمحو رمز الأوّل بالثاني — فيظنّ أنه مشترك
+/// والإشعار يذهب إلى جهازٍ تركه. والرموز تُدوَّر وتموت، فالجدول يسمح
+/// بحذف الميّت وحده بدل تصفير المستخدم.
+model DeviceToken {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  /// رمز FCM — فريدٌ عالمياً، وإعادة تسجيله من جهاز آخر تنقل ملكيّته
+  token      String   @unique @db.VarChar(512)
+  /// web | android | ios — به نعرف أي منصّة تفشل حين تفشل
+  platform   String   @default("web")
+  label      String?
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
 }
 
 model EmailVerificationCode {

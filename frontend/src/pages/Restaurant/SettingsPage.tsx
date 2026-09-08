@@ -8,6 +8,7 @@ import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
+import OrderAlertsSettings from '@/components/settings/OrderAlertsSettings';
 import {
   IoRestaurant,
   IoColorPalette,
@@ -676,6 +677,10 @@ export const SettingsPage: React.FC = () => {
               })}
               colors={C}
             />
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <OrderAlertsSettings colors={{ ...C, red: C.red }} />
           </div>
 
           <button style={saveBtn} onClick={handleSaveGeneral}>

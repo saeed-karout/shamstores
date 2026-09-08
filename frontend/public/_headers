@@ -20,3 +20,10 @@
 
 /*.svg
   Cache-Control: public, max-age=31536000, immutable
+
+# عامل الخدمة **بعد** قاعدة /*.js عمداً: قواعد Cloudflare تُطبَّق بالترتيب
+# والأخيرة تغلب. ولولا هذا الاستثناء لخُزّن العامل سنةً كاملة `immutable` —
+# فلا يصل إليه إصلاحٌ أبداً، وهو الملفّ الذي يستقبل كل إشعارات الطلبات.
+/firebase-messaging-sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Service-Worker-Allowed: /

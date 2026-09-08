@@ -10,6 +10,7 @@ import Loader from '@/components/common/Loader';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
+import OrderAlertsSettings from '@/components/settings/OrderAlertsSettings';
 import {
   IoStorefront,
   IoColorPalette,
@@ -742,6 +743,10 @@ const StoreSettingsPage: React.FC = () => {
               colors={{ ...C, warn: C.orange }}
               disabled={!canUpdateSettings}
             />
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <OrderAlertsSettings colors={{ ...C, red: C.red }} />
           </div>
 
           <button style={saveBtn} onClick={handleSaveGeneral} disabled={!canUpdateSettings}>
