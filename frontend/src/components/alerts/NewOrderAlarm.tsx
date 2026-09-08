@@ -19,7 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { IoNotifications, IoClose, IoArrowForward } from 'react-icons/io5';
 import { useAuth } from '@/hooks/useAuth';
 import { useSocket, NotificationEvent } from '@/hooks/useSocket';
-import { onForegroundPush } from '@/services/webPush';
+import { onForegroundPush, showLocalNotification } from '@/services/webPush';
 
 /** الفاصل بين رنّة وأخرى، وسقفُ الإلحاح — الرنين الأبدي يُطفأ فلا يعود ينفع */
 const REPEAT_MS = 7000;
@@ -154,7 +154,20 @@ const NewOrderAlarm: React.FC = () => {
     if (!isMerchant) return;
     return onForegroundPush((payload: any) => {
       const orderId = payload?.data?.orderId;
-      if (!orderId) return;
+
+      // ما ليس طلباً — تجربةٌ أو بثّ إداري — كان يُبتلع هنا بصمت: تصل
+      // الرسالة إلى معالج المقدّمة ما دام التبويب ظاهراً، ولا يعرض
+      // المتصفّح شيئاً تلقائياً. فيضغط التاجر «أرسل تجربة» ولا يرى شيئاً
+      // ويظنّ الإشعارات معطّلة وهي تعمل.
+      if (!orderId) {
+        void showLocalNotification(
+          payload?.notification?.title || 'شام ستورز',
+          payload?.notification?.body || '',
+          payload?.data?.link
+        );
+        return;
+      }
+
       push({
         id: orderId,
         orderNumber: payload?.data?.orderNumber || '',

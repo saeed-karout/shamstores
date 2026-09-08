@@ -242,4 +242,45 @@ export const onForegroundPush = (handler: (payload: any) => void): (() => void) 
   }
 };
 
-export default { getPushState, enablePush, disablePush, onForegroundPush, describeDevice, messagingProjectId };
+/**
+ * يعرض إشعار نظام من الصفحة نفسها.
+ *
+ * **لماذا نحتاجه رغم وجود عامل الخدمة:** عامل الخدمة يعرض الإشعار فقط حين
+ * **لا** تكون الصفحة ظاهرة. وحين تكون ظاهرة تصل الرسالة إلى معالج المقدّمة
+ * ولا يعرض المتصفّح شيئاً تلقائياً. فرسالةٌ ليست طلباً — تجربةٌ أو بثّ
+ * إداري — كانت تُبتلع بصمت أمام عين التاجر وهو ينتظرها.
+ *
+ * يمرّ عبر تسجيل عامل الخدمة لا `new Notification()`: الأخير مهمَل على
+ * أندرويد ويرمي هناك.
+ */
+export const showLocalNotification = async (
+  title: string,
+  body: string,
+  link?: string
+): Promise<boolean> => {
+  try {
+    if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return false;
+    const registration =
+      (await navigator.serviceWorker.getRegistration(SW_PATH)) ||
+      (await navigator.serviceWorker.ready);
+    if (!registration) return false;
+
+    await registration.showNotification(title, {
+      body,
+      icon: '/logo.svg',
+      badge: '/logo.svg',
+      dir: 'rtl',
+      lang: 'ar',
+      data: { link: link || '/' },
+    });
+    return true;
+  } catch (error) {
+    console.error('showLocalNotification failed:', error);
+    return false;
+  }
+};
+
+export default {
+  getPushState, enablePush, disablePush, onForegroundPush,
+  describeDevice, messagingProjectId, showLocalNotification
+};
