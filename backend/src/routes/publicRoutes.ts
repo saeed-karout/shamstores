@@ -11,6 +11,7 @@ import {
   resolveHost,
   getHostBrand
 } from '../controllers/publicController';
+import { getProductReviews } from '../controllers/productReviewController';
 
 const router = express.Router();
 
@@ -44,5 +45,8 @@ router.get('/item/:itemId', getMenuItemById);
 
 // جلب منتج محدد (باستخدام ID)
 router.get('/product/:productId', getProductById);
+
+// تقييمات المنتج — عامّة بلا مصادقة: يقرؤها من يفكّر بالشراء قبل أن يسجّل
+router.get('/product/:productId/reviews', getProductReviews);
 
 export default router;

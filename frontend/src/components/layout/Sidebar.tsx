@@ -146,6 +146,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (hasCoupons) items.push({ path: '/coupons', icon: IoPricetag, label: 'الكوبونات' });
     if (hasStaff) items.push({ path: '/staff', icon: IoPeople, label: 'موظفي المطعم' });
     if (hasAnalytics) items.push({ path: '/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
+    items.push({ path: '/restaurant/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });
     if (hasDelivery) items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
     if (hasDelivery) items.push({ path: '/drivers', icon: IoCar, label: 'السائقين' });
@@ -173,6 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (hasCoupons) items.push({ path: '/store/coupons', icon: IoPricetag, label: 'الكوبونات' });
     if (hasStaff) items.push({ path: '/store/staff', icon: IoPeople, label: 'موظفي المتجر' });
     if (hasAnalytics) items.push({ path: '/store/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
+    items.push({ path: '/store/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });
     if (hasOnlineOrders) items.push({ path: '/store/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
     if (hasOnlineOrders) items.push({ path: '/store/drivers', icon: IoCar, label: 'السائقين' });

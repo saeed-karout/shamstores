@@ -131,7 +131,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                   style={{ width: 34, height: 34, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
                 />
               )}
-              <span
+              {/* <span
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -143,7 +143,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                 }}
               >
                 {name}
-              </span>
+              </span> */}
 
               {headerActions}
 

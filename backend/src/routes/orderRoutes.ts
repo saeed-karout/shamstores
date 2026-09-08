@@ -16,6 +16,7 @@ import {
 import { authenticate, authorizeOwner, authorizeStaff, authorize } from '../middleware/auth';
 import { checkPlanFeature } from '../middleware/checkPlan';
 import { rateOrder } from '../controllers/deliveryController';
+import { getReviewableItems, submitReview } from '../controllers/productReviewController';
 
 const router = Router();
 
@@ -133,5 +134,15 @@ router.patch(
 
 
 router.post('/:orderId/rate', authenticate, rateOrder);
+
+// ==================== تقييم المنتجات ====================
+//
+// منفصلٌ عن تقييم الطلب عمداً: ذاك يقول «كانت التجربة جيدة»، وهذا يقول أي
+// صنفٍ استحقّها — وهو ما يقرؤه من يفكّر بالشراء.
+
+/** ما اشتراه الزبون في هذا الطلب ولم يقيّمه بعد */
+router.get('/:orderId/reviewable', authenticate, getReviewableItems);
+
+router.post('/:orderId/reviewable/:productId', authenticate, submitReview);
 
 export default router;

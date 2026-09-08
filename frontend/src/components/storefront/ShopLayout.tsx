@@ -185,22 +185,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
             </div>
           )}
 
-          {/* الاسم يضيق على الجوال: الشعار والبانر يعرّفان بالمتجر، وحقل
-              البحث أحقّ بالمساحة من اسم مكرَّر */}
-          <span
-            className="shop-brand-name"
-            style={{
-              fontWeight: 800,
-              fontSize: 15,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              flexShrink: 0
-            }}
-          >
-            {name}
-          </span>
-
+        
           {/* حقل بحث كامل — لابتوب. الكتابة مباشرةً بلا لوح وسيط. */}
           <div className="shop-search-full" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
             <IoSearchOutline

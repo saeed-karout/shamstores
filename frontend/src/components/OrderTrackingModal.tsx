@@ -141,6 +141,56 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   const alreadyRated = Boolean((trackingOrder as any)?.ratedAt || (trackingOrder as any)?.rating);
   const hasDriver = Boolean((trackingOrder as any)?.assignedDriverId);
 
+  /**
+   * تقييم كل منتج على حدة — بعد تقييم الطلب لا معه.
+   *
+   * تقييم الطلب يقول «كانت التجربة جيدة»، ولا يقول أي صنفٍ استحقّها. ومن
+   * يفكّر بالشراء يقرأ عن المنتج لا عن الطلب — فتقييمٌ لا ينزل إلى مستوى
+   * المنتج لا يُعرض له أصلاً.
+   *
+   * ويُطلب **بعد** إرسال تقييم الطلب: سؤالان معاً على شاشة واحدة يُفقدان
+   * الزبون قبل أن يجيب أحدهما.
+   */
+  const [reviewables, setReviewables] = useState<any[]>([]);
+  const [productStars, setProductStars] = useState<Record<string, number>>({});
+  const [savingProduct, setSavingProduct] = useState<string | null>(null);
+
+  const loadReviewables = async (orderId: string) => {
+    try {
+      const items: any = await api.get(`/orders/${orderId}/reviewable`);
+      if (Array.isArray(items) && items.length > 0) {
+        setReviewables(items);
+        setProductStars(
+          Object.fromEntries(items.filter((i: any) => i.myRating).map((i: any) => [i.productId, i.myRating]))
+        );
+      }
+    } catch {
+      // المطاعم لا منتجات لها في هذا المسار — الغياب طبيعي لا خطأ
+    }
+  };
+
+  const rateProduct = async (productId: string, value: number) => {
+    if (!trackingOrder) return;
+    setProductStars((prev) => ({ ...prev, [productId]: value }));
+    setSavingProduct(productId);
+    try {
+      await api.post(`/orders/${trackingOrder.id}/reviewable/${productId}`, { rating: value });
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'تعذّر حفظ تقييم المنتج');
+    } finally {
+      setSavingProduct(null);
+    }
+  };
+
+  // من قيّم الطلب في زيارة سابقة لا يمرّ بـ`submitRating` — ولولا هذا لما
+  // رأى تقييم المنتجات أبداً
+  useEffect(() => {
+    if (isFinished && alreadyRated && trackingOrder?.id && reviewables.length === 0) {
+      loadReviewables(trackingOrder.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFinished, alreadyRated, trackingOrder?.id]);
+
   const submitRating = async () => {
     if (!trackingOrder || orderStars < 1) return;
     setSending(true);
@@ -151,6 +201,8 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
         driverRating: driverStars > 0 ? driverStars : undefined
       });
       toast.success('شكراً لتقييمك');
+      // بعد تقييم الطلب يُعرض تقييم المنتجات — لا قبله
+      await loadReviewables(trackingOrder.id);
       onRated?.();
     } catch (error: any) {
       toast.error(error?.response?.data?.error || 'تعذّر إرسال التقييم');
@@ -414,6 +466,73 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 >
                   {sending ? 'جاري الإرسال...' : 'أرسل التقييم'}
                 </button>
+              </div>
+            )}
+
+            {/* تقييم المنتجات — يظهر بعد تقييم الطلب، ولمنتجات المتجر فقط */}
+            {isFinished && reviewables.length > 0 && (
+              <div
+                style={{
+                  background: sf.surface,
+                  border: `1px solid ${sf.border}`,
+                  borderRadius: 12,
+                  padding: 14,
+                  marginBottom: 12
+                }}
+              >
+                <div style={{ color: sf.text, fontSize: 14, fontWeight: 800, marginBottom: 4 }}>
+                  قيّم ما اشتريت
+                </div>
+                <div style={{ color: sf.muted, fontSize: 12, marginBottom: 12, lineHeight: 1.7 }}>
+                  رأيك يظهر لمن يفكّر بشراء نفس المنتج. يُحفظ فور اختيارك.
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {reviewables.map((item: any) => (
+                    <div
+                      key={item.productId}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, opacity: savingProduct === item.productId ? 0.6 : 1 }}
+                    >
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt=""
+                          style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                        />
+                      ) : (
+                        <span style={{
+                          width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                          background: sf.card, display: 'grid', placeItems: 'center',
+                          color: sf.muted, fontSize: 15
+                        }}>
+                          ◦
+                        </span>
+                      )}
+
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: sf.text }}>
+                        {item.name}
+                      </span>
+
+                      <span style={{ display: 'inline-flex', gap: 2, flexShrink: 0 }}>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => rateProduct(item.productId, n)}
+                            aria-label={`${n} من 5 لـ${item.name}`}
+                            style={{
+                              background: 'transparent', border: 'none', cursor: 'pointer',
+                              padding: 2, fontSize: 17, lineHeight: 1,
+                              color: n <= (productStars[item.productId] || 0) ? '#F5B301' : sf.border
+                            }}
+                          >
+                            ★
+                          </button>
+                        ))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

@@ -13,6 +13,7 @@ import Loader from '../components/common/Loader';
 import toast from 'react-hot-toast';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import ProductReviews from '@/components/storefront/ProductReviews';
 import { useCart } from '@/hooks/useCart';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import ProductOptionsSheet, {
@@ -755,6 +756,11 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             </div>
           </div>
         </div>
+
+        {/* آراء المشترين — قبل «منتجات ذات صلة» عمداً: من يقرأ عن هذا
+            المنتج لم يقرّر بعد، وصرفُه إلى منتج آخر قبل أن يرى رأي من
+            اشتراه يخسر البيعتين */}
+        <ProductReviews productId={product.id} />
 
         {/* منتجات ذات صلة */}
         {relatedProducts.length > 0 && (
