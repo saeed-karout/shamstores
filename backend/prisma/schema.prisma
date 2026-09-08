@@ -466,6 +466,12 @@ model MenuItem {
   categoryId      String?
   name            String
   nameEn          String?
+  /// رمز الصنف للكاشير — يُمسح بالباركود.
+  ///
+  /// اختياريّ ومفهرس لا فريد عالمياً: المطعم يبيع مشروبات وعبوات جاهزة لها
+  /// باركود مطبوع، ووجباتٍ لا رمز لها. والتفرّد يُفحص داخل المطعم لا عبر
+  /// المنصّة — رمزان متطابقان في مطعمين مختلفين ليسا تعارضاً.
+  sku             String?
   description     String?
   descriptionEn   String?
   price           Float
@@ -494,6 +500,7 @@ model MenuItem {
 
   @@index([restaurantId])
   @@index([categoryId])
+  @@index([restaurantId, sku])
 }
 
 model Product {

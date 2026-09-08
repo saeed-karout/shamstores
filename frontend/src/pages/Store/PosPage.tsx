@@ -6,9 +6,12 @@
 // كبيرة، وسلّة ثابتة لا تُمرَّر بعيداً، وحساب الباقي ظاهرٌ بلا ضغطة إضافية،
 // وأزرار مبالغ جاهزة لأن الكاشير يستلم أوراقاً مدوّرة لا مبالغ دقيقة.
 //
-// **والباركود بالكاميرا عبر `BarcodeDetector`** — واجهة أصيلة في المتصفّح
-// بلا مكتبة تُحمَّل. وغيابها ليس عطلاً: يبقى البحث بالاسم والرمز يدوياً،
-// والزرّ لا يُعرض أصلاً حين لا يدعمها المتصفّح بدل أن يُعرض ويفشل.
+// **وتخدم النشاطين**: المتجر يبيع `Product` بمخزونٍ يُخصم، والمطعم يبيع
+// `MenuItem` بلا مخزون — والواجهة لا تعرف الفرق لأن الخادم يوحّد الشكل.
+// الاختلاف الوحيد الظاهر أن المطعم لا يُعرض له رصيد.
+//
+// **والباركود بمحرّكين**: `BarcodeDetector` الأصيلة حيث توجد، وZXing
+// المحمَّلة عند الحاجة على Safari/iPhone — راجع utils/barcodeScanner.ts.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -18,6 +21,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '@/services/api';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { detectEngine, startScan, ScanHandle } from '@/utils/barcodeScanner';
 
 const C = {
   bg: '#082E24',
@@ -34,12 +38,17 @@ const C = {
 interface Product {
   id: string;
   name: string;
-  sku: string;
+  sku: string | null;
   price: number;
-  stock: number;
+  /** `null` للمطعم: لا مخزون يُتتبَّع — والوجبة تُطبخ عند الطلب */
+  stock: number | null;
   unit: string;
   imageUrl: string | null;
 }
+
+/** المطعم بلا مخزون: كل صنفٍ متاح ما دام مفعّلاً */
+const isTracked = (p: Product): boolean => typeof p.stock === 'number';
+const available = (p: Product): number => (isTracked(p) ? (p.stock as number) : Infinity);
 
 interface Line extends Product {
   quantity: number;
@@ -78,10 +87,12 @@ const PosPage: React.FC = () => {
   const [scanning, setScanning] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const scanLoop = useRef<number | null>(null);
+  const handleRef = useRef<ScanHandle | null>(null);
+  // يمنع نداءين للخادم من إطارين متتاليين يقرآن نفس الرمز
+  const lastCode = useRef<string>('');
 
-  const scannerSupported = typeof window !== 'undefined' && 'BarcodeDetector' in window;
+  const engine = detectEngine();
+  const scannerSupported = engine !== 'none';
 
   const load = useCallback(async (q: string) => {
     try {
@@ -115,13 +126,13 @@ const PosPage: React.FC = () => {
     setCart((prev) => {
       const existing = prev.find((l) => l.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.stock) {
+        if (existing.quantity >= available(product)) {
           toast.error(`المتاح ${product.stock} فقط من «${product.name}»`);
           return prev;
         }
         return prev.map((l) => (l.id === product.id ? { ...l, quantity: l.quantity + 1 } : l));
       }
-      if (product.stock < 1) {
+      if (available(product) < 1) {
         toast.error(`«${product.name}» غير متوفّر`);
         return prev;
       }
@@ -131,57 +142,45 @@ const PosPage: React.FC = () => {
 
   // ---------- الباركود ----------
   const stopScan = useCallback(() => {
-    if (scanLoop.current) { window.clearInterval(scanLoop.current); scanLoop.current = null; }
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+    handleRef.current?.stop();
+    handleRef.current = null;
+    lastCode.current = '';
     setScanning(false);
   }, []);
 
+  // الكاميرا لا تُترك مفتوحة بعد مغادرة الشاشة: ضوء العدسة المضاء يُقرأ
+  // تجسّساً، والبطارية تُستنزف بلا سبب
   useEffect(() => stopScan, [stopScan]);
 
-  const startScan = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        // الكاميرا الخلفية: الأمامية تصوّر وجه الكاشير لا الباركود
-        video: { facingMode: 'environment' }
-      });
-      streamRef.current = stream;
-      setScanning(true);
-
-      // بعد الرسم: العنصر غير موجود قبل أن تتحوّل الحالة
-      window.setTimeout(async () => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => undefined);
-        }
-        const Detector = (window as any).BarcodeDetector;
-        const detector = new Detector({
-          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code']
-        });
-
-        scanLoop.current = window.setInterval(async () => {
-          if (!videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            if (codes?.length) {
-              const value = codes[0].rawValue;
+  const startScanning = async () => {
+    setScanning(true);
+    // بعد الرسم: عنصر الفيديو غير موجود قبل أن تتحوّل الحالة
+    window.setTimeout(async () => {
+      if (!videoRef.current) return;
+      try {
+        handleRef.current = await startScan({
+          video: videoRef.current,
+          onResult: async (value) => {
+            if (value === lastCode.current) return;
+            lastCode.current = value;
+            try {
+              const item: any = await api.get(`/pos/sku/${encodeURIComponent(value)}`);
               stopScan();
-              const product: any = await api.get(`/pos/sku/${encodeURIComponent(value)}`);
-              addProduct(product);
-              toast.success(product.name);
-            }
-          } catch (e: any) {
-            if (e?.response?.status === 404) {
-              stopScan();
-              toast.error(e?.response?.data?.error || 'رمز غير معروف');
+              addProduct(item);
+              toast.success(item.name);
+            } catch (e: any) {
+              toast.error(e?.response?.data?.error || `رمز غير معروف: ${value}`);
+              // يُسمح بإعادة قراءة نفس الرمز بعد ثانيتين — قد يكون المستخدم
+              // أضاف الصنف للتوّ ويعيد المحاولة
+              window.setTimeout(() => { lastCode.current = ''; }, 2000);
             }
           }
-        }, 400);
-      }, 60);
-    } catch {
-      toast.error('تعذّر فتح الكاميرا — تأكّد من الإذن');
-      setScanning(false);
-    }
+        });
+      } catch (error: any) {
+        toast.error(error?.message || 'تعذّر فتح الكاميرا', { duration: 6000 });
+        setScanning(false);
+      }
+    }, 60);
   };
 
   // ---------- الحساب ----------
@@ -253,7 +252,7 @@ const PosPage: React.FC = () => {
 
               {scannerSupported && (
                 <button
-                  onClick={scanning ? stopScan : startScan}
+                  onClick={scanning ? stopScan : startScanning}
                   style={{
                     minWidth: 52, borderRadius: 13, cursor: 'pointer',
                     background: scanning ? C.red : C.accent,
@@ -279,6 +278,14 @@ const PosPage: React.FC = () => {
                 }}>
                   <div style={{ width: '68%', height: 76, border: `2px solid ${C.accent}`, borderRadius: 10 }} />
                 </div>
+                {engine === 'zxing' && (
+                  <span style={{
+                    position: 'absolute', insetInlineStart: 8, top: 8, fontSize: 10.5,
+                    background: 'rgba(0,0,0,.55)', color: C.muted, padding: '3px 8px', borderRadius: 6
+                  }}>
+                    قارئ احتياطي — قد يستغرق لحظة
+                  </span>
+                )}
               </div>
             )}
 
@@ -287,7 +294,7 @@ const PosPage: React.FC = () => {
               gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))'
             }}>
               {products.map((product) => {
-                const out = product.stock < 1;
+                const out = available(product) < 1;
                 return (
                   <button
                     key={product.id}
@@ -318,7 +325,7 @@ const PosPage: React.FC = () => {
                     <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 }}>
                       <b style={{ fontSize: 12.5, color: C.accent }}>{money(product.price)}</b>
                       <span style={{ fontSize: 10.5, color: out ? C.red : C.muted }}>
-                        {out ? 'نفد' : `${product.stock}`}
+                        {out ? 'نفد' : isTracked(product) ? `${product.stock}` : ''}
                       </span>
                     </span>
                   </button>
@@ -328,7 +335,7 @@ const PosPage: React.FC = () => {
 
             {products.length === 0 && (
               <p style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
-                {term ? 'لا منتج يطابق البحث.' : 'لا منتجات في هذا المتجر بعد.'}
+                {term ? 'لا صنف يطابق البحث.' : 'لا أصناف في هذا النشاط بعد.'}
               </p>
             )}
           </section>

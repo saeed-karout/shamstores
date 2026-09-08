@@ -149,6 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (hasAnalytics) items.push({ path: '/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
     items.push({ path: '/restaurant/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
     items.push({ path: '/restaurant/campaigns', icon: IoMegaphone, label: 'حملات الزبائن', badge: 'جديد' });
+    items.push({ path: '/restaurant/pos', icon: IoCard, label: 'الكاشير', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });
     if (hasDelivery) items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
     if (hasDelivery) items.push({ path: '/drivers', icon: IoCar, label: 'السائقين' });

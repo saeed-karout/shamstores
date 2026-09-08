@@ -1,6 +1,6 @@
 // backend/src/controllers/posController.ts
 //
-// الكاشير — البيع داخل المحلّ.
+// الكاشير — البيع داخل المحلّ، للمتاجر والمطاعم معاً.
 //
 // **لماذا يهمّ:** المحلّ السوري يبيع داخل المتجر أكثر ممّا يبيع أونلاين.
 // وبلا كاشير يبقى نصف مبيعاته خارج النظام: المخزون يخطئ، والتقارير تكذب،
@@ -9,6 +9,12 @@
 // **والبيع يصير `Order` كاملاً** لا جدولاً منفصلاً: بذلك يدخل التقارير
 // والمخزون والقسم المالي بلا سطر إضافي في أيٍّ منها. جدولٌ موازٍ كان سيعني
 // حسابين لكل رقم، ويفترقان بصمت عند أوّل تعديل.
+//
+// **والفرق بين النشاطين حقيقي لا شكلي:**
+//   - المتجر يبيع `Product` بمخزونٍ يُخصم ويُفحص قبل البيع.
+//   - المطعم يبيع `MenuItem` بلا مخزون — الوجبة تُطبخ عند الطلب، وفحصُ
+//     رصيدٍ لا وجود له كان سيمنع كل بيعة.
+// ولذلك الشيفرة تتفرّع عند المخزون وحده، لا عند كل خطوة.
 
 import { Response } from 'express';
 import { AuthRequest } from '../types';
@@ -18,7 +24,29 @@ import { emitOrderRealtimeEvent } from '../realtime/socket';
 /** طرق الدفع كما في تعداد Prisma — قيمة خارجها ترتدّ 500 بلا سبب مفهوم */
 const PAYMENT_METHODS = ['cash', 'card', 'online', 'sham_cash'];
 
-const getStoreId = (req: AuthRequest): string | null => req.user?.storeId || null;
+type BusinessKind = 'restaurant' | 'store';
+interface Business {
+  id: string;
+  kind: BusinessKind;
+}
+
+const getBusiness = (req: AuthRequest): Business | null => {
+  if (req.user?.restaurantId) return { id: req.user.restaurantId, kind: 'restaurant' };
+  if (req.user?.storeId) return { id: req.user.storeId, kind: 'store' };
+  return null;
+};
+
+/** شكلٌ موحَّد للصنف مهما كان مصدره — الواجهة لا تعرف الفرق ولا تحتاجه */
+interface SellableItem {
+  id: string;
+  name: string;
+  sku: string | null;
+  price: number;
+  /** `null` للمطعم: لا مخزون يُتتبَّع، وصفرٌ هنا كان سيُقرأ «نفد» */
+  stock: number | null;
+  unit: string;
+  imageUrl: string | null;
+}
 
 // ==================== البحث ====================
 
@@ -26,72 +54,109 @@ const getStoreId = (req: AuthRequest): string | null => req.user?.storeId || nul
  * بحث سريع للكاشير.
  *
  * حقولٌ قليلة عمداً: الشاشة تُستعمل بيدٍ واحدة وزبونٌ ينتظر، فكل حقل زائد
- * تأخيرٌ في شبكةٍ بطيئة. والصور تُرسَل لأنها ما يميّز المنتج بالنظر أسرع من
+ * تأخيرٌ في شبكةٍ بطيئة. والصور تُرسَل لأنها ما يميّز الصنف بالنظر أسرع من
  * قراءة الاسم.
  */
 export const searchProducts = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const storeId = getStoreId(req);
-    if (!storeId) {
-      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+    const business = getBusiness(req);
+    if (!business) {
+      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
       return;
     }
 
     const term = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const categoryId = typeof req.query.categoryId === 'string' ? req.query.categoryId : undefined;
 
-    const products = await prisma.product.findMany({
-      where: {
-        storeId,
-        isAvailable: true,
-        ...(categoryId ? { categoryId } : {}),
-        ...(term
-          ? { OR: [{ name: { contains: term } }, { sku: { contains: term } }] }
-          : {})
-      },
-      select: {
-        id: true, name: true, sku: true, price: true,
-        stock: true, unit: true, imageUrl: true, categoryId: true
-      },
-      // الأكثر مبيعاً أولاً: الكاشير يبيع نفس العشرة أصناف طوال اليوم
-      orderBy: [{ ordersCount: 'desc' }, { name: 'asc' }],
-      take: 60
-    });
+    let items: SellableItem[];
 
-    res.json({ success: true, data: products });
+    if (business.kind === 'store') {
+      const rows = await prisma.product.findMany({
+        where: {
+          storeId: business.id,
+          isAvailable: true,
+          ...(categoryId ? { categoryId } : {}),
+          ...(term ? { OR: [{ name: { contains: term } }, { sku: { contains: term } }] } : {})
+        },
+        select: { id: true, name: true, sku: true, price: true, stock: true, unit: true, imageUrl: true },
+        // الأكثر مبيعاً أولاً: الكاشير يبيع نفس العشرة أصناف طوال اليوم
+        orderBy: [{ ordersCount: 'desc' }, { name: 'asc' }],
+        take: 60
+      });
+      items = rows.map((r) => ({ ...r, price: Number(r.price) }));
+    } else {
+      const rows = await prisma.menuItem.findMany({
+        where: {
+          restaurantId: business.id,
+          isAvailable: true,
+          ...(categoryId ? { categoryId } : {}),
+          ...(term ? { OR: [{ name: { contains: term } }, { sku: { contains: term } }] } : {})
+        },
+        select: { id: true, name: true, sku: true, price: true, image: true },
+        orderBy: [{ ordersCount: 'desc' }, { name: 'asc' }],
+        take: 60
+      });
+      items = rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        sku: r.sku,
+        price: Number(r.price),
+        stock: null,
+        unit: 'piece',
+        imageUrl: r.image
+      }));
+    }
+
+    res.json({ success: true, data: items });
   } catch (error) {
     console.error('POS searchProducts failed:', error);
-    res.status(500).json({ success: false, error: 'تعذّر جلب المنتجات' });
+    res.status(500).json({ success: false, error: 'تعذّر جلب الأصناف' });
   }
 };
 
 /**
  * قراءة الباركود.
  *
- * `sku` فريدٌ على مستوى المنصّة، ولذلك يُقيَّد بالمتجر أيضاً: بدونه يقرأ
- * كاشير متجرٍ منتجَ متجرٍ آخر لو تشابه الرمز.
+ * البحث مقيَّد بالنشاط دائماً: رمزان متطابقان في محلّين مختلفين ليسا
+ * تعارضاً، وبلا القيد يقرأ كاشيرٌ صنفَ غيره.
  */
 export const lookupBySku = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const storeId = getStoreId(req);
+    const business = getBusiness(req);
     const sku = String(req.params.sku || '').trim();
 
-    if (!storeId || !sku) {
+    if (!business || !sku) {
       res.status(400).json({ success: false, error: 'الرمز مطلوب' });
       return;
     }
 
-    const product = await prisma.product.findFirst({
-      where: { storeId, sku },
-      select: { id: true, name: true, sku: true, price: true, stock: true, unit: true, imageUrl: true }
-    });
+    let item: SellableItem | null = null;
 
-    if (!product) {
-      res.status(404).json({ success: false, error: `لا منتج بالرمز ${sku}` });
+    if (business.kind === 'store') {
+      const row = await prisma.product.findFirst({
+        where: { storeId: business.id, sku },
+        select: { id: true, name: true, sku: true, price: true, stock: true, unit: true, imageUrl: true }
+      });
+      if (row) item = { ...row, price: Number(row.price) };
+    } else {
+      const row = await prisma.menuItem.findFirst({
+        where: { restaurantId: business.id, sku },
+        select: { id: true, name: true, sku: true, price: true, image: true }
+      });
+      if (row) {
+        item = {
+          id: row.id, name: row.name, sku: row.sku, price: Number(row.price),
+          stock: null, unit: 'piece', imageUrl: row.image
+        };
+      }
+    }
+
+    if (!item) {
+      res.status(404).json({ success: false, error: `لا صنف بالرمز ${sku}` });
       return;
     }
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: item });
   } catch (error) {
     console.error('POS lookupBySku failed:', error);
     res.status(500).json({ success: false, error: 'تعذّر البحث بالرمز' });
@@ -109,7 +174,7 @@ interface SaleLine {
  * إتمام بيعة.
  *
  * **الأسعار تُقرأ من قاعدة البيانات لا من الطلب.** إرسال السعر من الواجهة
- * يعني أن أي أحد يملك رمز موظّف يستطيع بيع منتجٍ بليرة واحدة. الواجهة تعرض،
+ * يعني أن أي أحد يملك رمز موظّف يستطيع بيع صنفٍ بليرة واحدة. الواجهة تعرض،
  * والخادم يحسب.
  *
  * **وكلّه في معاملة واحدة**: بيعةٌ تُسجَّل ثم يفشل خصم المخزون تترك رقماً
@@ -117,9 +182,9 @@ interface SaleLine {
  */
 export const createSale = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const storeId = getStoreId(req);
-    if (!storeId) {
-      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+    const business = getBusiness(req);
+    if (!business) {
+      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
       return;
     }
 
@@ -144,51 +209,55 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const products = await prisma.product.findMany({
-      where: { id: { in: clean.map((l) => l.productId) }, storeId },
-      select: { id: true, name: true, price: true, cost: true, stock: true }
-    });
-    const byId = new Map(products.map((p) => [p.id, p]));
+    const ids = clean.map((l) => l.productId);
+    const isStore = business.kind === 'store';
 
-    const missing = clean.filter((l) => !byId.has(l.productId));
-    if (missing.length > 0) {
-      res.status(400).json({ success: false, error: 'صنفٌ في البيعة لا يتبع هذا المتجر' });
+    const catalog = isStore
+      ? (await prisma.product.findMany({
+          where: { id: { in: ids }, storeId: business.id },
+          select: { id: true, name: true, price: true, cost: true, stock: true }
+        })).map((p) => ({ ...p, price: Number(p.price), stock: p.stock as number | null }))
+      : (await prisma.menuItem.findMany({
+          where: { id: { in: ids }, restaurantId: business.id },
+          select: { id: true, name: true, price: true }
+        })).map((m) => ({ ...m, price: Number(m.price), cost: null as number | null, stock: null as number | null }));
+
+    const byId = new Map(catalog.map((c) => [c.id, c]));
+
+    if (clean.some((l) => !byId.has(l.productId))) {
+      res.status(400).json({ success: false, error: 'صنفٌ في البيعة لا يتبع هذا النشاط' });
       return;
     }
 
-    // المخزون يُفحص قبل الكتابة: بيعُ ما ليس موجوداً يترك رصيداً سالباً
-    // يفسد الجرد ولا يُكتشف إلا يدوياً
-    const short = clean.find((l) => (byId.get(l.productId)!.stock ?? 0) < l.quantity);
-    if (short) {
-      const p = byId.get(short.productId)!;
-      res.status(400).json({
-        success: false,
-        error: `الكمية غير متوفّرة من «${p.name}» — المتاح ${p.stock}`
-      });
-      return;
+    // المخزون يُفحص قبل الكتابة — للمتجر وحده. المطعم يطبخ عند الطلب،
+    // وفحصُ رصيدٍ لا وجود له كان سيمنع كل بيعة.
+    if (isStore) {
+      const short = clean.find((l) => (byId.get(l.productId)!.stock ?? 0) < l.quantity);
+      if (short) {
+        const item = byId.get(short.productId)!;
+        res.status(400).json({
+          success: false,
+          error: `الكمية غير متوفّرة من «${item.name}» — المتاح ${item.stock}`
+        });
+        return;
+      }
     }
 
     const items = clean.map((l) => {
-      const product = byId.get(l.productId)!;
-      return {
-        productId: product.id,
-        quantity: l.quantity,
-        price: Number(product.price),
-        cost: product.cost ?? null
-      };
+      const found = byId.get(l.productId)!;
+      return { id: found.id, quantity: l.quantity, price: found.price, cost: found.cost ?? null };
     });
 
     const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const discount = Math.min(discountAmount, subtotal);
     const total = subtotal - discount;
-
     const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}`;
 
     const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
           orderNumber,
-          storeId,
+          ...(isStore ? { storeId: business.id } : { restaurantId: business.id }),
           status: 'served',
           orderType: 'takeaway',
           // يميّز بيع الكاشير عن الطلب الإلكتروني في التقارير والحصّة
@@ -206,14 +275,27 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
       });
 
       for (const item of items) {
-        await tx.orderItem.create({ data: { orderId: created.id, ...item } });
-        await tx.product.update({
-          where: { id: item.productId },
+        await tx.orderItem.create({
           data: {
-            stock: { decrement: item.quantity },
-            ordersCount: { increment: item.quantity }
+            orderId: created.id,
+            ...(isStore ? { productId: item.id } : { menuItemId: item.id }),
+            quantity: item.quantity,
+            price: item.price,
+            cost: item.cost
           }
         });
+
+        if (isStore) {
+          await tx.product.update({
+            where: { id: item.id },
+            data: { stock: { decrement: item.quantity }, ordersCount: { increment: item.quantity } }
+          });
+        } else {
+          await tx.menuItem.update({
+            where: { id: item.id },
+            data: { ordersCount: { increment: item.quantity } }
+          });
+        }
       }
 
       return created;
@@ -233,8 +315,8 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
           isPaid: true,
           total: Number(order.total),
           orderType: order.orderType,
-          restaurantId: null,
-          storeId,
+          restaurantId: isStore ? null : business.id,
+          storeId: isStore ? business.id : null,
           createdBy: order.createdBy,
           assignedDriverId: null
         },
@@ -256,7 +338,7 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
         paymentMethod,
         createdAt: order.createdAt,
         items: items.map((i) => ({
-          name: byId.get(i.productId)!.name,
+          name: byId.get(i.id)!.name,
           quantity: i.quantity,
           price: i.price,
           lineTotal: i.price * i.quantity
@@ -279,9 +361,9 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
  */
 export const getShiftSummary = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const storeId = getStoreId(req);
-    if (!storeId) {
-      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+    const business = getBusiness(req);
+    if (!business) {
+      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
       return;
     }
 
@@ -289,7 +371,11 @@ export const getShiftSummary = async (req: AuthRequest, res: Response): Promise<
     since.setHours(0, 0, 0, 0);
 
     const sales = await prisma.order.findMany({
-      where: { storeId, orderSource: 'pos', createdAt: { gte: since } },
+      where: {
+        ...(business.kind === 'store' ? { storeId: business.id } : { restaurantId: business.id }),
+        orderSource: 'pos',
+        createdAt: { gte: since }
+      },
       select: { total: true, paymentMethod: true, orderNumber: true, createdAt: true },
       orderBy: { createdAt: 'desc' }
     });
@@ -305,12 +391,7 @@ export const getShiftSummary = async (req: AuthRequest, res: Response): Promise<
 
     res.json({
       success: true,
-      data: {
-        count: sales.length,
-        total,
-        byMethod,
-        recent: sales.slice(0, 12)
-      }
+      data: { count: sales.length, total, byMethod, recent: sales.slice(0, 12) }
     });
   } catch (error) {
     console.error('POS shift summary failed:', error);

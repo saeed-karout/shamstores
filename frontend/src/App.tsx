@@ -321,6 +321,7 @@ const MainApp: React.FC = () => {
             <Route path="/restaurant/campaigns" element={<CampaignsPage />} />
             {/* الحارس في الخادم لا هنا: `pos` إضافة مدفوعة تُفحص على كل مسار */}
             <Route path="/store/pos" element={<PosPage />} />
+            <Route path="/restaurant/pos" element={<PosPage />} />
             <Route path="/store/analytics" element={<PlanRoute feature="analytics"><StoreAnalyticsPage /></PlanRoute>} />
             <Route path="/store/settings" element={<StoreSettingsPage />} />
             <Route path="/store/qr-codes" element={<PlanRoute feature="tableQr"><StoreQRCodesPage /></PlanRoute>} />
