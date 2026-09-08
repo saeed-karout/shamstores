@@ -101,6 +101,19 @@ const FEATURES = [
     // مُتحقَّق: checkPlanFeature('promotions')
   },
   {
+    code: 'pos',
+    name: 'الكاشير',
+    nameEn: 'Point of sale',
+    description:
+      'بِع داخل محلّك من هاتفك: امسح الباركود بالكاميرا، أو ابحث بالاسم، ' +
+      'وأتمم البيعة واحسب الباقي. المخزون ينقص تلقائياً وتدخل البيعة تقاريرك ' +
+      'وقسمك المالي مع الطلبات الإلكترونية.',
+    group: 'sales',
+    price: 4,
+    // مُتحقَّق: checkPlanFeature('pos') على كل مسارات /api/pos،
+    // و`pos` مدرجة في strictFeatures فلا تُفتح لخطة مدفوعة بلا شراء
+  },
+  {
     code: 'branding_removal',
     name: 'إخفاء شعار المنصّة',
     nameEn: 'Remove platform badge',

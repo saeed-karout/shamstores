@@ -34,6 +34,7 @@ import {
   IoWarning,
   IoDocumentText,
   IoNotifications,
+  IoCard,
 } from 'react-icons/io5';
 
 interface SidebarProps {
@@ -177,6 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (hasAnalytics) items.push({ path: '/store/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
     items.push({ path: '/store/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
     items.push({ path: '/store/campaigns', icon: IoMegaphone, label: 'حملات الزبائن', badge: 'جديد' });
+    items.push({ path: '/store/pos', icon: IoCard, label: 'الكاشير', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });
     if (hasOnlineOrders) items.push({ path: '/store/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
     if (hasOnlineOrders) items.push({ path: '/store/drivers', icon: IoCar, label: 'السائقين' });

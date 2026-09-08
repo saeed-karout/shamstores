@@ -66,6 +66,7 @@ const AdminPlatformSettings = lazy(() => import('./pages/Admin/AdminPlatformSett
 const AdminPushNotifications = lazy(() => import('./pages/Admin/AdminPushNotifications'));
 const CustomersPage = lazy(() => import('./pages/Store/CustomersPage'));
 const CampaignsPage = lazy(() => import('./pages/Store/CampaignsPage'));
+const PosPage = lazy(() => import('./pages/Store/PosPage'));
 const AdminFeatures = lazy(() => import('./pages/Admin/AdminFeatures'));
 const AdminBusinessMarketing = lazy(() => import('./pages/Admin/AdminBusinessMarketing'));
 const AdminAdvertisements = lazy(() => import('./pages/Admin/AdminAdvertisements'));
@@ -318,6 +319,8 @@ const MainApp: React.FC = () => {
             <Route path="/restaurant/customers" element={<CustomersPage />} />
             <Route path="/store/campaigns" element={<CampaignsPage />} />
             <Route path="/restaurant/campaigns" element={<CampaignsPage />} />
+            {/* الحارس في الخادم لا هنا: `pos` إضافة مدفوعة تُفحص على كل مسار */}
+            <Route path="/store/pos" element={<PosPage />} />
             <Route path="/store/analytics" element={<PlanRoute feature="analytics"><StoreAnalyticsPage /></PlanRoute>} />
             <Route path="/store/settings" element={<StoreSettingsPage />} />
             <Route path="/store/qr-codes" element={<PlanRoute feature="tableQr"><StoreQRCodesPage /></PlanRoute>} />

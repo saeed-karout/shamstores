@@ -71,7 +71,11 @@ export const countMonthlyOrders = async (
     where: {
       [businessType === 'restaurant' ? 'restaurantId' : 'storeId']: businessId,
       createdAt: { gte: startOfMonth() },
-      status: { notIn: UNCOUNTED_STATUSES }
+      status: { notIn: UNCOUNTED_STATUSES },
+      // بيع الكاشير خارج الحصّة: هو إضافة مدفوعة وحدها، وخصمُه من حصّة
+      // الطلبات الإلكترونية تحصيلٌ مرّتين. ومحلٌّ يبيع مئتي بيعة يومياً
+      // كان سيستهلك أي خطة في يومٍ واحد فيصير الكاشير غير قابل للاستعمال.
+      orderSource: { not: 'pos' }
     } as any
   });
 

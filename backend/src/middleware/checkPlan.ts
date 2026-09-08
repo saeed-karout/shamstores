@@ -75,7 +75,10 @@ export const checkPlanFeature = (featureCode: string) => {
         'table_qr',
         'multi_language',
         'promotions',
-        'coupons'
+        'coupons',
+        // إضافةٌ لا تمنحها خطة: بلا إدراجها هنا يمرّرها الشرط المتساهل
+        // أدناه لأي خطة مدفوعة، فتُفتح لمن لم يشترها
+        'pos'
       ]);
 
       if (featureSet.has(normalizedFeature)) {

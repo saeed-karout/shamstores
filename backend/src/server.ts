@@ -39,6 +39,7 @@ import notificationRoutes from './routes/notificationRoutes';
 import alertChannelRoutes from './routes/alertChannelRoutes';
 import customerRoutes from './routes/customerRoutes';
 import campaignRoutes from './routes/campaignRoutes';
+import posRoutes from './routes/posRoutes';
 import telegramRoutes from './routes/telegramRoutes';
 import planRoutes from './routes/planRoutes';
 import qrRoutes from './routes/qrRoutes';
@@ -299,6 +300,8 @@ app.use('/api/alert-channels', alertChannelRoutes);
 app.use('/api/customers', customerRoutes);
 // حملات التاجر واشتراك الزبون — ومسار إلغاء الاشتراك عام بلا مصادقة
 app.use('/api/campaigns', campaignRoutes);
+// الكاشير — إضافة مدفوعة، الحارس داخل الموجّه
+app.use('/api/pos', posRoutes);
 // تيليجرام لا يحمل رمزنا: الحماية بالسرّ في ترويسة النداء لا بالمصادقة
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/plans', planRoutes);
