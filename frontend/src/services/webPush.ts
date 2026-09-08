@@ -10,19 +10,61 @@
 // الموقع إلى شاشته الرئيسية (قيدٌ من Apple منذ 16.4). ويحتاج إذناً صريحاً
 // يرفضه كثيرون. ولذلك ليس القناة الوحيدة — تيليجرام يغطّي من يسقط منها.
 
+import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getMessaging, getToken, deleteToken, isSupported, onMessage } from 'firebase/messaging';
-import { firebaseApp } from './firebaseConfig';
 import api from './api';
 
 const SW_PATH = '/firebase-messaging-sw.js';
 
+/**
+ * مشروع الإشعارات **قد يختلف عن مشروع المصادقة**.
+ *
+ * وهذا واقعُ المنصّة اليوم: المصادقة على مشروع `shamstores`، والخادم وتطبيق
+ * السائق على `shamstores-ba667`. ورمزٌ يُصدره مشروعٌ ويرسل إليه آخر ترفضه
+ * Google بـ`messaging/mismatched-credential` — وهو خطأ خبيث لأن كل الفحوص
+ * تمرّ ولا يصل إشعار. كلّفنا ذلك ساعاتٍ في تطبيق السائق.
+ *
+ * فيُهيّأ تطبيق Firebase **مُسمّى** للإشعارات وحدها، بمتغيّرات `VITE_FCM_*`
+ * التي تعود إلى `VITE_FIREBASE_*` حين تغيب — فتوحيدُ المشروعين لاحقاً لا
+ * يحتاج تعديل شيفرة.
+ */
+const pick = (fcm: string, fallback: string): string =>
+  (import.meta.env[fcm as keyof ImportMetaEnv] as string) ||
+  (import.meta.env[fallback as keyof ImportMetaEnv] as string) ||
+  '';
+
 const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: pick('VITE_FCM_API_KEY', 'VITE_FIREBASE_API_KEY'),
+  authDomain: pick('VITE_FCM_AUTH_DOMAIN', 'VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: pick('VITE_FCM_PROJECT_ID', 'VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: pick('VITE_FCM_STORAGE_BUCKET', 'VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: pick('VITE_FCM_MESSAGING_SENDER_ID', 'VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: pick('VITE_FCM_APP_ID', 'VITE_FIREBASE_APP_ID'),
+};
+
+/** مشروع الإشعارات كما تراه الواجهة — تقارنه صفحة الإعدادات بمشروع الخادم */
+export const messagingProjectId = (): string => config.projectId;
+
+/**
+ * تطبيق مستقلّ باسم `messaging`.
+ *
+ * `initializeApp` بالاسم الافتراضي مرّتين يرمي، وتطبيقُ المصادقة مُهيّأ
+ * أصلاً في `firebaseConfig.ts`. الاسم يفصل بينهما فيتعايشان.
+ */
+const MESSAGING_APP = 'messaging';
+
+const messagingApp = (): FirebaseApp | null => {
+  if (!config.projectId || !config.apiKey || !config.messagingSenderId) return null;
+  try {
+    const existing = getApps().find((app) => app.name === MESSAGING_APP);
+    return existing || initializeApp(config, MESSAGING_APP);
+  } catch {
+    try {
+      return getApp(MESSAGING_APP);
+    } catch {
+      return null;
+    }
+  }
 };
 
 /**
@@ -80,7 +122,7 @@ export const getPushState = async (): Promise<PushState> => {
   if (!(await isSupported().catch(() => false))) {
     return isIos() && !isStandalone() ? 'ios-needs-pwa' : 'unsupported';
   }
-  if (!firebaseApp || !config.projectId || !VAPID_KEY) return 'not-configured';
+  if (!messagingApp() || !VAPID_KEY) return 'not-configured';
 
   return Notification.permission as PushState;
 };
@@ -134,8 +176,11 @@ export const enablePush = async (): Promise<EnableResult> => {
       return { ok: false, state: permission as PushState, error: 'لم يُمنح إذن الإشعارات' };
     }
 
+    const app = messagingApp();
+    if (!app) return { ok: false, state: 'not-configured', error: 'إشعارات الويب غير مضبوطة على المنصّة بعد' };
+
     const registration = await registerServiceWorker();
-    const messaging = getMessaging(firebaseApp!);
+    const messaging = getMessaging(app);
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration
@@ -159,8 +204,11 @@ export const enablePush = async (): Promise<EnableResult> => {
 /** يوقف الإشعارات على هذا الجهاز وحده — لا على بقية أجهزة التاجر */
 export const disablePush = async (): Promise<boolean> => {
   try {
+    const app = messagingApp();
+    if (!app) return false;
+
     const registration = await navigator.serviceWorker.getRegistration(SW_PATH);
-    const messaging = getMessaging(firebaseApp!);
+    const messaging = getMessaging(app);
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration
@@ -185,12 +233,13 @@ export const disablePush = async (): Promise<boolean> => {
  */
 export const onForegroundPush = (handler: (payload: any) => void): (() => void) => {
   try {
-    if (!firebaseApp) return () => undefined;
-    const messaging = getMessaging(firebaseApp);
+    const app = messagingApp();
+    if (!app) return () => undefined;
+    const messaging = getMessaging(app);
     return onMessage(messaging, handler);
   } catch {
     return () => undefined;
   }
 };
 
-export default { getPushState, enablePush, disablePush, onForegroundPush, describeDevice };
+export default { getPushState, enablePush, disablePush, onForegroundPush, describeDevice, messagingProjectId };

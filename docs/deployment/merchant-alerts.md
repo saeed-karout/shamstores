@@ -112,21 +112,50 @@ Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/getWebhookInfo"
 
 ## ٢. إشعار المتصفّح
 
-يعيد استخدام مشروع Firebase نفسه (`shamstores-ba667`). الناقص شيء واحد:
+### 🛑 مشروعان لا مشروع — وهذا أصل المشكلة
 
-### مفتاح VAPID
+المنصّة تستعمل مشروعَي Firebase مختلفين:
 
-> Firebase Console ← Project settings ← Cloud Messaging ← Web configuration ←
-> Web Push certificates ← Generate key pair
+| | المشروع |
+|---|---|
+| مصادقة الواجهة (`VITE_FIREBASE_*`) | `shamstores` |
+| الخادم وتطبيق السائق (`FIREBASE_PROJECT_ID`) | `shamstores-ba667` |
 
-يُوضع في بناء الواجهة (متغيّر Vite لا Heroku — يُدمج وقت البناء):
+ورمزٌ يُصدره مشروعٌ ويرسل إليه آخر ترفضه Google بـ
+`messaging/mismatched-credential`. وهو خطأ خبيث: كل الفحوص تمرّ، والتهيئة
+تنجح، ولا يصل إشعارٌ واحد. كلّفنا ساعاتٍ في تطبيق السائق قبل أن يُكتشف.
+
+**الحلّ المطبَّق:** تطبيق Firebase **مُسمّى** للإشعارات وحدها بمتغيّرات
+`VITE_FCM_*`، والمصادقة تبقى على مشروعها بلا مساس. وصفحة الإعدادات تقارن
+المشروعين وتقول التباين صراحةً بدل أن يُكتشف من سجلّ الخادم.
+
+### الخطوات
+
+**١.** في Firebase Console، مشروع **`shamstores-ba667`**: أضف تطبيق **Web**
+(</> Add app). انسخ إعداده.
+
+**٢.** في نفس المشروع: Project settings ← Cloud Messaging ← Web configuration
+← Web Push certificates ← **Generate key pair**.
+
+**٣.** في `frontend/.env` (متغيّرات Vite تُدمج **وقت البناء** لا على Heroku):
 
 ```
-VITE_FIREBASE_VAPID_KEY=المفتاح
+VITE_FCM_API_KEY=…
+VITE_FCM_AUTH_DOMAIN=shamstores-ba667.firebaseapp.com
+VITE_FCM_PROJECT_ID=shamstores-ba667
+VITE_FCM_STORAGE_BUCKET=shamstores-ba667.firebasestorage.app
+VITE_FCM_MESSAGING_SENDER_ID=242167559319
+VITE_FCM_APP_ID=…
+VITE_FIREBASE_VAPID_KEY=…
 ```
 
-ومعه بقية متغيّرات `VITE_FIREBASE_*` التي يستعملها `firebaseConfig.ts` أصلاً.
-بدون أيٍّ منها تعرض الصفحة «غير مضبوطة على المنصّة» بدل زرٍّ يفشل عند الضغط.
+**٤.** أعد بناء الواجهة ونشرها — بلا إعادة بناء لا يتغيّر شيء.
+
+> لو وحّدتَ المشروعين لاحقاً، احذف `VITE_FCM_*` كلها: الشيفرة تعود إلى
+> `VITE_FIREBASE_*` تلقائياً بلا تعديل.
+
+بدون أيٍّ من هذه تعرض الصفحة «ينقص إعداد الإشعارات على المنصّة» بدل زرٍّ
+يفشل عند الضغط.
 
 > على **iPhone** لا تعمل إشعارات الويب إلا إذا أضاف التاجر الموقع إلى الشاشة
 > الرئيسية (قيدٌ من Apple منذ iOS 16.4). الواجهة تقول له ذلك صراحةً. ولهذا

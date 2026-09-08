@@ -107,6 +107,9 @@ router.get('/channels', async (req: AuthRequest, res: Response) => {
       data: {
         push: {
           available: firebaseService.isConfigured,
+          // الواجهة تقارنه بمشروعها: رمزٌ يُصدره مشروعٌ ويرسل إليه آخر ترفضه
+          // Google بلا أن يبدو شيءٌ معطّلاً — وقد كلّفنا ذلك مرّتين
+          serverProjectId: firebaseService.projectId,
           devices: user?.deviceTokens || []
         },
         telegram: {

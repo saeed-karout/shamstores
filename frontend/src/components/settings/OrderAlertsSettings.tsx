@@ -18,7 +18,7 @@ import {
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
-import { enablePush, disablePush, getPushState, PushState } from '@/services/webPush';
+import { enablePush, disablePush, getPushState, PushState, messagingProjectId } from '@/services/webPush';
 
 interface Palette {
   card: string; surf: string; accent: string; text: string;
@@ -33,7 +33,7 @@ interface DeviceRow {
 }
 
 interface ChannelState {
-  push: { available: boolean; devices: DeviceRow[] };
+  push: { available: boolean; serverProjectId?: string | null; devices: DeviceRow[] };
   telegram: {
     available: boolean;
     linked: boolean;
@@ -114,11 +114,18 @@ const OrderAlertsSettings: React.FC<{ colors: Palette }> = ({ colors: C }) => {
 
   const pushOn = pushState === 'granted' && (state?.push.devices.length ?? 0) > 0;
 
+  // مشروعان مختلفان = كل رسالة تُرفض، وكل الفحوص تمرّ. يُقال صراحةً هنا
+  // بدل أن يُكتشف من سجلّ الخادم بعد ساعات.
+  const webProject = messagingProjectId();
+  const serverProject = state?.push.serverProjectId || '';
+  const projectMismatch = Boolean(webProject && serverProject && webProject !== serverProject);
+
   const pushHint = (() => {
     if (!state?.push.available) return 'الإشعارات غير مضبوطة على المنصّة بعد';
     if (pushState === 'ios-needs-pwa') return 'على iPhone: أضف الموقع إلى الشاشة الرئيسية أولاً';
     if (pushState === 'unsupported') return 'متصفّحك لا يدعم إشعارات الويب';
     if (pushState === 'not-configured') return 'ينقص إعداد الإشعارات على المنصّة';
+    if (projectMismatch) return `مشروع الواجهة «${webProject}» يخالف مشروع الخادم «${serverProject}» — سترفض Google كل رسالة`;
     if (pushState === 'denied') return 'محظورة من إعدادات المتصفّح — فعّلها من أيقونة القفل بجانب العنوان';
     return pushOn ? 'مفعّلة على هذا الجهاز' : 'غير مفعّلة على هذا الجهاز';
   })();
@@ -245,7 +252,7 @@ const OrderAlertsSettings: React.FC<{ colors: Palette }> = ({ colors: C }) => {
 
               <button
                 onClick={togglePush}
-                disabled={busy === 'push' || !state?.push.available || pushState === 'unsupported'}
+                disabled={busy === 'push' || !state?.push.available || pushState === 'unsupported' || projectMismatch}
                 style={{
                   marginTop: 10, padding: '8px 14px', borderRadius: 10,
                   background: pushOn ? 'transparent' : C.accent,
