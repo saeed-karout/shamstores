@@ -3,7 +3,11 @@
 import { Response, NextFunction } from 'express';
 import prisma from '../services/prisma';
 import { AuthRequest } from '../types';
-import { normalizeFeatureCode, getPlanFeatureCodes } from '../services/entitlement.service';
+import {
+  normalizeFeatureCode,
+  getPlanFeatureCodes,
+  businessHasEntitlement
+} from '../services/entitlement.service';
 
 // القواعد نفسها يستخدمها بقية الخادم — تعريفها في services/entitlement.service.ts
 // حتى لا تتباعد بوابات الخطة عن الميزات المُسندة لكل نشاط.
@@ -50,6 +54,17 @@ export const checkPlanFeature = (featureCode: string) => {
       const planFeatures = getPlanFeaturesFromPlan(plan).map(normalizeFeatureCode);
       const normalizedFeature = normalizeFeatureCode(featureCode);
       const featureSet = new Set(planFeatures);
+
+      // **الإضافات المشتراة تُفحص أوّلاً.**
+      //
+      // كان هذا الحارس يقرأ بوابات الخطة وحدها ولا يرى `BusinessFeature`
+      // إطلاقاً. فتاجرٌ يشتري إضافةً يراها «مملوكة» في الكتالوج — لأن
+      // الكتالوج يسأل `businessHasEntitlement` — ثم يرتدّ عند المسار بـ403.
+      // أي أن متجر الإضافات كلّه كان يبيع ما لا يُفتح بالشراء.
+      if (await businessHasEntitlement(businessId, businessType, normalizedFeature)) {
+        next();
+        return;
+      }
 
       const isPaidPlan = (plan.price || 0) > 0 && plan.slug !== 'free' && plan.name !== 'free';
       const strictFeatures = new Set([

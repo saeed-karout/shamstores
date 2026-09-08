@@ -14,6 +14,7 @@
     "prisma:studio": "prisma studio",
     "prisma:validate": "prisma validate",
     "prisma:db-push": "node scripts/prisma.js db push",
+    "seed:features": "node scripts/seed-features.js",
     "migration:run": "node scripts/prisma.js db push",
     "clean": "rm -rf dist node_modules"
   },
