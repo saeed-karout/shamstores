@@ -8,6 +8,7 @@ import { verifyToken } from '../config/auth';
 import { emitOrderRealtimeEvent, RealtimeOrderPayload } from '../realtime/socket';
 import { notifyDriversOfOrder, notifyCustomerOfOrder } from '../services/driverPush.service';
 import { alertMerchantOfNewOrder } from '../services/merchantAlerts.service';
+import { attributeOrder, syncReferralStatus } from '../services/affiliate.service';
 import { canAcceptOrder } from '../services/orderQuota.service';
 import { validateSelection } from '../services/productOptions.service';
 
@@ -595,6 +596,22 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     // `void`: الردّ لا ينتظر Firebase.
     void notifyDriversOfOrder(order);
 
+    // إحالة المسوّق — أساسها المنتجات بعد الخصم لا الفاتورة: رسوم التوصيل
+    // ليست بيعاً حقّقه المسوّق، ودفعُ عمولةٍ عليها خسارةٌ صافية للتاجر.
+    if (req.body?.referralCode) {
+      const businessId = order.restaurantId || order.storeId;
+      if (businessId) {
+        void attributeOrder({
+          code: String(req.body.referralCode),
+          orderId: order.id,
+          businessId,
+          businessType: order.restaurantId ? 'restaurant' : 'store',
+          buyerUserId: userId,
+          baseAmount: Number(order.subtotal) - (Number(order.discountAmount) || 0)
+        });
+      }
+    }
+
     // والتاجر كذلك: السوكِت يبثّ الطلب، لكنه لا يبلغ من أغلق اللوحة. فيبرد
     // الطلب حتى يلغيه الزبون، والتاجر لا يعلم أنه كان عنده طلب.
     void alertMerchantOfNewOrder({
@@ -653,6 +670,8 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
     // وتنبيهٌ يتكرّر بلا جديد يعلّم السائق تجاهل التنبيهات
     if (order.status !== updated.status) {
       void notifyDriversOfOrder(updated);
+      // العمولة لا تُستحقّ قبل اكتمال الطلب وتسقط عند إلغائه
+      void syncReferralStatus(updated.id, updated.status);
     }
 
     emitOrderRealtimeNotification(
@@ -1040,6 +1059,7 @@ export const updateDeliveryOrderStatus = async (req: AuthRequest, res: Response)
 
     if (order.status !== updated.status) {
       void notifyDriversOfOrder(updated);
+      void syncReferralStatus(updated.id, updated.status);
     }
 
     if (status === 'delivered') {

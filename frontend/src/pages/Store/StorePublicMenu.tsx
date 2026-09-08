@@ -64,6 +64,7 @@ import api, { getCurrentSubdomain } from '@/services/api';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
+import { captureRef, getRef, clearRef } from '@/utils/referral';
 import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
 import { calculateDistance } from '@/utils/distance';
 import { resolveBadges } from '@/utils/catalogBadges';
@@ -185,6 +186,17 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     (store as any)?.id,
     (store as any)?.currency
   );
+
+
+  // رمز المسوّق: يُلتقط من الرابط ويُحفظ ثلاثين يوماً — الزائر لا يشتري في
+  // نفس الزيارة عادةً، ورمزٌ يعيش في العنوان وحده يضيع عند أوّل تنقّل
+  useEffect(() => {
+    const id = (store as any)?.id;
+    if (!id) return;
+    const code = captureRef(id);
+    // الزيارة تُسجَّل مرّةً عند الالتقاط لا مع كل تحميل صفحة
+    if (code) api.post('/affiliate/track', { code }).catch(() => undefined);
+  }, [(store as any)?.id]);
 
   // ---------- تحميل البيانات ----------
   useEffect(() => {
@@ -557,12 +569,16 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           orderType === 'delivery' ? deliveryLocation?.address || address.trim() : undefined,
         deliveryLat: orderType === 'delivery' ? deliveryLocation?.lat : undefined,
         deliveryLng: orderType === 'delivery' ? deliveryLocation?.lng : undefined,
-        deliveryFee: orderType === 'delivery' ? deliveryFee : 0
+        deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+        // يُتجاهَل بصمت إن كان منتهياً أو لنشاطٍ آخر — الخادم يتحقّق
+        referralCode: getRef((store as any)?.id) || undefined
       };
 
       const response: any = await api.post('/orders', orderData);
 
       toast.success('تم إرسال طلبك — يتابعه المتجر الآن 🎉');
+      // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
+      clearRef((store as any)?.id);
       clearCart();
       setCartOpen(false);
       setOrderNotes('');

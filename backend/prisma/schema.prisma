@@ -120,20 +120,21 @@ model User {
   updatedAt          DateTime  @updatedAt
 
   // Relations
-  ownedStores      Store[]                @relation("StoreOwner")
-  ownedRestaurants Restaurant[]           @relation("RestaurantOwner")
-  restaurant       Restaurant?            @relation("RestaurantUsers", fields: [restaurantId], references: [id])
-  stores           Store[]                @relation("StoreUsers")
-  drivers          Driver[]
+  ownedStores       Store[]                @relation("StoreOwner")
+  ownedRestaurants  Restaurant[]           @relation("RestaurantOwner")
+  restaurant        Restaurant?            @relation("RestaurantUsers", fields: [restaurantId], references: [id])
+  stores            Store[]                @relation("StoreUsers")
+  drivers           Driver[]
   /// الطلبات المعيَّنة إليه كسائق
-  assignedOrders   Order[]                @relation("AssignedDeliveries")
-  tickets          Ticket[]
-  orders           Order[]                @relation("CreatedOrders")
-  firebaseUser     FirebaseUser?
-  notifications    Notification[]
-  deviceTokens     DeviceToken[]
-  productReviews   ProductReview[]
-  subscriptions    CustomerSubscription[]
+  assignedOrders    Order[]                @relation("AssignedDeliveries")
+  tickets           Ticket[]
+  orders            Order[]                @relation("CreatedOrders")
+  firebaseUser      FirebaseUser?
+  notifications     Notification[]
+  deviceTokens      DeviceToken[]
+  productReviews    ProductReview[]
+  subscriptions     CustomerSubscription[]
+  affiliateProfiles Affiliate[]
 
   @@index([email])
   @@index([restaurantId])
@@ -201,6 +202,78 @@ model CustomerSubscription {
   @@unique([userId, businessId, channel])
   @@index([businessId, businessType, marketingOptIn])
   @@map("customer_subscriptions")
+}
+
+/// مسوّقٌ بالعمولة لنشاطٍ بعينه.
+///
+/// `businessId` + `businessType` كنمط `BusinessFeature` — لا عمودان
+/// اختياريان: القيد الفريد على أعمدةٍ قد تكون NULL لا يمنع التكرار في MySQL.
+///
+/// و`userId` اختياري: كثير من المسوّقين في السوق أشخاصٌ بلا حساب على
+/// المنصّة — اسمٌ ورقم هاتف يكفيان لتسجيلهم وحساب عمولتهم.
+model Affiliate {
+  id           String  @id @default(cuid())
+  businessId   String  @map("business_id")
+  /// restaurant | store
+  businessType String  @map("business_type")
+  userId       String? @map("user_id")
+
+  name  String
+  phone String?
+  /// الرمز الذي يوزّعه المسوّق — يظهر في الرابط `?ref=CODE`
+  code  String  @unique
+
+  /// نسبة العمولة المئوية وقت الإسناد
+  commissionRate Float   @default(5)
+  isActive       Boolean @default(true) @map("is_active")
+
+  /// زيارات وصلت برابطه — تقيس جهده حتى قبل أوّل بيعة
+  clicks Int @default(0)
+
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  referrals AffiliateReferral[]
+
+  @@index([businessId, businessType, isActive])
+  @@index([userId])
+  @@map("affiliates")
+}
+
+/// طلبٌ مُسنَد إلى مسوّق.
+///
+/// **العمولة تُجمَّد وقت الإسناد** (`commissionRate` منسوخة هنا): تغييرُ
+/// النسبة لاحقاً يجب ألّا يعيد حساب عمولاتٍ استُحقّت بنسبةٍ أخرى — ولا أن
+/// يخفضها بأثرٍ رجعي على مسوّقٍ عمل بها.
+///
+/// **وتُحتسب على المنتجات لا على الفاتورة**: رسوم التوصيل ليست بيعاً حقّقه
+/// المسوّق، ودفعُ عمولةٍ عليها خسارةٌ صافية للتاجر.
+model AffiliateReferral {
+  id          String @id @default(cuid())
+  affiliateId String @map("affiliate_id")
+  /// فريد: طلبٌ واحد لا يُسنَد مرّتين مهما تكرّر النداء
+  orderId     String @unique @map("order_id")
+
+  /// الأساس الذي حُسبت عليه العمولة — يُحفظ للمراجعة لا للعرض
+  baseAmount     Float @map("base_amount")
+  commissionRate Float @map("commission_rate")
+  commission     Float
+
+  /// pending: الطلب لم يكتمل بعد · approved: اكتمل واستُحقّت
+  /// cancelled: أُلغي الطلب فسقطت · paid: دُفعت للمسوّق
+  status String @default("pending")
+
+  paidAt    DateTime? @map("paid_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  affiliate Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([affiliateId, status])
+  @@map("affiliate_referrals")
 }
 
 model EmailVerificationCode {
@@ -599,31 +672,31 @@ model InventoryMovement {
 }
 
 model Order {
-  id                     String        @id @default(cuid())
+  id                     String             @id @default(cuid())
   restaurantId           String?
   storeId                String?
   tableId                String?
-  orderNumber            String        @unique
+  orderNumber            String             @unique
   customerName           String?
   customerPhone          String?
-  status                 OrderStatus   @default(pending)
+  status                 OrderStatus        @default(pending)
   total                  Float
-  subtotal               Float?        @default(0)
-  discountAmount         Float?        @default(0)
+  subtotal               Float?             @default(0)
+  discountAmount         Float?             @default(0)
   couponCode             String?
   notes                  String?
-  paymentMethod          PaymentMethod @default(cash)
-  isPaid                 Boolean       @default(false)
-  tax                    Float         @default(0)
+  paymentMethod          PaymentMethod      @default(cash)
+  isPaid                 Boolean            @default(false)
+  tax                    Float              @default(0)
   createdBy              String?
-  orderType              OrderType     @default(dine_in)
+  orderType              OrderType          @default(dine_in)
   deliveryAddress        String?
   deliveryLat            Float?
   deliveryLng            Float?
   assignedDriverId       String?
   estimatedDeliveryTime  Int?
   actualDeliveryTime     Int?
-  deliveryFee            Float?        @default(0)
+  deliveryFee            Float?             @default(0)
   deliveryDistance       Float?
   driverAcceptedAt       DateTime?
   driverReachedAt        DateTime?
@@ -631,14 +704,15 @@ model Order {
   /// المرتجع لا يُلغي الطلب ولا يغيّر حالته: البضاعة سُلّمت فعلاً ثم عادت.
   /// دمجه في `status` كان سيمحو أن التسليم حدث، وهو ما يميّز المرتجع عن
   /// الإلغاء في أي دفتر حسابات.
+  affiliateReferral      AffiliateReferral?
   returnedAt             DateTime?
   /// المبلغ المُعاد — قد يكون جزءاً من الطلب لا كلّه
   returnAmount           Float?
-  returnReason           String?       @db.Text
-  rating                 Int?          @default(0)
+  returnReason           String?            @db.Text
+  rating                 Int?               @default(0)
   ratingComment          String?
   ratedAt                DateTime?
-  orderSource            String        @default("restaurant")
+  orderSource            String             @default("restaurant")
   deliveryProofImage     String?
   deliveryProofSignature String?
   deliveryProofType      String?
@@ -646,8 +720,8 @@ model Order {
   driverRating           Int?
   driverRatingComment    String?
   driverRatedAt          DateTime?
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
   // Relations
   restaurant    Restaurant?      @relation(fields: [restaurantId], references: [id])

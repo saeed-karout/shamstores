@@ -6,6 +6,7 @@ import { UserService } from '../services/user.service';
 import prisma from '../services/prisma';
 import { emitOrderRealtimeEvent } from '../realtime/socket';
 import { notifyDriversOfOrder } from '../services/driverPush.service';
+import { syncReferralStatus } from '../services/affiliate.service';
 import { buildImageUpdate, getPublicImages } from '../services/media.service';
 import { validatePaymentSettings } from '../services/payment.service';
 import { validateLanguageUpdate } from '../services/language.service';
@@ -1223,6 +1224,7 @@ export const updateStoreOrderStatus = async (req: AuthRequest, res: Response): P
     // وكانت تمرّ بلا إشعار. والسوكِت وحده لا يكفي: هاتفٌ مقفل لا سوكِت له.
     if (previousStatus !== status) {
       void notifyDriversOfOrder(updatedOrder);
+      void syncReferralStatus(updatedOrder.id, updatedOrder.status);
     }
 
     // **البثّ اللحظي.**

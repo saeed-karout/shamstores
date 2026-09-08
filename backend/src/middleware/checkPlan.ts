@@ -76,9 +76,10 @@ export const checkPlanFeature = (featureCode: string) => {
         'multi_language',
         'promotions',
         'coupons',
-        // إضافةٌ لا تمنحها خطة: بلا إدراجها هنا يمرّرها الشرط المتساهل
+        // إضافاتٌ لا تمنحها خطة: بلا إدراجها هنا يمرّرها الشرط المتساهل
         // أدناه لأي خطة مدفوعة، فتُفتح لمن لم يشترها
-        'pos'
+        'pos',
+        'affiliate'
       ]);
 
       if (featureSet.has(normalizedFeature)) {

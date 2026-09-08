@@ -40,6 +40,7 @@ import { getImageUrl } from '@/utils/imageHelpers';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
+import { captureRef, getRef, clearRef } from '@/utils/referral';
 import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
 import type { CartItem } from '@/services/types';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
@@ -147,6 +148,16 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     (restaurant as any)?.id,
     (restaurant as any)?.currency
   );
+
+  // رمز المسوّق: يُلتقط من الرابط ويُحفظ ثلاثين يوماً — الزائر لا يشتري في
+  // نفس الزيارة عادةً، ورمزٌ يعيش في العنوان وحده يضيع عند أوّل تنقّل
+  useEffect(() => {
+    const id = (restaurant as any)?.id;
+    if (!id) return;
+    const code = captureRef(id);
+    // الزيارة تُسجَّل مرّةً عند الالتقاط لا مع كل تحميل صفحة
+    if (code) api.post('/affiliate/track', { code }).catch(() => undefined);
+  }, [(restaurant as any)?.id]);
 
   // ---------- تحميل البيانات ----------
   useEffect(() => {
@@ -397,12 +408,16 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         subtotal,
         total: subtotal,
         paymentMethod: 'cash',
-        orderType
+        orderType,
+        // يُتجاهَل بصمت إن كان منتهياً أو لنشاطٍ آخر — الخادم يتحقّق
+        referralCode: getRef((restaurant as any)?.id) || undefined
       };
 
       await api.post('/orders', orderData);
 
       toast.success('تم إرسال طلبك بنجاح 🎉');
+      // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
+      clearRef((restaurant as any)?.id);
       clearCart();
       setCartOpen(false);
       setOrderNotes('');

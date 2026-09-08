@@ -120,6 +120,19 @@ const FEATURES = [
     // و`pos` مدرجة في strictFeatures فلا تُفتح لخطة مدفوعة بلا شراء
   },
   {
+    code: 'affiliate',
+    name: 'المسوّقون بالعمولة',
+    nameEn: 'Affiliate program',
+    description:
+      'أعطِ كل مسوّق رابطاً خاصاً به، وتابع كم زيارة جلب وكم بيعة أتمّ وكم ' +
+      'استحقّ. العمولة تُحسب تلقائياً، ولا تُستحقّ إلا باكتمال الطلب، وتسقط ' +
+      'إن أُلغي.',
+    group: 'marketing',
+    price: 4,
+    // مُتحقَّق: checkPlanFeature('affiliate') على مسارات التاجر،
+    // و`affiliate` في strictFeatures فلا تُفتح لخطة مدفوعة بلا شراء
+  },
+  {
     code: 'branding_removal',
     name: 'إخفاء شعار المنصّة',
     nameEn: 'Remove platform badge',
