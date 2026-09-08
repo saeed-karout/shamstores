@@ -14,9 +14,11 @@
 // المحمَّلة عند الحاجة على Safari/iPhone — راجع utils/barcodeScanner.ts.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   IoSearch, IoBarcode, IoTrash, IoAdd, IoRemove, IoCart,
-  IoCheckmarkCircle, IoClose, IoReceiptOutline, IoStatsChart
+  IoCheckmarkCircle, IoClose, IoReceiptOutline, IoStatsChart,
+  IoLockClosed, IoSparkles
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
@@ -85,6 +87,14 @@ const PosPage: React.FC = () => {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [shift, setShift] = useState<{ count: number; total: number } | null>(null);
   const [scanning, setScanning] = useState(false);
+  /**
+   * الميزة مقفلة.
+   *
+   * **كانت الصفحة تُفرغ بصمت** ومعها فقاعة خطأ تختفي بعد ثوانٍ: التاجر يرى
+   * شاشة كاشيرٍ بلا أصناف ويظنّها معطّلة أو متجره فارغاً. القفل حالةٌ
+   * مشروعة تُشرح، لا عطلٌ يُخفى.
+   */
+  const [locked, setLocked] = useState<boolean | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const handleRef = useRef<ScanHandle | null>(null);
@@ -98,10 +108,10 @@ const PosPage: React.FC = () => {
     try {
       const data: any = await api.get(`/pos/products${q ? `?q=${encodeURIComponent(q)}` : ''}`);
       setProducts(Array.isArray(data) ? data : []);
+      setLocked(false);
     } catch (e: any) {
-      if (e?.response?.status === 403) {
-        toast.error('الكاشير إضافة مدفوعة — فعّلها من صفحة الميزات', { duration: 7000 });
-      }
+      if (e?.response?.status === 403) setLocked(true);
+      else toast.error('تعذّر جلب الأصناف');
     }
   }, []);
 
@@ -110,7 +120,8 @@ const PosPage: React.FC = () => {
       const data: any = await api.get('/pos/shift');
       setShift({ count: data?.count ?? 0, total: data?.total ?? 0 });
     } catch {
-      // ملخّص النوبة ثانويّ — غيابه لا يمنع البيع
+      // ملخّص النوبة ثانويّ — غيابه لا يمنع البيع، والقفل يُكتشف من
+      // نداء الأصناف فلا داعي لفقاعتَي خطأ لسببٍ واحد
     }
   }, []);
 
@@ -210,6 +221,48 @@ const PosPage: React.FC = () => {
       setSaving(false);
     }
   };
+
+  if (locked) {
+    return (
+      <div style={{
+        background: C.bg, minHeight: '100vh', color: C.text,
+        display: 'grid', placeItems: 'center', padding: 24
+      }} dir="rtl">
+        <div style={{
+          maxWidth: '30rem', textAlign: 'center',
+          background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '32px 26px'
+        }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 18, margin: '0 auto 16px',
+            background: `${C.accent}1A`, display: 'grid', placeItems: 'center'
+          }}>
+            <IoLockClosed size={26} color={C.accent} />
+          </div>
+
+          <h1 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 900 }}>الكاشير إضافة مدفوعة</h1>
+
+          <p style={{ margin: '0 0 18px', fontSize: 13.5, color: C.muted, lineHeight: 1.9 }}>
+            بِع داخل محلّك من هاتفك: امسح الباركود بالكاميرا أو ابحث بالاسم،
+            وأتمم البيعة واحسب الباقي. المخزون ينقص تلقائياً، وتدخل البيعة
+            تقاريرك وقسمك المالي مع الطلبات الإلكترونية.
+          </p>
+
+          <Link
+            to="/features"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              minHeight: 46, padding: '0 22px', borderRadius: 13,
+              background: C.accent, color: '#0A2018', textDecoration: 'none',
+              fontWeight: 900, fontSize: 14
+            }}
+          >
+            <IoSparkles size={16} />
+            اطلب تفعيلها من الميزات
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', color: C.text }} dir="rtl">
