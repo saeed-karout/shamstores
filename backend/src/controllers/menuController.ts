@@ -216,6 +216,49 @@ export const getMenuItems = async (
   }
 };
 
+/**
+ * يُطبّع رمز الصنف (SKU) ويتحقّق أنه غير مستعمل داخل المطعم نفسه.
+ *
+ * **الفراغ يعني «بلا رمز» لا نصّاً فارغاً:** حقلٌ نصّي فارغ في نموذج الويب
+ * يصل `''` لا `undefined`. ولو خُزّن كما هو لصار لعشرات الأصناف «رمزٌ»
+ * واحد هو الفراغ، فيرجع مسحُ الباركود أوّلَ صنفٍ صادفه.
+ *
+ * **التفرّد داخل المطعم لا عبر المنصّة:** مطعمان يبيعان نفس عبوة المشروب
+ * لها باركود مطبوع واحد — وذلك ليس تعارضاً. (بخلاف `Product.sku` في المتاجر
+ * وهو فريدٌ عالمياً في المخطّط، وهو قيدٌ أضيق ممّا يلزم.)
+ *
+ * @returns النصّ المطبّع، أو `null` للفراغ، أو رسالة خطأ عند التعارض.
+ */
+const normalizeMenuItemSku = async (
+  raw: unknown,
+  restaurantId: string,
+  excludeItemId?: string
+): Promise<{ value: string | null } | { error: string }> => {
+  if (raw === undefined || raw === null) return { value: null };
+
+  const sku = String(raw).trim();
+  if (!sku) return { value: null };
+
+  if (sku.length > 64) {
+    return { error: 'رمز الصنف أطول من ٦٤ محرفاً' };
+  }
+
+  const clash = await prisma.menuItem.findFirst({
+    where: {
+      restaurantId,
+      sku,
+      ...(excludeItemId ? { id: { not: excludeItemId } } : {})
+    },
+    select: { name: true }
+  });
+
+  if (clash) {
+    return { error: `الرمز «${sku}» مستعمل للصنف «${clash.name}»` };
+  }
+
+  return { value: sku };
+};
+
 export const createMenuItem = async (
   req: AuthRequest,
   res: Response
@@ -228,7 +271,7 @@ export const createMenuItem = async (
       return;
     }
 
-    const { categoryId, name, description, price, originalPrice, image, position } = req.body;
+    const { categoryId, name, description, price, originalPrice, image, position, sku } = req.body;
 
     // التحقق من وجود الفئة
     const category = await prisma.category.findFirst({
@@ -237,6 +280,12 @@ export const createMenuItem = async (
 
     if (!category) {
       res.status(404).json({ success: false, error: 'الفئة غير موجودة' });
+      return;
+    }
+
+    const skuResult = await normalizeMenuItemSku(sku, restaurantId);
+    if ('error' in skuResult) {
+      res.status(400).json({ success: false, error: skuResult.error });
       return;
     }
 
@@ -250,6 +299,7 @@ export const createMenuItem = async (
         originalPrice: originalPrice || null,
         image: image || null,
         position: position || 0,
+        sku: skuResult.value,
         isAvailable: true
       }
     });
@@ -316,7 +366,7 @@ export const updateMenuItem = async (
       return;
     }
 
-    const { categoryId, name, description, price, originalPrice, image, position, isAvailable } = req.body;
+    const { categoryId, name, description, price, originalPrice, image, position, isAvailable, sku } = req.body;
 
     const item = await prisma.menuItem.findFirst({
       where: { id, restaurantId }
@@ -338,9 +388,22 @@ export const updateMenuItem = async (
       }
     }
 
+    // `sku` غير المُرسَل يترك القديم؛ والمُرسَل فارغاً يمسحه عمداً — وهما
+    // حالتان مختلفتان لا يجوز خلطهما، وإلا تعذّر مسح رمزٍ خاطئ أبداً.
+    let nextSku = item.sku;
+    if (sku !== undefined) {
+      const skuResult = await normalizeMenuItemSku(sku, restaurantId, id);
+      if ('error' in skuResult) {
+        res.status(400).json({ success: false, error: skuResult.error });
+        return;
+      }
+      nextSku = skuResult.value;
+    }
+
     const updatedItem = await prisma.menuItem.update({
       where: { id },
       data: {
+        sku: nextSku,
         categoryId: categoryId !== undefined ? categoryId : item.categoryId,
         name: name || item.name,
         description: description !== undefined ? description : item.description,

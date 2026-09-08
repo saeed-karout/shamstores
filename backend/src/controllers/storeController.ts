@@ -687,6 +687,21 @@ export const getProduct = async (req: AuthRequest, res: Response): Promise<void>
   }
 };
 
+/**
+ * هل هذا خطأ تعارضٍ على رمز المنتج؟
+ *
+ * `Product.sku` فريدٌ **عبر المنصّة كلّها** في المخطّط لا داخل المتجر. أي أن
+ * تاجراً قد يُمنَع من استعمال باركود منتجٍ لأن متجراً آخر لا يراه سجّله
+ * أوّلاً — وباركودات EAN المطبوعة واحدةٌ في العالم كلّه، فالتصادم مسألة وقت.
+ * لا نستطيع إصلاح القيد هنا، لكن السكوت عنه بـ«حدث خطأ» ٥٠٠ يترك التاجر
+ * يجرّب ويعيد بلا أن يعرف السبب.
+ */
+const isSkuConflict = (error: unknown): boolean =>
+  typeof error === 'object' &&
+  error !== null &&
+  (error as { code?: string }).code === 'P2002' &&
+  JSON.stringify((error as { meta?: unknown }).meta ?? '').includes('sku');
+
 export const createProduct = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
@@ -744,6 +759,13 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
     
     res.status(201).json({ success: true, message: 'تم إنشاء المنتج بنجاح', data: product });
   } catch (error) {
+    if (isSkuConflict(error)) {
+      res.status(409).json({
+        success: false,
+        error: 'رمز المنتج (SKU) مستعمل من قبل. جرّب رمزاً آخر أو أضف بادئة تخصّ متجرك.'
+      });
+      return;
+    }
     console.error('Error creating product:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في إنشاء المنتج' });
   }
@@ -803,6 +825,13 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     
     res.json({ success: true, message: 'تم تحديث المنتج بنجاح', data: updatedProduct });
   } catch (error) {
+    if (isSkuConflict(error)) {
+      res.status(409).json({
+        success: false,
+        error: 'رمز المنتج (SKU) مستعمل من قبل. جرّب رمزاً آخر أو أضف بادئة تخصّ متجرك.'
+      });
+      return;
+    }
     console.error('Error updating product:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في تحديث المنتج' });
   }

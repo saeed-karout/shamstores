@@ -143,6 +143,7 @@ const MenuPage: React.FC = () => {
     price: '',
     discountedPrice: '',
     image: '',
+    sku: '',
     preparationTime: '',
     calories: '',
     hasSizes: false,
@@ -158,7 +159,7 @@ const MenuPage: React.FC = () => {
     setItemForm({
       restaurantId: selectedRestaurantId === 'all' ? (restaurant?.id || '') : selectedRestaurantId,
       categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '',
-      price: '', discountedPrice: '', image: '', preparationTime: '', calories: '',
+      price: '', discountedPrice: '', image: '', sku: '', preparationTime: '', calories: '',
       hasSizes: false, hasAddons: false,
     });
     setSizes([
@@ -219,7 +220,7 @@ const MenuPage: React.FC = () => {
         categoryId: item.categoryId, name: item.name, nameEn: item.nameEn || '',
         description: item.description || '', descriptionEn: item.descriptionEn || '',
         price: item.price.toString(), discountedPrice: item.discountedPrice?.toString() || '',
-        image: item.image || '', preparationTime: item.preparationTime?.toString() || '',
+        image: item.image || '', sku: item.sku || '', preparationTime: item.preparationTime?.toString() || '',
         calories: item.calories?.toString() || '', hasSizes: item.hasSizes, hasAddons: item.hasAddons,
       });
       if (item.sizes) {
@@ -626,6 +627,21 @@ const MenuPage: React.FC = () => {
               <label style={labelStyle}>السعر بعد الخصم (ل.س)</label>
               <input type="number" step="0.01" min="0" value={itemForm.discountedPrice} onChange={(e) => setItemForm({ ...itemForm, discountedPrice: e.target.value })} style={inputStyle} placeholder="0.00" />
             </div>
+          </div>
+          <div>
+            <label style={labelStyle}>رمز الصنف / الباركود</label>
+            <input
+              type="text"
+              value={itemForm.sku}
+              onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
+              style={{ ...inputStyle, fontFamily: 'monospace' }}
+              placeholder="امسح الباركود أو اكتبه — اتركه فارغاً إن لم يكن للصنف رمز"
+              autoComplete="off"
+            />
+            <p style={{ fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 1.6 }}>
+              هذا ما يبحث عنه الكاشير حين تمسح الباركود. اتركه فارغاً للوجبات
+              المحضَّرة التي لا باركود لها.
+            </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>

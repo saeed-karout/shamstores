@@ -151,6 +151,9 @@ export interface Plan {
     price: number;
     discountedPrice?: number;
     image?: string;
+    /// رمز الصنف للكاشير — يُمسح بالباركود. اختياريّ: الوجبات المحضَّرة
+    /// لا باركود لها، والعبوات الجاهزة لها.
+    sku?: string;
     isAvailable: boolean;
     isFeatured: boolean;
     sortOrder: number;
