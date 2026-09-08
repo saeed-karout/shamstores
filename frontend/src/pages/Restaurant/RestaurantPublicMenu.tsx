@@ -955,6 +955,8 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       {/* ==================== تتبّع الطلبات (للمسجّلين فقط) ==================== */}
       <OrderTrackingModal
+        businessId={(restaurant as any)?.id}
+        isAuthenticated={isAuthenticated}
         isOpen={showOrderTracking}
         onClose={() => {
           setShowOrderTracking(false);

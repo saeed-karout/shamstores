@@ -1151,6 +1151,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       {/* ==================== تتبّع الطلبات ==================== */}
       <OrderTrackingModal
+        businessId={(store as any)?.id}
+        isAuthenticated={isAuthenticated}
         isOpen={showOrderTracking}
         onClose={() => {
           setShowOrderTracking(false);

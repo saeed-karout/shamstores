@@ -151,6 +151,32 @@ class EmailService {
     }
   }
 
+  /**
+   * إرسال رسالة حرّة — تستعملها حملات التجّار.
+   *
+   * تُرجع `false` بلا رمي حين يكون البريد غير مهيّأ: الحملة تمضي على
+   * قنواتها الأخرى، ورسالةٌ لم تُرسل ليست سبباً لإسقاط الباقي.
+   */
+  async sendEmail(options: { to: string; subject: string; html: string; text?: string }): Promise<boolean> {
+    try {
+      if (!this.transporter) await this.initializeTransporter();
+      if (!this.transporter || !this.config) return false;
+
+      await this.transporter.sendMail({
+        from: this.config.from,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        // نسخة نصّية مشتقّة: رسالة HTML وحدها ترفع احتمال اعتبارها مزعجة
+        text: options.text || options.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      });
+      return true;
+    } catch (error) {
+      console.error('تعذّر إرسال البريد:', error);
+      return false;
+    }
+  }
+
   async sendVerificationEmail(email: string, code: string): Promise<boolean> {
     try {
       if (!this.transporter) {

@@ -36,6 +36,7 @@ import {
 import toast from 'react-hot-toast';
 import Modal from './common/Modal';
 import api from '../services/api';
+import FollowOrderPrompt from './storefront/FollowOrderPrompt';
 import { Order, OrderStatus } from '../services/types';
 import { sf } from '@/utils/storefrontTheme';
 
@@ -53,6 +54,9 @@ interface OrderTrackingModalProps {
   kind?: TrackingKind;
   /** يُستدعى بعد تقييم ناجح ليعيد الصفحة الأم جلب الطلبات */
   onRated?: () => void;
+  /** النشاط — تحتاجه دعوة متابعة الطلب لتعرف لمن يشترك الزبون */
+  businessId?: string;
+  isAuthenticated?: boolean;
 }
 
 interface Step {
@@ -106,7 +110,9 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   formatPrice,
   loading,
   kind = 'store',
-  onRated
+  onRated,
+  businessId,
+  isAuthenticated
 }) => {
   const STEPS = kind === 'restaurant' ? RESTAURANT_STEPS : STORE_STEPS;
 
@@ -403,6 +409,16 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                   );
                 })}
               </div>
+            )}
+
+            {/* متابعة الطلب — تُعرض ما دام الطلب لم ينتهِ: بعد التسليم لا
+                معنى لعرضٍ يقول «تابع طلبك» */}
+            {!isFinished && businessId && (
+              <FollowOrderPrompt
+                businessId={businessId}
+                businessType={kind === 'restaurant' ? 'restaurant' : 'store'}
+                isAuthenticated={Boolean(isAuthenticated)}
+              />
             )}
 
             {/* التقييم — بعد التسليم وقبل أن يُقيَّم */}

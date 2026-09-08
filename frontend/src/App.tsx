@@ -65,6 +65,7 @@ const AdminBusinessFeatures = lazy(() => import('./pages/Admin/AdminBusinessFeat
 const AdminPlatformSettings = lazy(() => import('./pages/Admin/AdminPlatformSettings'));
 const AdminPushNotifications = lazy(() => import('./pages/Admin/AdminPushNotifications'));
 const CustomersPage = lazy(() => import('./pages/Store/CustomersPage'));
+const CampaignsPage = lazy(() => import('./pages/Store/CampaignsPage'));
 const AdminFeatures = lazy(() => import('./pages/Admin/AdminFeatures'));
 const AdminBusinessMarketing = lazy(() => import('./pages/Admin/AdminBusinessMarketing'));
 const AdminAdvertisements = lazy(() => import('./pages/Admin/AdminAdvertisements'));
@@ -315,6 +316,8 @@ const MainApp: React.FC = () => {
             {/* صفحة واحدة للمتجر والمطعم: النشاط يُشتقّ من الرمز لا من المسار */}
             <Route path="/store/customers" element={<CustomersPage />} />
             <Route path="/restaurant/customers" element={<CustomersPage />} />
+            <Route path="/store/campaigns" element={<CampaignsPage />} />
+            <Route path="/restaurant/campaigns" element={<CampaignsPage />} />
             <Route path="/store/analytics" element={<PlanRoute feature="analytics"><StoreAnalyticsPage /></PlanRoute>} />
             <Route path="/store/settings" element={<StoreSettingsPage />} />
             <Route path="/store/qr-codes" element={<PlanRoute feature="tableQr"><StoreQRCodesPage /></PlanRoute>} />

@@ -120,19 +120,20 @@ model User {
   updatedAt          DateTime  @updatedAt
 
   // Relations
-  ownedStores      Store[]         @relation("StoreOwner")
-  ownedRestaurants Restaurant[]    @relation("RestaurantOwner")
-  restaurant       Restaurant?     @relation("RestaurantUsers", fields: [restaurantId], references: [id])
-  stores           Store[]         @relation("StoreUsers")
+  ownedStores      Store[]                @relation("StoreOwner")
+  ownedRestaurants Restaurant[]           @relation("RestaurantOwner")
+  restaurant       Restaurant?            @relation("RestaurantUsers", fields: [restaurantId], references: [id])
+  stores           Store[]                @relation("StoreUsers")
   drivers          Driver[]
   /// الطلبات المعيَّنة إليه كسائق
-  assignedOrders   Order[]         @relation("AssignedDeliveries")
+  assignedOrders   Order[]                @relation("AssignedDeliveries")
   tickets          Ticket[]
-  orders           Order[]         @relation("CreatedOrders")
+  orders           Order[]                @relation("CreatedOrders")
   firebaseUser     FirebaseUser?
   notifications    Notification[]
   deviceTokens     DeviceToken[]
   productReviews   ProductReview[]
+  subscriptions    CustomerSubscription[]
 
   @@index([email])
   @@index([restaurantId])
@@ -161,6 +162,45 @@ model DeviceToken {
 
   @@index([userId])
   @@map("device_tokens")
+}
+
+/// اشتراك زبونٍ في تنبيهات نشاطٍ بعينه.
+///
+/// **يفصل الإذن عن العنوان.** العنوان محفوظ على المستخدم مرّةً واحدة
+/// (`telegramChatId` و`deviceTokens` والبريد)، وهذا الجدول يقول **من يحقّ
+/// له مراسلته عليه**. بدون الفصل، زبونٌ يشتري من ثلاثة متاجر يتلقّى حملات
+/// الثلاثة بإذنٍ أعطاه لواحد، وإلغاؤه لدى أحدها يقطعه عن جميعها.
+///
+/// **وتتبّع الطلب منفصل عن التسويق** (`marketingOptIn`): من قبل أن يعرف
+/// أين وصل طلبه لم يقبل إعلانات. خلطهما يحرق القناة — تيليجرام يحظر
+/// البوتات المُبلَّغ عنها، والمتصفّح يحجب الموقع نهائياً بعد تجاهلٍ متكرّر،
+/// وكلاهما لا يُسترجع.
+///
+/// `businessId` + `businessType` بدل عمودين اختياريين: القيد الفريد على
+/// أعمدةٍ قد تكون NULL لا يمنع التكرار في MySQL — والنمط نفسه في
+/// `BusinessFeature`.
+model CustomerSubscription {
+  id           String @id @default(cuid())
+  userId       String @map("user_id")
+  businessId   String @map("business_id")
+  /// restaurant | store
+  businessType String @map("business_type")
+  /// telegram | push | email
+  channel      String
+
+  /// وافق على رسائل تسويقية لا على تتبّع طلبه وحده
+  marketingOptIn Boolean   @default(false) @map("marketing_opt_in")
+  /// إلغاءٌ لا حذف: سجلّ الرفض يمنع إعادة إضافته بطلبٍ لاحق
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId, channel])
+  @@index([businessId, businessType, marketingOptIn])
+  @@map("customer_subscriptions")
 }
 
 model EmailVerificationCode {
