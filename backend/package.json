@@ -15,6 +15,7 @@
     "prisma:validate": "prisma validate",
     "prisma:db-push": "node scripts/prisma.js db push",
     "seed:features": "node scripts/seed-features.js",
+    "plans:apply-limits": "node scripts/apply-plan-limits.js",
     "migration:run": "node scripts/prisma.js db push",
     "clean": "rm -rf dist node_modules"
   },
