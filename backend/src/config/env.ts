@@ -85,6 +85,16 @@ if (isProduction) {
   if (r2Missing.length) {
     warnings.push(`تخزين الوسائط غير مهيأ (${r2Missing.join('، ')}) — رفع الصور والفيديو سيفشل.`);
   }
+
+  // ثغرةٌ صامتة: البوت يعمل، والربط ينجح، ولا شيء يبدو معطّلاً — بينما
+  // يستطيع أي أحد يعرف المسار أن يزعم أنه تيليجرام ويربط محادثته بحساب
+  // تاجر. والسرّ الفارغ يتخطّى الفحص كما لو لم يُطلب أصلاً.
+  if (process.env.TELEGRAM_BOT_TOKEN && !process.env.TELEGRAM_WEBHOOK_SECRET) {
+    warnings.push(
+      'TELEGRAM_WEBHOOK_SECRET فارغ رغم ضبط البوت — مسار الـwebhook مفتوح لأي منتحل. ' +
+      'راجع docs/deployment/merchant-alerts.md'
+    );
+  }
 }
 
 if (warnings.length) {

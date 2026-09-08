@@ -41,25 +41,50 @@ heroku config:set --app shamstores TELEGRAM_BOT_USERNAME=اسم_البوت_بل�
 سرٌّ يرافق كل نداء من تيليجرام. **ليس اختيارياً**: بدونه يستطيع أي أحد يعرف
 المسار أن يزعم أنه تيليجرام ويربط محادثته بحساب تاجر.
 
-```bash
-heroku config:set --app shamstores TELEGRAM_WEBHOOK_SECRET="$(openssl rand -hex 24)"
+> ⚠️ **الطرفية هنا PowerShell لا bash.** صياغة `$(openssl rand -hex 24)` لا
+> تعمل: `openssl` غير موجود على ويندوز، و`$( )` يُنفَّذ فيعطي نصّاً فارغاً —
+> فيُضبط المتغيّر **فارغاً** ويعلن Heroku النجاح. والشيفرة تتخطّى الفحص حين
+> يكون فارغاً، فيبقى الـwebhook بلا حماية وكل شيء يبدو ناجحاً.
+
+توليد السرّ (سطران، في نفس نافذة PowerShell ليبقى `$secret` محفوظاً):
+
+```powershell
+$bytes = New-Object 'Byte[]' 24; [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes); $secret = ($bytes | ForEach-Object { $_.ToString('x2') }) -join ''
+```
+
+```powershell
+heroku config:set --app shamstores TELEGRAM_WEBHOOK_SECRET=$secret
+```
+
+للتأكّد أنه ليس فارغاً — يجب أن يطبع 48:
+
+```powershell
+(heroku config:get TELEGRAM_WEBHOOK_SECRET --app shamstores).Length
 ```
 
 ### توصيل الـwebhook
 
-مرّةً واحدة بعد النشر. استبدل القيمتين بما ضبطته أعلاه:
+**بعد نشر الخادم لا قبله**: توصيلُه إلى مسارٍ لم يُنشر بعد يجعل تيليجرام
+يصطدم بـ404 ويُبطئ المحاولات.
 
-```bash
-curl -X POST "https://api.telegram.org/botالرمز/setWebhook" -H "Content-Type: application/json" -d '{"url":"https://shamstores.com/api/telegram/webhook","allowed_updates":["message"],"secret_token":"السرّ"}'
+> ⚠️ `curl` في PowerShell اسمٌ مستعار لـ`Invoke-WebRequest`، ولا يفهم
+> `-X` ولا `-H` ولا `-d`. استعمل `Invoke-RestMethod` كما هنا.
+
+```powershell
+$token = 'الرمز_من_BotFather'
+```
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "https://api.telegram.org/bot$token/setWebhook" -ContentType 'application/json' -Body (@{ url = 'https://shamstores.com/api/telegram/webhook'; allowed_updates = @('message'); secret_token = $secret } | ConvertTo-Json)
 ```
 
 للتحقّق:
 
-```bash
-curl "https://api.telegram.org/botالرمز/getWebhookInfo"
+```powershell
+Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/getWebhookInfo"
 ```
 
-يجب أن يظهر `"url"` صحيحاً و`"last_error_message"` غائباً.
+يجب أن يظهر `url` صحيحاً، و`pending_update_count` صفراً، ولا `last_error_message`.
 
 ### كيف يربط التاجر حسابه
 
