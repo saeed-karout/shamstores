@@ -342,7 +342,18 @@ export const login = async (
 ): Promise<void> => {
   try {
     const { email, password } = req.body;
-    
+
+    // حقلٌ ناقص كان يرتدّ 500: `findByEmail(undefined)` ترمي في Prisma،
+    // و`bcrypt.compare(undefined, …)` كذلك. و500 يقول «عطلٌ عندنا» بينما
+    // العطل في الطلب — ويُغرق السجلّ بضجيجٍ يخفي الأعطال الحقيقية.
+    if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
+      res.status(400).json({
+        success: false,
+        error: 'البريد الإلكتروني وكلمة المرور مطلوبان'
+      });
+      return;
+    }
+
     // نفس المصدر الذي يستخدمه القفل نفسه — قراءتهما من مكانين تُنتج تناقضاً
     const { maxAttempts: maxLoginAttempts } = await getLoginPolicy();
 
