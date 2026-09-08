@@ -280,7 +280,18 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
     const linkedBranches = await getLinkedBranches('store', store.userId, store.id);
-    res.json({ success: true, data: { ...store, linkedBranches, ...buildBranchSummary(store) } });
+    res.json({
+      success: true,
+      data: {
+        ...store,
+        linkedBranches,
+        // صفحة الإعدادات تقرأ من هنا لا من `/store/settings` — وغيابه كان
+        // يجعلها تقول «لم تضبط الإدارة سعر الصرف» وهو مضبوط، فيُخفى
+        // الدولار عن تاجرٍ يحقّ له تفعيله
+        currencySettings: await resolveCurrencySettings(store),
+        ...buildBranchSummary(store)
+      }
+    });
   } catch (error) {
     console.error('Error getting store profile:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب بيانات المتجر' });
