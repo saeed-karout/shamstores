@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import api from '@/services/api';
 import { sf } from '@/utils/storefrontTheme';
 import { enablePush } from '@/services/webPush';
+import { getVisitorId } from '@/utils/visitor';
 
 interface Props {
   businessId: string;
@@ -38,23 +39,31 @@ const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthen
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!isAuthenticated || !businessId) return;
+    // **الضيف مشمول:** كان الشرط `!isAuthenticated` يُخفي هذا المكوّن عن
+    // كل من لم يسجّل — وهم معظم زبائن المتاجر. فكانت الإشعارات ميزةً
+    // معلنةً لا يصل إليها أحد.
+    if (!businessId) return;
     try {
-      const data: any = await api.get(`/campaigns/subscription/${businessId}`);
+      const visitorId = getVisitorId();
+      const query = visitorId ? `?visitorId=${encodeURIComponent(visitorId)}` : '';
+      const data: any = await api.get(`/campaigns/subscription/${businessId}${query}`);
       setState(data);
       setMarketing(Boolean(data?.marketingOptIn));
     } catch {
       // الاشتراك تحسينٌ لا شرط لتتبّع الطلب
     }
-  }, [businessId, isAuthenticated]);
+  }, [businessId]);
 
   useEffect(() => { load(); }, [load]);
 
-  if (!isAuthenticated || !state || state.unsubscribed) return null;
+  if (!state || state.unsubscribed) return null;
 
+  // تيليجرام يشترط حساباً: رمز الربط يُخزَّن على المستخدم، ولا مكان له عند
+  // ضيف. فيُخفى عنه بدل أن يضغط زرّاً يرتدّ
   const hasTelegram = state.channels.includes('telegram') && state.telegramLinked;
   const hasPush = state.channels.includes('push');
-  if (hasTelegram && hasPush) return null;
+  const showTelegram = isAuthenticated && state.telegramAvailable !== false;
+  if (hasPush && (hasTelegram || !showTelegram)) return null;
 
   const subscribe = async (channel: 'telegram' | 'push') => {
     setBusy(channel);
@@ -62,7 +71,7 @@ const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthen
       // الإذن أولاً ثم التسجيل: إذنٌ مرفوض يعني اشتراكاً بلا عنوان —
       // سطرٌ في القاعدة لا يوصل شيئاً
       if (channel === 'push') {
-        const result = await enablePush();
+        const result = await enablePush('customer');
         if (!result.ok) {
           toast.error(result.error || 'تعذّر تفعيل الإشعارات', { duration: 6000 });
           return;
@@ -73,7 +82,8 @@ const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthen
         businessId,
         businessType,
         channel,
-        marketingOptIn: marketing
+        marketingOptIn: marketing,
+        visitorId: getVisitorId()
       });
 
       // تيليجرام يحتاج ضغطة Start بعد الإذن — الرابط يُفتح فوراً وإلا
@@ -129,7 +139,7 @@ const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthen
       </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {state.telegramAvailable && (
+        {showTelegram && (
           <button
             type="button"
             onClick={() => !hasTelegram && subscribe('telegram')}

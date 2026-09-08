@@ -3,11 +3,33 @@ import cron from 'node-cron';
 import { checkAndUpdateExpiredSubscriptions, checkExpiringSubscriptions } from './subscriptionScheduler';
 import { createBackup, pruneOldBackups, checkBackupTarget } from '../services/backup.service';
 import emailService from '../services/emailService';
+import { runAllAutomations } from '../services/automation.service';
 
 /**
  * تشغيل جميع المهام المجدولة
  */
 export const startSchedulers = () => {
+  /**
+   * الرسائل التلقائية — كل ساعة.
+   *
+   * **ساعةً لا دقيقة:** «السلّة المتروكة بعد ساعتين» لا تحتاج دقّةً أعلى،
+   * ودورةٌ كل دقيقة تعني ستّين مسحاً لكل جداول المتاجر مقابل لا شيء.
+   *
+   * **وساعةً لا يوماً:** الدورة اليومية كانت ستجعل تذكير السلّة يصل بعد
+   * أربعٍ وعشرين ساعة مهما ضبط التاجر «بعد ساعتين» — أي وعدٌ في الواجهة
+   * لا يفي به المحرّك.
+   */
+  cron.schedule('7 * * * *', async () => {
+    try {
+      const summary = await runAllAutomations();
+      if (summary.sent > 0 || summary.businesses > 0) {
+        console.log(`🤖 الرسائل التلقائية: ${summary.sent} رسالة من ${summary.businesses} نشاط`);
+      }
+    } catch (error) {
+      console.error('❌ فشل تشغيل الرسائل التلقائية:', error);
+    }
+  });
+
   // تشغيل كل ساعة: التحقق من الاشتراكات المنتهية
   cron.schedule('0 * * * *', async () => {
     console.log('🔄 Running subscription expiration check...');

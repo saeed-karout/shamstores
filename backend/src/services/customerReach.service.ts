@@ -30,12 +30,30 @@ const LAPSED_DAYS = 60;
 // ==================== الاشتراك ====================
 
 export interface SubscribeInput {
-  userId: string;
+  /** صاحب حساب — أو `null` لضيفٍ يُعرَّف بـ`visitorId` */
+  userId: string | null;
+  /** معرّف زائرٍ يولّده المتصفّح ويحفظه */
+  visitorId?: string | null;
+  /** هاتفه كما أدخله عند الطلب — يربط اشتراكه بطلباته لاحقاً */
+  phone?: string | null;
   businessId: string;
   businessType: BusinessType;
   channel: Channel;
   marketingOptIn: boolean;
 }
+
+/**
+ * المفتاح الثابت للمشترك.
+ *
+ * **لماذا عمودٌ مستقلّ لا `userId` يقبل الفراغ:** مايسكيوإل يسمح بتكرار
+ * القيم الفارغة في الفهرس الفريد، فكان ضيفٌ واحد يستطيع إنشاء اشتراكاتٍ
+ * لا نهائية لنفس المتجر — ويتلقّى الرسالة نفسها عشر مرّات.
+ */
+export const subjectKeyOf = (input: { userId?: string | null; visitorId?: string | null }): string | null => {
+  if (input.userId) return `u:${input.userId}`;
+  if (input.visitorId) return `v:${input.visitorId}`;
+  return null;
+};
 
 /**
  * يسجّل إذناً.
@@ -46,14 +64,17 @@ export interface SubscribeInput {
  * قائمةٍ خرج منها عمداً.
  */
 export const subscribe = async (input: SubscribeInput): Promise<{ ok: boolean; reason?: string }> => {
+  const subjectKey = subjectKeyOf(input);
+  if (!subjectKey) return { ok: false, reason: 'لا يمكن تحديد هوية المشترك' };
+
+  const identity = {
+    subjectKey,
+    businessId: input.businessId,
+    channel: input.channel
+  };
+
   const existing = await prisma.customerSubscription.findUnique({
-    where: {
-      userId_businessId_channel: {
-        userId: input.userId,
-        businessId: input.businessId,
-        channel: input.channel
-      }
-    }
+    where: { subjectKey_businessId_channel: identity }
   });
 
   if (existing?.unsubscribedAt) {
@@ -61,18 +82,21 @@ export const subscribe = async (input: SubscribeInput): Promise<{ ok: boolean; r
   }
 
   await prisma.customerSubscription.upsert({
-    where: {
-      userId_businessId_channel: {
-        userId: input.userId,
-        businessId: input.businessId,
-        channel: input.channel
-      }
-    },
+    where: { subjectKey_businessId_channel: identity },
     // الترقية إلى تسويق ممكنة، والتراجع عنه كذلك — لكن الإلغاء الكامل
-    // يمرّ بـ`unsubscribe` وحدها
-    update: { marketingOptIn: input.marketingOptIn },
+    // يمرّ بـ`unsubscribe` وحدها.
+    //
+    // والهاتف يُحدَّث دائماً: الضيف يشترك أوّلاً ثمّ يطلب، فرقمه لا يُعرف
+    // إلا في الطلب — وبلا تحديثٍ تبقى قاعدة «زبونٌ غاب» عمياء عنه.
+    update: {
+      marketingOptIn: input.marketingOptIn,
+      ...(input.phone ? { phone: input.phone } : {})
+    },
     create: {
+      subjectKey,
       userId: input.userId,
+      visitorId: input.visitorId || null,
+      phone: input.phone || null,
       businessId: input.businessId,
       businessType: input.businessType,
       channel: input.channel,
@@ -124,7 +148,11 @@ export const unsubscribeByToken = async (
 export type Segment = 'all' | 'returning' | 'lapsed';
 
 export interface Recipient {
-  userId: string;
+  /** المفتاح الثابت — موجودٌ دائماً، لحسابٍ كان أو لضيف */
+  subjectKey: string;
+  /** `null` للضيف: لا حساب له، فلا رابط إلغاءٍ موقَّعاً باسمه */
+  userId: string | null;
+  phone: string | null;
   name: string;
   channels: Channel[];
   telegramChatId: string | null;
@@ -153,75 +181,108 @@ export const resolveAudience = async (
   const subs = await prisma.customerSubscription.findMany({
     where: { businessId, businessType, marketingOptIn: true, unsubscribedAt: null },
     select: {
+      subjectKey: true,
       userId: true,
+      visitorId: true,
+      phone: true,
       channel: true,
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          telegramChatId: true,
-          deviceTokens: { select: { token: true } }
-        }
-      }
+      user: { select: { id: true, name: true, email: true, telegramChatId: true } }
     }
   });
 
-  const byUser = new Map<string, Recipient>();
+  // الأجهزة دفعةً واحدة: الضيف لا يملك علاقة `user`، فأجهزته لا تصل عبرها
+  const userIds = subs.map((s) => s.userId).filter((v): v is string => !!v);
+  const visitorIds = subs.map((s) => s.visitorId).filter((v): v is string => !!v);
+  const devices = (userIds.length || visitorIds.length)
+    ? await prisma.deviceToken.findMany({
+        where: {
+          OR: [
+            ...(userIds.length ? [{ userId: { in: userIds } }] : []),
+            ...(visitorIds.length ? [{ visitorId: { in: visitorIds } }] : [])
+          ]
+        },
+        select: { token: true, userId: true, visitorId: true }
+      })
+    : [];
+
+  const bySubject = new Map<string, Recipient>();
   for (const sub of subs) {
-    if (!sub.user) continue;
-    const current = byUser.get(sub.userId);
+    const key = sub.subjectKey;
+    const current = bySubject.get(key);
     if (current) {
       if (!current.channels.includes(sub.channel as Channel)) {
         current.channels.push(sub.channel as Channel);
       }
       continue;
     }
-    byUser.set(sub.userId, {
+
+    bySubject.set(key, {
+      subjectKey: key,
       userId: sub.userId,
-      name: sub.user.name,
+      phone: sub.phone,
+      name: sub.user?.name || 'زبوننا',
       channels: [sub.channel as Channel],
-      telegramChatId: sub.user.telegramChatId,
-      tokens: sub.user.deviceTokens.map((d) => d.token),
-      email: sub.user.email
+      telegramChatId: sub.user?.telegramChatId ?? null,
+      tokens: devices
+        .filter((d) => (sub.userId && d.userId === sub.userId) || (sub.visitorId && d.visitorId === sub.visitorId))
+        .map((d) => d.token),
+      email: sub.user?.email ?? null
     });
   }
 
   const scope = businessType === 'restaurant' ? { restaurantId: businessId } : { storeId: businessId };
-  const ids = Array.from(byUser.keys());
+  const ids = Array.from(bySubject.values()).map((r) => r.userId).filter((v): v is string => !!v);
+  const phones = Array.from(bySubject.values()).map((r) => r.phone).filter((v): v is string => !!v);
 
   // سلوك الشريحة يُقاس من الطلبات لا من الاشتراك: من اشترك ولم يشترِ ليس
-  // «عائداً» ولا «منقطعاً»
-  const orders = ids.length
+  // «عائداً» ولا «منقطعاً».
+  //
+  // والضيف يُقاس **بهاتفه** لا بحسابه: `createdBy` فارغٌ في طلبات الضيوف،
+  // وقياسهم به وحده كان يضعهم كلّهم خارج كل شريحة سلوكية.
+  const orders = (ids.length || phones.length)
     ? await prisma.order.findMany({
-        where: { ...scope, createdBy: { in: ids }, status: { in: [...COUNTED] } },
-        select: { createdBy: true, createdAt: true }
+        where: {
+          ...scope,
+          status: { in: [...COUNTED] },
+          OR: [
+            ...(ids.length ? [{ createdBy: { in: ids } }] : []),
+            ...(phones.length ? [{ customerPhone: { in: phones } }] : [])
+          ]
+        },
+        select: { createdBy: true, customerPhone: true, createdAt: true }
       })
     : [];
 
   const stats = new Map<string, { count: number; last: Date }>();
-  for (const order of orders) {
-    if (!order.createdBy) continue;
-    const current = stats.get(order.createdBy);
+  const bump = (key: string | null, at: Date) => {
+    if (!key) return;
+    const current = stats.get(key);
     if (current) {
       current.count += 1;
-      if (order.createdAt > current.last) current.last = order.createdAt;
+      if (at > current.last) current.last = at;
     } else {
-      stats.set(order.createdBy, { count: 1, last: order.createdAt });
+      stats.set(key, { count: 1, last: at });
     }
+  };
+  for (const order of orders) {
+    bump(order.createdBy ? `u:${order.createdBy}` : null, order.createdAt);
+    bump(order.customerPhone ? `p:${order.customerPhone}` : null, order.createdAt);
   }
 
   const lapsedBefore = new Date(Date.now() - LAPSED_DAYS * 24 * 60 * 60 * 1000);
 
-  const inSegment = (userId: string): boolean => {
-    const stat = stats.get(userId);
+  const inSegment = (r: Recipient): boolean => {
     if (segment === 'all') return true;
+    // الحساب أوّلاً ثمّ الهاتف: من له الاثنان تُحتسب طلباته من أيّهما وُجد
+    const stat =
+      (r.userId ? stats.get(`u:${r.userId}`) : undefined) ||
+      (r.phone ? stats.get(`p:${r.phone}`) : undefined);
     if (!stat) return false;
     if (segment === 'returning') return stat.count > 1;
     return stat.last < lapsedBefore;
   };
 
-  const recipients = Array.from(byUser.values()).filter((r) => inSegment(r.userId));
+  const recipients = Array.from(bySubject.values()).filter(inSegment);
 
   // القناة تُحتسب فقط إن كان لها عنوان فعلاً: إذنٌ بلا عنوان لا يوصل شيئاً،
   // وعدّه في المعاينة يَعِد بما لا يحدث
@@ -232,7 +293,7 @@ export const resolveAudience = async (
     if (r.channels.includes('email') && r.email) byChannel.email += 1;
   }
 
-  return { recipients, segmentSize: byUser.size, byChannel };
+  return { recipients, segmentSize: bySubject.size, byChannel };
 };
 
 export default {

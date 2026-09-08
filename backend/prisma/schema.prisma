@@ -150,7 +150,14 @@ model User {
 /// بحذف الميّت وحده بدل تصفير المستخدم.
 model DeviceToken {
   id         String   @id @default(cuid())
-  userId     String   @map("user_id")
+  /// صاحب الجهاز إن كان له حساب.
+  ///
+  /// **اختياريّ عمداً:** زبائن المتاجر يطلبون كضيوف بلا تسجيل — وكان
+  /// إلزامُه يعني أن جهاز الزبون لا يُسجَّل أصلاً، فلا يصله إشعارٌ مهما
+  /// أذِن. أي أن إشعارات الويب كانت للتجّار وحدهم بحكم عمودٍ في المخطّط.
+  userId     String?  @map("user_id")
+  /// معرّف زائرٍ يولّده المتصفّح ويحفظه — بديل الحساب لمن لا حساب له
+  visitorId  String?  @map("visitor_id")
   /// رمز FCM — فريدٌ عالمياً، وإعادة تسجيله من جهاز آخر تنقل ملكيّته
   token      String   @unique @db.VarChar(512)
   /// web | android | ios — به نعرف أي منصّة تفشل حين تفشل
@@ -159,9 +166,10 @@ model DeviceToken {
   lastSeenAt DateTime @default(now()) @map("last_seen_at")
   createdAt  DateTime @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([visitorId])
   @@map("device_tokens")
 }
 
@@ -180,9 +188,80 @@ model DeviceToken {
 /// `businessId` + `businessType` بدل عمودين اختياريين: القيد الفريد على
 /// أعمدةٍ قد تكون NULL لا يمنع التكرار في MySQL — والنمط نفسه في
 /// `BusinessFeature`.
+/// سلّةٌ بدأها زبونٌ ولم يُتمّها.
+///
+/// **لقطةٌ لا مرآة:** السلّة الحقيقية تعيش في متصفّح الزبون. ما يُحفظ هنا
+/// صورةٌ تُلتقط عند بلوغه صفحة الدفع — أي عند أوّل لحظةٍ يصير فيها للسلّة
+/// قيمةٌ تسويقية وهويّةٌ يُذكَّر بها صاحبها. حفظُ كل تغييرٍ في السلّة كان
+/// سيملأ الجدول بعرباتٍ من متصفّحين يتفرّجون.
+model AbandonedCart {
+  id           String @id @default(cuid())
+  businessId   String @map("business_id")
+  /// restaurant | store
+  businessType String @map("business_type")
+
+  /// من صاحبها — أيّهما توفّر
+  subjectKey String  @map("subject_key")
+  userId     String? @map("user_id")
+  visitorId  String? @map("visitor_id")
+  phone      String?
+
+  /// أسماء الأصناف وكمّياتها — للرسالة لا لإعادة بناء السلّة
+  items     Json
+  total     Float
+  itemCount Int   @default(0) @map("item_count")
+
+  lastActiveAt DateTime  @default(now()) @map("last_active_at")
+  /// وقت إرسال التذكير — صفٌّ نُبّه عليه لا يُنبَّه ثانية
+  notifiedAt   DateTime? @map("notified_at")
+  /// وقت إتمام الطلب — سلّةٌ اكتملت لا تُطارَد
+  recoveredAt  DateTime? @map("recovered_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([subjectKey, businessId])
+  @@index([businessId, businessType, recoveredAt, notifiedAt])
+  @@index([phone])
+  @@map("abandoned_carts")
+}
+
+/// سجلّ ما أرسلته القواعد التلقائية.
+///
+/// **غرضه منع التكرار لا التقرير:** بلا سجلٍّ يعيد المجدول إرسال «اشتقنا
+/// لك» لنفس الزبون كل ليلة، فيتحوّل التذكير إلى مضايقةٍ تُلغي الاشتراك.
+model AutomationSend {
+  id           String @id @default(cuid())
+  businessId   String @map("business_id")
+  businessType String @map("business_type")
+  /// lapsed | abandoned_cart
+  rule         String
+
+  subjectKey String  @map("subject_key")
+  channel    String
+  /// نجح الإرسال أم لا — الفاشل لا يمنع محاولةً لاحقة
+  ok         Boolean @default(true)
+
+  sentAt DateTime @default(now()) @map("sent_at")
+
+  @@index([businessId, rule, subjectKey, sentAt])
+  @@index([sentAt])
+  @@map("automation_sends")
+}
+
 model CustomerSubscription {
   id           String @id @default(cuid())
-  userId       String @map("user_id")
+  /// **المفتاح الثابت للمشترك** — معرّف الحساب أو معرّف الزائر.
+  ///
+  /// عمودٌ واحد يحمل الهوية أيّاً كان مصدرها، لأن التفرّد لا يستقيم على
+  /// عمودٍ يقبل NULL: مايسكيوإل يسمح بتكرار القيم الفارغة، فكان ضيفٌ واحد
+  /// يستطيع إنشاء عددٍ لا نهائي من الاشتراكات لنفس المتجر.
+  subjectKey   String @map("subject_key")
+  userId       String? @map("user_id")
+  /// معرّف الزائر لمن لا حساب له
+  visitorId    String? @map("visitor_id")
+  /// الهاتف كما أدخله عند الطلب — لربط الاشتراك بطلباته لاحقاً
+  phone        String?
   businessId   String @map("business_id")
   /// restaurant | store
   businessType String @map("business_type")
@@ -197,10 +276,11 @@ model CustomerSubscription {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, businessId, channel])
+  @@unique([subjectKey, businessId, channel])
   @@index([businessId, businessType, marketingOptIn])
+  @@index([phone])
   @@map("customer_subscriptions")
 }
 
@@ -404,6 +484,13 @@ model Restaurant {
   /// الأسعار تُخزَّن بالليرة دائماً؛ هذه عملات **عرض** لا تخزين، والدولار
   /// منها يتطلّب سعر صرف مضبوطاً من السوبر أدمن — راجع services/currency.service.ts
   enabledCurrencies            Json?
+  /// إعدادات الرسائل التلقائية.
+  ///
+  /// `{ lapsed: { enabled, afterDays, title, body }, abandonedCart: { … } }`
+  /// راجع services/automation.service.ts — هو المرجع الوحيد لشكلها.
+  /// غيابها يعني «كل القواعد متوقّفة»: لا يُرسَل شيء بلا قرارٍ صريح من
+  /// التاجر، فلا تفاجئ ترقيةٌ زبائنه برسائل لم يطلبها.
+  automations                  Json?
   subscriptionStart            DateTime?
   subscriptionEnd              DateTime?
   createdAt                    DateTime  @default(now())
@@ -474,6 +561,13 @@ model Store {
   /// الأسعار تُخزَّن بالليرة دائماً؛ هذه عملات **عرض** لا تخزين، والدولار
   /// منها يتطلّب سعر صرف مضبوطاً من السوبر أدمن — راجع services/currency.service.ts
   enabledCurrencies    Json?
+  /// إعدادات الرسائل التلقائية.
+  ///
+  /// `{ lapsed: { enabled, afterDays, title, body }, abandonedCart: { … } }`
+  /// راجع services/automation.service.ts — هو المرجع الوحيد لشكلها.
+  /// غيابها يعني «كل القواعد متوقّفة»: لا يُرسَل شيء بلا قرارٍ صريح من
+  /// التاجر، فلا تفاجئ ترقيةٌ زبائنه برسائل لم يطلبها.
+  automations                  Json?
 
   subdomain                    String    @unique
   customDomain                 String?   @unique

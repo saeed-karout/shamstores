@@ -70,6 +70,8 @@ import { calculateDistance } from '@/utils/distance';
 import { resolveBadges } from '@/utils/catalogBadges';
 import type { CartItem } from '@/services/types';
 import { useSocket } from '@/hooks/useSocket';
+import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
+import useCartSnapshot from '../../hooks/useCartSnapshot';
 
 // ==================== الأنواع ====================
 
@@ -288,6 +290,17 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
     [cart]
   );
+
+  // لقطة السلّة للتذكير التلقائي — تُلتقط حين تكون السلّة مفتوحةً وفيها
+  // أصناف، لا مع كل إضافة
+  useCartSnapshot({
+    businessId: (store as any)?.id,
+    businessType: 'store',
+    active: cartOpen && cart.length > 0,
+    items: cart.map((i: any) => ({ name: i.name, quantity: i.quantity })),
+    total: cartTotal,
+    phone: customerPhone
+  });
 
   const quantityByProductId = useMemo(() => {
     const map = new Map<string, number>();
@@ -1182,6 +1195,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         kind="store"
         onRated={() => fetchMyOrders(true)}
       />
+
+      {/* التثبيت على الشاشة الرئيسية — وعلى iPhone هو شرط الإشعارات لا تحسينها */}
+      <InstallAppPrompt businessName={(store as any)?.name} />
 
       {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}
       <PlatformBadge show={store?.showPlatformBadge} />

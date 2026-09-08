@@ -9,10 +9,66 @@ import { Router, Response } from 'express';
 import { AuthRequest } from '../types';
 import { authenticate } from '../middleware/auth';
 import prisma from '../services/prisma';
+import { optionalAuthenticate } from '../middleware/optionalAuth';
 import telegram from '../services/telegram.service';
 import firebaseService from '../services/firebaseService';
 
 const router = Router();
+
+/**
+ * تسجيل جهاز **الزبون** — قبل حارس المصادقة العام.
+ *
+ * زبائن المتاجر ضيوفٌ في الغالب، و`authenticate` ترتدّ عليهم بـ401. فكان
+ * إذنُ الإشعار يُمنَح في المتصفّح ثمّ يضيع رمزه بلا تسجيل: الزبون يرى
+ * «فُعّلت الإشعارات» ولا يصله شيء أبداً.
+ *
+ * الجهاز يُربط بـ`visitorId` يولّده المتصفّح — ومعرّف المستخدم يُضاف فوقه
+ * إن كان مسجّلاً، فيبقى الجهاز نفسه معروفاً بعد أن ينشئ حساباً.
+ */
+router.post('/visitor-devices', optionalAuthenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    const visitorId = typeof req.body?.visitorId === 'string' ? req.body.visitorId.trim().slice(0, 64) : '';
+    const platform = typeof req.body?.platform === 'string' ? req.body.platform.slice(0, 24) : 'web';
+    const label = typeof req.body?.label === 'string' ? req.body.label.slice(0, 120) : null;
+
+    if (!token || !visitorId) {
+      res.status(400).json({ success: false, error: 'رمز الجهاز ومعرّف الزائر مطلوبان' });
+      return;
+    }
+
+    await prisma.deviceToken.upsert({
+      where: { token },
+      update: { visitorId, userId: req.user?.id ?? null, platform, label, lastSeenAt: new Date() },
+      create: { token, visitorId, userId: req.user?.id ?? null, platform, label }
+    });
+
+    res.json({ success: true, message: 'تم تفعيل الإشعارات على هذا الجهاز' });
+  } catch (error) {
+    console.error('registerVisitorDevice failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر تسجيل الجهاز' });
+  }
+});
+
+/** إيقاف إشعارات جهاز الزائر — بلا مصادقة، الرمز نفسه هو الإثبات */
+router.post('/visitor-devices/remove', async (req: AuthRequest, res: Response) => {
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    if (!token) {
+      res.status(400).json({ success: false, error: 'رمز الجهاز مطلوب' });
+      return;
+    }
+    // `visitorId: { not: null }` يمنع استعمال هذا المسار العامّ لحذف جهاز
+    // تاجرٍ لو سُرّب رمزه
+    await prisma.deviceToken.deleteMany({ where: { token, visitorId: { not: null } } });
+    res.json({ success: true, message: 'تم إيقاف الإشعارات على هذا الجهاز' });
+  } catch (error) {
+    console.error('unregisterVisitorDevice failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر إلغاء الجهاز' });
+  }
+});
+
+// ==================== ما بعده للمستخدمين المسجّلين وحدهم ====================
 
 router.use(authenticate);
 

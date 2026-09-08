@@ -77,3 +77,23 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+/**
+ * معالج `fetch` — شرط تثبيت لا آلية تخزين.
+ *
+ * كروم لا يعرض «تثبيت التطبيق» إلا لموقعٍ عامل خدمته تستمع إلى `fetch`.
+ * لذلك يوجد هذا المعالج، ولذلك **لا يخزّن شيئاً**: التخزين المسبق على
+ * تطبيقٍ يُنشر عدّة مرّات في اليوم يترك زبائن على نسخةٍ قديمة لا يعرفون
+ * كيف يخرجون منها — وهو عطلٌ أسوأ بكثير من غياب العمل دون اتصال.
+ *
+ * المرور من الشبكة دائماً، وبلا اعتراضٍ لغير طلبات التصفّح.
+ */
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  // لا نعترض: نترك المتصفّح يتصرّف كما لو لا عامل خدمة أصلاً
+  return;
+});
+
+/// التحديث يصل فوراً لا بعد إغلاق كل التبويبات
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));

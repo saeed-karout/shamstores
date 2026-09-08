@@ -46,6 +46,7 @@ import type { CartItem } from '@/services/types';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 import { useSocket } from '@/hooks/useSocket';
+import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
 
 // ==================== الأنواع ====================
 
@@ -988,6 +989,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       {/* الشارة يحسمها الخادم: الخطة وحدها لا تكفي — قد تكون الميزة مشتراة
           مفردةً على خطة مجانية، وهو ما لا تراه الواجهة */}
+      {/* التثبيت على الشاشة الرئيسية — وعلى iPhone هو شرط الإشعارات لا تحسينها */}
+      <InstallAppPrompt businessName={(restaurant as any)?.name} />
+
       <PlatformBadge show={restaurant?.showPlatformBadge} />
     </>
   );

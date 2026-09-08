@@ -43,7 +43,15 @@ const getBusiness = (req: AuthRequest): { id: string; type: 'restaurant' | 'stor
   return null;
 };
 
-const unsubscribeUrl = (userId: string, businessId: string): string => {
+/**
+ * رابط إلغاء الاشتراك — أو `null` للضيف.
+ *
+ * الرمز موقَّعٌ بمعرّف المستخدم، والضيف لا معرّف له. وإخراج رابطٍ بمعرّفٍ
+ * فارغ كان سيعطي زبوناً رابطاً لا يُلغي شيئاً — وهو أسرع طريق إلى بلاغٍ
+ * يحظر البوت. الضيف يُلغي من الشاشة التي اشترك منها.
+ */
+const unsubscribeUrl = (userId: string | null, businessId: string): string | null => {
+  if (!userId) return null;
   const base = env.CLIENT_URL || `https://${env.APP_DOMAIN}`;
   return `${base}/api/campaigns/u/${buildUnsubscribeToken(userId, businessId)}`;
 };
@@ -156,8 +164,13 @@ export const sendCampaign = async (req: AuthRequest, res: Response): Promise<voi
       audience.recipients.map(async (recipient) => {
         const unsub = unsubscribeUrl(recipient.userId, business.id);
 
-        // السجلّ أولاً: به تُحسب الحصّة ويُقرأ التاريخ، ولو فشلت كل قناة
-        await prisma.notification
+        // السجلّ أولاً: به تُحسب الحصّة ويُقرأ التاريخ، ولو فشلت كل قناة.
+        //
+        // وللضيوف لا سجلّ: `Notification.userId` إلزاميّ، وإنشاء صفٍّ
+        // بمعرّفٍ فارغ يرمي فيُسقط إرسال ذلك الزبون كلّه. عدد المستقبلين
+        // يُحسب من `audience.recipients` لا من هذا الجدول.
+        if (recipient.userId) {
+          await prisma.notification
           .create({
             data: {
               userId: recipient.userId,
@@ -171,6 +184,7 @@ export const sendCampaign = async (req: AuthRequest, res: Response): Promise<voi
             }
           })
           .catch(() => undefined);
+        }
 
         if (recipient.channels.includes('telegram') && recipient.telegramChatId) {
           const ok = await telegram.sendMessage(recipient.telegramChatId, {
@@ -211,8 +225,9 @@ export const sendCampaign = async (req: AuthRequest, res: Response): Promise<voi
                 `<p><a href="${shopUrl}">زيارة ${shopName}</a></p>` +
                 `<hr style="border:none;border-top:1px solid #ddd;margin:20px 0">` +
                 `<p style="font-size:12px;color:#777">` +
-                `وصلتك هذه الرسالة لأنك اشتركت في تنبيهات ${shopName}. ` +
-                `<a href="${unsub}">إلغاء الاشتراك</a></p></div>`
+                `وصلتك هذه الرسالة لأنك اشتركت في تنبيهات ${shopName}.` +
+                (unsub ? ` <a href="${unsub}">إلغاء الاشتراك</a>` : '') +
+                `</p></div>`
             });
             emailSent += 1;
           } catch {

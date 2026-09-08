@@ -596,6 +596,29 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     // `void`: الردّ لا ينتظر Firebase.
     void notifyDriversOfOrder(order);
 
+    // السلّة المتروكة تُغلق عند الطلب — وإلا طارد المجدول زبوناً اشترى
+    // فعلاً برسالة «سلّتك بانتظارك». الإغلاق بالهاتف **وبالهوية** معاً:
+    // الضيف قد يطلب من متصفّحٍ آخر غير الذي التُقطت سلّته فيه.
+    void (async () => {
+      try {
+        const orderPhone = order.customerPhone?.trim();
+        const businessId = order.storeId || order.restaurantId;
+        if (!businessId) return;
+
+        const or: any[] = [];
+        if (userId) or.push({ subjectKey: `u:${userId}` });
+        if (orderPhone) or.push({ phone: orderPhone });
+        if (or.length === 0) return;
+
+        await prisma.abandonedCart.updateMany({
+          where: { businessId, recoveredAt: null, OR: or },
+          data: { recoveredAt: new Date() }
+        });
+      } catch (error) {
+        console.error('تعذّر إغلاق السلّة المتروكة:', error);
+      }
+    })();
+
     // إحالة المسوّق — أساسها المنتجات بعد الخصم لا الفاتورة: رسوم التوصيل
     // ليست بيعاً حقّقه المسوّق، ودفعُ عمولةٍ عليها خسارةٌ صافية للتاجر.
     if (req.body?.referralCode) {

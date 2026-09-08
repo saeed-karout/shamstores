@@ -37,6 +37,7 @@ import tableRoutes from './routes/tableRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import alertChannelRoutes from './routes/alertChannelRoutes';
+import automationRoutes from './routes/automationRoutes';
 import customerRoutes from './routes/customerRoutes';
 import campaignRoutes from './routes/campaignRoutes';
 import posRoutes from './routes/posRoutes';
@@ -297,6 +298,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 // قنوات التنبيه: أجهزة المتصفّح وربط تيليجرام — للمستخدم الحالي وحده
 app.use('/api/alert-channels', alertChannelRoutes);
+app.use('/api/automations', automationRoutes);
 // زبائن النشاط وإشراف تقييمات منتجاته — النشاط من الرمز لا من الطلب
 app.use('/api/customers', customerRoutes);
 // حملات التاجر واشتراك الزبون — ومسار إلغاء الاشتراك عام بلا مصادقة

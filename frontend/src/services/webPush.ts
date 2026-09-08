@@ -13,6 +13,7 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getMessaging, getToken, deleteToken, isSupported, onMessage } from 'firebase/messaging';
 import api from './api';
+import { getVisitorId } from '../utils/visitor';
 
 const SW_PATH = '/firebase-messaging-sw.js';
 
@@ -133,6 +134,32 @@ const registerServiceWorker = async (): Promise<ServiceWorkerRegistration> => {
   return navigator.serviceWorker.register(`${SW_PATH}?${query}`, { scope: '/' });
 };
 
+/**
+ * يسجّل عامل الخدمة عند إقلاع التطبيق — لا عند تفعيل الإشعارات وحده.
+ *
+ * **لماذا مبكّراً:** كروم لا يعرض «تثبيت التطبيق» إلا لموقعٍ **عامل خدمته
+ * مسجَّلٌ وفعّال** ولديه بيانٌ صالح. والتسجيل عند تفعيل الإشعارات وحده
+ * يعني أن الزبون الذي لم يفعّلها لا يُعرض عليه التثبيت أصلاً — ولا يستطيع
+ * تفعيلها على iPhone قبل أن يثبّت. حلقةٌ مغلقة كسْرُها هنا.
+ *
+ * الفشل صامتٌ عمداً: موقعٌ بلا عامل خدمة يعمل كما كان، والتثبيت وحده
+ * يغيب.
+ */
+export const registerAppServiceWorker = async (): Promise<void> => {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+  try {
+    await registerServiceWorker();
+  } catch (error) {
+    console.warn('تعذّر تسجيل عامل الخدمة:', error);
+  }
+};
+
+/** هل يعمل التطبيق مثبَّتاً على الشاشة الرئيسية؟ */
+export const isInstalled = (): boolean => isStandalone();
+
+/** هل الجهاز iPhone/iPad؟ يقرّر أي تعليمات تثبيتٍ تُعرض */
+export const isIosDevice = (): boolean => isIos();
+
 export interface EnableResult {
   ok: boolean;
   state: PushState;
@@ -146,7 +173,9 @@ export interface EnableResult {
  * التلقائي، والأسوأ أن رفضاً واحداً دائم: لا سبيل برمجياً لإعادة السؤال،
  * ويضطرّ التاجر إلى إعدادات المتصفّح. فالسؤال يأتي بعد أن يفهم لماذا.
  */
-export const enablePush = async (): Promise<EnableResult> => {
+export type PushAudience = 'merchant' | 'customer';
+
+export const enablePush = async (audience: PushAudience = 'merchant'): Promise<EnableResult> => {
   const state = await getPushState();
 
   if (state === 'unsupported') {
@@ -188,11 +217,27 @@ export const enablePush = async (): Promise<EnableResult> => {
 
     if (!token) return { ok: false, state: 'default', error: 'تعذّر الحصول على رمز الجهاز' };
 
-    await api.post('/alert-channels/devices', {
-      token,
-      platform: 'web',
-      label: describeDevice()
-    });
+    // مسارٌ مختلف للزبون عن التاجر: مسار التاجر محروسٌ بالمصادقة، والزبون
+    // ضيفٌ في الغالب فيرتدّ عنه بـ401 — فيرى «فُعّلت الإشعارات» ولا يصله
+    // شيء أبداً. الوجهة تُختار هنا لا تُترك للحظّ.
+    const visitorId = getVisitorId();
+    if (audience === 'customer') {
+      if (!visitorId) {
+        return { ok: false, state: 'default', error: 'متصفّحك يمنع حفظ البيانات — فعّل تخزين المواقع ثم أعد المحاولة' };
+      }
+      await api.post('/alert-channels/visitor-devices', {
+        token,
+        visitorId,
+        platform: 'web',
+        label: describeDevice()
+      });
+    } else {
+      await api.post('/alert-channels/devices', {
+        token,
+        platform: 'web',
+        label: describeDevice()
+      });
+    }
 
     return { ok: true, state: 'granted' };
   } catch (error: any) {

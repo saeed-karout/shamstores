@@ -6,6 +6,7 @@ import './index.css';
 import App from './App';
 import { SettingsProvider } from './hooks/SettingsContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { registerAppServiceWorker } from './services/webPush';
 
 /**
  * تعافٍ من أجزاء JS قديمة بعد نشر جديد.
@@ -47,6 +48,16 @@ window.addEventListener('unhandledrejection', (event) => {
     reloadOnceForStaleChunk();
   }
 });
+
+// عامل الخدمة يُسجَّل عند الإقلاع لا عند تفعيل الإشعارات.
+//
+// كروم لا يعرض «تثبيت التطبيق» إلا لموقعٍ عامل خدمته فعّال، وiPhone لا
+// يمنح الإشعارات إلا لموقعٍ مثبَّت. فالتسجيل المتأخّر كان يقفل الحلقة:
+// لا تثبيت بلا إشعارات، ولا إشعارات بلا تثبيت.
+//
+// بعد `render` لا قبله: التسجيل عملية شبكة، وتأخيرُ أوّل رسمةٍ لأجلها
+// يُبطئ ما يراه الزبون مقابل ميزةٍ لا يحتاجها في الثانية الأولى.
+void registerAppServiceWorker();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
