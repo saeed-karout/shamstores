@@ -36,11 +36,32 @@ const readStored = (slug: string): LangCode | null => {
   }
 };
 
+const LAST_KEY = STORAGE_PREFIX + '~last';
+
 const writeStored = (slug: string, lang: LangCode) => {
   try {
     localStorage.setItem(STORAGE_PREFIX + slug, lang);
+    // ونسخةٌ بلا اسم متجر — لصفحاتٍ تُفتح من رابطٍ ولا تعرف من أي متجر
+    // جاءت، كصفحة تتبّع الطلب (`/track/:orderId`)
+    localStorage.setItem(LAST_KEY, lang);
   } catch {
     /* تصفّح خاصّ — الاختيار يعيش لهذه الجلسة */
+  }
+};
+
+/**
+ * آخر لغةٍ اختارها الزبون في أي متجر.
+ *
+ * **لصفحةٍ بلا متجرٍ في مسارها.** رابط التتبّع يصل بالرسالة أو الإشعار
+ * ولا يحمل اسم المتجر، فكانت الصفحة تُعرض بالعربية دائماً لمن اختار
+ * الإنجليزية قبل ثانيةٍ في نفس الجلسة.
+ */
+export const readLastLang = (): LangCode | null => {
+  try {
+    const raw = localStorage.getItem(LAST_KEY);
+    return isLang(raw) ? raw : null;
+  } catch {
+    return null;
   }
 };
 

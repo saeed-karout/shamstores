@@ -10,8 +10,10 @@
 // والخادم يرفضهما على أي حال، فعرضهما قابلين للتعديل كان سيَعِد بما لا
 // يُنفَّذ — وهو أسوأ من إخفائهما.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { makeT } from '@/i18n/storefront';
+import { readLastLang } from '@/hooks/useStorefrontLanguage';
 import {
   IoPersonCircleOutline,
   IoCameraOutline,
@@ -36,6 +38,8 @@ const C = {
   red: '#FF6B6B'
 };
 
+// النصّ عربيٌّ هنا لأنه **مفتاح** القاموس لا نصَّ عرض: الخريطة خارج
+// المكوّن حيث لا يتوفّر `t`، والترجمة تقع عند الاستعمال داخله
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'مدير المنصة',
   owner: 'صاحب نشاط',
@@ -48,6 +52,9 @@ const ROLE_LABELS: Record<string, string> = {
 const MAX_AVATAR_MB = 4;
 
 const ProfilePage: React.FC = () => {
+  // صفحة الحساب تُفتح من واجهة المتجر ولا تحمل اسمه في مسارها — فتقرأ
+  // آخر لغةٍ اختارها الزبون، كصفحة تتبّع الطلب
+  const t = useMemo(() => makeT(readLastLang() || 'ar'), []);
   const navigate = useNavigate();
   const { user, setAuthData } = useAuth();
 
@@ -76,7 +83,7 @@ const ProfilePage: React.FC = () => {
           navigate('/user/login', { replace: true });
           return;
         }
-        toast.error('تعذّر تحميل بيانات حسابك');
+        toast.error(t('تعذّر تحميل بيانات حسابك'));
       } finally {
         setLoading(false);
       }
@@ -90,7 +97,7 @@ const ProfilePage: React.FC = () => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast.error('اختر ملف صورة');
+      toast.error(t('اختر ملف صورة'));
       return;
     }
     if (file.size > MAX_AVATAR_MB * 1024 * 1024) {
@@ -105,9 +112,9 @@ const ProfilePage: React.FC = () => {
       if (!url) throw new Error('no url');
       setAvatarUrl(url);
       // الرفع لا يحفظ: المستخدم قد يتراجع قبل الحفظ
-      toast.success('اضغط «حفظ» لتثبيت الصورة');
+      toast.success(t('اضغط «حفظ» لتثبيت الصورة'));
     } catch {
-      toast.error('تعذّر رفع الصورة');
+      toast.error(t('تعذّر رفع الصورة'));
     } finally {
       setUploading(false);
     }
@@ -130,7 +137,7 @@ const ProfilePage: React.FC = () => {
       });
 
       setProfile(data);
-      toast.success('تم حفظ بياناتك');
+      toast.success(t('تم حفظ بياناتك'));
 
       // الشريط الجانبي والقائمة يقرآن المستخدم من الحالة لا من الخادم
       const token = localStorage.getItem('token');
@@ -140,7 +147,7 @@ const ProfilePage: React.FC = () => {
         setAuthData(token, merged);
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || 'تعذّر حفظ البيانات');
+      toast.error(error?.response?.data?.error || t('تعذّر حفظ البيانات'));
     } finally {
       setSaving(false);
     }
@@ -170,12 +177,10 @@ const ProfilePage: React.FC = () => {
             padding: 0
           }}
         >
-          <IoArrowBack size={17} /> رجوع
-        </button>
+          <IoArrowBack size={17} />{t('رجوع')}</button>
 
         <h1 style={{ color: C.text, fontSize: 23, fontWeight: 800, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 9 }}>
-          <IoPersonCircleOutline style={{ color: C.accent }} /> حسابي
-        </h1>
+          <IoPersonCircleOutline style={{ color: C.accent }} />{t('حسابي')}</h1>
 
         {/* الصورة */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
@@ -242,9 +247,7 @@ const ProfilePage: React.FC = () => {
 
         {/* الحقول القابلة للتعديل */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 16 }}>
-          <label htmlFor="profile-name" style={labelStyle}>
-            الاسم الكامل
-          </label>
+          <label htmlFor="profile-name" style={labelStyle}>{t('الاسم الكامل')}</label>
           <input
             id="profile-name"
             value={name}
@@ -253,9 +256,7 @@ const ProfilePage: React.FC = () => {
             style={inputStyle}
           />
 
-          <label htmlFor="profile-phone" style={{ ...labelStyle, marginTop: 16 }}>
-            رقم الهاتف
-          </label>
+          <label htmlFor="profile-phone" style={{ ...labelStyle, marginTop: 16 }}>{t('رقم الهاتف')}</label>
           <input
             id="profile-phone"
             value={phone}
@@ -265,16 +266,12 @@ const ProfilePage: React.FC = () => {
             maxLength={20}
             style={{ ...inputStyle, textAlign: 'start' }}
           />
-          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 6 }}>
-            يظهر للمتجر عند طلبك، ويُستخدم للتواصل بشأن طلباتك.
-          </div>
+          <div style={{ color: C.muted, fontSize: 11.5, marginTop: 6 }}>{t('يظهر للمتجر عند طلبك، ويُستخدم للتواصل بشأن طلباتك.')}</div>
         </div>
 
         {/* ما لا يُعدَّل من هنا */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 20 }}>
-          <h2 style={{ color: C.text, fontSize: 14.5, fontWeight: 700, margin: '0 0 4px' }}>
-            بيانات ثابتة
-          </h2>
+          <h2 style={{ color: C.text, fontSize: 14.5, fontWeight: 700, margin: '0 0 4px' }}>{t('بيانات ثابتة')}</h2>
           <p style={{ color: C.muted, fontSize: 12, margin: '0 0 14px', lineHeight: 1.85 }}>
             تُغيَّر من إدارة المنصة. البريد معرّف دخولك ومحلّ التحقّق، وتغييره
             من هنا يجعل حسابك «مُفعَّلاً» ببريد لم يُثبَت أنه لك.
@@ -284,7 +281,7 @@ const ProfilePage: React.FC = () => {
           <ReadOnlyRow
             icon={<IoShieldCheckmarkOutline size={16} />}
             label="نوع الحساب"
-            value={ROLE_LABELS[profile?.role] || profile?.role}
+            value={ROLE_LABELS[profile?.role] ? t(ROLE_LABELS[profile.role]) : profile?.role}
           />
         </div>
 
@@ -310,7 +307,7 @@ const ProfilePage: React.FC = () => {
           }}
         >
           <IoSaveOutline size={18} />
-          {saving ? 'جارٍ الحفظ…' : dirty ? 'حفظ التغييرات' : 'لا تغييرات'}
+          {saving ? 'جارٍ الحفظ…' : dirty ? 'حفظ التغييرات' : t('لا تغييرات')}
         </button>
       </div>
     </div>

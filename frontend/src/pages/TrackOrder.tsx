@@ -1,7 +1,9 @@
 // src/pages/TrackOrder.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { makeT } from '@/i18n/storefront';
+import { readLastLang } from '@/hooks/useStorefrontLanguage';
 import { motion } from 'framer-motion';
 import {
   IoCheckmarkCircle, IoTime, IoCar, IoRestaurant,
@@ -59,6 +61,14 @@ interface OrderStatus {
 
 const TrackOrder: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
+
+  /**
+   * لغة العرض — من آخر اختيارٍ للزبون، لا من المسار.
+   *
+   * `/track/:orderId` لا يحمل اسم المتجر، فلا سبيل لقراءة تفضيلٍ مخزَّن
+   * باسمه. وكانت الصفحة عربيةً دائماً لمن بدّل إلى الإنجليزية قبل ثانية.
+   */
+  const t = useMemo(() => makeT(readLastLang() || 'ar'), []);
   const navigate = useNavigate();
   const [order, setOrder] = useState<OrderStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,11 +142,11 @@ const TrackOrder: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'pending': return 'قيد الانتظار';
-      case 'processing': return 'قيد التجهيز';
-      case 'shipped': return 'تم الشحن';
-      case 'delivered': return 'تم التوصيل';
-      case 'cancelled': return 'ملغي';
+      case 'pending': return t('قيد الانتظار');
+      case 'processing': return t('قيد التجهيز');
+      case 'shipped': return t('تم الشحن');
+      case 'delivered': return t('تم التوصيل');
+      case 'cancelled': return t('ملغي');
       default: return status;
     }
   };
@@ -156,7 +166,7 @@ const TrackOrder: React.FC = () => {
             borderTopColor: 'transparent', borderRadius: '50%',
             animation: 'spin 1s linear infinite', margin: '0 auto'
           }} />
-          <p style={{ marginTop: 16, color: C.muted, fontFamily: 'Cairo, sans-serif' }}>جاري تحميل معلومات الطلب...</p>
+          <p style={{ marginTop: 16, color: C.muted, fontFamily: 'Cairo, sans-serif' }}>{t('جاري تحميل معلومات الطلب...')}</p>
         </div>
       </div>
     );
@@ -167,7 +177,7 @@ const TrackOrder: React.FC = () => {
       <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
         <div style={{ textAlign: 'center', maxWidth: 420, fontFamily: 'Cairo, sans-serif' }}>
           <div style={{ fontSize: 64, marginBottom: 16 }}>⚠️</div>
-          <h2 style={{ color: C.text, fontSize: 24, fontWeight: 700, marginBottom: 8 }}>الطلب غير موجود</h2>
+          <h2 style={{ color: C.text, fontSize: 24, fontWeight: 700, marginBottom: 8 }}>{t('الطلب غير موجود')}</h2>
           <p style={{ color: C.muted, marginBottom: 24 }}>{error || 'لم نتمكن من العثور على الطلب'}</p>
           <Link
             to="/"
@@ -175,19 +185,17 @@ const TrackOrder: React.FC = () => {
               padding: '12px 24px', background: C.accent, color: C.bg,
               borderRadius: 12, textDecoration: 'none', fontWeight: 600
             }}
-          >
-            العودة إلى الرئيسية
-          </Link>
+          >{t('العودة إلى الرئيسية')}</Link>
         </div>
       </div>
     );
   }
 
   const statusSteps = [
-    { key: 'pending', label: 'تم الاستلام', icon: IoCheckmarkCircle },
-    { key: 'processing', label: 'قيد التجهيز', icon: IoTime },
-    { key: 'shipped', label: 'تم الشحن', icon: IoCar },
-    { key: 'delivered', label: 'تم التوصيل', icon: IoLocation },
+    { key: 'pending', label: t('تم الاستلام'), icon: IoCheckmarkCircle },
+    { key: 'processing', label: t('قيد التجهيز'), icon: IoTime },
+    { key: 'shipped', label: t('تم الشحن'), icon: IoCar },
+    { key: 'delivered', label: t('تم التوصيل'), icon: IoLocation },
   ];
 
   const currentStep = getStatusStep(order.status);
@@ -204,7 +212,7 @@ const TrackOrder: React.FC = () => {
             >
               <IoArrowBack size={24} />
             </button>
-            <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700 }}>تتبع الطلب</h1>
+            <h1 style={{ color: C.text, fontSize: 20, fontWeight: 700 }}>{t('تتبع الطلب')}</h1>
             <button
               onClick={shareOrder}
               aria-label="مشاركة الطلب"
@@ -221,7 +229,7 @@ const TrackOrder: React.FC = () => {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
-              <p style={{ color: C.muted, fontSize: 14 }}>رقم الطلب</p>
+              <p style={{ color: C.muted, fontSize: 14 }}>{t('رقم الطلب')}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <p style={{ color: C.text, fontSize: 28, fontWeight: 700, fontFamily: 'monospace' }}>{order.orderNumber}</p>
                 <button
@@ -245,7 +253,7 @@ const TrackOrder: React.FC = () => {
 
         {/* Status Timeline */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
-          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 24 }}>حالة الطلب</h2>
+          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 24 }}>{t('حالة الطلب')}</h2>
           <div style={{ position: 'relative' }}>
             {/* Track line */}
             <div style={{ position: 'absolute', top: 20, right: 0, left: 0, height: 2, background: C.surf }}>
@@ -292,9 +300,7 @@ const TrackOrder: React.FC = () => {
         {order.deliveryAddress && (
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
             <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoLocation style={{ color: C.accent }} />
-              عنوان التوصيل
-            </h2>
+              <IoLocation style={{ color: C.accent }} />{t('عنوان التوصيل')}</h2>
             <p style={{ color: C.text }}>{order.deliveryAddress}</p>
             {order.deliveryLat && order.deliveryLng && (
               <a
@@ -303,9 +309,7 @@ const TrackOrder: React.FC = () => {
                 rel="noopener noreferrer"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 12, color: C.accent, fontSize: 14, textDecoration: 'none' }}
               >
-                <IoMap size={16} />
-                فتح في خرائط جوجل
-              </a>
+                <IoMap size={16} />{t('فتح في خرائط جوجل')}</a>
             )}
           </div>
         )}
@@ -314,13 +318,11 @@ const TrackOrder: React.FC = () => {
         {order.assignedDriver && (order.status === 'processing' || order.status === 'shipped') && (
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
             <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoCar style={{ color: C.accent }} />
-              معلومات المندوب
-            </h2>
+              <IoCar style={{ color: C.accent }} />{t('معلومات المندوب')}</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ color: C.text }}><span style={{ color: C.muted }}>الاسم:</span> {order.assignedDriver.name}</p>
+              <p style={{ color: C.text }}><span style={{ color: C.muted }}>{t('الاسم:')}</span> {order.assignedDriver.name}</p>
               <p style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
-                <span style={{ color: C.muted }}>الهاتف:</span>
+                <span style={{ color: C.muted }}>{t('الهاتف:')}</span>
                 <a href={`tel:${order.assignedDriver.phone}`} style={{ color: C.accent, textDecoration: 'none' }}>
                   {order.assignedDriver.phone}
                 </a>
@@ -329,9 +331,7 @@ const TrackOrder: React.FC = () => {
               {driverLocation && (
                 <div style={{ marginTop: 12, padding: 12, background: 'rgba(96,165,250,0.1)', borderRadius: 12 }}>
                   <p style={{ fontSize: 14, color: C.blue, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <IoRefresh style={{ animation: 'spin 1s linear infinite' }} size={14} />
-                    موقع المندوب يتم تحديثه تلقائياً
-                  </p>
+                    <IoRefresh style={{ animation: 'spin 1s linear infinite' }} size={14} />{t('موقع المندوب يتم تحديثه تلقائياً')}</p>
                 </div>
               )}
             </div>
@@ -340,7 +340,7 @@ const TrackOrder: React.FC = () => {
 
         {/* Order Items */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, marginBottom: 24 }}>
-          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16 }}>المنتجات المطلوبة</h2>
+          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16 }}>{t('المنتجات المطلوبة')}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {order.orderItems.map((item) => {
               const product = item.product || item.menuItem;
@@ -354,7 +354,7 @@ const TrackOrder: React.FC = () => {
                     />
                   )}
                   <div style={{ flex: 1 }}>
-                    <p style={{ color: C.text, fontWeight: 500 }}>{product?.name || 'منتج'}</p>
+                    <p style={{ color: C.text, fontWeight: 500 }}>{product?.name || t('منتج')}</p>
                     <p style={{ color: C.muted, fontSize: 14 }}>الكمية: {item.quantity}</p>
                   </div>
                   <p style={{ color: C.accent, fontWeight: 700 }}>{item.price * item.quantity} ر.س</p>
@@ -363,35 +363,35 @@ const TrackOrder: React.FC = () => {
             })}
           </div>
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: C.text, fontWeight: 700 }}>الإجمالي</span>
+            <span style={{ color: C.text, fontWeight: 700 }}>{t('الإجمالي')}</span>
             <span style={{ color: C.accent, fontWeight: 700, fontSize: 18 }}>{order.total} ر.س</span>
           </div>
         </div>
 
         {/* Dates */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
-          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16 }}>معلومات إضافية</h2>
+          <h2 style={{ color: C.text, fontWeight: 700, fontSize: 18, marginBottom: 16 }}>{t('معلومات إضافية')}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
-            <p style={{ color: C.text }}><span style={{ color: C.muted }}>تاريخ الطلب:</span> {new Date(order.createdAt).toLocaleString('ar')}</p>
+            <p style={{ color: C.text }}><span style={{ color: C.muted }}>{t('تاريخ الطلب:')}</span> {new Date(order.createdAt).toLocaleString('ar')}</p>
             {order.estimatedDeliveryTime && (
-              <p style={{ color: C.text }}><span style={{ color: C.muted }}>الوقت المتوقع:</span> {new Date(order.estimatedDeliveryTime).toLocaleString('ar')}</p>
+              <p style={{ color: C.text }}><span style={{ color: C.muted }}>{t('الوقت المتوقع:')}</span> {new Date(order.estimatedDeliveryTime).toLocaleString('ar')}</p>
             )}
             {order.actualDeliveryTime && (
-              <p style={{ color: C.text }}><span style={{ color: C.muted }}>وقت التوصيل:</span> {new Date(order.actualDeliveryTime).toLocaleString('ar')}</p>
+              <p style={{ color: C.text }}><span style={{ color: C.muted }}>{t('وقت التوصيل:')}</span> {new Date(order.actualDeliveryTime).toLocaleString('ar')}</p>
             )}
             <p style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
-              <span style={{ color: C.muted }}>طريقة الدفع:</span>
-              {order.paymentMethod === 'cash' ? 'كاش' : order.paymentMethod === 'card' ? 'بطاقة' : 'أونلاين'}
+              <span style={{ color: C.muted }}>{t('طريقة الدفع:')}</span>
+              {order.paymentMethod === 'cash' ? t('كاش') : order.paymentMethod === 'card' ? t('بطاقة') : t('أونلاين')}
             </p>
             <p style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
-              <span style={{ color: C.muted }}>حالة الدفع:</span>
+              <span style={{ color: C.muted }}>{t('حالة الدفع:')}</span>
               {order.isPaid ? (
                 <span style={{ color: C.accent }}>مدفوع</span>
               ) : (
                 <span style={{ color: '#FBBF24' }}>غير مدفوع</span>
               )}
               {!order.isPaid && order.paymentMethod === 'cash' && (
-                <span style={{ fontSize: 12, color: C.muted }}>(سيتم الدفع عند الاستلام)</span>
+                <span style={{ fontSize: 12, color: C.muted }}>{t('(سيتم الدفع عند الاستلام)')}</span>
               )}
             </p>
           </div>
@@ -407,9 +407,7 @@ const TrackOrder: React.FC = () => {
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
           }}
         >
-          <IoRefresh size={18} />
-          تحديث البيانات
-        </button>
+          <IoRefresh size={18} />{t('تحديث البيانات')}</button>
       </div>
     </div>
   );
