@@ -115,6 +115,16 @@ const EN: Record<string, string> = {
   'حسابك': 'Your account',
   'بياناتي': 'My profile',
   'طلباتي': 'My orders',
+  'شكراً لتقييمك': 'Thank you for your review',
+  'تعذّر إرسال التقييم': 'Could not send the review',
+  'تعذّر حفظ تقييم المنتج': 'Could not save the product review',
+
+  'تمت الإضافة': 'Added',
+  'مشاركة واتساب': 'Share on WhatsApp',
+  'تم نسخ الرابط': 'Link copied',
+  'المنتج غير متوفر في المخزون': 'This product is out of stock',
+  'الكمية المتاحة محدودة': 'Available quantity is limited',
+
   // ===== صفحة الحساب =====
   'رجوع': 'Back',
   'تغيير صورة الحساب': 'Change account photo',

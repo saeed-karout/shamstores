@@ -386,9 +386,9 @@ const TrackOrder: React.FC = () => {
             <p style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.text }}>
               <span style={{ color: C.muted }}>{t('حالة الدفع:')}</span>
               {order.isPaid ? (
-                <span style={{ color: C.accent }}>مدفوع</span>
+                <span style={{ color: C.accent }}>{t('مدفوع')}</span>
               ) : (
-                <span style={{ color: '#FBBF24' }}>غير مدفوع</span>
+                <span style={{ color: '#FBBF24' }}>{t('غير مدفوع')}</span>
               )}
               {!order.isPaid && order.paymentMethod === 'cash' && (
                 <span style={{ fontSize: 12, color: C.muted }}>{t('(سيتم الدفع عند الاستلام)')}</span>

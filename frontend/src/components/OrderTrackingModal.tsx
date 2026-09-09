@@ -186,7 +186,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
     try {
       await api.post(`/orders/${trackingOrder.id}/reviewable/${productId}`, { rating: value });
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || 'تعذّر حفظ تقييم المنتج');
+      toast.error(error?.response?.data?.error || t('تعذّر حفظ تقييم المنتج'));
     } finally {
       setSavingProduct(null);
     }
@@ -210,12 +210,12 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
         comment: comment.trim() || undefined,
         driverRating: driverStars > 0 ? driverStars : undefined
       });
-      toast.success('شكراً لتقييمك');
+      toast.success(t('شكراً لتقييمك'));
       // بعد تقييم الطلب يُعرض تقييم المنتجات — لا قبله
       await loadReviewables(trackingOrder.id);
       onRated?.();
     } catch (error: any) {
-      toast.error(error?.response?.data?.error || 'تعذّر إرسال التقييم');
+      toast.error(error?.response?.data?.error || t('تعذّر إرسال التقييم'));
     } finally {
       setSending(false);
     }

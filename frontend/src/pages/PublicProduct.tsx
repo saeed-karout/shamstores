@@ -305,7 +305,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
 
     const productStock = typeof product.stock === 'number' ? product.stock : parseInt(String(product.stock)) || 0;
     if (productStock === 0) {
-      toast.error('المنتج غير متوفر في المخزون');
+      toast.error(t('المنتج غير متوفر في المخزون'));
       return;
     }
 
@@ -378,7 +378,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       }).catch(() => {});
     } else {
       navigator.clipboard.writeText(url);
-      toast.success('تم نسخ الرابط');
+      toast.success(t('تم نسخ الرابط'));
       setShowShareMenu(false);
     }
   };
@@ -394,7 +394,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     if (product && quantity < productStock) {
       setQuantity(quantity + 1);
     } else {
-      toast.error('الكمية المتاحة محدودة');
+      toast.error(t('الكمية المتاحة محدودة'));
     }
   };
 
@@ -754,7 +754,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 }}
               >
                 {addedToCart ? <IoCheckmark size={20} /> : <IoCart size={20} />}
-                {addedToCart ? 'تمت الإضافة' : 'أضف إلى السلة'}
+                {addedToCart ? t('تمت الإضافة') : t('أضف إلى السلة')}
               </button>
 
               <button
@@ -788,7 +788,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                       onClick={handleWhatsAppShare}
                       style={{ width: '100%', padding: '8px 16px', textAlign: 'right', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: C.text, fontFamily: 'Cairo, sans-serif' }}
                     >
-                      <IoLogoWhatsapp size={16} style={{ color: '#25D366' }} /> مشاركة واتساب
+                      <IoLogoWhatsapp size={16} style={{ color: '#25D366' }} /> {t('مشاركة واتساب')}
                     </button>
                   </div>
                 )}
@@ -864,7 +864,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                         />
                       ) : (
                         <div style={{ width: '100%', height: '100%', background: C.surf, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ color: C.muted }}>لا توجد صورة</span>
+                          <span style={{ color: C.muted }}>{t('لا توجد صورة')}</span>
                         </div>
                       )}
                     </div>
@@ -903,7 +903,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             style={{ width: '100%', padding: '12px 0', background: C.accent, color: C.bg, borderRadius: 12, border: 'none', fontWeight: 600, fontSize: 16, boxShadow: '0 4px 20px rgba(200,226,53,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
           >
             <IoCart size={20} />
-            أضف إلى السلة - {formatPrice(finalPrice, currency)}
+            {t('أضف إلى السلة')} — {formatPrice(finalPrice, currency)}
           </button>
         </div>
       )}
