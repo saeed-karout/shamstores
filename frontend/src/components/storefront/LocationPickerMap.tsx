@@ -96,11 +96,11 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
         setLocating(false);
         // رسالة لكل سبب: «فشل تحديد الموقع» وحدها لا تخبر المستخدم بما يفعل
         const messages: Record<number, string> = {
-          1: 'رفضتَ إذن الموقع. فعّله من إعدادات المتصفح أو ضع الدبّوس يدوياً.',
-          2: 'تعذّر تحديد الموقع — الإشارة ضعيفة. جرّب الخريطة.',
-          3: 'انتهت مهلة تحديد الموقع. جرّب مجدداً أو استخدم الخريطة.'
+          1: t('رفضتَ إذن الموقع. فعّله من إعدادات المتصفح أو ضع الدبّوس يدوياً.'),
+          2: t('تعذّر تحديد الموقع — الإشارة ضعيفة. جرّب الخريطة.'),
+          3: t('انتهت مهلة تحديد الموقع. جرّب مجدداً أو استخدم الخريطة.')
         };
-        toast.error(messages[error.code] || 'تعذّر تحديد الموقع. استخدم الخريطة.');
+        toast.error(messages[error.code] || t('تعذّر تحديد الموقع. استخدم الخريطة.'));
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
     );
@@ -192,7 +192,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
           style={{ ...actionButton, background: 'var(--sf-accent)', color: 'var(--sf-on-accent)' }}
         >
           <IoLocateOutline size={17} />
-          {locating ? 'جارٍ تحديد موقعك…' : 'موقعي الحالي'}
+          {locating ? t('جارٍ تحديد موقعك…') : t('موقعي الحالي')}
         </button>
 
         <button
@@ -202,7 +202,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
           style={{ ...actionButton, background: 'var(--sf-surface)', color: 'var(--sf-text)' }}
         >
           <IoMapOutline size={17} />
-          {mapOpen ? 'إخفاء الخريطة' : 'اختر من الخريطة'}
+          {mapOpen ? t('إخفاء الخريطة') : t('اختر من الخريطة')}
         </button>
       </div>
 

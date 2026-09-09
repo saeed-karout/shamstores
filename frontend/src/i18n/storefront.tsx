@@ -115,6 +115,78 @@ const EN: Record<string, string> = {
   'حسابك': 'Your account',
   'بياناتي': 'My profile',
   'طلباتي': 'My orders',
+  // ===== الموقع على الخريطة =====
+  'موقعي الحالي': 'My current location',
+  'اختر من الخريطة': 'Pick on the map',
+  'إخفاء الخريطة': 'Hide map',
+  'جارٍ تحديد موقعك…': 'Locating you…',
+  'تعذّر تحديد الموقع. استخدم الخريطة.': 'Could not get your location. Use the map.',
+  'تعذّر تحديد الموقع — الإشارة ضعيفة. جرّب الخريطة.':
+    'Could not get your location — weak signal. Try the map.',
+  'انتهت مهلة تحديد الموقع. جرّب مجدداً أو استخدم الخريطة.':
+    'Locating timed out. Try again or use the map.',
+  'رفضتَ إذن الموقع. فعّله من إعدادات المتصفح أو ضع الدبّوس يدوياً.':
+    'You denied location access. Enable it in your browser settings, or drop the pin manually.',
+
+  // ===== خيارات المنتج =====
+  'يمكن اختيار أكثر من واحد': 'more than one can be selected',
+  'اختر': 'Choose',
+  'أضف إلى السلة': 'Add to cart',
+
+  // ===== السلة وإتمام الطلب =====
+  'أكمل': 'Complete',
+  'طلب من الطاولة رقم': 'Order from table',
+  'شحن': 'Shipping',
+  'اختر المحافظة…': 'Choose a governorate…',
+  'المحافظة': 'Governorate',
+
+  // ===== حالات الطلب =====
+  // النصّ نفسه يظهر شارةً في «طلباتي» وسطراً في شريط التقدّم، فمدخلٌ واحد
+  // يكفي الاثنين — والقاموس مفهرَسٌ بالعربية فلا يتكرّر
+  'قيد الانتظار': 'Pending',
+  'قيد التحضير': 'Preparing',
+  'قيد التجهيز': 'Being prepared',
+  'جاهز': 'Ready',
+  'في الطريق': 'On the way',
+  'تمّ التسليم': 'Delivered',
+  'مكتمل': 'Completed',
+  'ملغي': 'Cancelled',
+  'مدفوع': 'Paid',
+  'يُدفع عند الاستلام': 'Pay on delivery',
+  'يُطبخ الآن': 'Being cooked now',
+  'جاهز للاستلام أو التوصيل': 'Ready for pickup or delivery',
+  'جاهز للشحن': 'Ready to ship',
+  'بالهناء والشفاء': 'Enjoy your meal',
+  'وصل الطلب': 'Order arrived',
+  'بانتظار تأكيد المتجر': 'Awaiting store confirmation',
+  'بانتظار تأكيد المطعم': 'Awaiting restaurant confirmation',
+  'بانتظار المندوب': 'Awaiting the courier',
+  'المندوب خرج بالطلب': 'The courier is out with your order',
+  'في الطريق إليك': 'On its way to you',
+  'يُجهَّز ويُغلَّف': 'Being prepared and packed',
+  'وصل طلبك': 'Your order has arrived',
+
+  // ===== شاشة «طلباتي» =====
+  'جاري التحميل...': 'Loading…',
+  'كل طلباتي': 'All my orders',
+  'لا طلبات بعد': 'No orders yet',
+  'سيظهر طلبك هنا فور إرساله.': 'Your order will appear here as soon as you place it.',
+  'كيف كانت تجربتك؟': 'How was your experience?',
+  'تقييم الطلب': 'Rate the order',
+  'تقييم المنتجات': 'Rate the products',
+  'تقييم المندوب': 'Rate the courier',
+  'جاري الإرسال...': 'Sending…',
+  'أرسل التقييم': 'Send review',
+  'قيّم ما اشتريت': 'Rate what you bought',
+  'رأيك يظهر لمن يفكّر بشراء نفس المنتج. يُحفظ فور اختيارك.':
+    'Your review is shown to anyone considering the same product. It saves as soon as you pick.',
+  'شكراً — سجّلنا تقييمك لهذا الطلب.': 'Thank you — your review for this order is recorded.',
+  'صنف': 'Item',
+  'أُلغي هذا الطلب. تواصل مع': 'This order was cancelled. Contact the',
+  'إن كان ذلك غير': 'if that was unexpected',
+  'المتجر': 'store',
+  'المطعم': 'restaurant',
+
   // قالب «صفحة أقسام»
   'تسوّق حسب الفئة': 'Shop by category',
   'عرض الكل': 'View all',
@@ -192,11 +264,7 @@ const EN: Record<string, string> = {
   'إغلاق العرض المكبّر': 'Close zoom',
 
   // ---------- الموقع ----------
-  'موقعي الحالي': 'My current location',
-  'إخفاء الخريطة': 'Hide map',
-  'اختر من الخريطة': 'Pick on map',
   'جارٍ تحميل الخريطة…': 'Loading map…',
-  'جارٍ تحديد موقعك…': 'Finding your location…',
   'تم تحديد موقعك': 'Location set',
   'الموقع محدَّد': 'Location selected',
   'اضغط على الخريطة أو اسحب الدبّوس لضبط الموقع بدقة':
@@ -205,13 +273,6 @@ const EN: Record<string, string> = {
     'Set your location so the driver finds you. A written address alone may not be enough.',
   'متصفحك لا يدعم تحديد الموقع. اختر من الخريطة.':
     'Your browser does not support location. Pick on the map.',
-  'رفضتَ إذن الموقع. فعّله من إعدادات المتصفح أو ضع الدبّوس يدوياً.':
-    'Location permission was denied. Enable it in your browser or place the pin manually.',
-  'تعذّر تحديد الموقع — الإشارة ضعيفة. جرّب الخريطة.':
-    'Could not find your location — weak signal. Try the map.',
-  'انتهت مهلة تحديد الموقع. جرّب مجدداً أو استخدم الخريطة.':
-    'Location request timed out. Try again or use the map.',
-  'تعذّر تحديد الموقع. استخدم الخريطة.': 'Could not find your location. Use the map.',
 
   // ---------- تنبيهات الطلب ----------
   'تابع طلبك أولاً بأول': 'Follow your order live',

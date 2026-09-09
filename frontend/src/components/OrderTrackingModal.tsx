@@ -39,6 +39,7 @@ import api from '../services/api';
 import FollowOrderPrompt from './storefront/FollowOrderPrompt';
 import { Order, OrderStatus } from '../services/types';
 import { sf } from '@/utils/storefrontTheme';
+import { useT } from '@/i18n/storefront';
 import { sd } from '@/utils/storefrontDesign';
 
 export type TrackingKind = 'store' | 'restaurant';
@@ -115,6 +116,8 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   businessId,
   isAuthenticated
 }) => {
+  // القاموس مفهرَسٌ بالنصّ العربيّ نفسه، فحالات الطلب تُترجم عند العرض
+  const { t } = useT();
   const STEPS = kind === 'restaurant' ? RESTAURANT_STEPS : STORE_STEPS;
 
   const [orderStars, setOrderStars] = useState(0);
@@ -232,7 +235,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
           whiteSpace: 'nowrap'
         }}
       >
-        {meta(status).label}
+        {t(meta(status).label)}
       </span>
     );
   };
@@ -264,11 +267,11 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="طلباتي" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t("طلباتي")} size="lg">
       <div style={{ fontFamily: sf.font }}>
         {loading ? (
           <div style={{ padding: '40px 0', textAlign: 'center', color: sf.muted, fontSize: 14 }}>
-            جاري التحميل...
+            {t('جاري التحميل...')}
           </div>
         ) : trackingOrder ? (
           <div>
@@ -290,7 +293,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 marginBottom: 16
               }}
             >
-              <IoArrowForward size={15} /> كل طلباتي
+              <IoArrowForward size={15} /> {t('كل طلباتي')}
             </button>
 
             <div
@@ -347,7 +350,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 }}
               >
                 <IoCloseCircle size={20} />
-                أُلغي هذا الطلب. تواصل مع {kind === 'restaurant' ? 'المطعم' : 'المتجر'} إن كان ذلك غير
+                {t('أُلغي هذا الطلب. تواصل مع')} {kind === 'restaurant' ? t('المطعم') : t('المتجر')} {t('إن كان ذلك غير')}
                 متوقّع.
               </div>
             ) : (
@@ -402,9 +405,9 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                             fontWeight: active ? 800 : 600
                           }}
                         >
-                          {step.label}
+                          {t(step.label)}
                         </div>
-                        <div style={{ color: sf.muted, fontSize: 11.5, marginTop: 2 }}>{step.hint}</div>
+                        <div style={{ color: sf.muted, fontSize: 11.5, marginTop: 2 }}>{t(step.hint)}</div>
                       </div>
                     </div>
                   );
@@ -434,12 +437,12 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 }}
               >
                 <div style={{ color: sf.text, fontSize: 14, fontWeight: 800, marginBottom: 12 }}>
-                  كيف كانت تجربتك؟
+                  {t('كيف كانت تجربتك؟')}
                 </div>
 
                 <div style={{ display: 'grid', gap: 14 }}>
-                  {stars(orderStars, setOrderStars, kind === 'restaurant' ? 'تقييم الطلب' : 'تقييم المنتجات')}
-                  {hasDriver && stars(driverStars, setDriverStars, 'تقييم المندوب')}
+                  {stars(orderStars, setOrderStars, kind === 'restaurant' ? t('تقييم الطلب') : t('تقييم المنتجات'))}
+                  {hasDriver && stars(driverStars, setDriverStars, t('تقييم المندوب'))}
                 </div>
 
                 <textarea
@@ -481,7 +484,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                     cursor: orderStars < 1 || sending ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {sending ? 'جاري الإرسال...' : 'أرسل التقييم'}
+                  {sending ? t('جاري الإرسال...') : t('أرسل التقييم')}
                 </button>
               </div>
             )}
@@ -498,10 +501,10 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 }}
               >
                 <div style={{ color: sf.text, fontSize: 14, fontWeight: 800, marginBottom: 4 }}>
-                  قيّم ما اشتريت
+                  {t('قيّم ما اشتريت')}
                 </div>
                 <div style={{ color: sf.muted, fontSize: 12, marginBottom: 12, lineHeight: 1.7 }}>
-                  رأيك يظهر لمن يفكّر بشراء نفس المنتج. يُحفظ فور اختيارك.
+                  {t('رأيك يظهر لمن يفكّر بشراء نفس المنتج. يُحفظ فور اختيارك.')}
                 </div>
 
                 <div style={{ display: 'grid', gap: 10 }}>
@@ -569,7 +572,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 }}
               >
                 <IoCheckmarkCircle size={16} style={{ color: '#4ADE80' }} />
-                شكراً — سجّلنا تقييمك لهذا الطلب.
+                {t('شكراً — سجّلنا تقييمك لهذا الطلب.')}
               </div>
             )}
 
@@ -618,7 +621,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                     }}
                   >
                     <span style={{ color: sf.text, fontSize: 13 }}>
-                      {item.menuItem?.name || item.product?.name || 'صنف'}
+                      {item.menuItem?.name || item.product?.name || t('صنف')}
                       <span style={{ color: sf.muted, fontSize: 12 }}> × {item.quantity}</span>
                     </span>
                     <span style={{ color: sf.muted, fontSize: 12.5, whiteSpace: 'nowrap' }}>
@@ -657,7 +660,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 }}
               >
                 <IoWallet size={12} />
-                {trackingOrder.isPaid ? 'مدفوع' : 'يُدفع عند الاستلام'}
+                {trackingOrder.isPaid ? t('مدفوع') : t('يُدفع عند الاستلام')}
               </span>
               <span style={{ color: sf.accent, fontWeight: 800, fontSize: 17 }}>
                 {formatPrice(Number(trackingOrder.total))}
@@ -668,9 +671,9 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
           <div style={{ padding: '44px 20px', textAlign: 'center' }}>
             <IoReceiptOutline size={40} style={{ color: sf.muted, opacity: 0.5, marginBottom: 12 }} />
             <div style={{ color: sf.text, fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
-              لا طلبات بعد
+              {t('لا طلبات بعد')}
             </div>
-            <div style={{ color: sf.muted, fontSize: 13 }}>سيظهر طلبك هنا فور إرساله.</div>
+            <div style={{ color: sf.muted, fontSize: 13 }}>{t('سيظهر طلبك هنا فور إرساله.')}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

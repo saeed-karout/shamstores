@@ -161,8 +161,8 @@ const ProductOptionsSheet: React.FC<Props> = ({
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 9 }}>
               <h3 style={{ color: sf.text, fontSize: 14, fontWeight: 800, margin: 0 }}>{group.name}</h3>
               <span style={{ color: group.required ? '#FF6B6B' : sf.muted, fontSize: 11.5 }}>
-                {group.required ? 'مطلوب' : 'اختياري'}
-                {group.type === 'multi' ? ' · يمكن اختيار أكثر من واحد' : ''}
+                {group.required ? t('مطلوب') : t('اختياري')}
+                {group.type === 'multi' ? ` · ${t('يمكن اختيار أكثر من واحد')}` : ''}
               </span>
             </div>
 
@@ -319,8 +319,8 @@ const ProductOptionsSheet: React.FC<Props> = ({
           }}
         >
           {missing
-            ? `اختر «${missing.name}»`
-            : `أضف إلى السلة — ${formatPrice(unitPrice * quantity, currency)}`}
+            ? `${t('اختر')} «${missing.name}»`
+            : `${t('أضف إلى السلة')} — ${formatPrice(unitPrice * quantity, currency)}`}
         </button>
       </div>
     </BottomSheet>

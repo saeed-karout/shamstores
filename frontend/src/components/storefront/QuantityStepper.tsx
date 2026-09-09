@@ -69,7 +69,7 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({
         type="button"
         onClick={() => canDecrease && onChange(value - 1)}
         disabled={!canDecrease}
-        aria-label={showRemoveIcon ? 'إزالة من السلة' : 'إنقاص الكمية'}
+        aria-label={showRemoveIcon ? t('إزالة من السلة') : t('إنقاص الكمية')}
         style={{
           ...buttonStyle(canDecrease),
           color: showRemoveIcon && canDecrease ? '#FF6B6B' : buttonStyle(canDecrease).color

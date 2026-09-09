@@ -17,6 +17,8 @@ import LocationPickerMap, { PickedLocation } from './LocationPickerMap';
 export interface ShippingZone {
   governorate: string;
   name: string;
+  /** الاسم الإنجليزي كما يرسله الخادم — قد يغيب في نسخةٍ أقدم منه */
+  nameEn?: string;
   fee: number;
   freeOverAmount: number | null;
   estimatedDays: number | null;
@@ -83,6 +85,8 @@ export interface CartSheetProps {
 const REQUIRED_MARK = <span style={{ color: '#FF6B6B' }}>*</span>;
 
 const ORDER_TYPE_META: Record<StorefrontOrderType, { label: string; icon: React.ReactNode }> = {
+  // النصّ عربيٌّ هنا لأنه **مفتاح** القاموس لا نصَّ عرض: القاموس مفهرَس
+  // بالعربية، والترجمة تقع عند الاستعمال داخل المكوّن حيث يتوفّر `t`
   dine_in: { label: 'في المطعم', icon: <IoRestaurantOutline size={17} /> },
   takeaway: { label: 'استلام', icon: <IoStorefrontOutline size={17} /> },
   delivery: { label: 'توصيل', icon: <IoBicycleOutline size={17} /> }
@@ -126,7 +130,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
   submitting = false,
   onSubmit
 }) => {
-  const { t } = useT();
+  const { t, lang } = useT();
   const [couponInput, setCouponInput] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
@@ -175,7 +179,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
       title={
         <span id="sf-cart-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <IoBagHandleOutline size={19} style={{ color: sf.accent }} />
-          السلة
+          {t('السلة')}
           {itemCount > 0 && (
             <span
               style={{
@@ -192,11 +196,18 @@ const CartSheet: React.FC<CartSheetProps> = ({
           )}
         </span>
       }
-      footer={
+      /**
+       * لا تذييل لسلّةٍ فارغة.
+       *
+       * كان يُعرض «تأكيد الطلب — ٠ ل.س» على سلّةٍ لا شيء فيها: زرٌّ معطّل
+       * يشغل ثمانين بكسلاً ويقول للزبون إن هناك ما يُؤكَّد. والرسالة
+       * «سلّتك فارغة» وحدها أوضح.
+       */
+      footer={items.length === 0 ? null : (
         <>
-          {missing.length > 0 && items.length > 0 && (
+          {missing.length > 0 && (
             <div style={{ color: '#FBBF24', fontSize: 11.5, marginBottom: 9, textAlign: 'center' }}>
-              أكمل: {missing.join('، ')}
+              {t('أكمل')}: {missing.map((m) => t(m)).join('، ')}
             </div>
           )}
           <button
@@ -222,11 +233,11 @@ const CartSheet: React.FC<CartSheetProps> = ({
               opacity: canSubmit ? 1 : 0.7
             }}
           >
-            <span>{submitting ? 'جاري إرسال الطلب...' : 'تأكيد الطلب'}</span>
+            <span>{submitting ? t('جاري إرسال الطلب...') : t('تأكيد الطلب')}</span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(total, currency)}</span>
           </button>
         </>
-      }
+      )}
     >
       {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 20px', color: sf.muted }}>
@@ -389,7 +400,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                 fontWeight: 700
               }}
             >
-              <IoRestaurantOutline size={17} /> طلب من الطاولة رقم {tableNumber}
+              <IoRestaurantOutline size={17} /> {t('طلب من الطاولة رقم')} {tableNumber}
             </div>
           ) : (
             availableOrderTypes.length > 1 && (
@@ -423,7 +434,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                         }}
                       >
                         {meta.icon}
-                        {meta.label}
+                        {t(meta.label)}
                       </button>
                     );
                   })}
@@ -438,7 +449,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
             <div style={{ display: 'grid', gap: 10 }}>
               <div>
                 <label style={fieldLabel} htmlFor="sf-cart-name">
-                  الاسم {nameRequired && REQUIRED_MARK}
+                  {t('الاسم')} {nameRequired && REQUIRED_MARK}
                 </label>
                 <input
                   id="sf-cart-name"
@@ -453,7 +464,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
 
               <div>
                 <label style={fieldLabel} htmlFor="sf-cart-phone">
-                  رقم الهاتف {phoneRequired && REQUIRED_MARK}
+                  {t('رقم الهاتف')} {phoneRequired && REQUIRED_MARK}
                 </label>
                 <input
                   id="sf-cart-phone"
@@ -470,7 +481,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
               {orderType === 'delivery' && shippingZones.length > 0 && onGovernorateChange && (
                 <div>
                   <label style={fieldLabel} htmlFor="sf-cart-governorate">
-                    المحافظة {REQUIRED_MARK}
+                    {t('المحافظة')} {REQUIRED_MARK}
                   </label>
                   <select
                     id="sf-cart-governorate"
@@ -478,10 +489,12 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     onChange={(e) => onGovernorateChange(e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="">اختر المحافظة…</option>
+                    <option value="">{t('اختر المحافظة…')}</option>
                     {shippingZones.map((zone) => (
                       <option key={zone.governorate} value={zone.governorate}>
-                        {zone.name}
+                        {/* الاسم الإنجليزي من الخادم لا من نسخةٍ في الواجهة:
+                            أربع عشرة محافظة مكتوبة مرّتين تتفرّقان عند أوّل تعديل */}
+                        {lang === 'en' && zone.nameEn ? zone.nameEn : zone.name}
                       </option>
                     ))}
                   </select>
@@ -489,9 +502,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
                       التوصيل في آخر سطر يتراجع عن الطلب */}
                   {selectedZone && (
                     <p style={{ color: sf.muted, fontSize: 12, margin: '7px 0 0', lineHeight: 1.8 }}>
-                      {selectedZone.deliveryMode === 'shipping' ? 'شحن' : 'توصيل'}
+                      {selectedZone.deliveryMode === 'shipping' ? t('شحن') : t('توصيل')}
                       {' · '}
-                      {effectiveDeliveryFee > 0 ? formatPrice(effectiveDeliveryFee) : 'مجاني'}
+                      {effectiveDeliveryFee > 0 ? formatPrice(effectiveDeliveryFee) : t('مجاني')}
                       {selectedZone.estimatedDays ? ` · خلال ${selectedZone.estimatedDays} يوم` : ''}
                       {selectedZone.freeOverAmount && effectiveDeliveryFee > 0
                         ? ` · مجاني فوق ${formatPrice(selectedZone.freeOverAmount)}`
@@ -504,7 +517,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
               {orderType === 'delivery' && onAddressChange && (
                 <div>
                   <label style={fieldLabel} htmlFor="sf-cart-address">
-                    عنوان التوصيل {REQUIRED_MARK}
+                    {t('عنوان التوصيل')} {REQUIRED_MARK}
                   </label>
                   <textarea
                     id="sf-cart-address"
@@ -609,7 +622,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     }}
                   >
                     <IoTicketOutline size={15} />
-                    {applyingCoupon ? '...' : 'تطبيق'}
+                    {applyingCoupon ? '...' : t('تطبيق')}
                   </button>
                 </div>
               )}
@@ -634,7 +647,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
             {orderType === 'delivery' && (
               <SummaryRow
                 label={t('رسوم التوصيل')}
-                value={effectiveDeliveryFee > 0 ? formatPrice(effectiveDeliveryFee, currency) : 'مجاني'}
+                value={effectiveDeliveryFee > 0 ? formatPrice(effectiveDeliveryFee, currency) : t('مجاني')}
               />
             )}
             <div style={{ height: 1, background: sf.border, margin: '3px 0' }} />

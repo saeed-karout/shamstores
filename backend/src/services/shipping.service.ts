@@ -22,6 +22,9 @@ export interface ZoneInput {
 
 export interface ZoneRow extends ZoneInput {
   name: string;
+  /** الاسم الإنجليزي — موجودٌ في `config/syria.ts` وكان يُسقَط هنا، فتظهر
+   *  «دمشق» داخل سلّةٍ إنجليزية بالكامل */
+  nameEn: string;
   configured: boolean;
 }
 
@@ -43,6 +46,7 @@ export const listZones = async (
     return {
       governorate: g.code,
       name: g.name,
+      nameEn: g.nameEn,
       fee: row ? Number(row.fee) : 0,
       freeOverAmount: row?.freeOverAmount ?? null,
       estimatedDays: row?.estimatedDays ?? null,
