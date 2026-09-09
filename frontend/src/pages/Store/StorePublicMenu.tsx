@@ -66,6 +66,8 @@ import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import { captureRef, getRef, clearRef } from '@/utils/referral';
 import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
+import LanguageSwitcher from '@/components/storefront/LanguageSwitcher';
+import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
 import { calculateDistance } from '@/utils/distance';
 import { resolveBadges } from '@/utils/catalogBadges';
 import type { CartItem } from '@/services/types';
@@ -307,6 +309,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   // صفحته، ويحدّد هل تُعرض دعوة التثبيت أصلاً (الميزة تُشترى)
   const storePwa = useStoreManifest((store as any)?.slug || urlSlug);
 
+  // لغة عرض المحتوى — من إعدادات المتجر التي يحسبها الخادم بحسب استحقاق
+  // `multi_language`، فلا يظهر الزرّ لمن لم يشترِ الميزة
+  const language = useStorefrontLanguage(urlSlug, (store as any)?.languageSettings);
+
   const quantityByProductId = useMemo(() => {
     const map = new Map<string, number>();
     cart.forEach((item) => map.set(item.id, (map.get(item.id) || 0) + item.quantity));
@@ -341,8 +347,26 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   );
 
   /** المنتجات بعد البحث والتصفية والترتيب */
+  /**
+   * المنتجات بلغة العرض.
+   *
+   * **الترجمة عند المصدر لا في كل بطاقة:** البطاقات تقرأ `name` مباشرةً،
+   * وتمريرُ اللغة إلى كلٍّ منها كان يعني تعديل خمسة مكوّنات وتذكّرَ ذلك في
+   * كل مكوّنٍ جديد. أمّا استبدال الحقل هنا فيجعل كل ما بعده يعمل بلا علم.
+   *
+   * والبحث يجري على القائمة المترجَمة: من يقرأ الإنجليزية يبحث بها.
+   */
+  const localizedProducts = useMemo(() => {
+    if (language.lang !== 'en') return products;
+    return products.map((p: any) => ({
+      ...p,
+      name: language.pick(p, 'name'),
+      description: language.pick(p, 'description')
+    }));
+  }, [products, language]);
+
   const visibleProducts = useMemo(() => {
-    let list = products;
+    let list = localizedProducts;
 
     if (isSearching) {
       list = list.filter(
@@ -359,7 +383,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     }
 
     return sortProducts(list);
-  }, [products, isSearching, searchTerm, activeCategory, onlyDiscounted, sortProducts]);
+  }, [localizedProducts, isSearching, searchTerm, activeCategory, onlyDiscounted, sortProducts]);
 
   /** الفئات التي تحوي منتجاً فعلاً — فئة فارغة في الشريط تُحبط الزبون */
   const navCategories = useMemo(() => {
@@ -371,7 +395,12 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
     const named = categories
       .filter((c) => (counts.get(c.id) || 0) > 0)
-      .map((c) => ({ id: c.id, name: c.name, image: c.image, count: counts.get(c.id) || 0 }));
+      .map((c) => ({
+        id: c.id,
+        name: language.pick(c, 'name'),
+        image: c.image,
+        count: counts.get(c.id) || 0
+      }));
 
     if ((counts.get(UNCATEGORIZED) || 0) > 0) {
       named.push({
@@ -387,7 +416,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     return named.length > 1
       ? [{ id: 'all', name: 'كل المنتجات', image: null, count: products.length }, ...named]
       : named;
-  }, [products, categories]);
+  }, [products, categories, language]);
 
   /**
    * المفضّلة **من هذا المتجر وحده**.
@@ -728,11 +757,19 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         onFavoritesClick={() => setFavoritesOpen(true)}
         onAccountClick={() => setAccountOpen(true)}
         headerExtra={
-          <CurrencySwitcher
-            options={currencyOptions}
-            code={currencyCode}
-            onChange={setCurrencyCode}
-          />
+          <>
+            <CurrencySwitcher
+              options={currencyOptions}
+              code={currencyCode}
+              onChange={setCurrencyCode}
+            />
+            {/* اللغة بعد العملة: التبديل بينهما قرارٌ واحد في ذهن الزبون */}
+            <LanguageSwitcher
+              options={language.options}
+              lang={language.lang}
+              onChange={language.setLang}
+            />
+          </>
         }
         accountLabel={isAuthenticated ? user?.name?.split(' ')[0] || 'حسابي' : 'دخول'}
         searchValue={searchQuery}
@@ -1203,9 +1240,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       {/* التثبيت على الشاشة الرئيسية — وعلى iPhone هو شرط الإشعارات لا تحسينها */}
       <InstallAppPrompt
-        businessName={storePwa.name || (store as any)?.name}
+        businessName={storePwa.shortName || storePwa.name || (store as any)?.name}
         enabled={storePwa.enabled}
-        accentColor={storePwa.themeColor || undefined}
+        theme={storePwa.theme}
       />
 
       {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}

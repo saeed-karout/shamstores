@@ -14,6 +14,7 @@ interface GeneralSettingsTabProps {
 const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ initialData, onSave, saving }) => {
   const [formData, setFormData] = useState({
     name: '',
+    pwaShortName: '',
     email: '',
     phone: '',
     whatsapp: '',
@@ -33,6 +34,7 @@ const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ initialData, on
     if (initialData) {
       setFormData({
         name: initialData.name || '',
+        pwaShortName: initialData.pwaShortName || '',
         email: initialData.email || '',
         phone: initialData.phone || '',
         whatsapp: initialData.whatsapp || '',
@@ -242,6 +244,24 @@ const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ initialData, on
             className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
             placeholder="أدخل اسم المتجر"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">اسم التطبيق المختصر</label>
+          <input
+            type="text"
+            maxLength={24}
+            value={formData.pwaShortName || ''}
+            onChange={(e) => setFormData({ ...formData, pwaShortName: e.target.value })}
+            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500"
+            placeholder={formData.name || 'اسم قصير'}
+          />
+          {/* شاشة الهاتف تعرض نحو ١٢ محرفاً ثمّ تقطع. والاختيار للتاجر
+              لأنه وحده يعرف أي جزءٍ من اسمه يميّزه */}
+          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+            يظهر تحت أيقونة متجرك على شاشة هاتف الزبون. اتركه فارغاً
+            لاستعمال الاسم الكامل — لكن الشاشة تعرض نحو ١٢ محرفاً ثم تقطع.
+          </p>
         </div>
 
         <div>

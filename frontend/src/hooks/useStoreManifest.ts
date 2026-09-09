@@ -13,10 +13,22 @@
 import { useEffect, useState } from 'react';
 import api from '@/services/api';
 
-interface PwaStatus {
+export interface StoreTheme {
+  primary: string;
+  background: string;
+  accent: string;
+  text: string;
+  card: string;
+  muted: string;
+}
+
+export interface PwaStatus {
   enabled: boolean;
   name: string | null;
+  shortName: string | null;
   themeColor: string | null;
+  /** هوية المتجر — تُرسم بها نافذة التثبيت بدل ألوان المنصّة */
+  theme: StoreTheme | null;
 }
 
 /** الوسوم التي نحقنها تُعلَّم كي تُزال عند مغادرة صفحة المتجر */
@@ -51,7 +63,13 @@ const setMeta = (name: string, content: string) => {
  * @returns حالة الميزة، لتقرّر الواجهة عرض دعوة التثبيت
  */
 export const useStoreManifest = (slug?: string | null): PwaStatus => {
-  const [status, setStatus] = useState<PwaStatus>({ enabled: false, name: null, themeColor: null });
+  const [status, setStatus] = useState<PwaStatus>({
+    enabled: false,
+    name: null,
+    shortName: null,
+    themeColor: null,
+    theme: null
+  });
 
   useEffect(() => {
     if (!slug) return;

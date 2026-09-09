@@ -42,6 +42,8 @@ import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import { captureRef, getRef, clearRef } from '@/utils/referral';
 import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
+import LanguageSwitcher from '@/components/storefront/LanguageSwitcher';
+import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
 import type { CartItem } from '@/services/types';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
@@ -106,6 +108,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   // المعرّف من المسار لا من الكائن: الكائن يُصرَّح بعد هذا السطر، والمسار
   // هو ما وصل به الزبون أصلاً فيكفي.
   const storePwa = useStoreManifest(urlSlug);
+
   const navigate = useNavigate();
 
   const { user, isAuthenticated, logout } = useAuth();
@@ -118,6 +121,30 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // لغة عرض المحتوى — من إعدادات المطعم التي يحسبها الخادم بحسب استحقاق
+  // `multi_language`، فلا يظهر الزرّ لمن لم يشترِ الميزة
+  const language = useStorefrontLanguage(urlSlug, (restaurant as any)?.languageSettings);
+
+  /**
+   * الأقسام وأصنافها بلغة العرض.
+   *
+   * **الترجمة عند المصدر لا في كل بطاقة:** البطاقات تقرأ `name` مباشرةً،
+   * وتمريرُ اللغة إلى كلٍّ منها كان يعني تعديل عدّة مكوّنات وتذكّرَ ذلك في
+   * كل مكوّنٍ جديد.
+   */
+  const localizedCategories = useMemo(() => {
+    if (language.lang !== 'en') return categories;
+    return categories.map((category: any) => ({
+      ...category,
+      name: language.pick(category, 'name'),
+      menuItems: (category.menuItems || []).map((item: any) => ({
+        ...item,
+        name: language.pick(item, 'name'),
+        description: language.pick(item, 'description')
+      }))
+    }));
+  }, [categories, language]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -513,7 +540,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     );
   }
 
-  const displayCategories = isSearching ? [] : categories;
+  const displayCategories = isSearching ? [] : localizedCategories;
 
   // ---------- إجراءات الرأس المصغّر ----------
   const headerActions = (
@@ -524,6 +551,12 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         options={currencyOptions}
         code={currencyCode}
         onChange={setCurrencyCode}
+      />
+      {/* اللغة بعد العملة: التبديل بينهما قرارٌ واحد في ذهن الزبون */}
+      <LanguageSwitcher
+        options={language.options}
+        lang={language.lang}
+        onChange={language.setLang}
       />
       <button
         type="button"
@@ -999,9 +1032,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           مفردةً على خطة مجانية، وهو ما لا تراه الواجهة */}
       {/* التثبيت على الشاشة الرئيسية — وعلى iPhone هو شرط الإشعارات لا تحسينها */}
       <InstallAppPrompt
-        businessName={storePwa.name || (restaurant as any)?.name}
+        businessName={storePwa.shortName || storePwa.name || (restaurant as any)?.name}
         enabled={storePwa.enabled}
-        accentColor={storePwa.themeColor || undefined}
+        theme={storePwa.theme}
       />
 
       <PlatformBadge show={restaurant?.showPlatformBadge} />

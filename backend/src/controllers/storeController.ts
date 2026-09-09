@@ -515,7 +515,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
       deliverySettings, paymentSettings, notificationSettings, enabledLanguages,
-      enabledCurrencies,
+      enabledCurrencies, pwaShortName,
       isActive 
     } = req.body;
     
@@ -541,6 +541,12 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (textColor !== undefined) updateData.textColor = textColor;
     if (mutedColor !== undefined) updateData.mutedColor = mutedColor;
     if (accentColor !== undefined) updateData.accentColor = accentColor;
+    // الاسم القصير: الفراغ يعني «عُد إلى الاسم الكامل» لا نصّاً فارغاً —
+    // وإلا ظهرت الأيقونة بلا اسم على شاشة الزبون
+    if (pwaShortName !== undefined) {
+      const trimmed = String(pwaShortName || '').trim().slice(0, 24);
+      updateData.pwaShortName = trimmed || null;
+    }
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
     
     if (latitude !== undefined) updateData.latitude = latitude ? parseFloat(latitude) : null;

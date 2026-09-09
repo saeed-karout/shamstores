@@ -24,6 +24,11 @@ interface Business {
   logo: string | null;
   primaryColor: string;
   backgroundColor: string;
+  accentColor: string;
+  textColor: string;
+  cardColor: string;
+  mutedColor: string;
+  pwaShortName: string | null;
 }
 
 /**
@@ -40,7 +45,12 @@ const findBusiness = async (slug: string): Promise<Business | null> => {
     slug: true,
     logo: true,
     primaryColor: true,
-    backgroundColor: true
+    backgroundColor: true,
+    accentColor: true,
+    textColor: true,
+    cardColor: true,
+    mutedColor: true,
+    pwaShortName: true
   } as const;
 
   const restaurant = await prisma.restaurant.findUnique({ where: { slug }, select });
@@ -104,7 +114,8 @@ export const getStoreManifest = async (req: Request, res: Response): Promise<voi
       // سيجعل المتصفّح يعدّ التطبيق تطبيقاً جديداً فيفقد الزبون تثبيته
       id: `/${business.slug}?pwa`,
       name: business.name,
-      short_name: business.name.slice(0, 12),
+      // ما كتبه التاجر إن كتب — والقطع الآليّ آخرَ حلّ لا أوّله
+      short_name: (business.pwaShortName || business.name).slice(0, 24),
       description: `اطلب من ${business.name} وتابع طلبك.`,
       lang: 'ar',
       dir: 'rtl',
@@ -260,12 +271,25 @@ export const getPwaStatus = async (req: Request, res: Response): Promise<void> =
     }
 
     const enabled = await businessHasEntitlement(business.id, business.type, PWA_FEATURE);
+    // الهوية تُرسل مع الحالة: نافذة التثبيت تُرسم بألوان المتجر لا
+    // بألوان المنصّة، وطلبٌ ثانٍ لجلبها كان سيؤخّر ظهورها
     res.json({
       success: true,
       data: {
         enabled,
         name: enabled ? business.name : null,
-        themeColor: enabled ? hexOrDefault(business.primaryColor, '#0D4A3A') : null
+        shortName: enabled ? business.pwaShortName || null : null,
+        themeColor: enabled ? hexOrDefault(business.primaryColor, '#0D4A3A') : null,
+        theme: enabled
+          ? {
+              primary: hexOrDefault(business.primaryColor, '#0D4A3A'),
+              background: hexOrDefault(business.backgroundColor, '#082E24'),
+              accent: hexOrDefault(business.accentColor, '#C8E235'),
+              text: hexOrDefault(business.textColor, '#E8F5E9'),
+              card: hexOrDefault(business.cardColor, '#112E23'),
+              muted: hexOrDefault(business.mutedColor, '#9DC4AC')
+            }
+          : null
       }
     });
   } catch (error) {
