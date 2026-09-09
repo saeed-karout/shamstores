@@ -17,6 +17,7 @@
 export type DesignPreset = 'modern' | 'minimal' | 'bold';
 
 const PRESETS: DesignPreset[] = ['modern', 'minimal', 'bold'];
+const SHELLS = ['classic', 'boutique', 'showcase'];
 const CARDS = ['standard', 'overlay', 'compact'];
 const PRODUCTS = ['classic', 'split', 'immersive'];
 const NAVS = ['solid', 'floating', 'minimal'];
@@ -35,6 +36,7 @@ const radius = (value: unknown): number | undefined => {
 
 export interface SanitizedDesign {
   preset?: string;
+  shell?: string;
   card?: string;
   product?: string;
   nav?: string;
@@ -59,6 +61,9 @@ export const sanitizeDesign = (raw: unknown): SanitizedDesign | null => {
 
   const preset = oneOf(input.preset, PRESETS);
   if (preset) out.preset = preset;
+
+  const shell = oneOf(input.shell, SHELLS);
+  if (shell) out.shell = shell;
 
   const card = oneOf(input.card, CARDS);
   if (card) out.card = card;

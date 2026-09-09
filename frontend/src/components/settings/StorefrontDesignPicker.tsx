@@ -21,7 +21,8 @@ import {
   IoMenuOutline,
   IoRefreshOutline,
   IoResizeOutline,
-  IoImageOutline
+  IoImageOutline,
+  IoLayersOutline
 } from 'react-icons/io5';
 import {
   PRESETS,
@@ -31,6 +32,7 @@ import {
   resolveDesign,
   type StorefrontDesign,
   type DesignPreset,
+  type ShellVariant,
   type CardVariant,
   type ProductVariant,
   type NavVariant,
@@ -151,6 +153,46 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
 
   return (
     <div>
+      {/* الهيكل أوّلاً: هو ما يغيّر الصفحة كلّها، والباقي يضبطه داخلها */}
+      <Section
+        icon={<IoLayersOutline size={17} />}
+        title="قالب الواجهة"
+        hint="أكبر اختيار هنا — يغيّر بنية صفحة متجرك كلّها، لا شكل عناصرها فقط."
+      >
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+          {(['classic', 'boutique', 'showcase'] as ShellVariant[]).map((option) => {
+            const active = design.shell === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                disabled={disabled}
+                onClick={() => set({ shell: option })}
+                aria-pressed={active}
+                style={{
+                  padding: 10,
+                  borderRadius: 14,
+                  border: `1.5px solid ${active ? C.accent : C.border}`,
+                  background: active ? 'rgba(200,226,53,0.09)' : C.surf,
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  textAlign: 'start',
+                  opacity: disabled ? 0.6 : 1
+                }}
+              >
+                <ShellThumb variant={option} tokens={tokens} />
+                <div style={{ color: active ? C.accent : C.text, fontSize: 13.5, fontWeight: 800, marginTop: 9 }}>
+                  {LABELS.shell[option]}
+                </div>
+                <div style={{ color: C.muted, fontSize: 11.5, lineHeight: 1.75, marginTop: 4 }}>
+                  {LABELS.shellHint[option]}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Section>
+
       <Section
         icon={<IoSparklesOutline size={17} />}
         title="القالب"
@@ -204,7 +246,7 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
           معاينة — بألوان {kind === 'store' ? 'متجرك' : 'مطعمك'}
         </div>
 
-        <PreviewNav design={design} tokens={tokens} />
+        <PreviewShell design={design} tokens={tokens} kind={kind} />
 
         <div
           style={{
@@ -247,19 +289,23 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
         />
       </Section>
 
-      <Section
-        icon={<IoMenuOutline size={17} />}
-        title="شكل الشريط العلوي"
-        hint="«عائم» يفصل الشريط عن حافّة الشاشة بظلّ. و«بسيط» يزيل خلفيته فيندمج مع الصفحة."
-      >
-        <Choices
-          options={['solid', 'floating', 'minimal'] as NavVariant[]}
-          labels={LABELS.nav}
-          value={design.nav}
-          onPick={(nav) => set({ nav })}
-          disabled={disabled}
-        />
-      </Section>
+      {/* لا يُعرض إلا مع «كلاسيكي»: القالبان الآخران بلا شريطٍ يُنمَّط،
+          وعرضُ خيارٍ لا أثر له يجعل التاجر يظنّ الميزة معطّلة */}
+      {design.shell === 'classic' && (
+        <Section
+          icon={<IoMenuOutline size={17} />}
+          title="شكل الشريط العلوي"
+          hint="«عائم» يفصل الشريط عن حافّة الشاشة بظلّ. و«بسيط» يزيل خلفيته فيندمج مع الصفحة."
+        >
+          <Choices
+            options={['solid', 'floating', 'minimal'] as NavVariant[]}
+            labels={LABELS.nav}
+            value={design.nav}
+            onPick={(nav) => set({ nav })}
+            disabled={disabled}
+          />
+        </Section>
+      )}
 
       <Section
         icon={<IoResizeOutline size={17} />}
@@ -328,8 +374,174 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
   );
 };
 
+type Tokens = ReturnType<typeof resolveTokens>;
+
+/**
+ * رسمةٌ مصغَّرة لكل قالبِ واجهة.
+ *
+ * **مجرّدة عمداً — لا لقطةُ شاشة.** اللقطة تحتاج توليداً وتخزيناً وتقادم مع
+ * كل تعديل. وهذه مستطيلاتٌ بألوان التاجر تقول ما يحتاج أن يُقال: أين
+ * الشريط، وأين الهوية، وكم تأخذ الصورة.
+ */
+const ShellThumb: React.FC<{ variant: ShellVariant; tokens: Tokens }> = ({ variant, tokens }) => {
+  const box: React.CSSProperties = {
+    background: tokens.bg,
+    border: `1px solid ${tokens.border}`,
+    borderRadius: 9,
+    height: 92,
+    padding: 6,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    overflow: 'hidden'
+  };
+  const bar = (h: number, bg: string, extra?: React.CSSProperties) => (
+    <div style={{ height: h, background: bg, borderRadius: 3, flexShrink: 0, ...extra }} />
+  );
+  const grid = (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, flex: 1 }}>
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} style={{ background: tokens.card, borderRadius: 3 }} />
+      ))}
+    </div>
+  );
+
+  if (variant === 'boutique') {
+    return (
+      <div style={{ ...box, alignItems: 'center' }}>
+        <div style={{ width: 18, height: 18, borderRadius: '50%', background: tokens.accent, marginTop: 2, flexShrink: 0 }} />
+        {bar(3, tokens.muted, { width: 34, marginTop: 1 })}
+        {bar(2, tokens.border, { width: 52 })}
+        {bar(7, tokens.surface, { width: '100%', borderRadius: 999, marginTop: 2 })}
+        <div style={{ display: 'flex', gap: 3, width: '100%' }}>
+          {[0, 1, 2].map((i) => bar(5, i === 0 ? tokens.accent : tokens.card, { flex: 1, borderRadius: 999 }))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3, width: '100%', flex: 1 }}>
+          {[0, 1].map((i) => (
+            <div key={i} style={{ background: tokens.card, borderRadius: 3 }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'showcase') {
+    return (
+      <div style={{ ...box, padding: 0, gap: 0 }}>
+        <div
+          style={{
+            height: 42,
+            background: `linear-gradient(160deg, ${tokens.primary}, ${tokens.accent})`,
+            position: 'relative',
+            flexShrink: 0
+          }}
+        >
+          <div style={{ position: 'absolute', top: 4, insetInlineEnd: 4, display: 'flex', gap: 2 }}>
+            {[0, 1, 2].map((i) => (
+              <span key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.75)' }} />
+            ))}
+          </div>
+          <div style={{ position: 'absolute', bottom: 4, insetInlineStart: 5, width: 26, height: 3, background: '#fff', borderRadius: 2 }} />
+        </div>
+        <div style={{ display: 'flex', gap: 3, padding: '4px 6px', flexShrink: 0 }}>
+          {[0, 1].map((i) => bar(11, tokens.card, { flex: 1, borderRadius: 3 }))}
+        </div>
+        <div style={{ padding: '0 6px 6px', flex: 1, display: 'flex' }}>{grid}</div>
+      </div>
+    );
+  }
+
+  // كلاسيكي
+  return (
+    <div style={box}>
+      <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexShrink: 0 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: tokens.accent }} />
+        {bar(6, tokens.surface, { flex: 1, borderRadius: 999 })}
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: tokens.surface }} />
+      </div>
+      {bar(20, `linear-gradient(120deg, ${tokens.primary}, ${tokens.accent})`, { marginTop: 1 })}
+      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <span key={i} style={{ width: 11, height: 11, borderRadius: 4, background: i === 0 ? tokens.accent : tokens.card }} />
+        ))}
+      </div>
+      {grid}
+    </div>
+  );
+};
+
+/** رأسٌ مصغَّر في المعاينة — يتبع الهيكل المختار لا شكل الشريط وحده */
+const PreviewShell: React.FC<{
+  design: StorefrontDesign;
+  tokens: Tokens;
+  kind: 'store' | 'restaurant';
+}> = ({ design, tokens, kind }) => {
+  if (design.shell === 'boutique') {
+    return (
+      <div style={{ textAlign: 'center', paddingBottom: 4 }}>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: tokens.accent,
+            margin: '0 auto'
+          }}
+        />
+        <div style={{ color: tokens.text, fontSize: 13, fontWeight: 800, marginTop: 7 }}>
+          {kind === 'store' ? 'اسم المتجر' : 'اسم المطعم'}
+        </div>
+        <div style={{ color: tokens.muted, fontSize: 10.5, marginTop: 3 }}>سطرٌ يعرّف بنشاطك</div>
+        <div
+          style={{
+            marginTop: 9,
+            height: 30,
+            borderRadius: 'var(--sf-r-chip)',
+            background: tokens.surface,
+            border: `var(--sf-border-w) solid ${tokens.border}`
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (design.shell === 'showcase') {
+    return (
+      <div
+        style={{
+          height: 74,
+          borderRadius: 'var(--sf-r-card)',
+          background: `linear-gradient(150deg, ${tokens.primary}, ${tokens.accent})`,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        <div style={{ position: 'absolute', top: 7, insetInlineEnd: 7, display: 'flex', gap: 5 }}>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              style={{
+                width: 15,
+                height: 15,
+                borderRadius: '50%',
+                background: 'rgba(0,0,0,0.34)',
+                border: '1px solid rgba(255,255,255,0.3)'
+              }}
+            />
+          ))}
+        </div>
+        <div style={{ position: 'absolute', bottom: 8, insetInlineStart: 10, color: '#fff', fontSize: 13, fontWeight: 900 }}>
+          {kind === 'store' ? 'اسم المتجر' : 'اسم المطعم'}
+        </div>
+      </div>
+    );
+  }
+
+  return <PreviewNav design={design} tokens={tokens} />;
+};
+
 /** شريطٌ مصغَّر يعكس النموذج المختار */
-const PreviewNav: React.FC<{ design: StorefrontDesign; tokens: ReturnType<typeof resolveTokens> }> = ({
+const PreviewNav: React.FC<{ design: StorefrontDesign; tokens: Tokens }> = ({
   design,
   tokens
 }) => {
@@ -369,7 +581,7 @@ const PreviewNav: React.FC<{ design: StorefrontDesign; tokens: ReturnType<typeof
 /** بطاقةٌ مصغَّرة تعكس نموذج البطاقة والاستدارات والظلّ */
 const PreviewCard: React.FC<{
   design: StorefrontDesign;
-  tokens: ReturnType<typeof resolveTokens>;
+  tokens: Tokens;
   title: string;
   price: string;
 }> = ({ design, tokens, title, price }) => {

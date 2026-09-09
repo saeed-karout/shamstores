@@ -18,6 +18,17 @@
 // `borderRadius: sd.rCard` مرّةً واحدة، ويتبدّل شكله دون أن يُعاد بناؤه.
 
 export type DesignPreset = 'modern' | 'minimal' | 'bold';
+
+/**
+ * هيكل الصفحة — **أكبر قرارٍ في القالب**، وأعلى من `nav` لا بجانبه.
+ *
+ *   • `classic`  — شريط علوي دائم، بانر، بلاطات أقسام، شبكة.
+ *   • `boutique` — بلا شريط: هوية في الوسط، تواصل، بحث، شرائح أقسام.
+ *   • `showcase` — غلاف يملأ الشاشة، أزرار طافية، أقسام بصورٍ عريضة.
+ *
+ * و`nav` يخصّ `classic` وحده: القالبان الآخران بلا شريطٍ يُنمَّط أصلاً.
+ */
+export type ShellVariant = 'classic' | 'boutique' | 'showcase';
 export type CardVariant = 'standard' | 'overlay' | 'compact';
 export type ProductVariant = 'classic' | 'split' | 'immersive';
 export type NavVariant = 'solid' | 'floating' | 'minimal';
@@ -36,6 +47,7 @@ export interface Radii {
 
 export interface StorefrontDesign {
   preset: DesignPreset;
+  shell: ShellVariant;
   card: CardVariant;
   product: ProductVariant;
   nav: NavVariant;
@@ -51,7 +63,10 @@ export interface StorefrontDesign {
  * ليست تدرّجاً لرقمٍ واحد: «بسيط» ليس «عصرياً» باستدارةٍ أقلّ، بل يستبدل
  * الظلّ بحدٍّ ويضغط الفراغات. ولذلك يحمل كلٌّ منها مجموعته كاملة.
  */
-export const PRESETS: Record<DesignPreset, Omit<StorefrontDesign, 'preset' | 'card' | 'product' | 'nav'>> = {
+export const PRESETS: Record<
+  DesignPreset,
+  Omit<StorefrontDesign, 'preset' | 'shell' | 'card' | 'product' | 'nav'>
+> = {
   // ناعمٌ ودافئ — الأقرب إلى تطبيقات التسوّق الحديثة
   modern: {
     radii: { card: 20, image: 16, button: 14, input: 13, sheet: 26, chip: 999 },
@@ -77,6 +92,7 @@ export const PRESETS: Record<DesignPreset, Omit<StorefrontDesign, 'preset' | 'ca
 
 export const DEFAULT_DESIGN: StorefrontDesign = {
   preset: 'modern',
+  shell: 'classic',
   card: 'standard',
   product: 'classic',
   nav: 'solid',
@@ -103,6 +119,7 @@ const SHADOWS: Record<ShadowLevel, [string, string]> = {
 };
 
 const PRESET_KEYS: DesignPreset[] = ['modern', 'minimal', 'bold'];
+const SHELL_KEYS: ShellVariant[] = ['classic', 'boutique', 'showcase'];
 const CARD_KEYS: CardVariant[] = ['standard', 'overlay', 'compact'];
 const PRODUCT_KEYS: ProductVariant[] = ['classic', 'split', 'immersive'];
 const NAV_KEYS: NavVariant[] = ['solid', 'floating', 'minimal'];
@@ -135,6 +152,7 @@ export const resolveDesign = (raw?: unknown): StorefrontDesign => {
 
   return {
     preset,
+    shell: pick(input.shell, SHELL_KEYS, DEFAULT_DESIGN.shell),
     card: pick(input.card, CARD_KEYS, DEFAULT_DESIGN.card),
     product: pick(input.product, PRODUCT_KEYS, DEFAULT_DESIGN.product),
     nav: pick(input.nav, NAV_KEYS, DEFAULT_DESIGN.nav),
@@ -235,6 +253,12 @@ export const sd = {
 /** أسماء عربية للعرض في اللوحة — مصدرٌ واحد فلا تتفرّق التسميات */
 export const LABELS = {
   preset: { modern: 'عصري', minimal: 'بسيط', bold: 'جريء' } as Record<DesignPreset, string>,
+  shell: { classic: 'كلاسيكي', boutique: 'بوتيك', showcase: 'معرض' } as Record<ShellVariant, string>,
+  shellHint: {
+    classic: 'شريط علوي دائم فيه البحث والسلّة، ثمّ بانر، ثمّ الأقسام. الأنسب لمتجرٍ كبير يتنقّل فيه الزبون بين أقسامٍ كثيرة.',
+    boutique: 'بلا شريط علوي: شعارك في الوسط ثمّ الاسم ثمّ طرق التواصل، ثمّ بحثٌ وشرائح أقسام. الأنسب لمن يصل زبائنه من إنستغرام.',
+    showcase: 'غلافك يملأ أعلى الشاشة والأزرار تطفو فوقه، والأقسام صورٌ عريضة. الأنسب لمتجرٍ صوره قويّة.'
+  } as Record<ShellVariant, string>,
   card: { standard: 'قياسية', overlay: 'صورة بغطاء', compact: 'مضغوطة' } as Record<CardVariant, string>,
   product: { classic: 'كلاسيكية', split: 'منقسمة', immersive: 'غامرة' } as Record<ProductVariant, string>,
   nav: { solid: 'صلب', floating: 'عائم', minimal: 'بسيط' } as Record<NavVariant, string>,

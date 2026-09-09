@@ -35,6 +35,9 @@ import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { sd } from '@/utils/storefrontDesign';
 import { useDesign } from '@/utils/storefrontDesignContext';
 import { useT } from '@/i18n/storefront';
+import { IconAction, ScrollTopButton, useScrolledPast } from './ShopShellParts';
+import BoutiqueShell from './shells/BoutiqueShell';
+import ShowcaseShell from './shells/ShowcaseShell';
 
 export interface ShopCategoryTile {
   id: string;
@@ -92,7 +95,7 @@ export interface ShopLayoutProps {
   footer?: React.ReactNode;
 }
 
-const ShopLayout: React.FC<ShopLayoutProps> = ({
+const ClassicShell: React.FC<ShopLayoutProps> = ({
   name,
   description,
   logo,
@@ -614,61 +617,21 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
   );
 };
 
-/** زرّ أيقونة بعدّاد — يكتسب اسماً مكتوباً على اللابتوب حيث تتّسع المساحة */
-const IconAction: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  badge?: number;
-  onClick?: () => void;
-  emphasis?: boolean;
-}> = ({ icon, label, badge = 0, onClick, emphasis }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-label={badge > 0 ? `${label} — ${badge}` : label}
-    style={{
-      position: 'relative',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 6,
-      minHeight: 40,
-      padding: '0 11px',
-      borderRadius: 12,
-      border: `1px solid ${emphasis ? 'transparent' : sf.border}`,
-      background: emphasis ? sf.accent : sf.surface,
-      color: emphasis ? sf.onAccent : sf.text,
-      cursor: 'pointer',
-      fontFamily: 'inherit',
-      fontSize: 12.5,
-      fontWeight: 700,
-      flexShrink: 0
-    }}
-  >
-    {icon}
-    <span className="shop-only-wide">{label}</span>
-    {badge > 0 && (
-      <span
-        style={{
-          position: 'absolute',
-          top: -5,
-          insetInlineEnd: -5,
-          minWidth: 18,
-          height: 18,
-          padding: '0 5px',
-          borderRadius: 999,
-          background: emphasis ? sf.bg : sf.accent,
-          color: emphasis ? sf.accent : sf.onAccent,
-          fontSize: 10.5,
-          fontWeight: 800,
-          display: 'grid',
-          placeItems: 'center',
-          border: `1px solid ${sf.bg}`
-        }}
-      >
-        {badge > 99 ? '99+' : badge}
-      </span>
-    )}
-  </button>
-);
+/**
+ * الموزّع — يختار الهيكل الذي ضبطه التاجر.
+ *
+ * **غلافٌ رقيق لا شرط داخل الهيكل:** الهياكل الثلاثة تستدعي خطّافات
+ * (`useState` للتمرير)، ورميُ `return` مبكّر داخل مكوّنٍ واحد بينها كان
+ * يخالف ترتيب الخطّافات ويُسقط الصفحة عند تبديل القالب.
+ *
+ * والقالب المجهول يقع على الكلاسيكي: متجرٌ ضُبط بقيمةٍ من إصدارٍ لاحق لا
+ * يُعرض فارغاً.
+ */
+const ShopLayout: React.FC<ShopLayoutProps> = (props) => {
+  const { shell } = useDesign();
+  if (shell === 'boutique') return <BoutiqueShell {...props} />;
+  if (shell === 'showcase') return <ShowcaseShell {...props} />;
+  return <ClassicShell {...props} />;
+};
 
 export default ShopLayout;
