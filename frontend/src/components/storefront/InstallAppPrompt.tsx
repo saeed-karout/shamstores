@@ -1,23 +1,18 @@
 // frontend/src/components/storefront/InstallAppPrompt.tsx
 //
-// دعوة الزبون إلى تثبيت المتجر على شاشته الرئيسية.
+// دعوة الزبون إلى تثبيت **متجر التاجر** على شاشته الرئيسية.
 //
 // **لماذا هذا ليس تزييناً:** على iPhone لا توجد إشعارات ويبٍ إطلاقاً قبل
 // التثبيت — قيدٌ من Apple لا حيلة فيه. فالزبون الذي لا يُعرض عليه التثبيت
 // هو زبونٌ لن تصله حملةٌ ولا تحديثُ طلب، مهما كان الخادم مضبوطاً.
 //
-// وعلى أندرويد التثبيت اختياريّ لكنه يحوّل المتجر من عنوانٍ يُكتب إلى
-// أيقونةٍ تُنقر — والفرق بينهما هو الفرق بين زبونٍ يعود وزبونٍ ينسى.
+// **ولا يظهر إلا لمتجرٍ اشترى الميزة:** البيان نفسه يرتدّ ٤٠٤ لغيره، فلا
+// فائدة من زرٍّ يفتح نافذةً لا تجد ما تثبّته.
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { IoClose, IoShareOutline, IoAddCircleOutline, IoDownloadOutline } from 'react-icons/io5';
+import { IoClose, IoShareOutline, IoAddCircleOutline, IoDownloadOutline, IoEllipsisVertical } from 'react-icons/io5';
 import { isInstalled, isIosDevice } from '../../services/webPush';
-
-/** حدث كروم غير القياسي — ليس في مكتبة أنواع DOM */
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import { canPromptInstall, onInstallStateChange, promptInstall } from '../../utils/installPrompt';
 
 const DISMISS_KEY = 'sham_install_prompt_dismissed_at';
 
@@ -34,8 +29,7 @@ const wasDismissedRecently = (): boolean => {
     const raw = localStorage.getItem(DISMISS_KEY);
     if (!raw) return false;
     const at = Number(raw);
-    if (!Number.isFinite(at)) return false;
-    return Date.now() - at < DISMISS_DAYS * 24 * 60 * 60 * 1000;
+    return Number.isFinite(at) && Date.now() - at < DISMISS_DAYS * 24 * 60 * 60 * 1000;
   } catch {
     // وضع التصفّح الخاص يرمي عند القراءة — والدعوة تُعرض، وهو الخطأ الأرحم
     return false;
@@ -50,75 +44,78 @@ const rememberDismissal = () => {
   }
 };
 
+type Sheet = null | 'ios' | 'manual';
+
 interface Props {
-  /** اسم المتجر — الدعوة باسمه لا باسم المنصّة: الزبون يثبّت متجره لا منصّتنا */
+  /** اسم المتجر — الدعوة باسمه لا باسم المنصّة: الزبون يثبّت متجره */
   businessName?: string;
-  /** لونٌ أساسي من هوية المتجر، إن وُجد */
+  /** لا تُعرض الدعوة قبل تأكيد أن المتجر اشترى الميزة */
+  enabled?: boolean;
   accentColor?: string;
 }
 
-const InstallAppPrompt: React.FC<Props> = ({ businessName, accentColor = '#C8E235' }) => {
-  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showIosSheet, setShowIosSheet] = useState(false);
+const InstallAppPrompt: React.FC<Props> = ({ businessName, enabled = false, accentColor = '#C8E235' }) => {
+  const [ready, setReady] = useState(canPromptInstall());
+  const [sheet, setSheet] = useState<Sheet>(null);
   const [visible, setVisible] = useState(false);
 
   const ios = isIosDevice();
 
   useEffect(() => {
+    if (!enabled) { setVisible(false); return; }
     if (isInstalled() || wasDismissedRecently()) return;
 
-    // أندرويد/كروم: المتصفّح يُعلمنا حين يصير التثبيت ممكناً. نحتجز الحدث
-    // لنعرضه في لحظةٍ نختارها بدل شريط المتصفّح الذي يُتجاهَل.
-    const onBeforeInstall = (event: Event) => {
-      event.preventDefault();
-      setDeferred(event as BeforeInstallPromptEvent);
-      setVisible(true);
+    // الحدث قد يكون وصل **قبل** تركيب هذا المكوّن — يُلتقط في
+    // `utils/installPrompt` عند إقلاع التطبيق، ويُقرأ من هناك لا يُنتظر
+    const sync = () => {
+      const can = canPromptInstall();
+      setReady(can);
+      if (can) setVisible(true);
     };
-    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    sync();
+    const unsubscribe = onInstallStateChange(sync);
 
-    // iOS لا يطلق ذلك الحدث أبداً — لا توجد واجهة تثبيت برمجية عليه، فلا
-    // مفرّ من شرح الخطوات يدوياً. التأخير يترك الزبون يرى المتجر أوّلاً.
+    // iOS لا يطلق ذلك الحدث أبداً — لا واجهة تثبيتٍ برمجية عليه، فلا مفرّ
+    // من شرح الخطوات. التأخير يترك الزبون يرى المتجر أوّلاً.
     let timer: number | undefined;
-    if (ios) {
-      timer = window.setTimeout(() => setVisible(true), 6000);
-    }
-
-    const onInstalled = () => setVisible(false);
-    window.addEventListener('appinstalled', onInstalled);
+    if (ios) timer = window.setTimeout(() => setVisible(true), 6000);
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
-      window.removeEventListener('appinstalled', onInstalled);
+      unsubscribe();
       if (timer) window.clearTimeout(timer);
     };
-  }, [ios]);
+  }, [enabled, ios]);
 
   const dismiss = useCallback(() => {
     rememberDismissal();
     setVisible(false);
-    setShowIosSheet(false);
+    setSheet(null);
   }, []);
 
+  /**
+   * **النقرة لا تصمت أبداً.**
+   *
+   * الصمت كان العطل الأصلي: نقرةٌ على «تثبيت» تصادف حالةً لا نافذة فيها
+   * فترتدّ بلا شيء — لا نافذة ولا رسالة. الآن لكل حالةٍ مخرجٌ مرئيّ.
+   */
   const install = useCallback(async () => {
-    if (ios) {
-      setShowIosSheet(true);
-      return;
-    }
-    if (!deferred) return;
-    try {
-      await deferred.prompt();
-      const choice = await deferred.userChoice;
-      // الرفض يُسجَّل تأجيلاً: من رفض نافذة النظام لا يُسأل غداً
-      if (choice.outcome === 'dismissed') rememberDismissal();
-      setVisible(false);
-      setDeferred(null);
-    } catch (error) {
-      console.warn('install prompt failed:', error);
-      setVisible(false);
-    }
-  }, [deferred, ios]);
+    if (ios) { setSheet('ios'); return; }
 
-  if (!visible) return null;
+    const outcome = await promptInstall();
+    if (outcome === 'accepted') { setVisible(false); return; }
+    if (outcome === 'dismissed') { rememberDismissal(); setVisible(false); return; }
+
+    // لا نافذة متاحة: متصفّحٌ لا يدعمها، أو حدثٌ استُهلك. الشرح اليدويّ
+    // أنفع من زرٍّ لا يفعل شيئاً
+    setSheet('manual');
+  }, [ios]);
+
+  if (!enabled || !visible) return null;
+  if (!ios && !ready && sheet === null) {
+    // على غير iOS بلا حدثٍ متاح لا يُعرض الشريط أصلاً — إلا إن كان الزبون
+    // قد فتح شرحاً يدوياً بالفعل
+    return null;
+  }
 
   const label = businessName ? `ثبّت ${businessName}` : 'ثبّت المتجر';
 
@@ -131,53 +128,53 @@ const InstallAppPrompt: React.FC<Props> = ({ businessName, accentColor = '#C8E23
         <div style={styles.text}>
           <div style={styles.title}>{label} على هاتفك</div>
           <div style={styles.sub}>
-            {ios
-              ? 'خطوتان فقط — ولتصلك إشعارات طلبك'
-              : 'يفتح بضغطة، وتصلك إشعارات طلبك'}
+            {ios ? 'خطوتان فقط — ولتصلك إشعارات طلبك' : 'يفتح بضغطة، وتصلك إشعارات طلبك'}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={install}
-          style={{ ...styles.cta, background: accentColor }}
-        >
+        <button type="button" onClick={install} style={{ ...styles.cta, background: accentColor }}>
           تثبيت
         </button>
-        <button
-          type="button"
-          onClick={dismiss}
-          style={styles.close}
-          aria-label="إغلاق"
-        >
+        <button type="button" onClick={dismiss} style={styles.close} aria-label="إغلاق">
           <IoClose size={18} />
         </button>
       </div>
 
-      {showIosSheet && (
+      {sheet !== null && (
         <div style={styles.overlay} onClick={dismiss} role="dialog" aria-modal="true">
           <div style={styles.sheet} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.sheetTitle}>التثبيت على iPhone</div>
-            <p style={styles.sheetHint}>
-              نظام iPhone لا يسمح بالتثبيت التلقائي، ولا تصلك الإشعارات قبله.
-              والخطوتان تُنجزان مرّةً واحدة:
-            </p>
+            {sheet === 'ios' ? (
+              <>
+                <div style={styles.sheetTitle}>التثبيت على iPhone</div>
+                <p style={styles.sheetHint}>
+                  نظام iPhone لا يسمح بالتثبيت التلقائي، ولا تصلك الإشعارات قبله.
+                  والخطوتان تُنجزان مرّةً واحدة:
+                </p>
+                <Step n={1} icon={<IoShareOutline size={19} color={accentColor} />}
+                  text="اضغط زرّ المشاركة في شريط سفاري بالأسفل" />
+                <Step n={2} icon={<IoAddCircleOutline size={19} color={accentColor} />}
+                  text="اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة»" />
+                <p style={styles.sheetFoot}>
+                  بعدها افتح المتجر من الأيقونة الجديدة، وفعّل الإشعارات من داخله.
+                </p>
+              </>
+            ) : (
+              <>
+                <div style={styles.sheetTitle}>التثبيت من المتصفّح</div>
+                <p style={styles.sheetHint}>
+                  متصفّحك لم يتح نافذة التثبيت التلقائية الآن. تستطيع تثبيته يدوياً:
+                </p>
+                <Step n={1} icon={<IoEllipsisVertical size={19} color={accentColor} />}
+                  text="افتح قائمة المتصفّح (⋮) في الأعلى" />
+                <Step n={2} icon={<IoAddCircleOutline size={19} color={accentColor} />}
+                  text="اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»" />
+                <p style={styles.sheetFoot}>
+                  إن لم تجد الخيار، جرّب فتح المتجر في متصفّح Chrome.
+                </p>
+              </>
+            )}
 
-            <Step
-              n={1}
-              icon={<IoShareOutline size={19} color={accentColor} />}
-              text="اضغط زرّ المشاركة في شريط سفاري بالأسفل"
-            />
-            <Step
-              n={2}
-              icon={<IoAddCircleOutline size={19} color={accentColor} />}
-              text="اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة»"
-            />
-
-            <p style={styles.sheetFoot}>
-              بعدها افتح المتجر من الأيقونة الجديدة، وفعّل الإشعارات من داخله.
-            </p>
-
-            <button type="button" onClick={dismiss} style={{ ...styles.cta, background: accentColor, width: '100%', marginTop: 6 }}>
+            <button type="button" onClick={dismiss}
+              style={{ ...styles.cta, background: accentColor, width: '100%', marginTop: 6 }}>
               فهمت
             </button>
           </div>
@@ -211,34 +208,20 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'rgba(8, 46, 36, 0.97)',
     border: '1px solid rgba(200, 226, 53, 0.28)',
     boxShadow: '0 8px 28px rgba(0,0,0,0.34)',
-    backdropFilter: 'blur(8px)',
+    backdropFilter: 'blur(8px)'
   },
-  iconWrap: {
-    width: 38, height: 38, borderRadius: 12,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
+  iconWrap: { width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   text: { flex: 1, minWidth: 0 },
   title: { color: '#E8F5E9', fontSize: 13.5, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   sub: { color: '#9DC4AC', fontSize: 11.5, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  cta: {
-    border: 'none', borderRadius: 11, padding: '9px 16px',
-    color: '#0A2018', fontSize: 13, fontWeight: 800, cursor: 'pointer', flexShrink: 0,
-  },
-  close: {
-    background: 'transparent', border: 'none', color: '#9DC4AC',
-    cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0,
-  },
-  overlay: {
-    position: 'fixed', inset: 0, zIndex: 1500,
-    background: 'rgba(0,0,0,0.6)',
-    display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-  },
+  cta: { border: 'none', borderRadius: 11, padding: '9px 16px', color: '#0A2018', fontSize: 13, fontWeight: 800, cursor: 'pointer', flexShrink: 0 },
+  close: { background: 'transparent', border: 'none', color: '#9DC4AC', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 },
+  overlay: { position: 'fixed', inset: 0, zIndex: 1500, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
   sheet: {
-    width: '100%', maxWidth: 460,
-    background: '#112E23',
+    width: '100%', maxWidth: 460, background: '#112E23',
     borderRadius: '20px 20px 0 0',
     padding: '20px 18px calc(env(safe-area-inset-bottom, 0px) + 20px)',
-    border: '1px solid rgba(200, 226, 53, 0.2)',
+    border: '1px solid rgba(200, 226, 53, 0.2)'
   },
   sheetTitle: { color: '#E8F5E9', fontSize: 16, fontWeight: 800, marginBottom: 8 },
   sheetHint: { color: '#9DC4AC', fontSize: 13, lineHeight: 1.8, margin: '0 0 14px' },
@@ -247,10 +230,10 @@ const styles: Record<string, React.CSSProperties> = {
   stepNum: {
     width: 22, height: 22, borderRadius: '50%', background: 'rgba(200,226,53,0.16)',
     color: '#C8E235', fontSize: 12, fontWeight: 800,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
   },
   stepIcon: { display: 'flex', flexShrink: 0 },
-  stepText: { color: '#E8F5E9', fontSize: 13.5, lineHeight: 1.6 },
+  stepText: { color: '#E8F5E9', fontSize: 13.5, lineHeight: 1.6 }
 };
 
 export default InstallAppPrompt;

@@ -71,6 +71,7 @@ import { resolveBadges } from '@/utils/catalogBadges';
 import type { CartItem } from '@/services/types';
 import { useSocket } from '@/hooks/useSocket';
 import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
+import useStoreManifest from '../../hooks/useStoreManifest';
 import useCartSnapshot from '../../hooks/useCartSnapshot';
 
 // ==================== الأنواع ====================
@@ -301,6 +302,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     total: cartTotal,
     phone: customerPhone
   });
+
+  // بيان التطبيق باسم هذا المتجر وهويته — يستبدل بيان المنصّة داخل
+  // صفحته، ويحدّد هل تُعرض دعوة التثبيت أصلاً (الميزة تُشترى)
+  const storePwa = useStoreManifest((store as any)?.slug || urlSlug);
 
   const quantityByProductId = useMemo(() => {
     const map = new Map<string, number>();
@@ -1197,7 +1202,11 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       />
 
       {/* التثبيت على الشاشة الرئيسية — وعلى iPhone هو شرط الإشعارات لا تحسينها */}
-      <InstallAppPrompt businessName={(store as any)?.name} />
+      <InstallAppPrompt
+        businessName={storePwa.name || (store as any)?.name}
+        enabled={storePwa.enabled}
+        accentColor={storePwa.themeColor || undefined}
+      />
 
       {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}
       <PlatformBadge show={store?.showPlatformBadge} />

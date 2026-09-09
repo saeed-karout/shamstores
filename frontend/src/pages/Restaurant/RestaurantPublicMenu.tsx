@@ -47,6 +47,7 @@ import PlatformBadge from '@/components/storefront/PlatformBadge';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 import { useSocket } from '@/hooks/useSocket';
 import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
+import useStoreManifest from '../../hooks/useStoreManifest';
 
 // ==================== الأنواع ====================
 
@@ -98,6 +99,13 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   businessWhatsapp: propBusinessWhatsapp
 }) => {
   const { slug: urlSlug, tableId } = useParams();
+
+  // بيان التطبيق باسم هذا المطعم وهويته — يستبدل بيان المنصّة داخل صفحته،
+  // ويحدّد هل تُعرض دعوة التثبيت أصلاً (الميزة تُشترى).
+  //
+  // المعرّف من المسار لا من الكائن: الكائن يُصرَّح بعد هذا السطر، والمسار
+  // هو ما وصل به الزبون أصلاً فيكفي.
+  const storePwa = useStoreManifest(urlSlug);
   const navigate = useNavigate();
 
   const { user, isAuthenticated, logout } = useAuth();
@@ -990,7 +998,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       {/* الشارة يحسمها الخادم: الخطة وحدها لا تكفي — قد تكون الميزة مشتراة
           مفردةً على خطة مجانية، وهو ما لا تراه الواجهة */}
       {/* التثبيت على الشاشة الرئيسية — وعلى iPhone هو شرط الإشعارات لا تحسينها */}
-      <InstallAppPrompt businessName={(restaurant as any)?.name} />
+      <InstallAppPrompt
+        businessName={storePwa.name || (restaurant as any)?.name}
+        enabled={storePwa.enabled}
+        accentColor={storePwa.themeColor || undefined}
+      />
 
       <PlatformBadge show={restaurant?.showPlatformBadge} />
     </>

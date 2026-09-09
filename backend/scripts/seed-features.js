@@ -133,6 +133,18 @@ const FEATURES = [
     // و`affiliate` في strictFeatures فلا تُفتح لخطة مدفوعة بلا شراء
   },
   {
+    code: 'pwa',
+    name: 'تطبيق باسم متجرك',
+    nameEn: 'Branded app (PWA)',
+    description:
+      'يثبّت زبونك متجرك على شاشة هاتفه كتطبيق — باسمك وشعارك ولونك، لا ' +
+      'باسم المنصّة. ويفتح بلا شريط متصفّح، وتصله إشعاراتك حتى على iPhone.',
+    group: 'identity',
+    price: 3,
+    // مُتحقَّق: pwaController يفحص الاستحقاق قبل خدمة البيان والأيقونات،
+    // فبلا شراءٍ لا يعرض المتصفّح «تثبيت» أصلاً
+  },
+  {
     code: 'branding_removal',
     name: 'إخفاء شعار المنصّة',
     nameEn: 'Remove platform badge',

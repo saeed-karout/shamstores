@@ -12,6 +12,7 @@ import {
   getHostBrand
 } from '../controllers/publicController';
 import { getProductReviews } from '../controllers/productReviewController';
+import { getStoreManifest, getStoreIcon, getPwaStatus } from '../controllers/pwaController';
 
 const router = express.Router();
 
@@ -26,6 +27,14 @@ router.get('/resolve-host', resolveHost);
 router.get('/brand', getHostBrand);
 
 // ✅ هذا هو المسار المطلوب - جلب بيانات المطعم/المتجر (باستخدام slug أو subdomain)
+// ==================== التطبيق المثبَّت لكل متجر ====================
+//
+// **قبل `/:identifier`** — express يطابق بالترتيب، و`/:identifier` يبتلع
+// أي مسارٍ من جزءٍ واحد. ولو وُضعت بعده لعاد البيانُ بيانات النشاط.
+router.get('/:slug/manifest.webmanifest', getStoreManifest);
+router.get('/:slug/pwa-icon/:file', getStoreIcon);
+router.get('/:slug/pwa-status', getPwaStatus);
+
 router.get('/:identifier', getBusinessBySlug);
 
 // جلب فئات المطعم (باستخدام slug)

@@ -7,6 +7,10 @@ import App from './App';
 import { SettingsProvider } from './hooks/SettingsContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { registerAppServiceWorker } from './services/webPush';
+// **الاستيراد وحده هو الغرض:** الوحدة تُسجّل مستمع `beforeinstallprompt`
+// عند تنفيذها. وكروم يطلقه قبل أن يُركّب React شجرته، فمستمعٌ داخل
+// `useEffect` يصل بعد فوات الحدث — وهو لا يُعاد إطلاقه إلا بإعادة تحميل.
+import './utils/installPrompt';
 
 /**
  * تعافٍ من أجزاء JS قديمة بعد نشر جديد.
