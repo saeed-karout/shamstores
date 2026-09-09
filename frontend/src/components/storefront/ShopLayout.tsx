@@ -38,6 +38,7 @@ import { useT } from '@/i18n/storefront';
 import { IconAction, ScrollTopButton, useScrolledPast } from './ShopShellParts';
 import BoutiqueShell from './shells/BoutiqueShell';
 import ShowcaseShell from './shells/ShowcaseShell';
+import LandingShell from './shells/LandingShell';
 
 export interface ShopCategoryTile {
   id: string;
@@ -90,6 +91,26 @@ export interface ShopLayoutProps {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   onSearchOpen?: () => void;
+
+  /**
+   * صفوفٌ معنونة لصفحة البداية — يعرضها هيكل «صفحة أقسام» وحده.
+   *
+   * **لماذا تمرّ عبر الهيكل ولا تُرسم في الصفحة:** الصفحة تعرف المنتجات
+   * والهيكل يعرف كيف تُرتَّب. ولو رسمتها الصفحة لاحتاجت أن تعرف أي قالبٍ
+   * مختار — وهو بالضبط ما يُفترض أن يخفيه الهيكل عنها.
+   *
+   * وتُترك فارغة عند البحث أو اختيار قسم: الزبون حينها يريد قائمةً كاملة
+   * لا صفحة عرضٍ منسّقة.
+   */
+  homeSections?: Array<{
+    key: string;
+    title: string;
+    items: any[];
+    onViewAll?: () => void;
+  }>;
+
+  /** كيف تُرسم بطاقة المنتج — الصفحة تملك المعالجات فتبقى عندها */
+  renderProduct?: (product: any) => React.ReactNode;
 
   children: React.ReactNode;
   footer?: React.ReactNode;
@@ -591,6 +612,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = (props) => {
   const { shell } = useDesign();
   if (shell === 'boutique') return <BoutiqueShell {...props} />;
   if (shell === 'showcase') return <ShowcaseShell {...props} />;
+  if (shell === 'landing') return <LandingShell {...props} />;
   return <ClassicShell {...props} />;
 };
 

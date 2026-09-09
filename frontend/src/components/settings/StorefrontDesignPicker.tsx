@@ -164,7 +164,7 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
         hint="أكبر اختيار هنا — يغيّر بنية صفحة متجرك كلّها، لا شكل عناصرها فقط."
       >
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
-          {(['classic', 'boutique', 'showcase'] as ShellVariant[]).map((option) => {
+          {(['classic', 'boutique', 'showcase', 'landing'] as ShellVariant[]).map((option) => {
             const active = design.shell === option;
             return (
               <button
@@ -430,6 +430,40 @@ const ShellThumb: React.FC<{ variant: ShellVariant; tokens: Tokens }> = ({ varia
     );
   }
 
+  if (variant === 'landing') {
+    return (
+      <div style={box}>
+        <div style={{ display: 'flex', gap: 3, alignItems: 'center', flexShrink: 0 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 2, background: tokens.accent }} />
+          <div style={{ flex: 1 }} />
+          <span style={{ width: 7, height: 7, borderRadius: 2, background: tokens.surface }} />
+          <span style={{ width: 7, height: 7, borderRadius: 2, background: tokens.accent }} />
+        </div>
+        {/* صفّ الفئات */}
+        <div style={{ display: 'flex', gap: 3, flexShrink: 0, marginTop: 1 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} style={{ width: 14, height: 14, borderRadius: 4, background: i === 0 ? tokens.accent : tokens.card }} />
+          ))}
+        </div>
+        {/* صفّان معنونان */}
+        {[0, 1].map((row) => (
+          <div key={row} style={{ flexShrink: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+              <span style={{ display: 'block', width: 20, height: 2.5, background: tokens.text, borderRadius: 2 }} />
+              <span style={{ display: 'block', width: 11, height: 2.5, background: tokens.accent, borderRadius: 2 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 3 }}>
+              {[0, 1, 2].map((i) => (
+                <span key={i} style={{ flex: 1, height: 15, borderRadius: 3, background: tokens.card }} />
+              ))}
+              <span style={{ width: 5, height: 15, borderRadius: 3, background: tokens.card, opacity: 0.5 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (variant === 'showcase') {
     return (
       <div style={{ ...box, padding: 0, gap: 0 }}>
@@ -506,6 +540,43 @@ const PreviewShell: React.FC<{
             border: `var(--sf-border-w) solid ${tokens.border}`
           }}
         />
+      </div>
+    );
+  }
+
+  if (design.shell === 'landing') {
+    return (
+      <div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            paddingBottom: 9,
+            borderBottom: `var(--sf-border-w) solid ${tokens.border}`
+          }}
+        >
+          <span style={{ width: 22, height: 22, borderRadius: 'var(--sf-r-image)', background: tokens.accent }} />
+          <span style={{ flex: 1, color: tokens.text, fontSize: 12.5, fontWeight: 800 }}>
+            {kind === 'store' ? 'اسم المتجر' : 'اسم المطعم'}
+          </span>
+          <span
+            style={{
+              background: tokens.accent,
+              color: tokens.onAccent,
+              borderRadius: 'var(--sf-r-button)',
+              padding: '3px 9px',
+              fontSize: 10,
+              fontWeight: 800
+            }}
+          >
+            السلّة
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 11 }}>
+          <span style={{ color: tokens.text, fontSize: 12.5, fontWeight: 800 }}>الجديد</span>
+          <span style={{ color: tokens.accent, fontSize: 10.5, fontWeight: 700 }}>عرض الكل ‹</span>
+        </div>
       </div>
     );
   }

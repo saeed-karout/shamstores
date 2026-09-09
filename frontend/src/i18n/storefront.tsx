@@ -115,6 +115,13 @@ const EN: Record<string, string> = {
   'حسابك': 'Your account',
   'بياناتي': 'My profile',
   'طلباتي': 'My orders',
+  // قالب «صفحة أقسام»
+  'تسوّق حسب الفئة': 'Shop by category',
+  'عرض الكل': 'View all',
+  'من نحن': 'About us',
+  'وصل حديثاً': 'New arrivals',
+  'الحسومات': 'On sale',
+  'الأكثر مبيعاً': 'Best sellers',
   'تسجيل الدخول': 'Sign in',
   'تسجيل الدخول (اختياري)': 'Sign in (optional)',
   'تسجيل الخروج': 'Sign out',

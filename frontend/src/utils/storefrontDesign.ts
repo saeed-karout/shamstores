@@ -25,10 +25,12 @@ export type DesignPreset = 'modern' | 'minimal' | 'bold';
  *   • `classic`  — شريط علوي دائم، بانر، بلاطات أقسام، شبكة.
  *   • `boutique` — بلا شريط: هوية في الوسط، تواصل، بحث، شرائح أقسام.
  *   • `showcase` — غلاف يملأ الشاشة، أزرار طافية، أقسام بصورٍ عريضة.
+ *   • `landing`  — صفحةٌ منسّقة: فئات، ثمّ صفوفٌ معنونة لكلٍّ «عرض الكل»،
+ *                  ثمّ تعريفٌ بالمتجر. الشبكة الكاملة عند البحث فقط.
  *
- * و`nav` يخصّ `classic` وحده: القالبان الآخران بلا شريطٍ يُنمَّط أصلاً.
+ * و`nav` يخصّ `classic` وحده: البقيّة بلا شريطٍ يُنمَّط أصلاً.
  */
-export type ShellVariant = 'classic' | 'boutique' | 'showcase';
+export type ShellVariant = 'classic' | 'boutique' | 'showcase' | 'landing';
 export type CardVariant = 'standard' | 'overlay' | 'compact';
 export type ProductVariant = 'classic' | 'split' | 'immersive';
 export type NavVariant = 'solid' | 'floating' | 'minimal';
@@ -119,7 +121,7 @@ const SHADOWS: Record<ShadowLevel, [string, string]> = {
 };
 
 const PRESET_KEYS: DesignPreset[] = ['modern', 'minimal', 'bold'];
-const SHELL_KEYS: ShellVariant[] = ['classic', 'boutique', 'showcase'];
+const SHELL_KEYS: ShellVariant[] = ['classic', 'boutique', 'showcase', 'landing'];
 const CARD_KEYS: CardVariant[] = ['standard', 'overlay', 'compact'];
 const PRODUCT_KEYS: ProductVariant[] = ['classic', 'split', 'immersive'];
 const NAV_KEYS: NavVariant[] = ['solid', 'floating', 'minimal'];
@@ -253,11 +255,17 @@ export const sd = {
 /** أسماء عربية للعرض في اللوحة — مصدرٌ واحد فلا تتفرّق التسميات */
 export const LABELS = {
   preset: { modern: 'عصري', minimal: 'بسيط', bold: 'جريء' } as Record<DesignPreset, string>,
-  shell: { classic: 'كلاسيكي', boutique: 'بوتيك', showcase: 'معرض' } as Record<ShellVariant, string>,
+  shell: {
+    classic: 'كلاسيكي',
+    boutique: 'بوتيك',
+    showcase: 'معرض',
+    landing: 'صفحة أقسام'
+  } as Record<ShellVariant, string>,
   shellHint: {
     classic: 'شريط علوي دائم فيه البحث والسلّة، ثمّ بانر، ثمّ الأقسام. الأنسب لمتجرٍ كبير يتنقّل فيه الزبون بين أقسامٍ كثيرة.',
     boutique: 'بلا شريط علوي: شعارك في الوسط ثمّ الاسم ثمّ طرق التواصل، ثمّ بحثٌ وشرائح أقسام. الأنسب لمن يصل زبائنه من إنستغرام.',
-    showcase: 'غلافك يملأ أعلى الشاشة والأزرار تطفو فوقه، والأقسام صورٌ عريضة. الأنسب لمتجرٍ صوره قويّة.'
+    showcase: 'غلافك يملأ أعلى الشاشة والأزرار تطفو فوقه، والأقسام صورٌ عريضة. الأنسب لمتجرٍ صوره قويّة.',
+    landing: 'صفحةُ عرضٍ منسّقة: فئاتك أوّلاً، ثمّ صفوف «الجديد» و«الحسومات» و«الأكثر مبيعاً» لكلٍّ «عرض الكل»، ثمّ تعريفٌ بك. الأنسب لمتجرٍ يريد أن يبدو أغنى ممّا تُظهره شبكة.'
   } as Record<ShellVariant, string>,
   card: { standard: 'قياسية', overlay: 'صورة بغطاء', compact: 'مضغوطة' } as Record<CardVariant, string>,
   product: { classic: 'كلاسيكية', split: 'منقسمة', immersive: 'غامرة' } as Record<ProductVariant, string>,

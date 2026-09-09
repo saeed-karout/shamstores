@@ -17,7 +17,7 @@
 export type DesignPreset = 'modern' | 'minimal' | 'bold';
 
 const PRESETS: DesignPreset[] = ['modern', 'minimal', 'bold'];
-const SHELLS = ['classic', 'boutique', 'showcase'];
+const SHELLS = ['classic', 'boutique', 'showcase', 'landing'];
 const CARDS = ['standard', 'overlay', 'compact'];
 const PRODUCTS = ['classic', 'split', 'immersive'];
 const NAVS = ['solid', 'floating', 'minimal'];

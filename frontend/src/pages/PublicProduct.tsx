@@ -109,6 +109,22 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   const { addToCart } = useCart();
   const [showShareMenu, setShowShareMenu] = useState(false);
 
+  /**
+   * نموذج الصفحة — **يُحسب هنا لا قبل `return` مباشرةً**.
+   *
+   * `useIsDesktop` خطّاف، وتحته في الملفّ `if (loading) return …`. فكان
+   * التصيير الأوّل (والصفحة تحمّل) يستدعي خطّافاتٍ أقلّ من الثاني، وهو ما
+   * يمنعه React: انهارت صفحة المنتج بخطأ #310 عند اكتمال التحميل. مكان
+   * الخطّاف فوق كل خروجٍ مبكّر لا بجانب ما يستعمله.
+   *
+   * و`resolveDesign` ليست خطّافاً، لكنها تُرفع معه ليبقى الاثنان معاً.
+   *
+   * ولا تُقرأ عبر `useDesign`: المزوّد يُصيَّر **داخل** ما تُرجعه هذه
+   * الدالّة، فلا يراه خطّافٌ في جسمها.
+   */
+  const isDesktop = useIsDesktop();
+  const design = resolveDesign((store as any)?.storefrontDesign);
+
   const actualProductId = productIdParam || paramProductId;
   const actualSlug = slug || store?.slug;
 
@@ -464,14 +480,6 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     return list.filter(Boolean);
   })();
 
-  /**
-   * نموذج الصفحة يُحسب هنا لا عبر `useDesign`.
-   *
-   * المزوّد يُصيَّر **داخل** ما تُرجعه هذه الدالّة، فلا يراه خطّافٌ يُستدعى
-   * في جسمها — كان سيُعيد القالب الافتراضي دائماً وتبدو الميزة معطّلة.
-   */
-  const design = resolveDesign((store as any)?.storefrontDesign);
-  const isDesktop = useIsDesktop();
   const split = design.product === 'split';
   const immersive = design.product === 'immersive';
 

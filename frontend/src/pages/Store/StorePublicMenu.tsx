@@ -393,6 +393,38 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     return sortProducts(list);
   }, [localizedProducts, isSearching, searchTerm, activeCategory, onlyDiscounted, sortProducts]);
 
+  /**
+   * صفوف صفحة البداية — لهيكل «صفحة أقسام» وحده.
+   *
+   * **تُترك فارغة عند البحث أو التصفية:** الزبون الذي كتب كلمةً يريد
+   * نتائجها لا مختاراتٍ فوقها. وحينها يعرض الهيكل الشبكة الكاملة وحدها.
+   *
+   * **والقسم الفارغ لا يُعرض:** متجرٌ بلا حسومات كان سيُظهر عنوان
+   * «الحسومات» وتحته فراغ — وهو أسوأ من غياب العنوان.
+   */
+  const homeSections = useMemo(() => {
+    if (isSearching || activeCategory !== 'all' || onlyDiscounted) return [];
+
+    const take = 10;
+    const newest = [...localizedProducts]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, take);
+    const discounted = localizedProducts
+      .filter((p) => resolveBadges(p).hasDiscount)
+      .sort((a, b) => (resolveBadges(b).discountPercent || 0) - (resolveBadges(a).discountPercent || 0))
+      .slice(0, take);
+    const popular = localizedProducts
+      .filter((p) => (p as any).isPopular || ((p as any).ordersCount || 0) > 0)
+      .sort((a, b) => (((b as any).ordersCount || 0) - ((a as any).ordersCount || 0)))
+      .slice(0, take);
+
+    return [
+      { key: 'new', title: t('وصل حديثاً'), items: newest, onViewAll: () => setSortBy('newest') },
+      { key: 'sale', title: t('الحسومات'), items: discounted, onViewAll: () => setOnlyDiscounted(true) },
+      { key: 'popular', title: t('الأكثر مبيعاً'), items: popular, onViewAll: () => setSortBy('featured') }
+    ].filter((section) => section.items.length > 1);
+  }, [localizedProducts, isSearching, activeCategory, onlyDiscounted, t]);
+
   /** الفئات التي تحوي منتجاً فعلاً — فئة فارغة في الشريط تُحبط الزبون */
   const navCategories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -525,6 +557,48 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       toast.error(error?.response?.data?.error || 'كوبون غير صالح');
     }
   };
+
+  /**
+   * بطاقة منتج — **دالّةٌ واحدة** تستعملها الشبكة والصفوف المنسّقة.
+   *
+   * كانت مكتوبةً ثلاث مرّات في هذا الملفّ بنفس اثنتي عشرة خاصّية. وإضافة
+   * الصفوف المنسّقة كانت ستجعلها أربعاً — أي أن نسيان `onToggleFavorite`
+   * في نسخةٍ منها يعني قلباً لا يعمل في مكانٍ واحد دون غيره.
+   */
+  const renderProductCard = useCallback(
+    (product: StorefrontProduct) => (
+      <ProductGridCard
+        key={product.id}
+        href={productPath(product.id)}
+        product={product}
+        currency={currency}
+        quantityInCart={quantityByProductId.get(product.id) || 0}
+        onAdd={handleAdd}
+        onQuantityChange={handleQuantityChange}
+        onOpen={(p) => navigate(productPath(p.id))}
+        isFavorite={favorites.has(product.id)}
+        onToggleFavorite={(p) =>
+          toggleFavorite({
+            id: p.id,
+            type: 'product',
+            name: p.name,
+            price: p.price,
+            image: coverOf(p)
+          } as any)
+        }
+      />
+    ),
+    [
+      productPath,
+      currency,
+      quantityByProductId,
+      handleAdd,
+      handleQuantityChange,
+      navigate,
+      favorites,
+      toggleFavorite
+    ]
+  );
 
   // ---------- التوصيل ----------
   // مناطق التوصيل التي فعّلها التاجر — فارغةٌ تعني أنه لم يضبطها بعد،
@@ -821,6 +895,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         onSearchOpen={() => setSearchOpen(true)}
+        homeSections={homeSections}
+        renderProduct={renderProductCard}
         footer={
           <PublicFooter
             businessName={language.pick(store, 'name')}
@@ -935,28 +1011,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22 }}
             >
-              {visibleProducts.map((product) => (
-                <ProductGridCard
-                  key={product.id}
-                  href={`/${storeSlug}/product/${product.id}`}
-                  product={product}
-                  currency={currency}
-                  quantityInCart={quantityByProductId.get(product.id) || 0}
-                  onAdd={handleAdd}
-                  onQuantityChange={handleQuantityChange}
-                  onOpen={(p) => navigate(productPath(p.id))}
-                  isFavorite={favorites.has(product.id)}
-                  onToggleFavorite={(p) =>
-                    toggleFavorite({
-                      id: p.id,
-                      type: 'product',
-                      name: p.name,
-                      price: p.price,
-                      image: coverOf(p)
-                    } as any)
-                  }
-                />
-              ))}
+              {visibleProducts.map(renderProductCard)}
             </motion.div>
           )}
         </section>
@@ -1034,19 +1089,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
             <div style={{ marginTop: 14, overflowY: 'auto', maxHeight: 'calc(100vh - 90px)' }}>
               <div className="shop-grid">
-                {visibleProducts.map((product) => (
-                  <ProductGridCard
-                    key={product.id}
-                    href={`/${storeSlug}/product/${product.id}`}
-                    product={product}
-                    currency={currency}
-                    quantityInCart={quantityByProductId.get(product.id) || 0}
-                    onAdd={handleAdd}
-                    onQuantityChange={handleQuantityChange}
-                    onOpen={(p) => navigate(productPath(p.id))}
-                    isFavorite={favorites.has(product.id)}
-                  />
-                ))}
+                {visibleProducts.map(renderProductCard)}
               </div>
               {isSearching && visibleProducts.length === 0 && (
                 <EmptyState text="لا توجد منتجات تطابق بحثك" />
@@ -1153,31 +1196,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           <div style={{ padding: '30px 10px', textAlign: 'center', color: sf.muted, fontSize: 13, lineHeight: 1.9 }}>{t('لم تضف شيئاً بعد.')}<br />{t('اضغط ♡ على أي منتج ليظهر هنا.')}</div>
         ) : (
           <div className="shop-grid" style={{ padding: '4px 0 14px' }}>
-            {favoriteProducts.map((product) => (
-              <ProductGridCard
-                key={product.id}
-                href={`/${storeSlug}/product/${product.id}`}
-                product={product}
-                currency={currency}
-                quantityInCart={quantityByProductId.get(product.id) || 0}
-                onAdd={handleAdd}
-                onQuantityChange={handleQuantityChange}
-                onOpen={(p) => {
-                  setFavoritesOpen(false);
-                  navigate(productPath(p.id));
-                }}
-                isFavorite
-                onToggleFavorite={(p) =>
-                  toggleFavorite({
-                    id: p.id,
-                    type: 'product',
-                    name: p.name,
-                    price: p.price,
-                    image: coverOf(p)
-                  } as any)
-                }
-              />
-            ))}
+            {favoriteProducts.map(renderProductCard)}
           </div>
         )}
       </BottomSheet>
