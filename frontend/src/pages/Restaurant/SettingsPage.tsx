@@ -8,6 +8,8 @@ import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
+import LanguageDisplaySettings from '@/components/settings/LanguageDisplaySettings';
+import useFeatures from '@/hooks/useFeatures';
 import OrderAlertsSettings from '@/components/settings/OrderAlertsSettings';
 import {
   IoRestaurant,
@@ -153,6 +155,7 @@ const saveBtn: React.CSSProperties = {
 
 export const SettingsPage: React.FC = () => {
   const { restaurant, loading, updateRestaurant, uploadLogo, uploadCover, refresh } = useRestaurant();
+  const { hasFeature } = useFeatures();
   const permissions = usePermissions();
   const { user, isSuperAdmin, isOwner } = useAuth();
   const [activeTab, setActiveTab] = useState('general');
@@ -174,6 +177,11 @@ export const SettingsPage: React.FC = () => {
     // عملات العرض — عرضٌ لا تسعير: الأسعار محفوظة بالليرة دائماً
     enabledCurrencies: ['SYP'] as string[],
     currency: 'SYP',
+    // لغات العرض — الخادم يعيدها إلى العربية وحدها بلا ميزة تعدّد اللغات
+    enabledLanguages: ['ar'] as string[],
+    language: 'ar',
+    /** الاسم تحت أيقونة التطبيق المثبَّت — الشاشة تعرض نحو ١٢ محرفاً */
+    pwaShortName: '',
   });
 
   // ✅ جميع ألوان المطعم
@@ -226,6 +234,14 @@ export const SettingsPage: React.FC = () => {
           (restaurant as any).currencySettings?.defaultCurrency ||
           (restaurant as any).currency ||
           'SYP',
+        // نفس القاعدة: من لم يختر بعد، لغته المفردة القديمة هي إعداده الفعلي
+        enabledLanguages: (() => {
+          const raw = (restaurant as any).enabledLanguages;
+          const list = Array.isArray(raw) ? raw : [];
+          return list.length ? list : [(restaurant as any).language || 'ar'];
+        })(),
+        language: (restaurant as any).language || 'ar',
+        pwaShortName: (restaurant as any).pwaShortName || '',
       });
 
       // ✅ تحميل جميع ألوان المطعم
@@ -663,6 +679,20 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
             <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>يمكنك الحصول على الإحداثيات من خرائط جوجل</p>
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <LanguageDisplaySettings
+              enabledLanguages={generalForm.enabledLanguages}
+              defaultLanguage={generalForm.language}
+              onChange={(next) => setGeneralForm({
+                ...generalForm,
+                enabledLanguages: next.enabledLanguages,
+                language: next.defaultLanguage,
+              })}
+              canUseMulti={hasFeature('multi_language')}
+              colors={C}
+            />
           </div>
 
           <div style={{ marginTop: 20 }}>

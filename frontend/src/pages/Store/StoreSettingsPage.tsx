@@ -10,6 +10,8 @@ import Loader from '@/components/common/Loader';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
+import LanguageDisplaySettings from '@/components/settings/LanguageDisplaySettings';
+import useFeatures from '@/hooks/useFeatures';
 import OrderAlertsSettings from '@/components/settings/OrderAlertsSettings';
 import {
   IoStorefront,
@@ -138,6 +140,7 @@ const saveBtn: React.CSSProperties = {
 
 const StoreSettingsPage: React.FC = () => {
   const { store, loading, updateStore, uploadLogo, uploadCover, fetchStore } = useStore();
+  const { hasFeature } = useFeatures();
   const { user, isSuperAdmin, isOwner } = useAuth();
   const { plan: currentPlan, loading: planLoading } = useCurrentPlan();
   const { setThemeColors } = useTheme();
@@ -167,6 +170,11 @@ const StoreSettingsPage: React.FC = () => {
     // عملات العرض — عرضٌ لا تسعير: الأسعار محفوظة بالليرة دائماً
     enabledCurrencies: ['SYP'] as string[],
     currency: 'SYP',
+    // لغات العرض — الخادم يعيدها إلى العربية وحدها بلا ميزة تعدّد اللغات
+    enabledLanguages: ['ar'] as string[],
+    language: 'ar',
+    /** الاسم تحت أيقونة التطبيق المثبَّت — الشاشة تعرض نحو ١٢ محرفاً */
+    pwaShortName: '',
   });
 
   // ✅ بيانات التصميم - جميع الألوان
@@ -230,6 +238,14 @@ const StoreSettingsPage: React.FC = () => {
             ? (store as any).currencySettings.enabledCurrencies
             : [(store as any).currency || 'SYP'],
         currency: (store as any).currencySettings?.defaultCurrency || (store as any).currency || 'SYP',
+        // نفس القاعدة: من لم يختر بعد، لغته المفردة القديمة هي إعداده الفعلي
+        enabledLanguages: (() => {
+          const raw = (store as any).enabledLanguages;
+          const list = Array.isArray(raw) ? raw : [];
+          return list.length ? list : [(store as any).language || 'ar'];
+        })(),
+        language: (store as any).language || 'ar',
+        pwaShortName: (store as any).pwaShortName || '',
       });
 
       setDesignForm({
@@ -590,6 +606,24 @@ const StoreSettingsPage: React.FC = () => {
                 />
               </div>
               <div>
+                <label style={labelStyle}>اسم التطبيق المختصر</label>
+                <input
+                  type="text"
+                  maxLength={24}
+                  value={generalForm.pwaShortName}
+                  onChange={(e) => setGeneralForm({ ...generalForm, pwaShortName: e.target.value })}
+                  style={getInput('pwaShortName')}
+                  onFocus={() => setFocusedInput('pwaShortName')}
+                  onBlur={() => setFocusedInput(null)}
+                  placeholder={generalForm.name || 'اسم قصير'}
+                  disabled={!canUpdateSettings}
+                />
+                <p style={{ color: C.muted, fontSize: 11.5, marginTop: 5, lineHeight: 1.8 }}>
+                  يظهر تحت أيقونة متجرك على شاشة هاتف الزبون. اتركه فارغاً
+                  لاستعمال الاسم الكامل — لكن الشاشة تعرض نحو ١٢ محرفاً ثم تقطع.
+                </p>
+              </div>
+              <div>
                 <label style={labelStyle}>البريد الإلكتروني</label>
                 <input
                   type="email"
@@ -728,6 +762,21 @@ const StoreSettingsPage: React.FC = () => {
               </div>
             </div>
             <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>يمكنك الحصول على الإحداثيات من خرائط جوجل</p>
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <LanguageDisplaySettings
+              enabledLanguages={generalForm.enabledLanguages}
+              defaultLanguage={generalForm.language}
+              onChange={(next) => setGeneralForm({
+                ...generalForm,
+                enabledLanguages: next.enabledLanguages,
+                language: next.defaultLanguage,
+              })}
+              canUseMulti={hasFeature('multi_language')}
+              colors={C}
+              disabled={!canUpdateSettings}
+            />
           </div>
 
           <div style={{ marginTop: 20 }}>
