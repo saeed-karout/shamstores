@@ -18,7 +18,6 @@ import {
 } from 'react-icons/io5';
 
 import PublicAdvertisements from '@/components/public/PublicAdvertisements';
-import PublicOffers from '@/components/public/PublicOffers';
 import PublicMarketingSections from '@/components/public/PublicMarketingSections';
 import PublicFooter from '@/components/public/PublicFooter';
 import OrderTrackingModal from '@/components/OrderTrackingModal';
@@ -802,7 +801,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                         businessType="restaurant"
                         limitPerSection={6}
                       />
-                      <PublicOffers businessId={restaurant.id} businessType="restaurant" limit={4} />
                     </div>
                   )}
                 </React.Fragment>
@@ -817,7 +815,6 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   businessType="restaurant"
                   limitPerSection={6}
                 />
-                <PublicOffers businessId={restaurant.id} businessType="restaurant" limit={4} />
               </div>
             )}
 

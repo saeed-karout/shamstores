@@ -36,7 +36,6 @@ import {
 } from 'react-icons/io5';
 
 import PublicAdvertisements from '@/components/public/PublicAdvertisements';
-import PublicOffers from '@/components/public/PublicOffers';
 import PublicMarketingSections from '@/components/public/PublicMarketingSections';
 import PublicFooter from '@/components/public/PublicFooter';
 import OrderTrackingModal from '@/components/OrderTrackingModal';
@@ -921,7 +920,6 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         {!isSearching && !onlyDiscounted && (
           <div style={{ marginTop: 28 }}>
             <PublicMarketingSections businessId={store.id} businessType="store" limitPerSection={6} />
-            <PublicOffers businessId={store.id} businessType="store" limit={4} />
             <div style={{ marginTop: 24 }}>
               <PublicAdvertisements
                 businessId={store.id}
