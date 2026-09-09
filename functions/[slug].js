@@ -41,8 +41,23 @@ const clamp = (value, max) => {
   return text.length <= max ? text : `${text.slice(0, max - 1).trim()}…`;
 };
 
-const fetchSeo = async (origin, slug, waitUntil) => {
-  const url = `${origin}/api/public/${encodeURIComponent(slug)}/seo`;
+/**
+ * أصل الواجهة البرمجية — **الخادم مباشرةً لا عبر نطاقنا**.
+ *
+ * نداءُ `https://shamstores.com/api/...` من داخل وظيفةٍ على Pages لا يمرّ
+ * بقاعدة الوكيل التي تحوّل `/api` إلى Heroku: كلاودفلير لا تُعيد إدخال
+ * الطلبات الفرعية في قواعد النطاق نفسه منعاً للحلقات. فيصل الطلب إلى أصول
+ * Pages، ويلتقطه `_redirects` فيُرجع **index.html** — ويفشل `response.json()`
+ * بـ«Unexpected token '<'». وهو ما وقع فعلاً، ولولا الترويسة التشخيصية
+ * لبدا العطل «الوظيفة لا تعمل».
+ *
+ * يُضبط من متغيّرات المشروع عند الحاجة؛ وإلا فالأصل المعروف.
+ */
+const API_ORIGIN = 'https://shamstores-5fa37cec9e6e.herokuapp.com';
+
+const fetchSeo = async (origin, slug, waitUntil, env) => {
+  const base = (env && env.API_ORIGIN) || API_ORIGIN;
+  const url = `${base}/api/public/${encodeURIComponent(slug)}/seo`;
   const cache = caches.default;
   const cacheKey = new Request(url, { method: 'GET' });
 
@@ -131,15 +146,27 @@ class SetText {
   }
 }
 
+/**
+ * ترويسة تشخيصية.
+ *
+ * بلا إشارةٍ من الوظيفة لا سبيل للتمييز بين «لم تُستدعَ أصلاً» و«استُدعيت
+ * وتخطّت» — والعطلان يبدوان واحداً: صفحةٌ بلا وسوم.
+ */
+const tag = (response, state) => {
+  const out = new Response(response.body, response);
+  out.headers.set('x-sham-seo', state);
+  return out;
+};
+
 export async function onRequestGet(context) {
-  const { request, params, next, waitUntil } = context;
+  const { request, params, next, waitUntil, env } = context;
 
   try {
     const slug = String(params.slug || '').trim();
 
     // الملفّات لها امتداد، والمسارات المحجوزة ليست متاجر
     if (!slug || slug.includes('.') || RESERVED.has(slug.toLowerCase())) {
-      return next();
+      return tag(await next(), 'reserved');
     }
 
     const response = await next();
@@ -147,8 +174,8 @@ export async function onRequestGet(context) {
     if (!contentType.includes('text/html')) return response;
 
     const url = new URL(request.url);
-    const data = await fetchSeo(url.origin, slug, waitUntil);
-    if (!data) return response;
+    const data = await fetchSeo(url.origin, slug, waitUntil, env);
+    if (!data) return tag(response, 'nodata');
 
     const pageUrl = `${url.origin}/${slug}`;
     const title = `${data.name} — ${data.type === 'restaurant' ? 'قائمة الطعام والطلب أونلاين' : 'تسوّق أونلاين'}`;
@@ -190,10 +217,10 @@ export async function onRequestGet(context) {
           element.append(`<script type="application/ld+json">${jsonLd}</script>`, { html: true });
         }
       })
-      .transform(response);
+      .transform(tag(response, 'hit'));
   } catch (error) {
     // لا تُسقط الصفحة لأجل وسم: الزائر أهمّ من الزاحف
     console.error('SEO rewrite failed:', error);
-    return next();
+    return tag(await next(), `error:${String(error).slice(0, 60)}`);
   }
 }
