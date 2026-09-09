@@ -125,6 +125,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   // لغة عرض المحتوى — من إعدادات المطعم التي يحسبها الخادم بحسب استحقاق
   // `multi_language`، فلا يظهر الزرّ لمن لم يشترِ الميزة
   const language = useStorefrontLanguage(urlSlug, (restaurant as any)?.languageSettings);
+
+  // المعرّف اللفظي للروابط — من الكائن إن حُمّل، وإلا من المسار
+  const menuSlug = (restaurant as any)?.slug || urlSlug || '';
   // الصفحة فوق المزوّد فلا تراه — تبني دالّتها من نفس اللغة
   const t = useMemo(() => makeT(language.lang), [language.lang]);
 
@@ -720,6 +723,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 {sortItems(searchResults).map((item) => (
                   <MenuItemListCard
                     key={item.id}
+                    href={`/${menuSlug}/item/${item.id}`}
                     item={item}
                     currency={currency}
                     quantityInCart={quantityByItemId.get(item.id) || 0}
@@ -769,6 +773,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                       {sortItems(category.menuItems || []).map((item) => (
                         <MenuItemListCard
                           key={item.id}
+                          href={`/${menuSlug}/item/${item.id}`}
                           item={item}
                           currency={currency}
                           quantityInCart={quantityByItemId.get(item.id) || 0}
@@ -909,6 +914,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   {sortItems(searchResults).map((item) => (
                     <MenuItemListCard
                       key={item.id}
+                      href={`/${menuSlug}/item/${item.id}`}
                       item={item}
                       currency={currency}
                       quantityInCart={quantityByItemId.get(item.id) || 0}

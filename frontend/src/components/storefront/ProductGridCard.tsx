@@ -43,9 +43,37 @@ interface Props {
   onAdd: (product: StorefrontProduct) => void;
   onQuantityChange: (product: StorefrontProduct, next: number) => void;
   onOpen?: (product: StorefrontProduct) => void;
+  /**
+   * رابط صفحة المنتج.
+   *
+   * **لماذا رابطٌ حقيقيّ لا `onClick` وحده:** زاحف جوجل يتبع `<a href>` ولا
+   * يضغط `div`. فكانت صفحات المنتجات موجودة في التطبيق وغير مفهرسة —
+   * ونبّه تقرير Lighthouse: «لا يمكن الزحف إلى الروابط».
+   *
+   * ويكسب الزبون معه ما يتوقّعه من أي متجر: فتحٌ في لسانٍ جديد، ونسخُ
+   * الرابط، وزرُّ الرجوع.
+   */
+  href?: string;
   isFavorite?: boolean;
   onToggleFavorite?: (product: StorefrontProduct) => void;
 }
+
+/**
+ * نقرةٌ تفتح النافذة السريعة — إلا حين يقصد الزبون لساناً جديداً.
+ *
+ * `preventDefault` بلا شرطٍ يكسر Ctrl+نقر والنقر الأوسط، وهما ما يفعله من
+ * يقارن منتجين. فالمفاتيح تُفحص أوّلاً ويُترك المتصفّح يتصرّف.
+ */
+const openInPlace = (
+  event: React.MouseEvent,
+  handler?: () => void
+): void => {
+  if (!handler) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (event.button !== 0) return;
+  event.preventDefault();
+  handler();
+};
 
 const BADGE_TONE: Record<string, { bg: string; color: string }> = {
   discount: { bg: '#FF6B6B', color: '#fff' },
@@ -75,6 +103,7 @@ const ProductGridCard: React.FC<Props> = ({
   onAdd,
   onQuantityChange,
   onOpen,
+  href,
   isFavorite,
   onToggleFavorite
 }) => {
@@ -214,10 +243,11 @@ const ProductGridCard: React.FC<Props> = ({
 
       {/* النص */}
       <div style={{ padding: '10px 11px 12px', display: 'flex', flexDirection: 'column', flex: 1, gap: 6 }}>
+        {/* **العنوان رابطٌ حقيقيّ لا الصورة.** زرّ المفضّلة داخل كتلة
+            الصورة، وتعشيق `button` في `a` غير صالح ويكسر قارئات الشاشة.
+            ورابطٌ واحد في البطاقة يكفي الزاحف. */}
         <h3
-          onClick={() => onOpen?.(product)}
           style={{
-            cursor: onOpen ? 'pointer' : 'default',
             color: sf.text,
             fontSize: 13.5,
             fontWeight: 700,
@@ -232,7 +262,17 @@ const ProductGridCard: React.FC<Props> = ({
           }}
           title={product.name}
         >
-          {product.name}
+          <a
+            href={href || undefined}
+            onClick={(e) => openInPlace(e, onOpen ? () => onOpen(product) : undefined)}
+            style={{
+              color: 'inherit',
+              textDecoration: 'none',
+              cursor: onOpen || href ? 'pointer' : 'default'
+            }}
+          >
+            {product.name}
+          </a>
         </h3>
 
         <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 8 }}>

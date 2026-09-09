@@ -314,6 +314,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   // لغة عرض المحتوى — من إعدادات المتجر التي يحسبها الخادم بحسب استحقاق
   // `multi_language`، فلا يظهر الزرّ لمن لم يشترِ الميزة
   const language = useStorefrontLanguage(urlSlug, (store as any)?.languageSettings);
+
+  // المعرّف اللفظي للروابط — من الكائن إن حُمّل، وإلا من المسار
+  const storeSlug = (store as any)?.slug || urlSlug || '';
   // الصفحة فوق المزوّد فلا تراه — تبني دالّتها من نفس اللغة
   const t = useMemo(() => makeT(language.lang), [language.lang]);
 
@@ -931,6 +934,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               {visibleProducts.map((product) => (
                 <ProductGridCard
                   key={product.id}
+                  href={`/${storeSlug}/product/${product.id}`}
                   product={product}
                   currency={currency}
                   quantityInCart={quantityByProductId.get(product.id) || 0}
@@ -1029,6 +1033,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 {visibleProducts.map((product) => (
                   <ProductGridCard
                     key={product.id}
+                    href={`/${storeSlug}/product/${product.id}`}
                     product={product}
                     currency={currency}
                     quantityInCart={quantityByProductId.get(product.id) || 0}
@@ -1147,6 +1152,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             {favoriteProducts.map((product) => (
               <ProductGridCard
                 key={product.id}
+                href={`/${storeSlug}/product/${product.id}`}
                 product={product}
                 currency={currency}
                 quantityInCart={quantityByProductId.get(product.id) || 0}

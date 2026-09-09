@@ -44,6 +44,14 @@ export interface MenuItemListCardProps {
   onAdd: (item: StorefrontMenuItem) => void;
   onQuantityChange?: (item: StorefrontMenuItem, next: number) => void;
   onOpenDetails?: (item: StorefrontMenuItem) => void;
+  /**
+   * رابط صفحة الصنف.
+   *
+   * زاحف جوجل يتبع `<a href>` ولا يضغط `div`. فكانت صفحات الأصناف موجودة
+   * في التطبيق وغير مفهرسة — ونبّه تقرير Lighthouse: «لا يمكن الزحف إلى
+   * الروابط».
+   */
+  href?: string;
   isFavorite?: boolean;
   onToggleFavorite?: (item: StorefrontMenuItem) => void;
 }
@@ -60,6 +68,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
   onAdd,
   onQuantityChange,
   onOpenDetails,
+  href,
   isFavorite = false,
   onToggleFavorite
 }) => {
@@ -181,7 +190,24 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
               overflow: 'hidden'
             }}
           >
-            {item.name}
+            {/* الرابط داخل العنوان لا حول البطاقة: البطاقة تحوي أزرار
+                الكمية والمفضّلة، وتعشيق `button` في `a` غير صالح */}
+            <a
+              href={href || undefined}
+              onClick={(e) => {
+                // المفاتيح تُفحص أوّلاً: `preventDefault` بلا شرطٍ يكسر
+                // Ctrl+نقر والنقر الأوسط، وهما ما يفعله من يقارن صنفين
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                if (e.button !== 0) return;
+                if (unavailable || !onOpenDetails) return;
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenDetails(item);
+              }}
+              style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+              {item.name}
+            </a>
           </h3>
 
           {onToggleFavorite && (
