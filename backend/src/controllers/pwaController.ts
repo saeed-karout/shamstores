@@ -29,6 +29,8 @@ interface Business {
   cardColor: string;
   mutedColor: string;
   pwaShortName: string | null;
+  subdomain: string | null;
+  customDomain: string | null;
 }
 
 /**
@@ -50,7 +52,9 @@ const findBusiness = async (slug: string): Promise<Business | null> => {
     textColor: true,
     cardColor: true,
     mutedColor: true,
-    pwaShortName: true
+    pwaShortName: true,
+    subdomain: true,
+    customDomain: true
   } as const;
 
   const restaurant = await prisma.restaurant.findUnique({ where: { slug }, select });
@@ -65,19 +69,42 @@ const findBusiness = async (slug: string): Promise<Business | null> => {
 /**
  * نطاق التطبيق داخل الموقع.
  *
- * **على نطاقٍ خاصّ بالمتجر يكون الجذر** — متجره وحده هناك. وعلى نطاق
- * المنصّة يكون `/<slug>` لأن كل المتاجر تتشارك الأصل، وبيانٌ نطاقه `/`
- * كان سيجعل تثبيت متجرين يتعارض.
+ * **يُسأل: هل هذا نطاق المتجر نفسه؟ — لا: هل هو نطاق المنصّة؟**
+ *
+ * كان السؤال معكوساً، يقارن `req.hostname` بـ`APP_DOMAIN`. والطلب يمرّ عبر
+ * Cloudflare إلى Heroku فتصل الترويسة باسمٍ غير اسم النطاق العامّ،
+ * فيُحسَب كل طلبٍ «نطاقاً خاصّاً» ويخرج البيان بـ`scope: "/"` و
+ * `start_url: "/"` — أي أن زبوناً يثبّت «Disney Store» يفتح **صفحة
+ * المنصّة الرئيسية**. عطلٌ صامت: البيان صحيح البنية، والأيقونة صحيحة،
+ * والتطبيق يفتح المكان الخطأ.
+ *
+ * والسؤال الجديد لا يحتاج معرفة نطاق المنصّة أصلاً: يقارن المضيف بنطاق
+ * **هذا المتجر** المخزَّن في سجلّه. فإن طابقه فهو بيته وله الجذر، وإلا
+ * فهو ضيفٌ على نطاقٍ مشترك وله `/<slug>`.
  */
-const isPlatformHost = (req: Request): boolean => {
-  const host = (req.hostname || '').toLowerCase();
-  const platform = (process.env.APP_DOMAIN || 'shamstores.com').toLowerCase();
-  return host === platform || host.endsWith(`.${platform}`) || host === 'localhost';
+const hostOf = (req: Request): string =>
+  String(req.headers['x-forwarded-host'] || req.hostname || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase();
+
+const isOwnDomain = (req: Request, business: Business): boolean => {
+  const host = hostOf(req);
+  if (!host) return false;
+
+  const custom = (business.customDomain || '').toLowerCase().replace(/^www\./, '');
+  if (custom && (host === custom || host === `www.${custom}`)) return true;
+
+  // النطاق الفرعي: `<subdomain>.shamstores.com` بيتُ المتجر أيضاً
+  const sub = (business.subdomain || '').toLowerCase();
+  if (sub && host.split('.')[0] === sub) return true;
+
+  return false;
 };
 
-const scopeFor = (req: Request, slug: string): { scope: string; start: string } => {
-  if (!isPlatformHost(req)) return { scope: '/', start: '/' };
-  return { scope: `/${slug}`, start: `/${slug}` };
+const scopeFor = (req: Request, business: Business): { scope: string; start: string } => {
+  if (isOwnDomain(req, business)) return { scope: '/', start: '/' };
+  return { scope: `/${business.slug}`, start: `/${business.slug}` };
 };
 
 const hexOrDefault = (value: string | null | undefined, fallback: string): string =>
@@ -104,7 +131,7 @@ export const getStoreManifest = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    const { scope, start } = scopeFor(req, business.slug);
+    const { scope, start } = scopeFor(req, business);
     const theme = hexOrDefault(business.primaryColor, '#0D4A3A');
     const background = hexOrDefault(business.backgroundColor, '#082E24');
     const base = `/api/public/${encodeURIComponent(business.slug)}/pwa-icon`;

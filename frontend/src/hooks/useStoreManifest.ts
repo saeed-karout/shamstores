@@ -50,12 +50,37 @@ const restorePlatform = () => {
   });
 };
 
+/**
+ * يضبط وسم `meta` — **بالتعديل إن وُجد لا بإضافة ثانٍ**.
+ *
+ * المتصفّح يقرأ **أوّل** وسمٍ بالاسم نفسه. وإضافة `theme-color` ثانٍ في
+ * نهاية `head` كانت تترك لون شريط المتصفّح على أخضر المنصّة رغم أن اللون
+ * الصحيح موجودٌ في الصفحة — وسمٌ يُكتب ولا يُقرأ.
+ *
+ * والقيمة الأصلية تُحفَظ لتُعاد عند مغادرة صفحة المتجر.
+ */
 const setMeta = (name: string, content: string) => {
+  const existing = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  if (existing) {
+    if (!existing.hasAttribute('data-sham-prev')) {
+      existing.setAttribute('data-sham-prev', existing.getAttribute('content') || '');
+    }
+    existing.setAttribute('content', content);
+    return;
+  }
   const meta = document.createElement('meta');
   meta.setAttribute('name', name);
   meta.setAttribute('content', content);
   meta.setAttribute(MARK, '');
   document.head.appendChild(meta);
+};
+
+/** يعيد الوسوم المعدَّلة إلى قيمها الأصلية */
+const restoreMeta = () => {
+  document.querySelectorAll<HTMLMetaElement>('meta[data-sham-prev]').forEach((el) => {
+    el.setAttribute('content', el.getAttribute('data-sham-prev') || '');
+    el.removeAttribute('data-sham-prev');
+  });
 };
 
 /**
@@ -134,6 +159,7 @@ export const useStoreManifest = (slug?: string | null): PwaStatus => {
     return () => {
       cancelled = true;
       removeInjected();
+      restoreMeta();
       restorePlatform();
     };
   }, [slug]);
