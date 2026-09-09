@@ -94,6 +94,11 @@ export const getBusinessBySlug = async (
         data: {
           id: restaurant.id,
           name: restaurant.name,
+          // الاسم والوصف بالإنجليزية — تقرؤهما الواجهة عند تبديل
+          // اللغة. الحمولة مبنيّة حقلاً حقلاً، فعمودٌ جديد يبقى
+          // محجوباً حتى يُضاف هنا صراحةً.
+          nameEn: restaurant.nameEn,
+          descriptionEn: restaurant.descriptionEn,
           slug: restaurant.slug,
           subdomain: restaurant.subdomain,
           customDomain: restaurant.customDomainVerified ? restaurant.customDomain : null,
@@ -181,6 +186,11 @@ export const getBusinessBySlug = async (
         data: {
           id: store.id,
           name: store.name,
+          // الاسم والوصف بالإنجليزية — تقرؤهما الواجهة عند تبديل
+          // اللغة. الحمولة مبنيّة حقلاً حقلاً، فعمودٌ جديد يبقى
+          // محجوباً حتى يُضاف هنا صراحةً.
+          nameEn: store.nameEn,
+          descriptionEn: store.descriptionEn,
           slug: store.slug,
           subdomain: store.subdomain,
           customDomain: store.customDomainVerified ? store.customDomain : null,
@@ -325,6 +335,11 @@ export const getTableById = async (
         restaurant: {
           id: restaurant.id,
           name: restaurant.name,
+          // الاسم والوصف بالإنجليزية — تقرؤهما الواجهة عند تبديل
+          // اللغة. الحمولة مبنيّة حقلاً حقلاً، فعمودٌ جديد يبقى
+          // محجوباً حتى يُضاف هنا صراحةً.
+          nameEn: restaurant.nameEn,
+          descriptionEn: restaurant.descriptionEn,
           slug: restaurant.slug,
           logo: restaurant.logo,
           primaryColor: restaurant.primaryColor,
@@ -401,6 +416,11 @@ export const getProductById = async (
         store: {
           id: store.id,
           name: store.name,
+          // الاسم والوصف بالإنجليزية — تقرؤهما الواجهة عند تبديل
+          // اللغة. الحمولة مبنيّة حقلاً حقلاً، فعمودٌ جديد يبقى
+          // محجوباً حتى يُضاف هنا صراحةً.
+          nameEn: store.nameEn,
+          descriptionEn: store.descriptionEn,
           slug: store.slug,
           logo: store.logo,
           primaryColor: store.primaryColor,
@@ -482,6 +502,11 @@ export const getMenuItemById = async (
         restaurant: {
           id: restaurant.id,
           name: restaurant.name,
+          // الاسم والوصف بالإنجليزية — تقرؤهما الواجهة عند تبديل
+          // اللغة. الحمولة مبنيّة حقلاً حقلاً، فعمودٌ جديد يبقى
+          // محجوباً حتى يُضاف هنا صراحةً.
+          nameEn: restaurant.nameEn,
+          descriptionEn: restaurant.descriptionEn,
           slug: restaurant.slug,
           logo: restaurant.logo,
           primaryColor: restaurant.primaryColor,
@@ -650,6 +675,11 @@ export const getMenuItemByShareToken = async (
         restaurant: {
           id: restaurant.id,
           name: restaurant.name,
+          // الاسم والوصف بالإنجليزية — تقرؤهما الواجهة عند تبديل
+          // اللغة. الحمولة مبنيّة حقلاً حقلاً، فعمودٌ جديد يبقى
+          // محجوباً حتى يُضاف هنا صراحةً.
+          nameEn: restaurant.nameEn,
+          descriptionEn: restaurant.descriptionEn,
           slug: restaurant.slug,
           logo: restaurant.logo,
           primaryColor: restaurant.primaryColor,
