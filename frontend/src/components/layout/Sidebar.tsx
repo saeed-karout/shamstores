@@ -151,6 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     items.push({ path: '/restaurant/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
     items.push({ path: '/restaurant/campaigns', icon: IoMegaphone, label: 'حملات الزبائن', badge: 'جديد' });
     items.push({ path: '/restaurant/automations', icon: IoFlash, label: 'رسائل تلقائية', badge: 'جديد' });
+    items.push({ path: '/restaurant/shipping', icon: IoNavigate, label: 'مناطق التوصيل', badge: 'جديد' });
     items.push({ path: '/restaurant/pos', icon: IoCard, label: 'الكاشير', badge: 'جديد' });
     items.push({ path: '/restaurant/affiliates', icon: IoTrendingUp, label: 'المسوّقون', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });
@@ -183,6 +184,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     items.push({ path: '/store/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
     items.push({ path: '/store/campaigns', icon: IoMegaphone, label: 'حملات الزبائن', badge: 'جديد' });
     items.push({ path: '/store/automations', icon: IoFlash, label: 'رسائل تلقائية', badge: 'جديد' });
+    items.push({ path: '/store/shipping', icon: IoNavigate, label: 'مناطق التوصيل', badge: 'جديد' });
     items.push({ path: '/store/pos', icon: IoCard, label: 'الكاشير', badge: 'جديد' });
     items.push({ path: '/store/affiliates', icon: IoTrendingUp, label: 'المسوّقون', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });

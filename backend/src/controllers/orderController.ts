@@ -1,6 +1,7 @@
 // backend/src/controllers/orderController.ts
 
 import { Response } from 'express';
+import shippingService from '../services/shipping.service';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { isPaymentMethodAllowed } from '../services/payment.service';
@@ -253,6 +254,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       orderType = 'dine_in',
       deliveryAddress, deliveryLat, deliveryLng,
       deliveryFee: providedDeliveryFee,
+      governorate,
       deliveryDistance: providedDeliveryDistance
     } = req.body;
 
@@ -491,7 +493,40 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       computedDiscount = Math.round(computedDiscount * 100) / 100;
     }
 
-    const finalDeliveryFee = Math.max(0, Number(providedDeliveryFee) || 0);
+    // ==================== أجرة المحافظة ====================
+    //
+    // **تُحسَب هنا لا تُقبَل من الواجهة.** الأجرة تدخل في مبلغ الطلب، وقبولُ
+    // ما يُرسَل يعني زبوناً يبدّل الرقم في أدوات المطوّر فيدفع صفراً. ما
+    // يُقبل من الواجهة اختيارُ محافظةٍ فقط.
+    //
+    // وحين لا تُرسَل محافظة يبقى السلوك القديم كما هو — متاجرُ لم تضبط
+    // مناطقها بعد تعمل بلا تغيير.
+    let finalDeliveryFee = Math.max(0, Number(providedDeliveryFee) || 0);
+    let effectiveOrderType = orderType;
+
+    const zoneBusinessId = storeId || restaurantId;
+    const zoneBusinessType = storeId ? 'store' : 'restaurant';
+
+    if (governorate && zoneBusinessId && (orderType === 'delivery' || orderType === 'shipping')) {
+      const zoneQuote = await shippingService.quote(
+        zoneBusinessId,
+        zoneBusinessType as 'store' | 'restaurant',
+        String(governorate),
+        Math.max(0, computedSubtotal - computedDiscount)
+      );
+
+      if (!zoneQuote.ok) {
+        res.status(400).json({ success: false, error: zoneQuote.error || 'محافظة غير مدعومة' });
+        return;
+      }
+
+      finalDeliveryFee = zoneQuote.fee;
+
+      // **هنا يُحسم من يُسلّم.** المنطقة المضبوطة على `shipping` تُنتج طلباً
+      // من نوع `shipping` — ولا يمرّ بالتوزيع التلقائي أدناه، ولا يُشعَر به
+      // أي سائق (`driverPush` يتخطّى ما ليس `delivery`).
+      effectiveOrderType = zoneQuote.deliveryMode === 'driver' ? 'delivery' : 'shipping';
+    }
     const finalDeliveryDistance = Math.max(0, Number(providedDeliveryDistance) || 0);
     const finalTotal = Math.max(0, computedSubtotal - computedDiscount);
 
@@ -510,7 +545,8 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       total: Math.round((finalTotal + finalDeliveryFee) * 100) / 100,
       notes: notes || null,
       paymentMethod,
-      orderType: orderType,
+      orderType: effectiveOrderType,
+      governorate: governorate || null,
       deliveryAddress: deliveryAddress || null,
       deliveryLat: deliveryLat || null,
       deliveryLng: deliveryLng || null,
@@ -526,8 +562,12 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
 
     if (userId) orderData.createdBy = userId;
 
-    // التوزيع التلقائي للسائق (للمتاجر فقط)
-    if (storeId && orderType === 'delivery') {
+    // التوزيع التلقائي للسائق (للمتاجر فقط).
+    //
+    // `effectiveOrderType` لا `orderType`: طلبُ محافظةٍ بعيدة صار `shipping`
+    // أعلاه، وإسنادُه إلى سائقٍ في مدينة المتجر يعني سائقاً يرفض وطلباً
+    // يتعطّل بلا سببٍ ظاهر لأحد.
+    if (storeId && effectiveOrderType === 'delivery') {
       const bestDriver = await findBestDriver(storeId, deliveryLat, deliveryLng);
       if (bestDriver) {
         orderData.assignedDriverId = bestDriver.id;

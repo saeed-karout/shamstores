@@ -39,6 +39,12 @@ enum OrderType {
   dine_in
   delivery
   takeaway
+  /// شحنٌ إلى محافظة أخرى عبر شركة شحن.
+  ///
+  /// **منفصلٌ عن `delivery` عمداً:** التوصيل يذهب إلى سائق المتجر، والشحن
+  /// لا. ولو وُضعا في قيمةٍ واحدة لأُسنِد طلبُ حلبَ إلى سائقٍ في دمشق —
+  /// وهو ما يجعل السائق يرفض والطلب يتعطّل بلا سببٍ ظاهر.
+  shipping
 }
 
 enum DiscountType {
@@ -811,6 +817,8 @@ model Order {
   estimatedDeliveryTime  Int?
   actualDeliveryTime     Int?
   deliveryFee            Float?             @default(0)
+  /// محافظة التسليم — أساسُ حساب الأجرة وقرارِ السائق أو الشحن
+  governorate            String?
   deliveryDistance       Float?
   driverAcceptedAt       DateTime?
   driverReachedAt        DateTime?
@@ -891,6 +899,47 @@ model OrderItem {
   @@index([orderId])
   @@index([menuItemId])
   @@index([productId])
+}
+
+/// أجرة التوصيل أو الشحن لمحافظة واحدة.
+///
+/// **صفٌّ لكل محافظة لا رقمٌ واحد للمتجر:** كان `deliveryFee` رقماً وحيداً،
+/// فتاجرٌ في دمشق يبيع إلى حلب لا يستطيع تسعير الفرق — فيضع رقماً وسطاً
+/// يخسر به في البعيد ويخسر الزبون في القريب.
+model ShippingZone {
+  id           String @id @default(cuid())
+  businessId   String @map("business_id")
+  /// restaurant | store
+  businessType String @map("business_type")
+
+  /// رمز المحافظة — راجع config/syria.ts، وهو المرجع الوحيد للقائمة
+  governorate String
+
+  fee Float @default(0)
+
+  /// شحنٌ مجانيّ فوق هذا المبلغ. `null` يعني «لا شحن مجاني».
+  ///
+  /// والصفر ليس بديلاً عن `null`: صفرٌ يعني «كل الطلبات مجانية» وهو قرارٌ
+  /// مختلف تماماً.
+  freeOverAmount Float? @map("free_over_amount")
+
+  /// مدّة التسليم المتوقّعة بالأيام — تُعرض للزبون قبل الدفع
+  estimatedDays Int? @map("estimated_days")
+
+  /// `driver` يُسنَد لسائق المتجر، و`shipping` لشركة شحن.
+  ///
+  /// **هذا ما يمنع إسناد طلب حلبَ إلى سائقٍ في دمشق.** والقرار للتاجر لا
+  /// للنظام: قد يكون له سائقٌ في محافظتين.
+  deliveryMode String @default("shipping") @map("delivery_mode")
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([businessId, businessType, governorate])
+  @@index([businessId, businessType, isActive])
+  @@map("shipping_zones")
 }
 
 model Coupon {

@@ -67,6 +67,7 @@ const AdminPushNotifications = lazy(() => import('./pages/Admin/AdminPushNotific
 const CustomersPage = lazy(() => import('./pages/Store/CustomersPage'));
 const CampaignsPage = lazy(() => import('./pages/Store/CampaignsPage'));
 const AutomationsPage = lazy(() => import('./pages/Store/AutomationsPage'));
+const ShippingZonesPage = lazy(() => import('./pages/Store/ShippingZonesPage'));
 const PosPage = lazy(() => import('./pages/Store/PosPage'));
 const AffiliatesPage = lazy(() => import('./pages/Store/AffiliatesPage'));
 const AdminFeatures = lazy(() => import('./pages/Admin/AdminFeatures'));
@@ -323,6 +324,8 @@ const MainApp: React.FC = () => {
             <Route path="/restaurant/campaigns" element={<CampaignsPage />} />
             <Route path="/store/automations" element={<AutomationsPage />} />
             <Route path="/restaurant/automations" element={<AutomationsPage />} />
+            <Route path="/store/shipping" element={<ShippingZonesPage />} />
+            <Route path="/restaurant/shipping" element={<ShippingZonesPage />} />
             {/* الحارس في الخادم لا هنا: `pos` إضافة مدفوعة تُفحص على كل مسار */}
             <Route path="/store/pos" element={<PosPage />} />
             <Route path="/restaurant/pos" element={<PosPage />} />
