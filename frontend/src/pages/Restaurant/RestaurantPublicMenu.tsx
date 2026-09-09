@@ -588,7 +588,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       />
 
       <StorefrontLayout
-        name={restaurant.name}
+        name={language.pick(restaurant, 'name')}
         description={restaurant.description}
         logo={restaurant.logo}
         coverImage={restaurant.coverImage}
@@ -618,7 +618,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         }
         footer={
           <PublicFooter
-            businessName={restaurant.name}
+            businessName={language.pick(restaurant, 'name')}
             businessType="restaurant"
             businessLogo={restaurant.logo}
             businessSlug={restaurant.slug}

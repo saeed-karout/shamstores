@@ -182,6 +182,8 @@ export const SettingsPage: React.FC = () => {
     language: 'ar',
     /** الاسم تحت أيقونة التطبيق المثبَّت — الشاشة تعرض نحو ١٢ محرفاً */
     pwaShortName: '',
+    nameEn: '',
+    descriptionEn: '',
   });
 
   // ✅ جميع ألوان المطعم
@@ -242,6 +244,8 @@ export const SettingsPage: React.FC = () => {
         })(),
         language: (restaurant as any).language || 'ar',
         pwaShortName: (restaurant as any).pwaShortName || '',
+        nameEn: (restaurant as any).nameEn || '',
+        descriptionEn: (restaurant as any).descriptionEn || '',
       });
 
       // ✅ تحميل جميع ألوان المطعم
@@ -535,6 +539,23 @@ export const SettingsPage: React.FC = () => {
                   onBlur={() => setFocusedInput(null)}
                 />
               </div>
+              <div>
+                <label style={labelStyle}>الاسم بالإنجليزية</label>
+                <input
+                  type="text"
+                  value={generalForm.nameEn}
+                  onChange={(e) => setGeneralForm({ ...generalForm, nameEn: e.target.value })}
+                  style={getInput('nameEn')}
+                  onFocus={() => setFocusedInput('nameEn')}
+                  onBlur={() => setFocusedInput(null)}
+                  placeholder="English name"
+                  dir="ltr"
+                />
+                <p style={{ color: C.muted, fontSize: 11.5, marginTop: 5, lineHeight: 1.8 }}>
+                  يظهر حين يبدّل الزبون اللغة. اتركه فارغاً ليبقى الاسم العربي.
+                </p>
+              </div>
+
               <div>
                 <label style={labelStyle}>البريد الإلكتروني</label>
                 <input

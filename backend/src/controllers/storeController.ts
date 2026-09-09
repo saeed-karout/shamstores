@@ -515,7 +515,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
       deliverySettings, paymentSettings, notificationSettings, enabledLanguages,
-      enabledCurrencies, pwaShortName,
+      enabledCurrencies, pwaShortName, nameEn, descriptionEn,
       isActive 
     } = req.body;
     
@@ -532,6 +532,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (phone !== undefined) updateData.phone = phone;
     if (address !== undefined) updateData.address = address;
     if (description !== undefined) updateData.description = description;
+    if (descriptionEn !== undefined) updateData.descriptionEn = descriptionEn || null;
     
     if (primaryColor !== undefined) updateData.primaryColor = primaryColor;
     if (secondaryColor !== undefined) updateData.secondaryColor = secondaryColor;
@@ -541,6 +542,12 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (textColor !== undefined) updateData.textColor = textColor;
     if (mutedColor !== undefined) updateData.mutedColor = mutedColor;
     if (accentColor !== undefined) updateData.accentColor = accentColor;
+    // الاسم والوصف بالإنجليزية — الفراغ يُخزَّن `null` لا نصّاً فارغاً،
+    // فيرتدّ العرض إلى العربية بدل أن يُظهر سطراً خالياً
+    if (nameEn !== undefined) updateData.nameEn = String(nameEn || '').trim() || null;
+    if (descriptionEn !== undefined) {
+      updateData.descriptionEn = String(descriptionEn || '').trim() || null;
+    }
     // الاسم القصير: الفراغ يعني «عُد إلى الاسم الكامل» لا نصّاً فارغاً —
     // وإلا ظهرت الأيقونة بلا اسم على شاشة الزبون
     if (pwaShortName !== undefined) {
@@ -715,7 +722,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
+    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
     
     if (!name) {
       res.status(400).json({ success: false, error: 'اسم المنتج مطلوب' });
@@ -737,6 +744,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
         nameEn: nameEn || null,
         sku,
         description: description || null,
+        descriptionEn: descriptionEn || null,
         price: parseFloat(price),
         cost: cost ? parseFloat(cost) : null,
         stock: stock || 0,
@@ -791,7 +799,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
+    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
     
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;

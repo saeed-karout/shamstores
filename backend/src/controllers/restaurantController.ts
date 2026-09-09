@@ -294,7 +294,7 @@ export const updateProfile = async (
       textColor, mutedColor, accentColor, fontFamily,
       subdomain, customDomain, isActive, deliverySettings,
       paymentSettings, currency, enabledCurrencies, language, enabledLanguages,
-      pwaShortName
+      pwaShortName, nameEn, descriptionEn
     } = req.body;
 
     let restaurant = null;
@@ -375,6 +375,11 @@ export const updateProfile = async (
     if (textColor !== undefined) updateData.textColor = textColor;
     if (mutedColor !== undefined) updateData.mutedColor = mutedColor;
     if (accentColor !== undefined) updateData.accentColor = accentColor;
+    // الاسم والوصف بالإنجليزية — الفراغ `null` فيرتدّ العرض إلى العربية
+    if (nameEn !== undefined) updateData.nameEn = String(nameEn || '').trim() || null;
+    if (descriptionEn !== undefined) {
+      updateData.descriptionEn = String(descriptionEn || '').trim() || null;
+    }
     // الاسم القصير: الفراغ يعني «عُد إلى الاسم الكامل» لا نصّاً فارغاً
     if (pwaShortName !== undefined) {
       const trimmed = String(pwaShortName || '').trim().slice(0, 24);

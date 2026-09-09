@@ -774,7 +774,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       <StorefrontSeo business={store} type="store" itemCount={products.length} />
 
       <ShopLayout
-        name={store.name}
+        name={language.pick(store, 'name')}
         description={store.description}
         logo={store.logo}
         coverImage={store.coverImage}
@@ -816,7 +816,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         onSearchOpen={() => setSearchOpen(true)}
         footer={
           <PublicFooter
-            businessName={store.name}
+            businessName={language.pick(store, 'name')}
             businessType="store"
             businessLogo={store.logo}
             businessSlug={store.slug}

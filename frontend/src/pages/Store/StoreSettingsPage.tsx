@@ -175,6 +175,8 @@ const StoreSettingsPage: React.FC = () => {
     language: 'ar',
     /** الاسم تحت أيقونة التطبيق المثبَّت — الشاشة تعرض نحو ١٢ محرفاً */
     pwaShortName: '',
+    nameEn: '',
+    descriptionEn: '',
   });
 
   // ✅ بيانات التصميم - جميع الألوان
@@ -246,6 +248,8 @@ const StoreSettingsPage: React.FC = () => {
         })(),
         language: (store as any).language || 'ar',
         pwaShortName: (store as any).pwaShortName || '',
+        nameEn: (store as any).nameEn || '',
+        descriptionEn: (store as any).descriptionEn || '',
       });
 
       setDesignForm({
@@ -605,6 +609,24 @@ const StoreSettingsPage: React.FC = () => {
                   disabled={!canUpdateSettings}
                 />
               </div>
+              <div>
+                <label style={labelStyle}>الاسم بالإنجليزية</label>
+                <input
+                  type="text"
+                  value={generalForm.nameEn}
+                  onChange={(e) => setGeneralForm({ ...generalForm, nameEn: e.target.value })}
+                  style={getInput('nameEn')}
+                  onFocus={() => setFocusedInput('nameEn')}
+                  onBlur={() => setFocusedInput(null)}
+                  placeholder="English name"
+                  dir="ltr"
+                  disabled={!canUpdateSettings}
+                />
+                <p style={{ color: C.muted, fontSize: 11.5, marginTop: 5, lineHeight: 1.8 }}>
+                  يظهر حين يبدّل الزبون اللغة. اتركه فارغاً ليبقى الاسم العربي.
+                </p>
+              </div>
+
               <div>
                 <label style={labelStyle}>اسم التطبيق المختصر</label>
                 <input

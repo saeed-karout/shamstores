@@ -441,6 +441,13 @@ model Restaurant {
   whatsapp                 String?
   address                  String?
   description              String?
+  /// الاسم والوصف بالإنجليزية — يظهران حين يبدّل الزبون اللغة.
+  ///
+  /// **كانا غائبين تماماً:** بُني زرّ اللغة وترجمة الواجهة، وبقي اسم المتجر
+  /// ووصفه عربيّين مهما بدّل الزبون — لأنه لا حقل يحملهما. الفراغ يرتدّ إلى
+  /// العربية، فمن لم يترجم لا يخسر شيئاً.
+  nameEn                       String?
+  descriptionEn                String?
   logo                     String?
   coverImage               String?
   instagram                String?
@@ -533,6 +540,13 @@ model Store {
   userId                  String? // owner can have multiple stores
   address                 String?
   description             String?
+  /// الاسم والوصف بالإنجليزية — يظهران حين يبدّل الزبون اللغة.
+  ///
+  /// **كانا غائبين تماماً:** بُني زرّ اللغة وترجمة الواجهة، وبقي اسم المتجر
+  /// ووصفه عربيّين مهما بدّل الزبون — لأنه لا حقل يحملهما. الفراغ يرتدّ إلى
+  /// العربية، فمن لم يترجم لا يخسر شيئاً.
+  nameEn                       String?
+  descriptionEn                String?
   logo                    String?
   coverImage              String?
   latitude                Float?
@@ -716,6 +730,8 @@ model Product {
   /// يعرف بوجوده. التفرّد في `@@unique([storeId, sku])` أسفل النموذج.
   sku           String
   description   String?
+  /// الوصف بالإنجليزية — يرتدّ إلى العربي حين يكون فارغاً
+  descriptionEn String?
   price         Float
   /// السعر قبل التخفيض. أعلى من price يعني عرضاً؛ مساوٍ أو أقل يُتجاهَل.
   originalPrice Float?
