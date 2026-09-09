@@ -75,6 +75,7 @@ import { useSocket } from '@/hooks/useSocket';
 import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
 import useStoreManifest from '../../hooks/useStoreManifest';
 import useCartSnapshot from '../../hooks/useCartSnapshot';
+import { StorefrontI18nProvider, makeT } from '@/i18n/storefront';
 
 // ==================== الأنواع ====================
 
@@ -312,6 +313,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   // لغة عرض المحتوى — من إعدادات المتجر التي يحسبها الخادم بحسب استحقاق
   // `multi_language`، فلا يظهر الزرّ لمن لم يشترِ الميزة
   const language = useStorefrontLanguage(urlSlug, (store as any)?.languageSettings);
+  // الصفحة فوق المزوّد فلا تراه — تبني دالّتها من نفس اللغة
+  const t = useMemo(() => makeT(language.lang), [language.lang]);
 
   const quantityByProductId = useMemo(() => {
     const map = new Map<string, number>();
@@ -405,7 +408,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     if ((counts.get(UNCATEGORIZED) || 0) > 0) {
       named.push({
         id: UNCATEGORIZED,
-        name: 'منتجات أخرى',
+        name: t('منتجات أخرى'),
         image: null,
         count: counts.get(UNCATEGORIZED)!
       });
@@ -414,7 +417,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     // «الكل» بلاطة مثل غيرها: في نمط البلاطات لا يوجد شريط يحمل خياراً
     // منفصلاً، فبلا هذه لا سبيل للعودة من قسم إلى كل المنتجات
     return named.length > 1
-      ? [{ id: 'all', name: 'كل المنتجات', image: null, count: products.length }, ...named]
+      ? [{ id: 'all', name: t('كل المنتجات'), image: null, count: products.length }, ...named]
       : named;
   }, [products, categories, language]);
 
@@ -552,7 +555,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   // ---------- إرسال الطلب ----------
   const submitOrder = async () => {
     if (cart.length === 0) {
-      toast.error('السلة فارغة');
+      toast.error(t('السلة فارغة'));
       return;
     }
 
@@ -577,11 +580,11 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       return;
     }
     if (!customerName.trim() || !customerPhone.trim()) {
-      toast.error('الاسم ورقم الهاتف مطلوبان');
+      toast.error(t('الاسم ورقم الهاتف مطلوبان'));
       return;
     }
     if (orderType === 'delivery' && !deliveryLocation && !address.trim()) {
-      toast.error('حدّد موقع التوصيل أو اكتب العنوان');
+      toast.error(t('حدّد موقع التوصيل أو اكتب العنوان'));
       return;
     }
 
@@ -623,7 +626,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       const response: any = await api.post('/orders', orderData);
 
-      toast.success('تم إرسال طلبك — يتابعه المتجر الآن 🎉');
+      toast.success(t('تم إرسال طلبك — يتابعه المتجر الآن 🎉'));
       // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
       clearRef((store as any)?.id);
       clearCart();
@@ -717,9 +720,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         <div style={{ maxWidth: 380 }}>
           <div style={{ fontSize: 52, marginBottom: 14 }}>🛍️</div>
           <h1 style={{ fontSize: 19, fontWeight: 800, marginBottom: 8 }}>{loadError}</h1>
-          <p style={{ color: sf.muted, fontSize: 13.5, lineHeight: 1.9 }}>
-            تأكد من صحة الرابط أو تواصل مع المتجر.
-          </p>
+          <p style={{ color: sf.muted, fontSize: 13.5, lineHeight: 1.9 }}>{t('تأكد من صحة الرابط أو تواصل مع المتجر.')}</p>
         </div>
       </div>
     );
@@ -731,7 +732,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     : ['takeaway'];
 
   return (
-    <>
+    // المزوّد يلفّ الشجرة كلّها: البطاقات والسلّة والرأس تقرأ اللغة
+    // منه بلا تمريرٍ عبر عشرة مكوّنات
+    <StorefrontI18nProvider lang={language.lang}>
       <StorefrontSeo business={store} type="store" itemCount={products.length} />
 
       <ShopLayout
@@ -865,7 +868,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               : onlyDiscounted
                 ? 'العروض'
                 : activeCategory === 'all'
-                  ? 'كل المنتجات'
+                  ? t('كل المنتجات')
                   : navCategories.find((c) => c.id === activeCategory)?.name || 'المنتجات'}
             <span style={{ color: sf.muted, fontWeight: 600, fontSize: 12.5 }}>
               {visibleProducts.length} منتج
@@ -963,7 +966,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث عن منتج..."
+                placeholder={t('ابحث عن منتج...')}
                 style={{
                   flex: 1,
                   minHeight: 46,
@@ -980,7 +983,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 type="button"
                 onClick={() => setSearchOpen(false)}
                 style={iconButtonStyle}
-                aria-label="إغلاق البحث"
+                aria-label={t('إغلاق البحث')}
               >
                 <IoClose size={20} />
               </button>
@@ -1010,7 +1013,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       </AnimatePresence>
 
       {/* ==================== لوح الترتيب ==================== */}
-      <BottomSheet open={sortSheetOpen} onClose={() => setSortSheetOpen(false)} title="ترتيب المنتجات">
+      <BottomSheet open={sortSheetOpen} onClose={() => setSortSheetOpen(false)} title={t('ترتيب المنتجات')}>
         <div style={{ padding: '4px 0 10px' }}>
           {SORT_OPTIONS.map((option) => (
             <button
@@ -1037,7 +1040,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                 cursor: 'pointer'
               }}
             >
-              {option.label}
+              {t(option.label)}
               {sortBy === option.key && <IoCheckmark size={18} />}
             </button>
           ))}
@@ -1098,13 +1101,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       />
 
       {/* ==================== المفضلة ==================== */}
-      <BottomSheet open={favoritesOpen} onClose={() => setFavoritesOpen(false)} title="المفضلة">
+      <BottomSheet open={favoritesOpen} onClose={() => setFavoritesOpen(false)} title={t('المفضلة')}>
         {favoriteProducts.length === 0 ? (
-          <div style={{ padding: '30px 10px', textAlign: 'center', color: sf.muted, fontSize: 13, lineHeight: 1.9 }}>
-            لم تضف شيئاً بعد.
-            <br />
-            اضغط ♡ على أي منتج ليظهر هنا.
-          </div>
+          <div style={{ padding: '30px 10px', textAlign: 'center', color: sf.muted, fontSize: 13, lineHeight: 1.9 }}>{t('لم تضف شيئاً بعد.')}<br />{t('اضغط ♡ على أي منتج ليظهر هنا.')}</div>
         ) : (
           <div className="shop-grid" style={{ padding: '4px 0 14px' }}>
             {favoriteProducts.map((product) => (
@@ -1149,7 +1148,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               </div>
               <SheetAction
                 icon={<IoPersonCircleOutline size={18} />}
-                label="بياناتي"
+                label={t('بياناتي')}
                 onClick={() => {
                   setAccountOpen(false);
                   navigate('/profile');
@@ -1157,7 +1156,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               />
               <SheetAction
                 icon={<IoReceiptOutline size={18} />}
-                label="طلباتي"
+                label={t('طلباتي')}
                 onClick={() => {
                   setAccountOpen(false);
                   fetchMyOrders();
@@ -1166,7 +1165,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               />
               <SheetAction
                 icon={<IoHeartOutline size={18} />}
-                label="المفضلة"
+                label={t('المفضلة')}
                 onClick={() => {
                   setAccountOpen(false);
                   setFavoritesOpen(true);
@@ -1174,7 +1173,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               />
               <SheetAction
                 icon={<IoLogOutOutline size={18} />}
-                label="تسجيل الخروج"
+                label={t('تسجيل الخروج')}
                 danger
                 onClick={() => {
                   setAccountOpen(false);
@@ -1204,12 +1203,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   textDecoration: 'none'
                 }}
               >
-                <IoPersonCircleOutline size={18} />
-                تسجيل الدخول
-              </Link>
+                <IoPersonCircleOutline size={18} />{t('تسجيل الدخول')}</Link>
               <SheetAction
                 icon={<IoHeartOutline size={18} />}
-                label="المفضلة"
+                label={t('المفضلة')}
                 onClick={() => {
                   setAccountOpen(false);
                   setFavoritesOpen(true);
@@ -1247,7 +1244,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}
       <PlatformBadge show={store?.showPlatformBadge} />
-    </>
+    </StorefrontI18nProvider>
   );
 };
 

@@ -17,6 +17,7 @@ import api from '@/services/api';
 import { sf } from '@/utils/storefrontTheme';
 import { enablePush } from '@/services/webPush';
 import { getVisitorId } from '@/utils/visitor';
+import { useT } from '@/i18n/storefront';
 
 interface Props {
   businessId: string;
@@ -34,6 +35,7 @@ interface SubState {
 }
 
 const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthenticated }) => {
+  const { t } = useT();
   const [state, setState] = useState<SubState | null>(null);
   const [marketing, setMarketing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -92,7 +94,7 @@ const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthen
         window.open(data.telegramLinkUrl, '_blank', 'noopener');
       }
 
-      toast.success('سيصلك تحديث طلبك أولاً بأول');
+      toast.success(t('سيصلك تحديث طلبك أولاً بأول'));
       await load();
     } catch (error: any) {
       toast.error(error?.response?.data?.error || 'تعذّر التفعيل');
@@ -131,12 +133,8 @@ const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthen
         fontFamily: sf.font
       }}
     >
-      <div style={{ color: sf.text, fontSize: 14, fontWeight: 800, marginBottom: 3 }}>
-        تابع طلبك أولاً بأول
-      </div>
-      <p style={{ color: sf.muted, fontSize: 12, margin: '0 0 12px', lineHeight: 1.7 }}>
-        يصلك تنبيه فور تغيّر حالة طلبك — بلا أن تُبقي هذه الصفحة مفتوحة.
-      </p>
+      <div style={{ color: sf.text, fontSize: 14, fontWeight: 800, marginBottom: 3 }}>{t('تابع طلبك أولاً بأول')}</div>
+      <p style={{ color: sf.muted, fontSize: 12, margin: '0 0 12px', lineHeight: 1.7 }}>{t('يصلك تنبيه فور تغيّر حالة طلبك — بلا أن تُبقي هذه الصفحة مفتوحة.')}</p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {showTelegram && (
@@ -181,7 +179,7 @@ const FollowOrderPrompt: React.FC<Props> = ({ businessId, businessType, isAuthen
           onChange={(e) => setMarketing(e.target.checked)}
           style={{ marginTop: 3, accentColor: sf.accent, flexShrink: 0 }}
         />
-        <span>أرغب أيضاً بمعرفة العروض والخصومات. يمكنك الإلغاء من أي رسالة.</span>
+        <span>{t('أرغب أيضاً بمعرفة العروض والخصومات. يمكنك الإلغاء من أي رسالة.')}</span>
       </label>
     </div>
   );

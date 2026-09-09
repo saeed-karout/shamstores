@@ -32,6 +32,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { sf } from '@/utils/storefrontTheme';
 import { getImageUrl } from '@/utils/imageHelpers';
+import { useT } from '@/i18n/storefront';
 
 export interface ShopCategoryTile {
   id: string;
@@ -114,6 +115,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
   children,
   footer
 }) => {
+  const { t } = useT();
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
@@ -202,8 +204,8 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
             <input
               value={searchValue}
               onChange={(e) => onSearchChange?.(e.target.value)}
-              placeholder="ابحث في المنتجات…"
-              aria-label="ابحث في المنتجات"
+              placeholder={t('ابحث في المنتجات…')}
+              aria-label={t('ابحث في المنتجات')}
               style={{
                 width: '100%',
                 minHeight: 42,
@@ -254,13 +256,13 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
             <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
             <IconAction
               icon={<IoHeartOutline size={19} />}
-              label="المفضلة"
+              label={t('المفضلة')}
               badge={favoritesCount}
               onClick={onFavoritesClick}
             />
             <IconAction
               icon={<IoBagHandleOutline size={19} />}
-              label="السلة"
+              label={t('السلة')}
               badge={cartCount}
               onClick={onCartClick}
               emphasis
@@ -272,7 +274,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
         {categories.length > 0 && (
           <nav
             className="shop-navbar"
-            aria-label="أقسام المتجر"
+            aria-label={t('أقسام المتجر')}
             style={{ borderTop: `1px solid ${sf.border}` }}
           >
             <div
@@ -388,7 +390,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
                   }}
                 >
                   {contact.icon}
-                  {contact.label}
+                  {t(contact.label)}
                 </a>
               ))}
               {address && (
@@ -455,7 +457,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
       {categories.length > 0 && (
         <nav
           className="shop-shell shop-tiles no-scrollbar"
-          aria-label="أقسام المتجر"
+          aria-label={t('أقسام المتجر')}
           style={{ gap: 12, overflowX: 'auto', paddingTop: 16, paddingBottom: 4 }}
         >
           {categories.map((category) => {
@@ -541,7 +543,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            aria-label="العودة إلى الأعلى"
+            aria-label={t('العودة إلى الأعلى')}
             style={{
               position: 'fixed',
               insetInlineEnd: 14,

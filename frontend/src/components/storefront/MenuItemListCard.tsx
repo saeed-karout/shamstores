@@ -15,6 +15,7 @@ import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import QuantityStepper from './QuantityStepper';
+import { useT } from '@/i18n/storefront';
 
 export interface StorefrontMenuItem {
   id: string;
@@ -62,6 +63,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
   isFavorite = false,
   onToggleFavorite
 }) => {
+  const { t } = useT();
   const unavailable = item.isAvailable === false;
   // المخطط يخزّن السعر الحالي في price والسعر قبل الخصم في originalPrice
   const finalPrice = item.discountedPrice && item.discountedPrice > 0 ? item.discountedPrice : item.price;
@@ -139,9 +141,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
               fontSize: 12,
               fontWeight: 800
             }}
-          >
-            غير متوفر
-          </div>
+          >{t('غير متوفر')}</div>
         )}
 
         {hasDiscount && !unavailable && (
@@ -234,10 +234,9 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {item.isPopular && (
               <span style={badgeStyle}>
-                <IoFlameOutline size={11} /> الأكثر طلباً
-              </span>
+                <IoFlameOutline size={11} />{t('الأكثر طلباً')}</span>
             )}
-            {item.isNew && <span style={badgeStyle}>جديد</span>}
+            {item.isNew && <span style={badgeStyle}>{t('جديد')}</span>}
             {!!item.preparationTime && (
               <span style={badgeStyle}>
                 <IoTimeOutline size={11} /> {item.preparationTime} د
@@ -311,8 +310,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
                 >
                   {withOptions ? (
                     <>
-                      <IoOptionsOutline size={15} /> خيارات
-                    </>
+                      <IoOptionsOutline size={15} />{t('خيارات')}</>
                   ) : (
                     <IoAdd size={20} />
                   )}

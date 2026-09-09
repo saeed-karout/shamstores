@@ -18,6 +18,7 @@ import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getVisualBadges } from '@/utils/catalogBadges';
 import QuantityStepper from './QuantityStepper';
+import { useT } from '@/i18n/storefront';
 
 export interface StorefrontProduct {
   id: string;
@@ -77,6 +78,7 @@ const ProductGridCard: React.FC<Props> = ({
   isFavorite,
   onToggleFavorite
 }) => {
+  const { t } = useT();
   const badges = getVisualBadges(product).slice(0, 2);
   const cover = coverImage(product);
   // النسخة الصغيرة تكفي بطاقةً عرضها مئتا بكسل — الكبيرة تُنزَّل بلا أن
@@ -159,7 +161,7 @@ const ProductGridCard: React.FC<Props> = ({
                   backdropFilter: 'blur(4px)'
                 }}
               >
-                {badge.label}
+                {t(badge.label)}
               </span>
             );
           })}
@@ -206,9 +208,7 @@ const ProductGridCard: React.FC<Props> = ({
               fontWeight: 800,
               fontSize: 13
             }}
-          >
-            نفدت الكمية
-          </div>
+          >{t('نفدت الكمية')}</div>
         )}
       </div>
 

@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IoLocateOutline, IoMapOutline, IoCheckmarkCircle, IoWarningOutline } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+import { useT } from '@/i18n/storefront';
 
 export interface PickedLocation {
   lat: number;
@@ -54,6 +55,7 @@ const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
 };
 
 const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, fallbackCenter }) => {
+  const { t } = useT();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
@@ -75,7 +77,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
   // ===== GPS =====
   const useMyLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      toast.error('متصفحك لا يدعم تحديد الموقع. اختر من الخريطة.');
+      toast.error(t('متصفحك لا يدعم تحديد الموقع. اختر من الخريطة.'));
       return;
     }
 
@@ -88,7 +90,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
           mapRef.current.setView([latitude, longitude], 17);
         }
         setLocating(false);
-        toast.success('تم تحديد موقعك');
+        toast.success(t('تم تحديد موقعك'));
       },
       (error) => {
         setLocating(false);
@@ -208,7 +210,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
         <div style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--sf-border)' }}>
           <div ref={containerRef} style={{ height: 240, width: '100%', background: 'var(--sf-surface)' }} />
           {loadingMap && (
-            <div style={{ ...mapOverlay, color: 'var(--sf-muted)' }}>جارٍ تحميل الخريطة…</div>
+            <div style={{ ...mapOverlay, color: 'var(--sf-muted)' }}>{t('جارٍ تحميل الخريطة…')}</div>
           )}
           <div
             style={{
@@ -218,9 +220,7 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
               background: 'var(--sf-surface)',
               borderTop: '1px solid var(--sf-border)'
             }}
-          >
-            اضغط على الخريطة أو اسحب الدبّوس لضبط الموقع بدقة
-          </div>
+          >{t('اضغط على الخريطة أو اسحب الدبّوس لضبط الموقع بدقة')}</div>
         </div>
       )}
 
@@ -228,18 +228,14 @@ const LocationPickerMap: React.FC<LocationPickerMapProps> = ({ value, onChange, 
         <div style={{ ...statusBox, borderColor: 'var(--sf-accent)' }}>
           <IoCheckmarkCircle size={17} style={{ color: 'var(--sf-accent)', flexShrink: 0, marginTop: 2 }} />
           <div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--sf-text)', marginBottom: 2 }}>
-              الموقع محدَّد
-            </div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--sf-text)', marginBottom: 2 }}>{t('الموقع محدَّد')}</div>
             <div style={{ fontSize: 11.5, color: 'var(--sf-muted)', lineHeight: 1.7 }}>{value.address}</div>
           </div>
         </div>
       ) : (
         <div style={{ ...statusBox, borderColor: 'var(--sf-border)' }}>
           <IoWarningOutline size={17} style={{ color: 'var(--sf-muted)', flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: 11.5, color: 'var(--sf-muted)', lineHeight: 1.7 }}>
-            حدّد موقعك ليصل السائق إليك بدقة. العنوان المكتوب وحده قد لا يكفي.
-          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--sf-muted)', lineHeight: 1.7 }}>{t('حدّد موقعك ليصل السائق إليك بدقة. العنوان المكتوب وحده قد لا يكفي.')}</div>
         </div>
       )}
     </div>

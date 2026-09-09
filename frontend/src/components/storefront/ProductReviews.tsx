@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { IoStar, IoStarOutline } from 'react-icons/io5';
 import api from '@/services/api';
 import { sf } from '@/utils/storefrontTheme';
+import { useT } from '@/i18n/storefront';
 
 interface Review {
   id: string;
@@ -55,6 +56,7 @@ export const RatingBadge: React.FC<{ average?: number; count?: number }> = ({ av
 };
 
 const ProductReviews: React.FC<{ productId: string }> = ({ productId }) => {
+  const { t } = useT();
   const [data, setData] = useState<ReviewData | null>(null);
 
   useEffect(() => {
@@ -79,9 +81,7 @@ const ProductReviews: React.FC<{ productId: string }> = ({ productId }) => {
         borderTop: `1px solid ${sf.border}`, fontFamily: sf.font
       }}
     >
-      <h2 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800, color: sf.text }}>
-        آراء المشترين
-      </h2>
+      <h2 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 800, color: sf.text }}>{t('آراء المشترين')}</h2>
 
       <div style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
         <div style={{ textAlign: 'center', minWidth: 90 }}>

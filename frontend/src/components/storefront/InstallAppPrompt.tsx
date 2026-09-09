@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { IoClose, IoShareOutline, IoAddCircleOutline, IoDownloadOutline, IoEllipsisVertical } from 'react-icons/io5';
 import { isInstalled, isIosDevice } from '../../services/webPush';
 import { canPromptInstall, onInstallStateChange, promptInstall } from '../../utils/installPrompt';
+import { useT } from '@/i18n/storefront';
 
 const DISMISS_KEY = 'sham_install_prompt_dismissed_at';
 
@@ -81,6 +82,7 @@ interface Props {
 }
 
 const InstallAppPrompt: React.FC<Props> = ({ businessName, enabled = false, theme }) => {
+  const { t: tr } = useT();
   const t = theme ?? FALLBACK;
   const [, setReady] = useState(canPromptInstall());
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -158,7 +160,7 @@ const InstallAppPrompt: React.FC<Props> = ({ businessName, enabled = false, them
 
   return (
     <>
-      <div style={styles.bar} role="region" aria-label="تثبيت التطبيق">
+      <div style={styles.bar} role="region" aria-label={tr('تثبيت التطبيق')}>
         <div style={styles.iconWrap}>
           <IoDownloadOutline size={20} color={t.accent} />
         </div>
@@ -168,10 +170,8 @@ const InstallAppPrompt: React.FC<Props> = ({ businessName, enabled = false, them
             {ios ? 'خطوتان فقط — ولتصلك إشعارات طلبك' : 'يفتح بضغطة، وتصلك إشعارات طلبك'}
           </div>
         </div>
-        <button type="button" onClick={install} style={styles.cta}>
-          تثبيت
-        </button>
-        <button type="button" onClick={dismiss} style={styles.close} aria-label="إغلاق">
+        <button type="button" onClick={install} style={styles.cta}>{tr('تثبيت')}</button>
+        <button type="button" onClick={dismiss} style={styles.close} aria-label={tr('إغلاق')}>
           <IoClose size={18} />
         </button>
       </div>
@@ -181,39 +181,31 @@ const InstallAppPrompt: React.FC<Props> = ({ businessName, enabled = false, them
           <div style={styles.sheet} onClick={(e) => e.stopPropagation()}>
             {sheet === 'ios' ? (
               <>
-                <div style={styles.sheetTitle}>التثبيت على iPhone</div>
+                <div style={styles.sheetTitle}>{tr('التثبيت على iPhone')}</div>
                 <p style={styles.sheetHint}>
                   نظام iPhone لا يسمح بالتثبيت التلقائي، ولا تصلك الإشعارات قبله.
                   والخطوتان تُنجزان مرّةً واحدة:
                 </p>
                 <Step n={1} icon={<IoShareOutline size={19} color={t.accent} />}
-                  text="اضغط زرّ المشاركة في شريط سفاري بالأسفل" s={styles} />
+                  text={tr('اضغط زرّ المشاركة في شريط سفاري بالأسفل')} s={styles} />
                 <Step n={2} icon={<IoAddCircleOutline size={19} color={t.accent} />}
-                  text="اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة»" s={styles} />
-                <p style={styles.sheetFoot}>
-                  بعدها افتح المتجر من الأيقونة الجديدة، وفعّل الإشعارات من داخله.
-                </p>
+                  text={tr('اختر «إضافة إلى الشاشة الرئيسية» ثم «إضافة»')} s={styles} />
+                <p style={styles.sheetFoot}>{tr('بعدها افتح المتجر من الأيقونة الجديدة، وفعّل الإشعارات من داخله.')}</p>
               </>
             ) : (
               <>
-                <div style={styles.sheetTitle}>التثبيت من المتصفّح</div>
-                <p style={styles.sheetHint}>
-                  متصفّحك لم يتح نافذة التثبيت التلقائية الآن. تستطيع تثبيته يدوياً:
-                </p>
+                <div style={styles.sheetTitle}>{tr('التثبيت من المتصفّح')}</div>
+                <p style={styles.sheetHint}>{tr('متصفّحك لم يتح نافذة التثبيت التلقائية الآن. تستطيع تثبيته يدوياً:')}</p>
                 <Step n={1} icon={<IoEllipsisVertical size={19} color={t.accent} />}
-                  text="افتح قائمة المتصفّح (⋮) في الأعلى" s={styles} />
+                  text={tr('افتح قائمة المتصفّح (⋮) في الأعلى')} s={styles} />
                 <Step n={2} icon={<IoAddCircleOutline size={19} color={t.accent} />}
-                  text="اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»" s={styles} />
-                <p style={styles.sheetFoot}>
-                  إن لم تجد الخيار، جرّب فتح المتجر في متصفّح Chrome.
-                </p>
+                  text={tr('اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»')} s={styles} />
+                <p style={styles.sheetFoot}>{tr('إن لم تجد الخيار، جرّب فتح المتجر في متصفّح Chrome.')}</p>
               </>
             )}
 
             <button type="button" onClick={dismiss}
-              style={{ ...styles.cta, width: '100%', marginTop: 6 }}>
-              فهمت
-            </button>
+              style={{ ...styles.cta, width: '100%', marginTop: 6 }}>{tr('فهمت')}</button>
           </div>
         </div>
       )}

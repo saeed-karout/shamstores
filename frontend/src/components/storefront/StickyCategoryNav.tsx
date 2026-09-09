@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { sf } from '@/utils/storefrontTheme';
+import { useT } from '@/i18n/storefront';
 
 export interface CategoryNavItem {
   id: string;
@@ -36,6 +37,7 @@ const StickyCategoryNav: React.FC<StickyCategoryNavProps> = ({
   showAll = true,
   allLabel = 'الكل'
 }) => {
+  const { t } = useT();
   const [spyActive, setSpyActive] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const isProgrammaticScroll = useRef(false);
@@ -121,7 +123,7 @@ const StickyCategoryNav: React.FC<StickyCategoryNavProps> = ({
 
   return (
     <nav
-      aria-label="أقسام القائمة"
+      aria-label={t('أقسام القائمة')}
       style={{
         position: 'sticky',
         top: offsetTop,

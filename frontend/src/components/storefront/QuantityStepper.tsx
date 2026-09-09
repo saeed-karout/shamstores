@@ -3,6 +3,7 @@
 import React from 'react';
 import { IoAdd, IoRemove, IoTrashOutline } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
+import { useT } from '@/i18n/storefront';
 
 export interface QuantityStepperProps {
   value: number;
@@ -26,6 +27,7 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({
   disabled = false,
   ariaLabel = 'الكمية'
 }) => {
+  const { t } = useT();
   const dimension = size === 'sm' ? 34 : 40;
   const canDecrease = !disabled && (removeAtMin ? value >= min : value > min);
   const canIncrease = !disabled && value < max;
@@ -93,7 +95,7 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({
         type="button"
         onClick={() => canIncrease && onChange(value + 1)}
         disabled={!canIncrease}
-        aria-label="زيادة الكمية"
+        aria-label={t('زيادة الكمية')}
         style={{
           ...buttonStyle(canIncrease),
           background: canIncrease ? sf.accent : sf.surface,

@@ -12,6 +12,7 @@
 import React from 'react';
 import { sf } from '@/utils/storefrontTheme';
 import type { CurrencyOption } from '@/hooks/useDisplayCurrency';
+import { useT } from '@/i18n/storefront';
 
 interface Props {
   options: CurrencyOption[];
@@ -22,6 +23,7 @@ interface Props {
 }
 
 const CurrencySwitcher: React.FC<Props> = ({ options, code, onChange, variant = 'compact' }) => {
+  const { t } = useT();
   if (options.length < 2) return null;
 
   const compact = variant === 'compact';
@@ -29,7 +31,7 @@ const CurrencySwitcher: React.FC<Props> = ({ options, code, onChange, variant = 
   return (
     <div
       role="group"
-      aria-label="عملة العرض"
+      aria-label={t('عملة العرض')}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

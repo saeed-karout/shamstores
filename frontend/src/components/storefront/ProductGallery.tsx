@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { IoChevronBack, IoChevronForward, IoExpandOutline, IoClose } from 'react-icons/io5';
+import { useT } from '@/i18n/storefront';
 
 interface Props {
   images: string[];
@@ -19,6 +20,7 @@ interface Props {
 }
 
 const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' }) => {
+  const { t } = useT();
   const [active, setActive] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -61,9 +63,7 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
           color: 'var(--sf-muted)',
           fontSize: 13
         }}
-      >
-        لا توجد صورة لهذا المنتج
-      </div>
+      >{t('لا توجد صورة لهذا المنتج')}</div>
     );
   }
 
@@ -84,7 +84,7 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
         <button
           type="button"
           onClick={() => setZoomed(true)}
-          aria-label="تكبير الصورة"
+          aria-label={t('تكبير الصورة')}
           style={{ ...roundBtn, insetInlineEnd: 10, top: 10 }}
         >
           <IoExpandOutline size={17} />
@@ -92,11 +92,11 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
 
         {count > 1 && (
           <>
-            <button type="button" onClick={() => go(active - 1)} aria-label="الصورة السابقة"
+            <button type="button" onClick={() => go(active - 1)} aria-label={t('الصورة السابقة')}
               style={{ ...roundBtn, insetInlineEnd: 10, top: '50%', transform: 'translateY(-50%)' }}>
               <IoChevronForward size={18} />
             </button>
-            <button type="button" onClick={() => go(active + 1)} aria-label="الصورة التالية"
+            <button type="button" onClick={() => go(active + 1)} aria-label={t('الصورة التالية')}
               style={{ ...roundBtn, insetInlineStart: 10, top: '50%', transform: 'translateY(-50%)' }}>
               <IoChevronBack size={18} />
             </button>
@@ -168,7 +168,7 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
           <button
             type="button"
             onClick={() => setZoomed(false)}
-            aria-label="إغلاق العرض المكبّر"
+            aria-label={t('إغلاق العرض المكبّر')}
             style={{ ...roundBtn, position: 'fixed', top: 16, insetInlineEnd: 16, background: 'rgba(255,255,255,0.16)' }}
           >
             <IoClose size={20} />

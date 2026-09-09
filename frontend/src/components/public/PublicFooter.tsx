@@ -22,6 +22,7 @@ import {
   IoLockClosed
 } from 'react-icons/io5';
 import { Link } from 'react-router-dom';
+import { useT } from '@/i18n/storefront';
 
 interface SocialLinks {
   facebook?: string;
@@ -76,6 +77,7 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
   showQuickLinks = true,
   year = new Date().getFullYear()
 }) => {
+  const { t } = useT();
   
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -317,7 +319,7 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
           {/* روابط سريعة */}
           {showQuickLinks && (
             <div style={styles.section}>
-              <h3 style={styles.sectionTitle}>روابط سريعة</h3>
+              <h3 style={styles.sectionTitle}>{t('روابط سريعة')}</h3>
               <div>
                 {quickLinks.map((link, index) => (
                   <Link
@@ -333,7 +335,7 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
                       e.currentTarget.style.paddingRight = '0';
                     }}
                   >
-                    {link.name}
+                    {t(link.name)}
                   </Link>
                 ))}
               </div>
@@ -342,7 +344,7 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
 
           {/* معلومات الاتصال */}
           <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>تواصل معنا</h3>
+            <h3 style={styles.sectionTitle}>{t('تواصل معنا')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {contactInfo.phone && (
                 <a href={`tel:${contactInfo.phone}`} style={styles.contactItem}>
@@ -381,7 +383,7 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
 
           {/* روابط المعلومات */}
           <div style={styles.section}>
-            <h3 style={styles.sectionTitle}>معلومات</h3>
+            <h3 style={styles.sectionTitle}>{t('معلومات')}</h3>
             <div>
               {infoLinks.map((link, index) => (
                 <Link
@@ -397,7 +399,7 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
                     e.currentTarget.style.paddingRight = '0';
                   }}
                 >
-                  {link.name}
+                  {t(link.name)}
                 </Link>
               ))}
             </div>
@@ -406,21 +408,17 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
           {/* نشرة بريدية (اختياري) */}
           {showNewsletter && (
             <div style={styles.section}>
-              <h3 style={styles.sectionTitle}>النشرة البريدية</h3>
-              <p style={styles.description}>
-                اشترك ليصلك كل جديد عن العروض والمنتجات
-              </p>
+              <h3 style={styles.sectionTitle}>{t('النشرة البريدية')}</h3>
+              <p style={styles.description}>{t('اشترك ليصلك كل جديد عن العروض والمنتجات')}</p>
               <form onSubmit={handleNewsletterSubmit} style={styles.newsletter}>
                 <div style={styles.newsletterInput}>
                   <input
                     type="email"
-                    placeholder="بريدك الإلكتروني"
+                    placeholder={t('بريدك الإلكتروني')}
                     style={styles.input}
                     required
                   />
-                  <button type="submit" style={styles.button}>
-                    اشتراك
-                  </button>
+                  <button type="submit" style={styles.button}>{t('اشتراك')}</button>
                 </div>
               </form>
             </div>
@@ -433,12 +431,8 @@ const PublicFooter: React.FC<PublicFooterProps> = ({
             © {year} {businessName}. جميع الحقوق محفوظة
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <Link to="/privacy" style={{ color: mutedColor, textDecoration: 'none' }}>
-              سياسة الخصوصية
-            </Link>
-            <Link to="/terms" style={{ color: mutedColor, textDecoration: 'none' }}>
-              الشروط والأحكام
-            </Link>
+            <Link to="/privacy" style={{ color: mutedColor, textDecoration: 'none' }}>{t('سياسة الخصوصية')}</Link>
+            <Link to="/terms" style={{ color: mutedColor, textDecoration: 'none' }}>{t('الشروط والأحكام')}</Link>
           </div>
         </div>
       </div>

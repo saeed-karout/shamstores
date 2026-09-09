@@ -15,6 +15,7 @@ import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
+import { useT } from '@/i18n/storefront';
 
 export interface OptionValue {
   label: string;
@@ -81,6 +82,7 @@ const ProductOptionsSheet: React.FC<Props> = ({
   onConfirm,
   onPreviewImage
 }) => {
+  const { t } = useT();
   const [selection, setSelection] = useState<OptionSelection>({});
   const [quantity, setQuantity] = useState(1);
 
@@ -293,7 +295,7 @@ const ProductOptionsSheet: React.FC<Props> = ({
             borderTop: `1px solid ${sf.border}`
           }}
         >
-          <span style={{ color: sf.muted, fontSize: 13, fontWeight: 700 }}>الكمية</span>
+          <span style={{ color: sf.muted, fontSize: 13, fontWeight: 700 }}>{t('الكمية')}</span>
           <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={99} ariaLabel="الكمية" />
         </div>
 

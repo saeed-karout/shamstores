@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
+import { useT } from '@/i18n/storefront';
 
 export interface BannerSlide {
   id: string;
@@ -49,6 +50,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   className = '',
   ariaLabel = 'عروض وإعلانات'
 }) => {
+  const { t } = useT();
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -199,7 +201,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           <button
             type="button"
             onClick={() => goTo((active - 1 + count) % count)}
-            aria-label="الشريحة السابقة"
+            aria-label={t('الشريحة السابقة')}
             style={{ ...arrowStyle, insetInlineEnd: 10 }}
           >
             <IoChevronForward size={18} />
@@ -208,7 +210,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
           <button
             type="button"
             onClick={() => goTo((active + 1) % count)}
-            aria-label="الشريحة التالية"
+            aria-label={t('الشريحة التالية')}
             style={{ ...arrowStyle, insetInlineStart: 10 }}
           >
             <IoChevronBack size={18} />

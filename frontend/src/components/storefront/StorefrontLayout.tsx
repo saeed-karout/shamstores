@@ -13,6 +13,7 @@ import {
 } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
 import { getImageUrl } from '@/utils/imageHelpers';
+import { useT } from '@/i18n/storefront';
 
 export interface StorefrontBranch {
   id: string;
@@ -67,6 +68,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
   children,
   footer
 }) => {
+  const { t } = useT();
   const [showMiniHeader, setShowMiniHeader] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [branchOpen, setBranchOpen] = useState(false);
@@ -393,9 +395,8 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
           {(phone || whatsapp) && (
             <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
               {phone && (
-                <a href={`tel:${phone}`} style={contactButton} aria-label="اتصال">
-                  <IoCallOutline size={17} /> اتصال
-                </a>
+                <a href={`tel:${phone}`} style={contactButton} aria-label={t('اتصال')}>
+                  <IoCallOutline size={17} />{t('اتصال')}</a>
               )}
               {whatsapp && (
                 <a
@@ -403,10 +404,9 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ ...contactButton, color: '#25D366', borderColor: 'rgba(37,211,102,0.3)' }}
-                  aria-label="واتساب"
+                  aria-label={t('واتساب')}
                 >
-                  <IoLogoWhatsapp size={17} /> واتساب
-                </a>
+                  <IoLogoWhatsapp size={17} />{t('واتساب')}</a>
               )}
             </div>
           )}
@@ -430,7 +430,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.7 }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            aria-label="العودة إلى الأعلى"
+            aria-label={t('العودة إلى الأعلى')}
             style={{
               position: 'fixed',
               insetInlineStart: 14,

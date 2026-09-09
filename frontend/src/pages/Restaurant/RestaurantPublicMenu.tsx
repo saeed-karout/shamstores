@@ -50,6 +50,7 @@ import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 import { useSocket } from '@/hooks/useSocket';
 import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
 import useStoreManifest from '../../hooks/useStoreManifest';
+import { StorefrontI18nProvider, makeT } from '@/i18n/storefront';
 
 // ==================== الأنواع ====================
 
@@ -125,6 +126,8 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   // لغة عرض المحتوى — من إعدادات المطعم التي يحسبها الخادم بحسب استحقاق
   // `multi_language`، فلا يظهر الزرّ لمن لم يشترِ الميزة
   const language = useStorefrontLanguage(urlSlug, (restaurant as any)?.languageSettings);
+  // الصفحة فوق المزوّد فلا تراه — تبني دالّتها من نفس اللغة
+  const t = useMemo(() => makeT(language.lang), [language.lang]);
 
   /**
    * الأقسام وأصنافها بلغة العرض.
@@ -406,17 +409,17 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   // ---------- إرسال الطلب ----------
   const submitOrder = async () => {
     if (cart.length === 0) {
-      toast.error('السلة فارغة');
+      toast.error(t('السلة فارغة'));
       return;
     }
 
     const isDineInAtTable = orderType === 'dine_in' && !!tableId;
     if (!isDineInAtTable && (!customerName.trim() || !customerPhone.trim())) {
-      toast.error('الاسم ورقم الهاتف مطلوبان');
+      toast.error(t('الاسم ورقم الهاتف مطلوبان'));
       return;
     }
     if (orderType === 'delivery' && !address.trim()) {
-      toast.error('عنوان التوصيل مطلوب');
+      toast.error(t('عنوان التوصيل مطلوب'));
       return;
     }
 
@@ -451,7 +454,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       await api.post('/orders', orderData);
 
-      toast.success('تم إرسال طلبك بنجاح 🎉');
+      toast.success(t('تم إرسال طلبك بنجاح 🎉'));
       // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
       clearRef((restaurant as any)?.id);
       clearCart();
@@ -532,9 +535,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         <div style={{ maxWidth: 380 }}>
           <div style={{ fontSize: 52, marginBottom: 14 }}>🍽️</div>
           <h1 style={{ fontSize: 19, fontWeight: 800, marginBottom: 8 }}>{loadError}</h1>
-          <p style={{ color: sf.muted, fontSize: 13.5, lineHeight: 1.9 }}>
-            تأكد من صحة الرابط أو تواصل مع المطعم.
-          </p>
+          <p style={{ color: sf.muted, fontSize: 13.5, lineHeight: 1.9 }}>{t('تأكد من صحة الرابط أو تواصل مع المطعم.')}</p>
         </div>
       </div>
     );
@@ -561,7 +562,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       <button
         type="button"
         onClick={() => setSearchOpen(true)}
-        aria-label="بحث"
+        aria-label={t('بحث')}
         style={iconButtonStyle}
       >
         <IoSearchOutline size={19} />
@@ -569,7 +570,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       <button
         type="button"
         onClick={() => setSortSheetOpen(true)}
-        aria-label="ترتيب"
+        aria-label={t('ترتيب')}
         style={iconButtonStyle}
       >
         <IoSwapVerticalOutline size={19} />
@@ -578,7 +579,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   );
 
   return (
-    <>
+    // المزوّد يلفّ الشجرة كلّها: البطاقات والسلّة والرأس تقرأ اللغة
+    // منه بلا تمريرٍ عبر عشرة مكوّنات
+    <StorefrontI18nProvider lang={language.lang}>
       <StorefrontSeo
         business={restaurant}
         type="restaurant"
@@ -676,7 +679,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
             {isSearching ? searchQuery : 'ابحث في القائمة...'}
           </button>
 
-          <button type="button" onClick={() => setSortSheetOpen(true)} style={iconButtonStyle} aria-label="ترتيب">
+          <button type="button" onClick={() => setSortSheetOpen(true)} style={iconButtonStyle} aria-label={t('ترتيب')}>
             <IoSwapVerticalOutline size={19} />
           </button>
 
@@ -688,7 +691,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 setShowOrderTracking(true);
               }}
               style={iconButtonStyle}
-              aria-label="طلباتي"
+              aria-label={t('طلباتي')}
             >
               <IoReceiptOutline size={19} />
             </button>
@@ -696,7 +699,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
             <Link
               to="/user/login"
               style={{ ...iconButtonStyle, textDecoration: 'none' }}
-              aria-label="تسجيل الدخول (اختياري)"
+              aria-label={t('تسجيل الدخول (اختياري)')}
             >
               <IoPersonCircleOutline size={19} />
             </Link>
@@ -706,9 +709,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         {/* نتائج البحث */}
         {isSearching ? (
           <section style={{ marginTop: 16 }}>
-            <h2 style={sectionHeading}>
-              نتائج البحث
-              <span style={{ color: sf.muted, fontWeight: 600, fontSize: 12.5 }}>
+            <h2 style={sectionHeading}>{t('نتائج البحث')}<span style={{ color: sf.muted, fontWeight: 600, fontSize: 12.5 }}>
                 {searchResults.length} صنف
               </span>
             </h2>
@@ -876,7 +877,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ابحث عن صنف..."
+                placeholder={t('ابحث عن صنف...')}
                 style={{
                   flex: 1,
                   minWidth: 0,
@@ -895,7 +896,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   if (!searchQuery.trim()) setSearchQuery('');
                 }}
                 style={{ ...iconButtonStyle, flexShrink: 0 }}
-                aria-label="إغلاق البحث"
+                aria-label={t('إغلاق البحث')}
               >
                 <IoClose size={19} />
               </button>
@@ -936,7 +937,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       </AnimatePresence>
 
       {/* ==================== لوح الترتيب ==================== */}
-      <BottomSheet open={sortSheetOpen} onClose={() => setSortSheetOpen(false)} title="ترتيب حسب">
+      <BottomSheet open={sortSheetOpen} onClose={() => setSortSheetOpen(false)} title={t('ترتيب حسب')}>
         <div style={{ display: 'grid', gap: 8 }}>
           {SORT_OPTIONS.map((option) => {
             const active = sortBy === option.key;
@@ -964,7 +965,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
                   cursor: 'pointer'
                 }}
               >
-                {option.label}
+                {t(option.label)}
                 {active && <IoCheckmark size={18} />}
               </button>
             );
@@ -1038,7 +1039,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       />
 
       <PlatformBadge show={restaurant?.showPlatformBadge} />
-    </>
+    </StorefrontI18nProvider>
   );
 };
 

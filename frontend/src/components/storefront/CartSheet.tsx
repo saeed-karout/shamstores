@@ -19,6 +19,7 @@ import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import type { CartItem } from '@/services/types';
+import { useT } from '@/i18n/storefront';
 
 export type StorefrontOrderType = 'dine_in' | 'takeaway' | 'delivery';
 
@@ -108,6 +109,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
   submitting = false,
   onSubmit
 }) => {
+  const { t } = useT();
   const [couponInput, setCouponInput] = useState('');
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
@@ -209,8 +211,8 @@ const CartSheet: React.FC<CartSheetProps> = ({
       {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 20px', color: sf.muted }}>
           <IoBagHandleOutline size={46} style={{ opacity: 0.4, marginBottom: 14 }} />
-          <div style={{ fontSize: 14.5, fontWeight: 700, color: sf.text, marginBottom: 6 }}>سلتك فارغة</div>
-          <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>تصفّح القائمة وأضف ما يعجبك</div>
+          <div style={{ fontSize: 14.5, fontWeight: 700, color: sf.text, marginBottom: 6 }}>{t('سلتك فارغة')}</div>
+          <div style={{ fontSize: 12.5, lineHeight: 1.8 }}>{t('تصفّح القائمة وأضف ما يعجبك')}</div>
         </div>
       ) : (
         <>
@@ -347,8 +349,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                 padding: '4px 0'
               }}
             >
-              <IoTrashOutline size={14} /> إفراغ السلة
-            </button>
+              <IoTrashOutline size={14} />{t('إفراغ السلة')}</button>
           </div>
 
           {/* نوع الطلب */}
@@ -373,7 +374,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
           ) : (
             availableOrderTypes.length > 1 && (
               <section style={{ marginBottom: 18 }}>
-                <h4 style={sectionTitle}>نوع الطلب</h4>
+                <h4 style={sectionTitle}>{t('نوع الطلب')}</h4>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {availableOrderTypes.map((type) => {
                     const active = orderType === type;
@@ -413,7 +414,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
 
           {/* بيانات الزبون — الطلب كضيف، بلا تسجيل دخول */}
           <section style={{ marginBottom: 18 }}>
-            <h4 style={sectionTitle}>بياناتك</h4>
+            <h4 style={sectionTitle}>{t('بياناتك')}</h4>
             <div style={{ display: 'grid', gap: 10 }}>
               <div>
                 <label style={fieldLabel} htmlFor="sf-cart-name">
@@ -424,7 +425,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                   type="text"
                   value={customerName}
                   onChange={(e) => onCustomerNameChange(e.target.value)}
-                  placeholder="اسمك"
+                  placeholder={t('اسمك')}
                   autoComplete="name"
                   style={inputStyle}
                 />
@@ -455,7 +456,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     id="sf-cart-address"
                     value={address}
                     onChange={(e) => onAddressChange(e.target.value)}
-                    placeholder="الحي، الشارع، أقرب معلم..."
+                    placeholder={t('الحي، الشارع، أقرب معلم...')}
                     rows={2}
                     style={{ ...inputStyle, resize: 'vertical' }}
                   />
@@ -473,14 +474,12 @@ const CartSheet: React.FC<CartSheetProps> = ({
               )}
 
               <div>
-                <label style={fieldLabel} htmlFor="sf-cart-notes">
-                  ملاحظات على الطلب
-                </label>
+                <label style={fieldLabel} htmlFor="sf-cart-notes">{t('ملاحظات على الطلب')}</label>
                 <textarea
                   id="sf-cart-notes"
                   value={notes}
                   onChange={(e) => onNotesChange(e.target.value.slice(0, 300))}
-                  placeholder="أي ملاحظة إضافية..."
+                  placeholder={t('أي ملاحظة إضافية...')}
                   rows={2}
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
@@ -491,7 +490,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
           {/* كوبون الخصم */}
           {onCouponApply && (
             <section style={{ marginBottom: 18 }}>
-              <h4 style={sectionTitle}>كوبون خصم</h4>
+              <h4 style={sectionTitle}>{t('كوبون خصم')}</h4>
               {couponCode ? (
                 <div
                   style={{
@@ -520,9 +519,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                         cursor: 'pointer',
                         fontFamily: 'inherit'
                       }}
-                    >
-                      إزالة
-                    </button>
+                    >{t('إزالة')}</button>
                   )}
                 </div>
               ) : (
@@ -531,14 +528,14 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     type="text"
                     value={couponInput}
                     onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                    placeholder="أدخل الكود"
+                    placeholder={t('أدخل الكود')}
                     style={{ ...inputStyle, flex: 1, direction: 'ltr', textAlign: 'start' }}
                   />
                   <button
                     type="button"
                     onClick={handleApplyCoupon}
                     disabled={!couponInput.trim() || applyingCoupon}
-                    aria-label="تطبيق الكوبون"
+                    aria-label={t('تطبيق الكوبون')}
                     style={{
                       minHeight: 46,
                       padding: '0 18px',
@@ -576,18 +573,18 @@ const CartSheet: React.FC<CartSheetProps> = ({
               gap: 9
             }}
           >
-            <SummaryRow label="المجموع الفرعي" value={formatPrice(subtotal, currency)} />
+            <SummaryRow label={t('المجموع الفرعي')} value={formatPrice(subtotal, currency)} />
             {discount > 0 && (
-              <SummaryRow label="الخصم" value={`- ${formatPrice(discount, currency)}`} accent="#4ADE80" />
+              <SummaryRow label={t('الخصم')} value={`- ${formatPrice(discount, currency)}`} accent="#4ADE80" />
             )}
             {orderType === 'delivery' && (
               <SummaryRow
-                label="رسوم التوصيل"
+                label={t('رسوم التوصيل')}
                 value={effectiveDeliveryFee > 0 ? formatPrice(effectiveDeliveryFee, currency) : 'مجاني'}
               />
             )}
             <div style={{ height: 1, background: sf.border, margin: '3px 0' }} />
-            <SummaryRow label="الإجمالي" value={formatPrice(total, currency)} bold />
+            <SummaryRow label={t('الإجمالي')} value={formatPrice(total, currency)} bold />
           </section>
         </>
       )}

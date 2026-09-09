@@ -10,6 +10,7 @@ import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import type { StorefrontMenuItem } from './MenuItemListCard';
+import { useT } from '@/i18n/storefront';
 
 export interface SelectedOptions {
   size?: { name: string; price: number };
@@ -35,6 +36,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
   onClose,
   onConfirm
 }) => {
+  const { t } = useT();
   const [sizeIndex, setSizeIndex] = useState<number | null>(null);
   const [addonNames, setAddonNames] = useState<Set<string>>(new Set());
   const [quantity, setQuantity] = useState(1);
@@ -125,8 +127,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
           }}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <IoBagAddOutline size={19} /> إضافة إلى السلة
-          </span>
+            <IoBagAddOutline size={19} />{t('إضافة إلى السلة')}</span>
           <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(total, currency)}</span>
         </button>
       }
@@ -157,8 +158,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
       {/* الأحجام */}
       {!!item.sizes?.length && (
         <section style={{ marginBottom: 20 }}>
-          <h4 style={sectionTitle}>
-            الحجم <span style={requiredTag}>مطلوب</span>
+          <h4 style={sectionTitle}>{t('الحجم')}<span style={requiredTag}>{t('مطلوب')}</span>
           </h4>
           <div style={{ display: 'grid', gap: 8 }}>
             {item.sizes.map((size, index) => {
@@ -202,8 +202,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
       {/* الإضافات */}
       {!!item.addons?.length && (
         <section style={{ marginBottom: 20 }}>
-          <h4 style={sectionTitle}>
-            الإضافات <span style={{ ...requiredTag, background: 'transparent', color: sf.muted }}>اختياري</span>
+          <h4 style={sectionTitle}>{t('الإضافات')}<span style={{ ...requiredTag, background: 'transparent', color: sf.muted }}>{t('اختياري')}</span>
           </h4>
           <div style={{ display: 'grid', gap: 8 }}>
             {item.addons.map((addon, index) => {
@@ -246,17 +245,17 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
 
       {/* الكمية */}
       <section style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h4 style={{ ...sectionTitle, marginBottom: 0 }}>الكمية</h4>
+        <h4 style={{ ...sectionTitle, marginBottom: 0 }}>{t('الكمية')}</h4>
         <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={50} />
       </section>
 
       {/* ملاحظات */}
       <section>
-        <h4 style={sectionTitle}>ملاحظات</h4>
+        <h4 style={sectionTitle}>{t('ملاحظات')}</h4>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value.slice(0, 300))}
-          placeholder="مثال: بدون بصل، حار قليلاً..."
+          placeholder={t('مثال: بدون بصل، حار قليلاً...')}
           rows={3}
           style={{
             width: '100%',
