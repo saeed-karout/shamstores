@@ -13,6 +13,15 @@ import {
 } from 'react-icons/io5';
 import BottomSheet from './BottomSheet';
 import LocationPickerMap, { PickedLocation } from './LocationPickerMap';
+
+export interface ShippingZone {
+  governorate: string;
+  name: string;
+  fee: number;
+  freeOverAmount: number | null;
+  estimatedDays: number | null;
+  deliveryMode: 'driver' | 'shipping';
+}
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
 import { formatPrice } from '@/utils/currency';
@@ -50,6 +59,10 @@ export interface CartSheetProps {
   /** حقول التوصيل — تُعرض فقط عند اختيار التوصيل */
   address?: string;
   onAddressChange?: (value: string) => void;
+  /** محافظات يخدمها المتجر — فارغةٌ تعني أنه لم يضبط مناطقه بعد */
+  shippingZones?: ShippingZone[];
+  governorate?: string;
+  onGovernorateChange?: (code: string) => void;
   /** إحداثيات التوصيل — العنوان النصّي وحده لا يكفي السائق */
   deliveryLocation?: PickedLocation | null;
   onDeliveryLocationChange?: (location: PickedLocation) => void;
@@ -98,6 +111,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
   onNotesChange,
   address = '',
   onAddressChange,
+  shippingZones = [],
+  governorate = '',
+  onGovernorateChange,
   deliveryLocation = null,
   onDeliveryLocationChange,
   businessLocation,
@@ -118,6 +134,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
     [items]
   );
 
+  const selectedZone = shippingZones.find((z) => z.governorate === governorate) || null;
   const effectiveDeliveryFee = orderType === 'delivery' ? deliveryFee : 0;
   const total = Math.max(0, subtotal - discount + effectiveDeliveryFee);
   const itemCount = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
@@ -133,6 +150,8 @@ const CartSheet: React.FC<CartSheetProps> = ({
   if (nameRequired && !customerName.trim()) missing.push('الاسم');
   if (phoneRequired && !customerPhone.trim()) missing.push('رقم الهاتف');
   if (addressRequired && !address.trim()) missing.push('عنوان التوصيل');
+  // تُطلب فقط حين يضبط المتجر مناطقه — وإلا منعنا الطلب في متاجر لم تُهيّأ
+  if (addressRequired && shippingZones.length > 0 && !governorate) missing.push('المحافظة');
 
   const canSubmit = missing.length === 0 && !submitting;
 
@@ -446,6 +465,40 @@ const CartSheet: React.FC<CartSheetProps> = ({
                   style={{ ...inputStyle, direction: 'ltr', textAlign: 'start' }}
                 />
               </div>
+
+              {orderType === 'delivery' && shippingZones.length > 0 && onGovernorateChange && (
+                <div>
+                  <label style={fieldLabel} htmlFor="sf-cart-governorate">
+                    المحافظة {REQUIRED_MARK}
+                  </label>
+                  <select
+                    id="sf-cart-governorate"
+                    value={governorate}
+                    onChange={(e) => onGovernorateChange(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="">اختر المحافظة…</option>
+                    {shippingZones.map((zone) => (
+                      <option key={zone.governorate} value={zone.governorate}>
+                        {zone.name}
+                      </option>
+                    ))}
+                  </select>
+                  {/* الأجرة والمدّة تُعرضان فور الاختيار: زبونٌ يكتشف أجرة
+                      التوصيل في آخر سطر يتراجع عن الطلب */}
+                  {selectedZone && (
+                    <p style={{ color: sf.muted, fontSize: 12, margin: '7px 0 0', lineHeight: 1.8 }}>
+                      {selectedZone.deliveryMode === 'shipping' ? 'شحن' : 'توصيل'}
+                      {' · '}
+                      {effectiveDeliveryFee > 0 ? formatPrice(effectiveDeliveryFee) : 'مجاني'}
+                      {selectedZone.estimatedDays ? ` · خلال ${selectedZone.estimatedDays} يوم` : ''}
+                      {selectedZone.freeOverAmount && effectiveDeliveryFee > 0
+                        ? ` · مجاني فوق ${formatPrice(selectedZone.freeOverAmount)}`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {orderType === 'delivery' && onAddressChange && (
                 <div>

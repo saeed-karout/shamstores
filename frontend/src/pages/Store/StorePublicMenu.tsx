@@ -153,6 +153,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [orderType, setOrderType] = useState<StorefrontOrderType>('delivery');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [governorate, setGovernorate] = useState('');
+  const [shippingZones, setShippingZones] = useState<any[]>([]);
   const [orderNotes, setOrderNotes] = useState('');
   const [address, setAddress] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState<PickedLocation | null>(null);
@@ -521,8 +523,41 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   };
 
   // ---------- التوصيل ----------
+  // مناطق التوصيل التي فعّلها التاجر — فارغةٌ تعني أنه لم يضبطها بعد،
+  // وحينها يبقى الحساب القديم بالمسافة كما هو
+  useEffect(() => {
+    const slug = (store as any)?.slug || urlSlug;
+    if (!slug) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data: any = await api.get(`/shipping/public/${encodeURIComponent(slug)}`);
+        if (!cancelled) setShippingZones(Array.isArray(data) ? data : []);
+      } catch {
+        // غياب المناطق لا يمنع الطلب — الحساب القديم يعمل
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [(store as any)?.slug, urlSlug]);
+
+  const selectedZone = useMemo(
+    () => shippingZones.find((z) => z.governorate === governorate) || null,
+    [shippingZones, governorate]
+  );
+
   const deliveryFee = useMemo(() => {
     if (orderType !== 'delivery') return 0;
+
+    // **المنطقة تغلب حساب المسافة:** التاجر الذي ضبط أجرة محافظته قصد
+    // رقماً بعينه، وحسابُ المسافة فوقه يعطي رقماً ثالثاً لا هو اختاره
+    // ولا يفهمه الزبون.
+    if (selectedZone) {
+      const afterDiscount = cartTotal - discountAmount;
+      const free = selectedZone.freeOverAmount;
+      if (free && afterDiscount >= Number(free)) return 0;
+      return Math.round(Number(selectedZone.fee) || 0);
+    }
+    if (shippingZones.length > 0) return 0;
 
     const settings = store?.deliverySettings;
     if (!settings) return 0;
@@ -549,7 +584,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     } catch {
       return Math.round(base);
     }
-  }, [orderType, store, cartTotal, discountAmount, deliveryLocation]);
+  }, [orderType, store, cartTotal, discountAmount, deliveryLocation, selectedZone, shippingZones]);
 
   // ---------- إرسال الطلب ----------
   const submitOrder = async () => {
@@ -619,6 +654,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         deliveryLat: orderType === 'delivery' ? deliveryLocation?.lat : undefined,
         deliveryLng: orderType === 'delivery' ? deliveryLocation?.lng : undefined,
         deliveryFee: orderType === 'delivery' ? deliveryFee : 0,
+        // الخادم يُعيد حسابها من المحافظة ولا يثق بما نرسله — هذه للعرض
+        governorate: orderType === 'delivery' ? governorate || null : null,
         // يُتجاهَل بصمت إن كان منتهياً أو لنشاطٍ آخر — الخادم يتحقّق
         referralCode: getRef((store as any)?.id) || undefined
       };
@@ -1076,6 +1113,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             : undefined
         }
         deliveryFee={deliveryFee}
+        shippingZones={shippingZones}
+        governorate={governorate}
+        onGovernorateChange={setGovernorate}
         discount={discountAmount}
         couponCode={couponCode}
         onCouponApply={applyCoupon}
