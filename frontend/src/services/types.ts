@@ -154,6 +154,11 @@ export interface Plan {
     /// رمز الصنف للكاشير — يُمسح بالباركود. اختياريّ: الوجبات المحضَّرة
     /// لا باركود لها، والعبوات الجاهزة لها.
     sku?: string;
+    /// تتبّع المخزون اختياريّ لكل صنف — راجع menuController.normalizeStock
+    trackStock?: boolean;
+    /// `null`/غائب = لا يُتتبَّع، والصفر = نفد
+    stock?: number | null;
+    minStockLevel?: number | null;
     isAvailable: boolean;
     isFeatured: boolean;
     sortOrder: number;

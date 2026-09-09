@@ -144,6 +144,9 @@ const MenuPage: React.FC = () => {
     discountedPrice: '',
     image: '',
     sku: '',
+    trackStock: false,
+    stock: '',
+    minStockLevel: '',
     preparationTime: '',
     calories: '',
     hasSizes: false,
@@ -160,6 +163,7 @@ const MenuPage: React.FC = () => {
       restaurantId: selectedRestaurantId === 'all' ? (restaurant?.id || '') : selectedRestaurantId,
       categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '',
       price: '', discountedPrice: '', image: '', sku: '', preparationTime: '', calories: '',
+      trackStock: false, stock: '', minStockLevel: '',
       hasSizes: false, hasAddons: false,
     });
     setSizes([
@@ -220,7 +224,11 @@ const MenuPage: React.FC = () => {
         categoryId: item.categoryId, name: item.name, nameEn: item.nameEn || '',
         description: item.description || '', descriptionEn: item.descriptionEn || '',
         price: item.price.toString(), discountedPrice: item.discountedPrice?.toString() || '',
-        image: item.image || '', sku: item.sku || '', preparationTime: item.preparationTime?.toString() || '',
+        image: item.image || '', sku: item.sku || '',
+        trackStock: Boolean((item as any).trackStock),
+        stock: (item as any).stock?.toString() || '',
+        minStockLevel: (item as any).minStockLevel?.toString() || '',
+        preparationTime: item.preparationTime?.toString() || '',
         calories: item.calories?.toString() || '', hasSizes: item.hasSizes, hasAddons: item.hasAddons,
       });
       if (item.sizes) {
@@ -292,6 +300,9 @@ const MenuPage: React.FC = () => {
         price: basePrice,
         discountedPrice: itemForm.discountedPrice ? parseFloat(itemForm.discountedPrice) : null,
         preparationTime: itemForm.preparationTime ? parseInt(itemForm.preparationTime) : null,
+        trackStock: itemForm.trackStock,
+        stock: itemForm.trackStock ? parseInt(itemForm.stock || '0') : null,
+        minStockLevel: itemForm.trackStock ? parseInt(itemForm.minStockLevel || '5') : null,
         calories: itemForm.calories ? parseInt(itemForm.calories) : null,
         sizes: itemForm.hasSizes ? sizesObject : null,
         addons: itemForm.hasAddons ? addonsObject : null,
@@ -643,6 +654,54 @@ const MenuPage: React.FC = () => {
               المحضَّرة التي لا باركود لها.
             </p>
           </div>
+          {/* تتبّع المخزون: **اختياريّ لكل صنف**. الشاورما تُحضَّر عند الطلب
+              فلا مخزون لها، وعلبة البيبسي لها عدد. وتفعيلُه للجميع كان
+              سيُظهر كل الوجبات «نفدت» فور التفعيل. */}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={itemForm.trackStock}
+                onChange={(e) => setItemForm({ ...itemForm, trackStock: e.target.checked })}
+                style={{ accentColor: C.accent, width: 17, height: 17 }}
+              />
+              <span style={{ color: C.text, fontSize: 14, fontWeight: 600 }}>
+                تتبّع المخزون لهذا الصنف
+              </span>
+            </label>
+            <p style={{ color: C.muted, fontSize: 12, margin: '6px 0 0', lineHeight: 1.8 }}>
+              فعّله للمعلّبات والمشروبات الجاهزة. اتركه مطفأً للوجبات التي
+              تُحضَّر عند الطلب — وإلا ظهرت «نفدت» عند أوّل بيعة.
+            </p>
+
+            {itemForm.trackStock && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                <div>
+                  <label style={labelStyle}>الكمية المتوفّرة</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={itemForm.stock}
+                    onChange={(e) => setItemForm({ ...itemForm, stock: e.target.value })}
+                    style={inputStyle}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>حدّ التنبيه</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={itemForm.minStockLevel}
+                    onChange={(e) => setItemForm({ ...itemForm, minStockLevel: e.target.value })}
+                    style={inputStyle}
+                    placeholder="5"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>وقت التحضير (دقيقة)</label>

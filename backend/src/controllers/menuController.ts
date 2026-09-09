@@ -259,6 +259,30 @@ const normalizeMenuItemSku = async (
   return { value: sku };
 };
 
+/**
+ * يطبّع حقول المخزون.
+ *
+ * **إطفاء التتبّع يمحو الرصيد إلى `null` لا يتركه صفراً.** الصفر يعني
+ * «نفد» فيُخفي الصنف عن الزبائن؛ والـ`null` يعني «لا يُتتبَّع» وهو المقصود.
+ * وترك الصفر عند الإطفاء كان سيُخفي كل صنفٍ أُلغي تتبّعه.
+ */
+const normalizeStock = (
+  trackStock: unknown,
+  stock: unknown,
+  minStockLevel: unknown
+): { trackStock: boolean; stock: number | null; minStockLevel: number | null } => {
+  const tracked = trackStock === true || trackStock === 'true';
+  if (!tracked) return { trackStock: false, stock: null, minStockLevel: null };
+
+  const qty = Number(stock);
+  const min = Number(minStockLevel);
+  return {
+    trackStock: true,
+    stock: Number.isFinite(qty) ? Math.max(0, Math.round(qty)) : 0,
+    minStockLevel: Number.isFinite(min) && min > 0 ? Math.round(min) : 5
+  };
+};
+
 export const createMenuItem = async (
   req: AuthRequest,
   res: Response
@@ -271,7 +295,7 @@ export const createMenuItem = async (
       return;
     }
 
-    const { categoryId, name, description, price, originalPrice, image, position, sku } = req.body;
+    const { categoryId, name, description, price, originalPrice, image, position, sku, trackStock, stock, minStockLevel } = req.body;
 
     // التحقق من وجود الفئة
     const category = await prisma.category.findFirst({
@@ -300,6 +324,7 @@ export const createMenuItem = async (
         image: image || null,
         position: position || 0,
         sku: skuResult.value,
+        ...normalizeStock(trackStock, stock, minStockLevel),
         isAvailable: true
       }
     });
@@ -366,7 +391,7 @@ export const updateMenuItem = async (
       return;
     }
 
-    const { categoryId, name, description, price, originalPrice, image, position, isAvailable, sku } = req.body;
+    const { categoryId, name, description, price, originalPrice, image, position, isAvailable, sku, trackStock, stock, minStockLevel } = req.body;
 
     const item = await prisma.menuItem.findFirst({
       where: { id, restaurantId }
@@ -404,6 +429,13 @@ export const updateMenuItem = async (
       where: { id },
       data: {
         sku: nextSku,
+        ...(trackStock !== undefined || stock !== undefined || minStockLevel !== undefined
+          ? normalizeStock(
+              trackStock !== undefined ? trackStock : item.trackStock,
+              stock !== undefined ? stock : item.stock,
+              minStockLevel !== undefined ? minStockLevel : item.minStockLevel
+            )
+          : {}),
         categoryId: categoryId !== undefined ? categoryId : item.categoryId,
         name: name || item.name,
         description: description !== undefined ? description : item.description,

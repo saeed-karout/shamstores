@@ -606,6 +606,18 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           data: { stock: { decrement: itemData.quantity } }
         });
       }
+
+      // أصناف المطاعم المتتبَّعة تُخصم أيضاً — الطلب الإلكتروني يستهلك
+      // نفس العلبة التي يبيعها الكاشير. وبلا هذا يبيع المطعم عشرين بيبسي
+      // أونلاين ورصيده لم ينقص واحدةً.
+      if (itemData.menuItemId) {
+        await prisma.menuItem.updateMany({
+          // `updateMany` بشرط `trackStock`: يتخطّى غير المتتبَّع بلا
+          // استعلامٍ سابق، ولا يرمي إن لم يطابق شيئاً
+          where: { id: itemData.menuItemId, trackStock: true },
+          data: { stock: { decrement: itemData.quantity } }
+        });
+      }
     }
 
     // تحديث استخدام الكوبون

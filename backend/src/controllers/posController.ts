@@ -92,7 +92,7 @@ export const searchProducts = async (req: AuthRequest, res: Response): Promise<v
           ...(categoryId ? { categoryId } : {}),
           ...(term ? { OR: [{ name: { contains: term } }, { sku: { contains: term } }] } : {})
         },
-        select: { id: true, name: true, sku: true, price: true, image: true },
+        select: { id: true, name: true, sku: true, price: true, image: true, trackStock: true, stock: true },
         orderBy: [{ ordersCount: 'desc' }, { name: 'asc' }],
         take: 60
       });
@@ -101,7 +101,8 @@ export const searchProducts = async (req: AuthRequest, res: Response): Promise<v
         name: r.name,
         sku: r.sku,
         price: Number(r.price),
-        stock: null,
+        // `null` لغير المتتبَّع، والرقم للمتتبَّع — والفرق يحسم هل يُمنع البيع
+        stock: r.trackStock ? (r.stock ?? 0) : null,
         unit: 'piece',
         imageUrl: r.image
       }));
@@ -141,12 +142,12 @@ export const lookupBySku = async (req: AuthRequest, res: Response): Promise<void
     } else {
       const row = await prisma.menuItem.findFirst({
         where: { restaurantId: business.id, sku },
-        select: { id: true, name: true, sku: true, price: true, image: true }
+        select: { id: true, name: true, sku: true, price: true, image: true, trackStock: true, stock: true }
       });
       if (row) {
         item = {
           id: row.id, name: row.name, sku: row.sku, price: Number(row.price),
-          stock: null, unit: 'piece', imageUrl: row.image
+          stock: row.trackStock ? (row.stock ?? 0) : null, unit: 'piece', imageUrl: row.image
         };
       }
     }
@@ -219,8 +220,14 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
         })).map((p) => ({ ...p, price: Number(p.price), stock: p.stock as number | null }))
       : (await prisma.menuItem.findMany({
           where: { id: { in: ids }, restaurantId: business.id },
-          select: { id: true, name: true, price: true }
-        })).map((m) => ({ ...m, price: Number(m.price), cost: null as number | null, stock: null as number | null }));
+          select: { id: true, name: true, price: true, trackStock: true, stock: true }
+        })).map((m: any) => ({
+          ...m,
+          price: Number(m.price),
+          cost: null as number | null,
+          // نفس القاعدة: غير المتتبَّع `null` فلا يُفحص سقفه
+          stock: m.trackStock ? ((m.stock as number | null) ?? 0) : null
+        }));
 
     const byId = new Map(catalog.map((c) => [c.id, c]));
 
@@ -229,18 +236,23 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    // المخزون يُفحص قبل الكتابة — للمتجر وحده. المطعم يطبخ عند الطلب،
-    // وفحصُ رصيدٍ لا وجود له كان سيمنع كل بيعة.
-    if (isStore) {
-      const short = clean.find((l) => (byId.get(l.productId)!.stock ?? 0) < l.quantity);
-      if (short) {
-        const item = byId.get(short.productId)!;
-        res.status(400).json({
-          success: false,
-          error: `الكمية غير متوفّرة من «${item.name}» — المتاح ${item.stock}`
-        });
-        return;
-      }
+    // **المخزون يُفحص للمتتبَّع لا لنوع النشاط.**
+    //
+    // كان الفحص للمتاجر وحدها، بحجّة أن المطعم يطبخ عند الطلب. والحجّة
+    // صحيحةٌ للوجبات وخاطئةٌ للمعلّبات: مطعمٌ يبيع بيبسي له عدد. فالمعيار
+    // الآن `stock !== null` — أي «هل لهذا الصنف رصيدٌ يُتتبَّع» — وهو صحيح
+    // للطرفين، ويستثني وجبات المطعم من تلقاء نفسه.
+    const short = clean.find((l) => {
+      const item = byId.get(l.productId)!;
+      return item.stock !== null && item.stock < l.quantity;
+    });
+    if (short) {
+      const item = byId.get(short.productId)!;
+      res.status(400).json({
+        success: false,
+        error: `الكمية غير متوفّرة من «${item.name}» — المتاح ${item.stock}`
+      });
+      return;
     }
 
     const items = clean.map((l) => {
@@ -291,9 +303,15 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
             data: { stock: { decrement: item.quantity }, ordersCount: { increment: item.quantity } }
           });
         } else {
+          // المخزون يُخصم للمتتبَّع وحده. والكتالوج مقروءٌ قبل المعاملة فلا
+          // نستعلم داخلها لكل صنف — معاملةٌ طويلة تُقفل صفوفاً تحت الضغط.
+          const tracked = byId.get(item.id)?.stock !== null;
           await tx.menuItem.update({
             where: { id: item.id },
-            data: { ordersCount: { increment: item.quantity } }
+            data: {
+              ordersCount: { increment: item.quantity },
+              ...(tracked ? { stock: { decrement: item.quantity } } : {})
+            }
           });
         }
       }

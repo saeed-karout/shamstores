@@ -669,6 +669,21 @@ model MenuItem {
   /// مصفوفة مجموعات: { name, type: single|multi, required, values: [{label, priceDelta}] }
   /// راجع services/productOptions.service.ts — هو المرجع الوحيد لشكلها وتحقّقها.
   options         Json?
+  /// هل يُتتبَّع مخزون هذا الصنف؟
+  ///
+  /// **اختياريّ لكل صنف لا للمطعم كلّه.** الشاورما تُحضَّر عند الطلب فلا
+  /// مخزون لها، وعلبة البيبسي لها عدد. ولو تُتبِّع الجميع لظهرت كل الوجبات
+  /// «نفدت» فور التفعيل — وهو ما يوقف المطعم عن البيع في دقيقة.
+  trackStock      Boolean  @default(false) @map("track_stock")
+
+  /// الكمية المتبقّية — ذات معنى فقط حين `trackStock`.
+  ///
+  /// `null` يعني «لا يُتتبَّع» والصفر يعني «نفد». وخلطهما هو بالضبط ما يجعل
+  /// كل أصناف المطعم تبدو نافدة.
+  stock           Int?
+
+  minStockLevel   Int?     @default(5) @map("min_stock_level")
+
   isAvailable     Boolean  @default(true)
   isPopular       Boolean  @default(false)
   isNew           Boolean  @default(false)

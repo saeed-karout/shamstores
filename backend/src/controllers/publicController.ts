@@ -70,7 +70,19 @@ export const getBusinessBySlug = async (
           orderBy: { position: 'asc' }
         }),
         prisma.menuItem.findMany({
-          where: { restaurantId: restaurant.id, isAvailable: true },
+          // **المتتبَّع النافد يُستبعَد كما المخفيّ.**
+          //
+          // `isAvailable` قرارُ التاجر، والمخزون واقعُ الرفّ. وعرضُ صنفٍ
+          // نفد يعني زبوناً يطلبه فيُرفض عند التحضير — أو أسوأ: يُقبل
+          // ويُخصَم رصيدٌ إلى ما دون الصفر.
+          //
+          // ولا يُطفأ `isAvailable` تلقائياً: إطفاؤه قرارٌ يحتاج إعادةَ
+          // تشغيلٍ يدوية عند التوريد، والاستبعادُ بالقراءة يعود وحده.
+          where: {
+            restaurantId: restaurant.id,
+            isAvailable: true,
+            OR: [{ trackStock: false }, { stock: { gt: 0 } }]
+          },
           orderBy: { position: 'asc' }
         })
       ]);
@@ -299,7 +311,11 @@ export const getTableById = async (
     });
     
     const menuItems = await prisma.menuItem.findMany({
-      where: { restaurantId: restaurant.id, isAvailable: true },
+      where: {
+        restaurantId: restaurant.id,
+        isAvailable: true,
+        OR: [{ trackStock: false }, { stock: { gt: 0 } }]
+      },
       orderBy: { position: 'asc' }
     });
     
