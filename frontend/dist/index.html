@@ -7,6 +7,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#082E24" />
 
+    <!-- ⚠️ لا `canonical` ولا `og:url` ثابتان هنا عمداً.
+         كانا يشيران إلى `https://shamstores.com/` في **كل** صفحة — أي
+         إخبارٌ صريح لجوجل بأن صفحة كل متجر نسخةٌ من صفحتنا الرئيسية.
+         والأسوأ على النطاقات المخصّصة: التاجر يشتري نطاقاً فيخرج من
+         الفهرس وتُنسَب صفحته إلينا.
+         صفحات المتاجر تحصل على وسمها الصحيح من وظيفة الحافّة
+         (`functions/[slug].js`)، وما عداها يكتفي جوجل بعنوانه نفسه —
+         وهو التصرّف الصحيح حين لا نعرف البديل. -->
+
+    <!-- ⚠️ بيان التطبيق ووسوم آبل: هذه هي ما يجعل «إضافة إلى الشاشة
+         الرئيسية» تفتح تطبيقاً مستقلّاً لا صفحةً في المتصفّح.
+         وعلى iPhone هذا **شرطٌ لوجود الإشعارات أصلاً**: نظام iOS لا يمنح
+         Push API إلا لموقعٍ يعمل في وضع standalone، فبلا هذه الوسوم يبقى
+         كل مستخدمي الآيفون بلا إشعارات مهما فعلنا في الشيفرة. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="شام ستورز" />
+
     <!-- ⚠️ هذه الوسوم ثابتة في الـ HTML عمداً.
          التطبيق يُصيَّر في المتصفح، وكثير من الزواحف — ومنها زواحف نماذج
          الذكاء الاصطناعي — لا تنفّذ جافاسكربت. ما يكتبه react-helmet لا
@@ -23,13 +44,11 @@
     />
     <meta name="author" content="Sham Stores" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-    <link rel="canonical" href="https://shamstores.com/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="شام ستورز" />
     <meta property="og:locale" content="ar_SY" />
-    <meta property="og:url" content="https://shamstores.com/" />
     <meta property="og:title" content="شام ستورز — قائمة رقمية ومتجر إلكتروني للمطاعم والمتاجر السورية" />
     <meta
       property="og:description"
@@ -40,7 +59,6 @@
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://shamstores.com/" />
     <meta name="twitter:title" content="شام ستورز — قائمة رقمية ومتجر إلكتروني" />
     <meta
       name="twitter:description"
@@ -96,12 +114,13 @@
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <script type="module" crossorigin src="/assets/index-DnCLdJjJ.js"></script>
+    <script type="module" crossorigin src="/assets/index-BClDE82R.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/vendor-query-Cdl-9iGO.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-charts-BMaJADYX.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-socket-BcxXcwBL.js">
     <link rel="modulepreload" crossorigin href="/assets/vendor-motion-BAuxIyPe.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-DPEgoLmM.css">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-B9yOwzhf.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BRq_GQGu.css">
   </head>
   <body>
     <div id="root"></div>

@@ -589,7 +589,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       <StorefrontLayout
         name={language.pick(restaurant, 'name')}
-        description={restaurant.description}
+        description={language.pick(restaurant, 'description')}
         logo={restaurant.logo}
         coverImage={restaurant.coverImage}
         phone={restaurant.phone}
@@ -622,7 +622,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
             businessType="restaurant"
             businessLogo={restaurant.logo}
             businessSlug={restaurant.slug}
-            description={restaurant.description}
+            description={language.pick(restaurant, 'description')}
             socialLinks={{
               facebook: restaurant.facebook,
               instagram: restaurant.instagram,

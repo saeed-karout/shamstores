@@ -1,5 +1,6 @@
 // frontend/src/components/a11y/SkipToContent.tsx
 
+import { useT } from '@/i18n/storefront';
 /**
  * رابط «تخطَّ إلى المحتوى».
  *
@@ -10,10 +11,14 @@
  * الهدف `#main-content` معرَّف في App.tsx حول شجرة المسارات، ويحمل
  * `tabIndex={-1}` ليقبل التركيز برمجياً عند القفز إليه.
  */
-const SkipToContent: React.FC = () => (
-  <a href="#main-content" className="skip-link">
-    تخطَّ إلى المحتوى
-  </a>
-);
+const SkipToContent: React.FC = () => {
+  // خارج مزوّد المتجر يرتدّ إلى العربية — وهو الصحيح في صفحات المنصّة
+  const { t } = useT();
+  return (
+    <a href="#main-content" className="skip-link">
+      {t('تخطَّ إلى المحتوى')}
+    </a>
+  );
+};
 
 export default SkipToContent;

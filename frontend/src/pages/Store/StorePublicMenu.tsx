@@ -775,7 +775,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       <ShopLayout
         name={language.pick(store, 'name')}
-        description={store.description}
+        description={language.pick(store, 'description')}
         logo={store.logo}
         coverImage={store.coverImage}
         phone={store.phone}
@@ -820,7 +820,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             businessType="store"
             businessLogo={store.logo}
             businessSlug={store.slug}
-            description={store.description}
+            description={language.pick(store, 'description')}
             socialLinks={{
               facebook: store.facebook,
               instagram: store.instagram,
@@ -863,7 +863,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             }}
           >
             <IoSwapVerticalOutline size={15} />
-            {SORT_OPTIONS.find((o) => o.key === sortBy)?.label || 'ترتيب'}
+            {t(SORT_OPTIONS.find((o) => o.key === sortBy)?.label || 'ترتيب')}
           </button>
 
           {/* مرشّح العروض — يظهر فقط حين توجد عروض فعلاً */}

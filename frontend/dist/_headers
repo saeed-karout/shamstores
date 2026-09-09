@@ -20,3 +20,18 @@
 
 /*.svg
   Cache-Control: public, max-age=31536000, immutable
+
+# عامل الخدمة **بعد** قاعدة /*.js عمداً: قواعد Cloudflare تُطبَّق بالترتيب
+# والأخيرة تغلب. ولولا هذا الاستثناء لخُزّن العامل سنةً كاملة `immutable` —
+# فلا يصل إليه إصلاحٌ أبداً، وهو الملفّ الذي يستقبل كل إشعارات الطلبات.
+/firebase-messaging-sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Service-Worker-Allowed: /
+
+# بيان التطبيق: لا يُخزَّن طويلاً.
+#
+# تغييرُ الاسم أو الأيقونة لا يصل إلى هاتفٍ خزّن البيان سنةً، ويبقى المتجر
+# مثبَّتاً باسمٍ قديم بلا سبيلٍ لتصحيحه إلا حذفه وإعادة تثبيته.
+/manifest.webmanifest
+  Cache-Control: public, max-age=3600
+  Content-Type: application/manifest+json; charset=utf-8

@@ -7,6 +7,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#082E24" />
 
+    <!-- ⚠️ لا `canonical` ولا `og:url` ثابتان هنا عمداً.
+         كانا يشيران إلى `https://shamstores.com/` في **كل** صفحة — أي
+         إخبارٌ صريح لجوجل بأن صفحة كل متجر نسخةٌ من صفحتنا الرئيسية.
+         والأسوأ على النطاقات المخصّصة: التاجر يشتري نطاقاً فيخرج من
+         الفهرس وتُنسَب صفحته إلينا.
+         صفحات المتاجر تحصل على وسمها الصحيح من وظيفة الحافّة
+         (`functions/[slug].js`)، وما عداها يكتفي جوجل بعنوانه نفسه —
+         وهو التصرّف الصحيح حين لا نعرف البديل. -->
+
     <!-- ⚠️ بيان التطبيق ووسوم آبل: هذه هي ما يجعل «إضافة إلى الشاشة
          الرئيسية» تفتح تطبيقاً مستقلّاً لا صفحةً في المتصفّح.
          وعلى iPhone هذا **شرطٌ لوجود الإشعارات أصلاً**: نظام iOS لا يمنح
@@ -35,13 +44,11 @@
     />
     <meta name="author" content="Sham Stores" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-    <link rel="canonical" href="https://shamstores.com/" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="شام ستورز" />
     <meta property="og:locale" content="ar_SY" />
-    <meta property="og:url" content="https://shamstores.com/" />
     <meta property="og:title" content="شام ستورز — قائمة رقمية ومتجر إلكتروني للمطاعم والمتاجر السورية" />
     <meta
       property="og:description"
@@ -52,7 +59,6 @@
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://shamstores.com/" />
     <meta name="twitter:title" content="شام ستورز — قائمة رقمية ومتجر إلكتروني" />
     <meta
       name="twitter:description"
