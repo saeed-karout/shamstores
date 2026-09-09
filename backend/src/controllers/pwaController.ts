@@ -325,4 +325,87 @@ export const getPwaStatus = async (req: Request, res: Response): Promise<void> =
   }
 };
 
-export default { getStoreManifest, getStoreIcon, getPwaStatus };
+// ==================== بيانات محرّكات البحث ====================
+
+/**
+ * ملخّصٌ خفيف لحقن وسوم الصفحة على حافّة Cloudflare.
+ *
+ * **لماذا منفذٌ مستقلّ عن `/public/:slug`:** ذاك يردّ كل شيء — الفئات
+ * والأصناف والإعدادات وساعات العمل — ويُنادى هنا **قبل** أن يُخدَم HTML
+ * لكل زائر. فكل كيلوبايتٍ زائد تأخيرٌ في أوّل بايت، لا تأخيرٌ بعد التحميل.
+ *
+ * **ولا يُشترط شراء ميزة:** ظهورُ متجر التاجر في جوجل ليس إضافةً تُباع بل
+ * سببُ وجود المنصّة. وهو أيضاً ما تفعله المنصّات المنافسة بلا مقابل.
+ */
+export const getSeoSummary = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const slug = String(req.params.slug || '').trim();
+
+    const select = {
+      id: true,
+      name: true,
+      slug: true,
+      description: true,
+      logo: true,
+      coverImage: true,
+      currency: true,
+      isActive: true
+    } as const;
+
+    const restaurant = await prisma.restaurant.findUnique({ where: { slug }, select });
+    const store = restaurant ? null : await prisma.store.findUnique({ where: { slug }, select });
+    const business = restaurant || store;
+    const type: BusinessType = restaurant ? 'restaurant' : 'store';
+
+    // النشاط الموقوف لا يُفهرَس: صفحةٌ تظهر في جوجل ثمّ تُفتح فتقول «غير
+    // موجود» تضرّ ترتيب النطاق كلّه لا صفحتها وحدها
+    if (!business || business.isActive === false) {
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      res.json({ success: true, data: { found: false } });
+      return;
+    }
+
+    // اثنا عشر صنفاً: ما يكفي ليفهم المحرّك ما يبيعه المتجر، ولا يُثقل
+    // الاستجابة التي تسبق كل صفحة
+    const items = restaurant
+      ? await prisma.menuItem.findMany({
+          where: { restaurantId: business.id, isAvailable: true },
+          select: { id: true, name: true, nameEn: true, price: true, image: true },
+          orderBy: [{ isPopular: 'desc' }, { position: 'asc' }],
+          take: 12
+        })
+      : await prisma.product.findMany({
+          where: { storeId: business.id, isAvailable: true },
+          select: { id: true, name: true, nameEn: true, price: true, imageUrl: true },
+          orderBy: [{ isPopular: 'desc' }, { createdAt: 'desc' }],
+          take: 12
+        });
+
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json({
+      success: true,
+      data: {
+        found: true,
+        type,
+        name: business.name,
+        description: business.description || null,
+        logo: business.logo || null,
+        cover: business.coverImage || null,
+        currency: business.currency || 'SYP',
+        products: items.map((row: any) => ({
+          name: row.name,
+          nameEn: row.nameEn || null,
+          price: Number(row.price) || 0,
+          image: row.image || row.imageUrl || null
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('getSeoSummary failed:', error);
+    // الفشل يُقرأ «لا بيانات» لا خطأً: الحافّة تتخطّى الحقن وتخدم الصفحة
+    // كما هي، فعطلٌ هنا لا يُسقط المتجر
+    res.json({ success: true, data: { found: false } });
+  }
+};
+
+export default { getStoreManifest, getStoreIcon, getPwaStatus, getSeoSummary };

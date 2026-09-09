@@ -12,7 +12,7 @@ import {
   getHostBrand
 } from '../controllers/publicController';
 import { getProductReviews } from '../controllers/productReviewController';
-import { getStoreManifest, getStoreIcon, getPwaStatus } from '../controllers/pwaController';
+import { getStoreManifest, getStoreIcon, getPwaStatus, getSeoSummary } from '../controllers/pwaController';
 
 const router = express.Router();
 
@@ -34,6 +34,7 @@ router.get('/brand', getHostBrand);
 router.get('/:slug/manifest.webmanifest', getStoreManifest);
 router.get('/:slug/pwa-icon/:file', getStoreIcon);
 router.get('/:slug/pwa-status', getPwaStatus);
+router.get('/:slug/seo', getSeoSummary);
 
 router.get('/:identifier', getBusinessBySlug);
 
