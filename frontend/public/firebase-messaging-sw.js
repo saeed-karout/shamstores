@@ -79,19 +79,54 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 /**
- * معالج `fetch` — شرط تثبيت لا آلية تخزين.
+ * معالج `fetch` — شرط تثبيتٍ وشبكةُ أمانٍ عند انقطاع الشبكة.
  *
- * كروم لا يعرض «تثبيت التطبيق» إلا لموقعٍ عامل خدمته تستمع إلى `fetch`.
- * لذلك يوجد هذا المعالج، ولذلك **لا يخزّن شيئاً**: التخزين المسبق على
- * تطبيقٍ يُنشر عدّة مرّات في اليوم يترك زبائن على نسخةٍ قديمة لا يعرفون
- * كيف يخرجون منها — وهو عطلٌ أسوأ بكثير من غياب العمل دون اتصال.
+ * **لا يخزّن شيئاً عمداً:** التخزين المسبق على تطبيقٍ يُنشر عدّة مرّات في
+ * اليوم يترك زبائن على نسخةٍ قديمة لا يعرفون كيف يخرجون منها — وهو عطلٌ
+ * أسوأ من غياب العمل دون اتصال. فالمرور من الشبكة دائماً.
  *
- * المرور من الشبكة دائماً، وبلا اعتراضٍ لغير طلبات التصفّح.
+ * **لكن الفشل لا يُترك للمتصفّح:** كروم يشترط أن يستجيب الموقع وهو غير
+ * متّصل ليعدّه تطبيقاً قابلاً للتثبيت — وبلا ذلك يُنشئ **اختصاراً** عليه
+ * شارته بدل تطبيقٍ حقيقيّ يظهر بين التطبيقات. والأهمّ للزبون: تطبيقٌ
+ * مثبَّت يفتح على صفحة خطأ المتصفّح يبدو معطّلاً لا غير متّصل.
+ *
+ * الاعتراض على طلبات التصفّح وحدها: الصور وملفّات JS تفشل بهدوء ولا
+ * تحتاج صفحةً بديلة.
  */
+const OFFLINE_PAGE = `<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>لا اتصال</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;
+    background:#082E24;color:#E8F5E9;
+    font-family:system-ui,-apple-system,'Segoe UI',sans-serif;text-align:center;padding:24px}
+  .c{max-width:320px}
+  h1{font-size:19px;margin:0 0 10px}
+  p{font-size:14px;line-height:1.9;color:#9DC4AC;margin:0 0 22px}
+  button{background:#C8E235;color:#0A2018;border:0;border-radius:12px;
+    padding:13px 26px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+</style></head>
+<body><div class="c">
+  <h1>لا يوجد اتصال بالإنترنت</h1>
+  <p>تحقّق من اتصالك ثمّ أعد المحاولة — بياناتك وسلّتك محفوظة.</p>
+  <button onclick="location.reload()">إعادة المحاولة</button>
+</div></body></html>`;
+
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-  // لا نعترض: نترك المتصفّح يتصرّف كما لو لا عامل خدمة أصلاً
-  return;
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  if (request.mode !== 'navigate') return;
+
+  event.respondWith(
+    fetch(request).catch(
+      () =>
+        new Response(OFFLINE_PAGE, {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        })
+    )
+  );
 });
 
 /// التحديث يصل فوراً لا بعد إغلاق كل التبويبات
