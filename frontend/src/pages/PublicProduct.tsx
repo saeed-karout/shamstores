@@ -1,6 +1,6 @@
 // frontend/src/pages/PublicProduct.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   IoCart, IoShare, IoHeart, IoHeartOutline, IoCheckmark,
@@ -19,6 +19,8 @@ import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { StorefrontDesignProvider } from '@/utils/storefrontDesignContext';
 import { sd, resolveDesign } from '@/utils/storefrontDesign';
 import { useIsDesktop } from '@/hooks/useMediaQuery';
+import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
+import { makeT } from '@/i18n/storefront';
 import ProductOptionsSheet, {
   parseProductOptions,
   hasOptions,
@@ -123,6 +125,22 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
    * الدالّة، فلا يراه خطّافٌ في جسمها.
    */
   const isDesktop = useIsDesktop();
+
+  /**
+   * لغة العرض — تُقرأ من نفس المفتاح الذي تكتبه واجهة المتجر.
+   *
+   * **ما كان يقع:** الزبون يبدّل اللغة على `/<slug>` ثمّ يفتح منتجاً،
+   * فتهبط عليه صفحةٌ عربية بالكامل — العنوان والحالة والوصف وزرّ الشراء.
+   * الصفحة لم تكن داخل نظام الترجمة أصلاً.
+   *
+   * و`makeT` لا `useT`: مزوّد اللغة يُصيَّر داخل ما تُرجعه هذه الدالّة،
+   * فلا يراه خطّافٌ في جسمها.
+   */
+  const language = useStorefrontLanguage(
+    slug || (store as any)?.slug || '',
+    (store as any)?.languageSettings
+  );
+  const t = useMemo(() => makeT(language.lang), [language.lang]);
   const design = resolveDesign((store as any)?.storefrontDesign);
 
   const actualProductId = productIdParam || paramProductId;
@@ -416,14 +434,13 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
         <div style={{ textAlign: 'center', maxWidth: 380 }}>
           <div style={{ fontSize: 46, marginBottom: 12 }}>🛒</div>
           <h1 style={{ fontSize: 21, fontWeight: 800, color: C.text, marginBottom: 8 }}>
-            {unavailable.name ? `«${unavailable.name}» غير متاح حالياً` : 'هذا المنتج غير متاح حالياً'}
+            {unavailable.name ? `«${unavailable.name}» ${t('غير متاح حالياً')}` : t('هذا المنتج غير متاح حالياً')}
           </h1>
           <p style={{ color: C.muted, marginBottom: 18, lineHeight: 1.9, fontSize: 13.5 }}>
-            أوقفه المتجر مؤقتاً. رابطك صحيح — تصفّح بقية المنتجات أو تواصل مع
-            المتجر للسؤال عن عودته.
+            {t('أوقفه المتجر مؤقتاً. رابطك صحيح — تصفّح بقية المنتجات أو تواصل مع المتجر للسؤال عن عودته.')}
           </p>
           <Link to={`/${store?.slug || ''}`} style={{ color: C.accent, textDecoration: 'none', fontWeight: 700 }}>
-            تصفّح المتجر
+            {t('تصفّح المتجر')}
           </Link>
         </div>
       </div>
@@ -434,10 +451,10 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     return (
       <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
         <div style={{ textAlign: 'center' }}>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>المنتج غير موجود</h1>
-          <p style={{ color: C.muted, marginBottom: 16 }}>عذراً، المنتج الذي تبحث عنه غير موجود</p>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 8 }}>{t('المنتج غير موجود')}</h1>
+          <p style={{ color: C.muted, marginBottom: 16 }}>{t('عذراً، المنتج الذي تبحث عنه غير موجود')}</p>
           <Link to={`/${store?.slug || ''}`} style={{ color: C.accent, textDecoration: 'none' }}>
-            العودة إلى المتجر
+            {t('العودة إلى المتجر')}
           </Link>
         </div>
       </div>
@@ -490,7 +507,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       {/* خيارات المنتج — الصورة تتبع اللون المختار */}
       <ProductOptionsSheet
         open={optionsOpen}
-        name={product.name}
+        name={language.pick(product, 'name')}
         basePrice={parsePrice(product.price)}
         options={parseProductOptions((product as any).options)}
         currency={currency}
@@ -509,7 +526,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Link to={`/${store.slug}`} style={{ color: C.muted, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 15 }}>
               <IoChevronForward size={18} />
-              العودة إلى المتجر
+              {t('العودة إلى المتجر')}
             </Link>
             <Link to={`/${store.slug}`} style={{ fontSize: 20, fontWeight: 700, color: C.text, textDecoration: 'none' }}>
               {store.name}
@@ -568,20 +585,20 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 />
               ) : (
                 <div style={{ width: '100%', height: immersive ? 'min(72vh, 520px)' : 384, background: C.surf, borderRadius: immersive ? 0 : sd.rImage, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: C.muted }}>لا توجد صورة</span>
+                  <span style={{ color: C.muted }}>{t('لا توجد صورة')}</span>
                 </div>
               )}
 
               {discountPercent > 0 && (
                 <div style={{ position: 'absolute', top: 16, right: 16, background: C.red, color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
-                  خصم {discountPercent}%
+                  {t('خصم')} {discountPercent}%
                 </div>
               )}
 
               {productStock === 0 && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ background: C.red, color: '#fff', padding: '8px 16px', borderRadius: 20, fontSize: 17, fontWeight: 700 }}>
-                    نفد من المخزون
+                    {t('نفد من المخزون')}
                   </span>
                 </div>
               )}
@@ -619,13 +636,13 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
               <p style={{ fontSize: 11, color: C.muted, marginBottom: 8, marginTop: 0 }}>SKU: {product.sku}</p>
             )}
 
-            {/* الاسم */}
-            <h1 style={{ fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 8, marginTop: 0 }}>
-              {product.name}
+            {/* الاسم — **واحدٌ حسب اللغة، لا الاثنان معاً.**
+                كانت الصفحة تكدّس الاسم العربيّ فوق الإنجليزيّ وتحته الوصفَين،
+                فيقرأ الزبون كل شيء مرّتين. و`pick` تُرجع ما يقابل لغته
+                وترتدّ إلى العربية إن لم يملأ التاجر الحقل الإنجليزي. */}
+            <h1 style={{ fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 16, marginTop: 0 }}>
+              {language.pick(product, 'name')}
             </h1>
-            {product.nameEn && (
-              <p style={{ color: C.muted, marginBottom: 16 }}>{product.nameEn}</p>
-            )}
 
             {/* السعر */}
             <div style={{ marginBottom: 16 }}>
@@ -638,7 +655,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                     {formatPrice(getOriginalPrice(), currency)}
                   </span>
                   <span style={{ background: 'rgba(200,226,53,0.15)', color: C.accent, padding: '4px 8px', borderRadius: 20, fontSize: 13, border: `1px solid ${C.border}` }}>
-                    وفر {discountPercent}%
+                    {t('وفّر')} {discountPercent}%
                   </span>
                 </div>
               ) : (
@@ -651,32 +668,31 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             {/* الوصف */}
             {product.description && (
               <div style={{ marginBottom: 24 }}>
-                <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 8, marginTop: 0 }}>الوصف</h3>
-                <p style={{ color: C.muted, lineHeight: 1.8, margin: 0 }}>{product.description}</p>
-                {product.descriptionEn && (
-                  <p style={{ color: C.muted, fontSize: 13, marginTop: 8, marginBottom: 0 }}>{product.descriptionEn}</p>
-                )}
+                <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 8, marginTop: 0 }}>{t('الوصف')}</h3>
+                <p style={{ color: C.muted, lineHeight: 1.8, margin: 0 }}>
+                  {language.pick(product, 'description')}
+                </p>
               </div>
             )}
 
             {/* المخزون */}
             <div style={{ marginBottom: 24, padding: 16, background: C.surf, borderRadius: 12, border: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ color: C.muted }}>الحالة:</span>
+                <span style={{ color: C.muted }}>{t('الحالة:')}</span>
                 {productStock > 0 ? (
                   <span style={{ color: C.accent, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <IoCheckmark /> متوفر
+                    <IoCheckmark /> {t('متوفر')}
                   </span>
                 ) : (
                   <span style={{ color: C.red, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <IoClose /> غير متوفر
+                    <IoClose /> {t('غير متوفر')}
                   </span>
                 )}
               </div>
               {productStock > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
-                  <span style={{ color: C.muted }}>الكمية المتاحة:</span>
-                  <span style={{ fontWeight: 500, color: C.text }}>{productStock} قطعة</span>
+                  <span style={{ color: C.muted }}>{t('الكمية المتاحة:')}</span>
+                  <span style={{ fontWeight: 500, color: C.text }}>{productStock} {t('قطعة')}</span>
                 </div>
               )}
             </div>
@@ -685,7 +701,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             {productStock > 0 && (
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: C.muted, marginBottom: 8 }}>
-                  الكمية:
+                  {t('الكمية:')}
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <button
@@ -701,7 +717,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                   >
                     +
                   </button>
-                  <span style={{ fontSize: 13, color: C.muted, marginRight: 8 }}>الحد الأقصى: {productStock}</span>
+                  <span style={{ fontSize: 13, color: C.muted, marginRight: 8 }}>{t('الحد الأقصى:')} {productStock}</span>
                 </div>
               </div>
             )}
@@ -766,7 +782,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                       onClick={handleShare}
                       style={{ width: '100%', padding: '8px 16px', textAlign: 'right', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: C.text, fontFamily: 'Cairo, sans-serif' }}
                     >
-                      <IoShare size={16} style={{ color: C.muted }} /> نسخ الرابط
+                      <IoShare size={16} style={{ color: C.muted }} /> {t('نسخ الرابط')}
                     </button>
                     <button
                       onClick={handleWhatsAppShare}
@@ -781,18 +797,18 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
 
             {/* معلومات المتجر */}
             <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 24 }}>
-              <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 12, marginTop: 0 }}>معلومات المتجر</h3>
+              <h3 style={{ fontWeight: 600, color: C.text, marginBottom: 12, marginTop: 0 }}>{t('معلومات المتجر')}</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14 }}>
                 {store.phone && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted }}>
                     <IoCall size={16} style={{ color: C.accent }} />
-                    <span>هاتف: {store.phone}</span>
+                    <span>{t('هاتف:')} {store.phone}</span>
                   </div>
                 )}
                 {store.whatsapp && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted }}>
                     <IoLogoWhatsapp size={16} style={{ color: '#25D366' }} />
-                    <span>واتساب: {store.whatsapp}</span>
+                    <span>{t('واتساب:')} {store.whatsapp}</span>
                   </div>
                 )}
                 {store.address && (
@@ -804,13 +820,13 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 {store.settings?.enableDelivery && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted }}>
                     <IoTime size={16} style={{ color: C.accent }} />
-                    <span>وقت التوصيل المتوقع: {store.settings.estimatedTime} دقيقة</span>
+                    <span>{t('وقت التوصيل المتوقع:')} {store.settings.estimatedTime} {t('دقيقة')}</span>
                   </div>
                 )}
                 {store.settings?.enableDelivery && store.settings.freeDeliveryAbove > 0 && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted }}>
                     <IoWallet size={16} style={{ color: C.accent }} />
-                    <span>توصيل مجاني للطلبات فوق {formatPrice(store.settings.freeDeliveryAbove, currency)}</span>
+                    <span>{t('توصيل مجاني للطلبات فوق')} {formatPrice(store.settings.freeDeliveryAbove, currency)}</span>
                   </div>
                 )}
               </div>
@@ -826,7 +842,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
         {/* منتجات ذات صلة */}
         {relatedProducts.length > 0 && (
           <div style={{ marginTop: 48 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 24 }}>منتجات قد تعجبك</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 24 }}>{t('منتجات قد تعجبك')}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
               {relatedProducts.map((item) => {
                 const itemPrice = parsePrice(item.discountedPrice || item.price);

@@ -21,6 +21,8 @@ import env from '../config/env';
 import { renameStorefront } from '../services/storefrontIdentity.service';
 import { normalizeOptions } from '../services/productOptions.service';
 import { sanitizeDesign } from '../config/storefrontDesign';
+import { getPublicPaymentOptions } from '../services/payment.service';
+import { resolveLanguageSettings } from '../services/language.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -1990,11 +1992,22 @@ export const getPublicStore = async (req: Request, res: Response) => {
         accentColor: store.accentColor,
         fontFamily: store.fontFamily,
         deliverySettings: store.deliverySettings,
-        paymentSettings: store.paymentSettings,
+        // **لا `paymentSettings` خامّاً.** كان يُرسل كما هو لأي زائر: رقم
+        // المحفظة والملاحظات الداخلية، وحتى لطريقة دفعٍ مطفأة. هذه البنية
+        // تكشف المسموح فقط — والمتحكّم العامّ يفعل ذلك منذ حين، وبقي هذا
+        // المسار (وهو ما تستعمله صفحة المنتج) على الحال القديمة.
+        paymentOptions: getPublicPaymentOptions(store.paymentSettings),
         notificationSettings: store.notificationSettings,
         timezone: store.timezone,
         currency: store.currency,
         language: store.language,
+        // إعدادات اللغة وشكل الواجهة — كانتا تغيبان عن هذا المسار وحده،
+        // فتُعرض صفحة المنتج بالعربية دائماً وبالقالب الافتراضي دائماً
+        // مهما اختار التاجر والزبون
+        languageSettings: await resolveLanguageSettings(store, 'store'),
+        storefrontDesign: store.storefrontDesign,
+        nameEn: store.nameEn,
+        descriptionEn: store.descriptionEn,
         isActive: store.isActive,
         createdAt: store.createdAt,
         updatedAt: store.updatedAt,
