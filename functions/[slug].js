@@ -35,6 +35,69 @@ const RESERVED = new Set([
   'checkout', 'search', 'store', 'restaurant', 'api', 'assets', 'icons'
 ]);
 
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
+/**
+ * محتوى نصّيّ داخل `#root` — يراه من لا ينفّذ الجافاسكربت.
+ *
+ * **لماذا داخل `#root` تحديداً:** `createRoot().render()` يستبدل محتوى
+ * الحاوية عند أوّل رسم. فالنصّ يعيش للزاحف ويختفي للزائر بلا سطر جافاسكربت
+ * إضافيّ منّا، وبلا وميضٍ يبقى.
+ *
+ * **وليس تمويهاً:** نفس المنتجات تظهر في التطبيق بعد تحميله — النسخة
+ * المقروءة بلا جافاسكربت تصف نفس الصفحة لا صفحةً أخرى. والتمويه أن يختلف
+ * ما يراه الزاحف عمّا يراه الزائر، لا أن يصل إليه أبكر.
+ *
+ * **ولا نصّ مخفيّ:** لو أُخفي بـ`display:none` لصار حشواً يُعاقَب عليه.
+ * يُرسَم مرئياً بألوان المتجر، فومضته — إن رآها أحد — تبدو تحميلاً لا عطلاً.
+ */
+const buildFallbackHtml = (data, pageUrl) => {
+  const theme = data.theme || {};
+  const bg = theme.background || '#082E24';
+  const fg = theme.text || '#E8F5E9';
+  const muted = theme.muted || '#9DC4AC';
+  const accent = theme.accent || '#C8E235';
+  const currency = data.currency === 'USD' ? '$' : 'ل.س';
+
+  const items = (data.products || []).filter((p) => p?.name);
+  const list = items
+    .map((product) => {
+      const price = Number(product.price) || 0;
+      return (
+        `<li style="padding:10px 0;border-bottom:1px solid ${accent}22">` +
+        `<span style="color:${fg}">${escapeHtml(product.name)}</span>` +
+        (price > 0
+          ? ` <span style="color:${accent}">${price.toLocaleString('en-US')} ${currency}</span>`
+          : '') +
+        `</li>`
+      );
+    })
+    .join('');
+
+  return (
+    `<div style="background:${bg};color:${fg};min-height:100vh;padding:28px 18px;` +
+    `font-family:system-ui,-apple-system,'Segoe UI',sans-serif">` +
+    `<div style="max-width:640px;margin:0 auto">` +
+    `<h1 style="font-size:22px;margin:0 0 10px">${escapeHtml(data.name)}</h1>` +
+    (data.description
+      ? `<p style="color:${muted};line-height:1.9;margin:0 0 18px">${escapeHtml(clamp(data.description, 300))}</p>`
+      : '') +
+    (items.length
+      ? `<h2 style="font-size:16px;margin:22px 0 8px">${data.type === 'restaurant' ? 'من القائمة' : 'من المنتجات'}</h2>` +
+        `<ul style="list-style:none;padding:0;margin:0">${list}</ul>`
+      : '') +
+    `<p style="color:${muted};margin:22px 0 0;font-size:13px">` +
+    `<a href="${escapeHtml(pageUrl)}" style="color:${accent}">${escapeHtml(data.name)}</a>` +
+    ` — جارٍ تحميل المتجر…</p>` +
+    `</div></div>`
+  );
+};
+
 /** يقصّ الوصف إلى ما تعرضه نتيجة البحث — الأطول يُقطع بثلاث نقاط عندهم */
 const clamp = (value, max) => {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim();
@@ -215,6 +278,13 @@ export async function onRequestGet(context) {
           // البيانات المنظَّمة تُضاف ولا تستبدل: صفحة المنصّة لها بياناتها
           // الخاصّة، وهذه تصف المتجر داخلها
           element.append(`<script type="application/ld+json">${jsonLd}</script>`, { html: true });
+        }
+      })
+      .on('#root', {
+        element(element) {
+          // الحاوية فارغة في `index.html`، فالكتابة فيها لا تمحو شيئاً.
+          // وReact يستبدل محتواها عند أوّل رسم فتختفي من تلقائها.
+          element.setInnerContent(buildFallbackHtml(data, pageUrl), { html: true });
         }
       })
       .transform(tag(response, 'hit'));

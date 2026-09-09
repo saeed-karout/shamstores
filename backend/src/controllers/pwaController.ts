@@ -349,7 +349,11 @@ export const getSeoSummary = async (req: Request, res: Response): Promise<void> 
       logo: true,
       coverImage: true,
       currency: true,
-      isActive: true
+      isActive: true,
+      backgroundColor: true,
+      textColor: true,
+      mutedColor: true,
+      accentColor: true
     } as const;
 
     const restaurant = await prisma.restaurant.findUnique({ where: { slug }, select });
@@ -392,6 +396,14 @@ export const getSeoSummary = async (req: Request, res: Response): Promise<void> 
         logo: business.logo || null,
         cover: business.coverImage || null,
         currency: business.currency || 'SYP',
+        // ألوان المتجر: النصّ المحقون يُرسَم بها فلا تبدو ومضته عطلاً
+        // قبل أن يستبدله التطبيق
+        theme: {
+          background: hexOrDefault((business as any).backgroundColor, '#082E24'),
+          text: hexOrDefault((business as any).textColor, '#E8F5E9'),
+          muted: hexOrDefault((business as any).mutedColor, '#9DC4AC'),
+          accent: hexOrDefault((business as any).accentColor, '#C8E235')
+        },
         products: items.map((row: any) => ({
           name: row.name,
           nameEn: row.nameEn || null,
