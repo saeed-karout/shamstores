@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import NewOrderAlarm from '../alerts/NewOrderAlarm';
+
+/**
+ * المنبّه مؤجَّل — **لأن `Layout` يُستورد ساكناً من `App`.**
+ *
+ * فكان `useSocket` و`webPush` داخله يدخلان الحزمة الرئيسية، ويصلان إلى
+ * زبونٍ يفتح متجراً ولا لوحة له أصلاً. والتأجيل لا يؤخّر التاجر: المنبّه
+ * لا يُعرض إلا عند وصول طلب، وحزمته تصل قبله بكثير.
+ */
+const NewOrderAlarm = lazy(() => import('../alerts/NewOrderAlarm'));
 
 // Map route prefixes to page titles (Arabic)
 const pageTitles: Record<string, string> = {
@@ -83,7 +91,9 @@ const Layout: React.FC = () => {
 
       {/* المنبّه في الهيكل لا في صفحة الطلبات: التاجر الذي يتصفّح منتجاته
           «نشطٌ على اللوحة» ولم يكن يحدث عنده شيء عند وصول طلب */}
-      <NewOrderAlarm />
+      <Suspense fallback={null}>
+        <NewOrderAlarm />
+      </Suspense>
     </div>
   );
 };

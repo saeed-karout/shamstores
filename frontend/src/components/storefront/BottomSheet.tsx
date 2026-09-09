@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { IoClose } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 
 export interface BottomSheetProps {
   open: boolean;
@@ -149,9 +150,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           flexDirection: 'column',
           background: sf.card,
           color: sf.text,
-          borderTopLeftRadius: 22,
-          borderTopRightRadius: 22,
-          border: `1px solid ${sf.border}`,
+          // استدارة اللوح من رمزها: القالب «الجريء» يجعل حافّته منحنيةً
+          // بوضوح و«البسيط» شبه مستقيمة
+          borderTopLeftRadius: sd.rSheet,
+          borderTopRightRadius: sd.rSheet,
+          border: `${sd.borderW} solid ${sf.border}`,
           borderBottom: 'none',
           boxShadow: `0 -18px 48px ${sf.shadow}`,
           outline: 'none',
@@ -189,8 +192,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
                   flexShrink: 0,
                   display: 'grid',
                   placeItems: 'center',
-                  borderRadius: 12,
-                  border: `1px solid ${sf.border}`,
+                  borderRadius: sd.rButton,
+                  border: `${sd.borderW} solid ${sf.border}`,
                   background: sf.surface,
                   color: sf.muted,
                   cursor: 'pointer'

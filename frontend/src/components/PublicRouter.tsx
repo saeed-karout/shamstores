@@ -1,14 +1,25 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { getCurrentSubdomain, isCustomDomain, getCurrentHost } from '../utils/subdomain';
 import Loader from './common/Loader';
 import PublicMenu from '../pages/PublicMenu';
-import UserLogin from '../pages/auth/UserLogin';
-import UserRegister from '../pages/auth/UserRegister';
 import api from '../services/api';
-import TrackOrder from '@/pages/TrackOrder';
-import PublicProduct from '@/pages/PublicProduct';
-import ProfilePage from '@/pages/ProfilePage';
+
+/**
+ * صفحاتٌ ليست واجهة المتجر — مؤجَّلة.
+ *
+ * كانت كلّها ساكنة، فتدخل الحزمة الرئيسية ويحمّلها كلُّ زبونٍ يفتح المتجر.
+ * و`TrackOrder` وحدها كانت تجرّ framer-motion (١٢٨ ك.ب) إلى أوّل تحميل
+ * لصفحةٍ لا حركة فيها.
+ *
+ * `PublicMenu` وحدها تبقى ساكنة: هي الوجهة الأولى على نطاق التاجر، وتأجيلها
+ * يضيف رحلةً كاملة قبل أوّل منتج.
+ */
+const UserLogin = lazy(() => import('../pages/auth/UserLogin'));
+const UserRegister = lazy(() => import('../pages/auth/UserRegister'));
+const TrackOrder = lazy(() => import('@/pages/TrackOrder'));
+const PublicProduct = lazy(() => import('@/pages/PublicProduct'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 
 // مكون داخلي لجلب البيانات
 const BusinessLoader: React.FC<{ children: (data: any) => React.ReactNode }> = ({ children }) => {
@@ -145,6 +156,7 @@ const PublicRouter: React.FC = () => {
   const subdomain = getCurrentSubdomain();
   
   return (
+    <Suspense fallback={<Loader />}>
     <Routes>
       <Route path="/terms" element={<Navigate to="/" replace />} />
       <Route path="/privacy" element={<Navigate to="/" replace />} />
@@ -250,6 +262,7 @@ const PublicRouter: React.FC = () => {
       {/* إعادة توجيه أي مسار آخر إلى الصفحة الرئيسية */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 };
 

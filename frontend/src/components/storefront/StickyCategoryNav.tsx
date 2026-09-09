@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { useT } from '@/i18n/storefront';
 
 export interface CategoryNavItem {
@@ -165,7 +166,7 @@ const StickyCategoryNav: React.FC<StickyCategoryNavProps> = ({
                 gap: 6,
                 minHeight: 38,
                 padding: '0 16px',
-                borderRadius: 999,
+                borderRadius: sd.rChip,
                 border: `1px solid ${isActive ? 'transparent' : sf.border}`,
                 background: isActive ? sf.accent : sf.card,
                 color: isActive ? sf.onAccent : sf.muted,

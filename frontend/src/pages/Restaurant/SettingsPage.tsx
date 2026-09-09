@@ -6,6 +6,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
+import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker';
+import { DEFAULT_DESIGN, resolveDesign, type StorefrontDesign } from '@/utils/storefrontDesign';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
 import LanguageDisplaySettings from '@/components/settings/LanguageDisplaySettings';
@@ -187,6 +189,9 @@ export const SettingsPage: React.FC = () => {
   });
 
   // ✅ جميع ألوان المطعم
+  // شكل الواجهة منفصل عن ألوانها — انظر التعليق نفسه في إعدادات المتجر
+  const [designShape, setDesignShape] = useState<StorefrontDesign>(DEFAULT_DESIGN);
+
   const [designForm, setDesignForm] = useState({
     primaryColor: '#3B82F6',
     secondaryColor: '#10B981',
@@ -261,6 +266,8 @@ export const SettingsPage: React.FC = () => {
         fontFamily: restaurant.fontFamily || 'Cairo',
       });
 
+      setDesignShape(resolveDesign((restaurant as any).storefrontDesign));
+
       setSeoForm({
         metaTitle: restaurant.metaTitle || '',
         metaDescription: restaurant.metaDescription || '',
@@ -303,7 +310,7 @@ export const SettingsPage: React.FC = () => {
 
   const handleSaveDesign = async () => {
     try {
-      await updateRestaurant(designForm);
+      await updateRestaurant({ ...designForm, storefrontDesign: designShape } as any);
       toast.success('تم تحديث التصميم والألوان');
     } catch (error) {}
   };
@@ -998,6 +1005,23 @@ export const SettingsPage: React.FC = () => {
                 readOnly
               />
             </div>
+          </div>
+
+          {/* الشكل بعد اللون: صاحب المطعم يضبط هويته أولاً ثم يرى كيف تُرسم */}
+          <div style={{ ...sectionCard, marginTop: 20 }}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
+              شكل الواجهة والقوالب
+            </h2>
+            <p style={{ color: C.muted, fontSize: 12.5, margin: '0 0 20px', lineHeight: 1.9 }}>
+              الألوان أعلاه تخصّ هويتك، وهذه تخصّ شكلها: القالب ونماذج البطاقات
+              والصفحات واستدارة كل عنصر. المعاينة أدناه بألوان مطعمك نفسها.
+            </p>
+            <StorefrontDesignPicker
+              value={designShape}
+              onChange={setDesignShape}
+              colors={designForm}
+              kind="restaurant"
+            />
           </div>
 
           <button style={saveBtn} onClick={handleSaveDesign}>

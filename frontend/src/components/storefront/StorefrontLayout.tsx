@@ -12,7 +12,7 @@ import {
   IoArrowUp
 } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
-import { getImageUrl } from '@/utils/imageHelpers';
+import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { useT } from '@/i18n/storefront';
 
 export interface StorefrontBranch {
@@ -126,7 +126,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
             >
               {logo && (
                 <img
-                  src={getImageUrl(logo)}
+                  src={getImageUrl(sizedImage(logo, 'sm'))}
                   alt=""
                   width={34}
                   height={34}
@@ -244,7 +244,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
           <div style={{ display: 'flex', gap: 13 }}>
             {logo ? (
               <img
-                src={getImageUrl(logo)}
+                src={getImageUrl(sizedImage(logo, 'sm'))}
                 alt={name}
                 width={72}
                 height={72}

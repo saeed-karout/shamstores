@@ -12,6 +12,7 @@ import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 import { renameStorefront } from '../services/storefrontIdentity.service';
+import { sanitizeDesign } from '../config/storefrontDesign';
 
 // دالة مساعدة لإنشاء subdomain فريد
 const generateUniqueSubdomain = async (baseSubdomain: string, excludeId?: string): Promise<string> => {
@@ -294,7 +295,7 @@ export const updateProfile = async (
       textColor, mutedColor, accentColor, fontFamily,
       subdomain, customDomain, isActive, deliverySettings,
       paymentSettings, currency, enabledCurrencies, language, enabledLanguages,
-      pwaShortName, nameEn, descriptionEn
+      pwaShortName, nameEn, descriptionEn, storefrontDesign
     } = req.body;
 
     let restaurant = null;
@@ -375,6 +376,8 @@ export const updateProfile = async (
     if (textColor !== undefined) updateData.textColor = textColor;
     if (mutedColor !== undefined) updateData.mutedColor = mutedColor;
     if (accentColor !== undefined) updateData.accentColor = accentColor;
+    // شكل الواجهة يمرّ بمنقٍّ لا مباشرةً: العمود JSON، وما لا يُفحص يُحفظ
+    if (storefrontDesign !== undefined) updateData.storefrontDesign = sanitizeDesign(storefrontDesign);
     // الاسم والوصف بالإنجليزية — الفراغ `null` فيرتدّ العرض إلى العربية
     if (nameEn !== undefined) updateData.nameEn = String(nameEn || '').trim() || null;
     if (descriptionEn !== undefined) {

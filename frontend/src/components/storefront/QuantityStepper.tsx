@@ -3,6 +3,7 @@
 import React from 'react';
 import { IoAdd, IoRemove, IoTrashOutline } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { useT } from '@/i18n/storefront';
 
 export interface QuantityStepperProps {
@@ -37,7 +38,7 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({
     height: dimension,
     display: 'grid',
     placeItems: 'center',
-    borderRadius: 10,
+    borderRadius: sd.rButton,
     border: `1px solid ${sf.border}`,
     background: sf.surface,
     color: enabled ? sf.text : sf.muted,
@@ -59,7 +60,7 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({
         alignItems: 'center',
         gap: 6,
         background: sf.card,
-        borderRadius: 12,
+        borderRadius: sd.rButton,
         padding: 3,
         border: `1px solid ${sf.border}`
       }}

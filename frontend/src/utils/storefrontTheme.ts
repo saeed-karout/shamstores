@@ -2,6 +2,12 @@
 //
 // ألوان التاجر تصبح متغيرات CSS على :root، فتستهلكها كل مكونات المتجر
 // عبر var(--sf-*) بدل ألوان مكتوبة يدوياً في كل ملف.
+//
+// **والشكل يُطبَّق معها من هنا** (`storefrontDesign.ts`) لا من نداءٍ ثانٍ:
+// نقطتا تطبيق تعنيان موضعاً يُنسى فيه أحدهما، فيظهر متجرٌ بألوانه وباستدارات
+// متجرٍ آخر.
+
+import { applyStorefrontDesign, resolveDesign } from './storefrontDesign';
 
 export interface StorefrontBusiness {
   primaryColor?: string | null;
@@ -13,6 +19,8 @@ export interface StorefrontBusiness {
   mutedColor?: string | null;
   accentColor?: string | null;
   fontFamily?: string | null;
+  /** شكل الواجهة كما يصل من الخادم — يُنقَّى في `resolveDesign` */
+  storefrontDesign?: unknown;
 }
 
 export type StorefrontKind = 'restaurant' | 'store';
@@ -189,7 +197,11 @@ export const applyStorefrontTheme = (
     root.style.setProperty(name, value);
   });
 
+  // الشكل مع اللون في نداءٍ واحد — ودالّة تنظيفه تُضمّ إلى تنظيفنا
+  const restoreDesign = applyStorefrontDesign(resolveDesign(business?.storefrontDesign), root);
+
   return () => {
+    restoreDesign();
     previous.forEach(([name, value]) => {
       if (value) root.style.setProperty(name, value);
       else root.style.removeProperty(name);

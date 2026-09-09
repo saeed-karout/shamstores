@@ -20,6 +20,7 @@ import { buildBranchSummary, getLinkedBranches } from '../services/businessBranc
 import env from '../config/env';
 import { renameStorefront } from '../services/storefrontIdentity.service';
 import { normalizeOptions } from '../services/productOptions.service';
+import { sanitizeDesign } from '../config/storefrontDesign';
 
 // ==================== دوال مساعدة ====================
 
@@ -515,7 +516,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
       deliverySettings, paymentSettings, notificationSettings, enabledLanguages,
-      enabledCurrencies, pwaShortName, nameEn, descriptionEn,
+      enabledCurrencies, pwaShortName, nameEn, descriptionEn, storefrontDesign,
       isActive 
     } = req.body;
     
@@ -542,6 +543,8 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     if (textColor !== undefined) updateData.textColor = textColor;
     if (mutedColor !== undefined) updateData.mutedColor = mutedColor;
     if (accentColor !== undefined) updateData.accentColor = accentColor;
+    // شكل الواجهة يمرّ بمنقٍّ لا مباشرةً: العمود JSON، وما لا يُفحص يُحفظ
+    if (storefrontDesign !== undefined) updateData.storefrontDesign = sanitizeDesign(storefrontDesign);
     // الاسم والوصف بالإنجليزية — الفراغ يُخزَّن `null` لا نصّاً فارغاً،
     // فيرتدّ العرض إلى العربية بدل أن يُظهر سطراً خالياً
     if (nameEn !== undefined) updateData.nameEn = String(nameEn || '').trim() || null;

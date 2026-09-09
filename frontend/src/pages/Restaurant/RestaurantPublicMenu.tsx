@@ -37,6 +37,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
+import { StorefrontDesignProvider } from '@/utils/storefrontDesignContext';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import { captureRef, getRef, clearRef } from '@/utils/referral';
@@ -583,6 +584,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   return (
     // المزوّد يلفّ الشجرة كلّها: البطاقات والسلّة والرأس تقرأ اللغة
     // منه بلا تمريرٍ عبر عشرة مكوّنات
+    // ونموذج العرض معها: البطاقة والشريط وصفحة المنتج تقرأ منه
+    // أيّ هيكلٍ اختاره التاجر
+    <StorefrontDesignProvider value={(restaurant as any)?.storefrontDesign}>
     <StorefrontI18nProvider lang={language.lang}>
       <StorefrontSeo
         business={restaurant}
@@ -1043,6 +1047,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       <PlatformBadge show={restaurant?.showPlatformBadge} />
     </StorefrontI18nProvider>
+    </StorefrontDesignProvider>
   );
 };
 

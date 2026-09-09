@@ -24,6 +24,7 @@ export interface ShippingZone {
 }
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
@@ -180,7 +181,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
               style={{
                 background: sf.accentSoft,
                 color: sf.accent,
-                borderRadius: 999,
+                borderRadius: sd.rChip,
                 padding: '1px 9px',
                 fontSize: 12,
                 fontWeight: 800
@@ -210,7 +211,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
               justifyContent: 'space-between',
               gap: 12,
               padding: '0 18px',
-              borderRadius: 14,
+              borderRadius: sd.rButton,
               border: 'none',
               background: canSubmit ? sf.accent : sf.surface,
               color: canSubmit ? sf.onAccent : sf.muted,
@@ -245,7 +246,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                   gap: 11,
                   background: sf.surface,
                   border: `1px solid ${sf.border}`,
-                  borderRadius: 13,
+                  borderRadius: sd.rCard,
                   padding: 10
                 }}
               >
@@ -257,14 +258,14 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     decoding="async"
                     width={62}
                     height={62}
-                    style={{ width: 62, height: 62, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+                    style={{ width: 62, height: 62, borderRadius: sd.rImage, objectFit: 'cover', flexShrink: 0 }}
                   />
                 ) : (
                   <div
                     style={{
                       width: 62,
                       height: 62,
-                      borderRadius: 10,
+                      borderRadius: sd.rImage,
                       background: sf.card,
                       display: 'grid',
                       placeItems: 'center',
@@ -313,7 +314,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                         height: 30,
                         display: 'grid',
                         placeItems: 'center',
-                        borderRadius: 8,
+                        borderRadius: sd.rButton,
                         border: 'none',
                         background: 'transparent',
                         color: '#FF6B6B',
@@ -380,7 +381,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                 gap: 9,
                 background: sf.accentSoft,
                 border: `1px solid ${sf.border}`,
-                borderRadius: 12,
+                borderRadius: sd.rCard,
                 padding: '11px 14px',
                 marginBottom: 18,
                 color: sf.accent,
@@ -411,7 +412,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: 7,
-                          borderRadius: 12,
+                          borderRadius: sd.rButton,
                           border: `1.5px solid ${active ? sf.accent : sf.border}`,
                           background: active ? sf.accentSoft : sf.surface,
                           color: active ? sf.accent : sf.muted,
@@ -553,7 +554,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     gap: 10,
                     background: 'rgba(74,222,128,0.1)',
                     border: '1px solid rgba(74,222,128,0.3)',
-                    borderRadius: 12,
+                    borderRadius: sd.rCard,
                     padding: '11px 14px'
                   }}
                 >
@@ -592,7 +593,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                     style={{
                       minHeight: 46,
                       padding: '0 18px',
-                      borderRadius: 12,
+                      borderRadius: sd.rButton,
                       border: `1px solid ${sf.border}`,
                       background: sf.surface,
                       color: sf.text,
@@ -620,7 +621,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
             style={{
               background: sf.surface,
               border: `1px solid ${sf.border}`,
-              borderRadius: 13,
+              borderRadius: sd.rCard,
               padding: 14,
               display: 'grid',
               gap: 9
@@ -688,7 +689,7 @@ const inputStyle: React.CSSProperties = {
   minHeight: 46,
   background: sf.surface,
   border: `1px solid ${sf.border}`,
-  borderRadius: 12,
+  borderRadius: sd.rButton,
   padding: '11px 13px',
   color: sf.text,
   fontSize: 13.5,

@@ -16,6 +16,9 @@ import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import ProductReviews from '@/components/storefront/ProductReviews';
 import { useCart } from '@/hooks/useCart';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
+import { StorefrontDesignProvider } from '@/utils/storefrontDesignContext';
+import { sd, resolveDesign } from '@/utils/storefrontDesign';
+import { useIsDesktop } from '@/hooks/useMediaQuery';
 import ProductOptionsSheet, {
   parseProductOptions,
   hasOptions,
@@ -461,7 +464,20 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     return list.filter(Boolean);
   })();
 
+  /**
+   * نموذج الصفحة يُحسب هنا لا عبر `useDesign`.
+   *
+   * المزوّد يُصيَّر **داخل** ما تُرجعه هذه الدالّة، فلا يراه خطّافٌ يُستدعى
+   * في جسمها — كان سيُعيد القالب الافتراضي دائماً وتبدو الميزة معطّلة.
+   */
+  const design = resolveDesign((store as any)?.storefrontDesign);
+  const isDesktop = useIsDesktop();
+  const split = design.product === 'split';
+  const immersive = design.product === 'immersive';
+
   return (
+    // نموذج العرض الذي اختاره التاجر — يحدّد هيكل هذه الصفحة نفسها
+    <StorefrontDesignProvider value={(store as any)?.storefrontDesign}>
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* خيارات المنتج — الصورة تتبع اللون المختار */}
       <ProductOptionsSheet
@@ -495,18 +511,55 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       </div>
 
       <div style={{ maxWidth: 1152, margin: '0 auto', padding: '32px 16px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32 }}>
+        {/* تخطيط الصفحة حسب النموذج:
+            • «كلاسيكية» — عمودان يتوزّعان تلقائياً وينهاران إلى واحد.
+            • «منقسمة»  — عمودان بنسبةٍ ثابتة على الشاشة الكبيرة، والمعرض
+                          ملتصقٌ بالأعلى فيبقى ظاهراً وأنت تقرأ التفاصيل.
+            • «غامرة»   — عمودٌ واحد وصورةٌ بلا إطار تبدأ الصفحة.
+            وكلّها عمودٌ واحد على الجوال: عمودان على ٣٧٥ بكسل يعنيان
+            صورةً بعرض ١٦٠ بكسل ونصّاً لا يُقرأ. */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: immersive
+              ? '1fr'
+              : split && isDesktop
+                ? 'minmax(0, 1.05fr) minmax(0, 0.95fr)'
+                : 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: immersive ? 22 : 32,
+            alignItems: 'start'
+          }}
+        >
           {/* قسم الصور */}
-          <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 16 }}>
+          <div
+            style={{
+              background: immersive ? 'transparent' : C.card,
+              borderRadius: immersive ? 0 : sd.rCard,
+              border: immersive ? 'none' : `${sd.borderW} solid ${C.border}`,
+              padding: immersive ? 0 : 16,
+              // الالتصاق للنموذج المنقسم وحده، وعلى الشاشة الكبيرة وحدها:
+              // معرضٌ ملتصق على الجوال يأكل الشاشة ويمنع الوصول إلى الزرّ
+              position: split && isDesktop ? 'sticky' : 'static',
+              top: split && isDesktop ? 16 : undefined,
+              // «غامرة» تكسر حشوة الصفحة لتصل الصورة إلى حافّتها
+              marginInline: immersive ? -16 : 0
+            }}
+          >
             <div style={{ position: 'relative' }}>
               {images.length > 0 && images[0] ? (
                 <img
                   src={getImageUrl(sizedImage(images[currentImageIndex], 'md'))}
                   alt={product.name}
-                  style={{ width: '100%', height: 384, objectFit: 'cover', borderRadius: 12, display: 'block' }}
+                  style={{
+                    width: '100%',
+                    height: immersive ? 'min(72vh, 520px)' : 384,
+                    objectFit: 'cover',
+                    borderRadius: immersive ? 0 : sd.rImage,
+                    display: 'block'
+                  }}
                 />
               ) : (
-                <div style={{ width: '100%', height: 384, background: C.surf, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: immersive ? 'min(72vh, 520px)' : 384, background: C.surf, borderRadius: immersive ? 0 : sd.rImage, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ color: C.muted }}>لا توجد صورة</span>
                 </div>
               )}
@@ -831,6 +884,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
         </div>
       )}
     </div>
+    </StorefrontDesignProvider>
   );
 };
 

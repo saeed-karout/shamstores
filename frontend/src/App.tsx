@@ -4,7 +4,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import SkipToContent from '@/components/a11y/SkipToContent';
-import GlobalNotifications from '@/components/GlobalNotifications';
+const GlobalNotifications = lazy(() => import('@/components/GlobalNotifications'));
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { IoWarning } from 'react-icons/io5';
@@ -76,7 +76,10 @@ const AdminAdvertisements = lazy(() => import('./pages/Admin/AdminAdvertisements
 const AdminSubscriptions = lazy(() => import('./pages/Admin/AdminSubscriptions'));
 const AdminContactMessages = lazy(() => import('./pages/Admin/AdminContactMessages'));
 // ==================== صفحات عامة ====================
-import HomePage from './pages/HomePage';
+// **مؤجَّلة كبقيّة الصفحات، ولا استثناء لها.** كانت ساكنةً فتدخل الحزمة
+// الرئيسية ومعها framer-motion (١٢٨ ك.ب) — يحمّلها كلُّ زبونٍ يفتح متجراً
+// على نطاقه الخاصّ ولا يرى صفحتنا الرئيسية أصلاً.
+const HomePage = lazy(() => import('./pages/HomePage'));
 const PublicMenu = lazy(() => import('./pages/PublicMenu'));
 const PublicStorefrontRoute = lazy(() => import('./components/PublicStorefrontRoute'));
 const PublicTable = lazy(() => import('./pages/PublicTable'));
@@ -255,7 +258,13 @@ const MainApp: React.FC = () => {
       <SkipToContent />
       {/* مستمع الإشعارات — مرة واحدة لكل التطبيق. كان الاتصال يقوم في
           صفحتَي الطلبات فقط، فالمشرف على أي شاشة أخرى بلا سوكِت إطلاقاً. */}
-      <GlobalNotifications token={localStorage.getItem('token')} />
+      {/* بشرط وجود جلسة: الزبون الضيف لا رمز له ولا سوكِت، وتحميلُ
+          socket.io (٤٢ ك.ب) في صفحة متجرٍ كان حملاً بلا مقابل. */}
+      {localStorage.getItem('token') && (
+        <Suspense fallback={null}>
+          <GlobalNotifications token={localStorage.getItem('token')} />
+        </Suspense>
+      )}
 
       <Suspense fallback={<RouteFallback />}>
         <main id="main-content" tabIndex={-1}>

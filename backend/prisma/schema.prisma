@@ -466,6 +466,15 @@ model Restaurant {
   accentColor              String  @default("#C8E235")
   fontFamily               String  @default("Cairo")
 
+  /// شكل واجهة المتجر: القالب والنماذج والاستدارات — لا الألوان.
+  ///
+  /// عمودٌ واحد بصيغة JSON لا أربعة عشر عموداً: الحقول هنا ذوقٌ يتوسّع
+  /// (نموذج بطاقة، نموذج صفحة، استدارة لكل عنصر)، وكل إضافة كانت ستعني
+  /// ترحيلاً جديداً. ولا يُستعلَم عنه ولا يُرشَّح به فلا يخسر شيئاً.
+  ///
+  /// الفراغ مقصود: متجرٌ بلا قيمة يأخذ القالب الافتراضي في الواجهة.
+  storefrontDesign         Json?
+
   // ✅ أضف هذه الحقول الجديدة هنا
   timezone String @default("Asia/Riyadh")
   currency String @default("SYP")
@@ -569,6 +578,9 @@ model Store {
   mutedColor              String  @default("#9DC4AC")
   accentColor             String  @default("#C8E235")
   fontFamily              String  @default("Cairo")
+
+  /// شكل واجهة المتجر — انظر التعليق نفسه على Restaurant.
+  storefrontDesign        Json?
   timezone                String  @default("Asia/Riyadh")
   currency                String  @default("SYP")
   language                String  @default("ar")

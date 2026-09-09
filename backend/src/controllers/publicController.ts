@@ -125,6 +125,7 @@ export const getBusinessBySlug = async (
           mutedColor: restaurant.mutedColor,
           accentColor: restaurant.accentColor,
           fontFamily: restaurant.fontFamily,
+          storefrontDesign: restaurant.storefrontDesign,
           // ✅ إعدادات إضافية
           deliverySettings: restaurant.deliverySettings,
           timezone: restaurant.timezone,
@@ -217,6 +218,7 @@ export const getBusinessBySlug = async (
           mutedColor: store.mutedColor,
           accentColor: store.accentColor,
           fontFamily: store.fontFamily,
+          storefrontDesign: store.storefrontDesign,
           // ✅ إعدادات إضافية
           deliverySettings: store.deliverySettings,
           // كان يُرسل paymentSettings خاماً: رقم المحفظة والملاحظات الداخلية
@@ -350,7 +352,8 @@ export const getTableById = async (
           textColor: restaurant.textColor,
           mutedColor: restaurant.mutedColor,
           accentColor: restaurant.accentColor,
-          fontFamily: restaurant.fontFamily
+          fontFamily: restaurant.fontFamily,
+          storefrontDesign: restaurant.storefrontDesign
         },
         table: {
           id: table.id,
@@ -431,7 +434,8 @@ export const getProductById = async (
           textColor: store.textColor,
           mutedColor: store.mutedColor,
           accentColor: store.accentColor,
-          fontFamily: store.fontFamily
+          fontFamily: store.fontFamily,
+          storefrontDesign: store.storefrontDesign
         },
         product: {
           id: product.id,
@@ -517,7 +521,8 @@ export const getMenuItemById = async (
           textColor: restaurant.textColor,
           mutedColor: restaurant.mutedColor,
           accentColor: restaurant.accentColor,
-          fontFamily: restaurant.fontFamily
+          fontFamily: restaurant.fontFamily,
+          storefrontDesign: restaurant.storefrontDesign
         },
         menuItem: {
           id: menuItem.id,
@@ -690,7 +695,8 @@ export const getMenuItemByShareToken = async (
           textColor: restaurant.textColor,
           mutedColor: restaurant.mutedColor,
           accentColor: restaurant.accentColor,
-          fontFamily: restaurant.fontFamily
+          fontFamily: restaurant.fontFamily,
+          storefrontDesign: restaurant.storefrontDesign
         },
         menuItem: {
           id: menuItem.id,
@@ -755,6 +761,7 @@ export const getHostBrand = async (req: Request, res: Response): Promise<void> =
       textColor: true,
       mutedColor: true,
       accentColor: true,
+      storefrontDesign: true,
       fontFamily: true,
       isActive: true
     } as const;

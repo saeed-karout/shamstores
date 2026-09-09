@@ -61,6 +61,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useTheme } from '@/context/ThemeContext';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
+import { StorefrontDesignProvider } from '@/utils/storefrontDesignContext';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import { captureRef, getRef, clearRef } from '@/utils/referral';
@@ -773,6 +774,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   return (
     // المزوّد يلفّ الشجرة كلّها: البطاقات والسلّة والرأس تقرأ اللغة
     // منه بلا تمريرٍ عبر عشرة مكوّنات
+    // ونموذج العرض معها: البطاقة والشريط وصفحة المنتج تقرأ منه
+    // أيّ هيكلٍ اختاره التاجر
+    <StorefrontDesignProvider value={(store as any)?.storefrontDesign}>
     <StorefrontI18nProvider lang={language.lang}>
       <StorefrontSeo business={store} type="store" itemCount={products.length} />
 
@@ -1289,6 +1293,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}
       <PlatformBadge show={store?.showPlatformBadge} />
     </StorefrontI18nProvider>
+    </StorefrontDesignProvider>
   );
 };
 

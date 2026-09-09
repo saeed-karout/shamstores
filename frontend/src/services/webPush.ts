@@ -10,8 +10,7 @@
 // الموقع إلى شاشته الرئيسية (قيدٌ من Apple منذ 16.4). ويحتاج إذناً صريحاً
 // يرفضه كثيرون. ولذلك ليس القناة الوحيدة — تيليجرام يغطّي من يسقط منها.
 
-import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getMessaging, getToken, deleteToken, isSupported, onMessage } from 'firebase/messaging';
+import type { FirebaseApp } from 'firebase/app';
 import api from './api';
 import { getVisitorId } from '../utils/visitor';
 
@@ -54,8 +53,29 @@ export const messagingProjectId = (): string => config.projectId;
  */
 const MESSAGING_APP = 'messaging';
 
-const messagingApp = (): FirebaseApp | null => {
+/**
+ * حزمة فايربيس تُنزَّل عند أوّل حاجةٍ إليها — لا عند إقلاع الصفحة.
+ *
+ * **ما كان يكلّفه الاستيراد الساكن:** هذا الملفّ يُستورد من `main.tsx`
+ * (لتسجيل عامل الخدمة) ومن نافذتَي التثبيت ومتابعة الطلب في واجهة المتجر.
+ * فكان كل زبونٍ يفتح متجراً يحمّل ١٩٧ ك.ب من فايربيس قبل أن يرى منتجاً
+ * واحداً — وأكثرهم لا يفعّل الإشعارات أصلاً.
+ *
+ * وتسجيلُ عامل الخدمة لا يحتاج الحزمة إطلاقاً؛ الإعداد يُمرَّر إليه في
+ * سلسلة الاستعلام. فبقي الإقلاع كما هو وسقط الحمل.
+ *
+ * الوعد يُحفظ لا يُعاد: `import()` يخزّن مؤقّتاً، والمتغيّر يمنع حتى
+ * الاستدعاءات المتوازية من إطلاق طلبين.
+ */
+let appModule: Promise<typeof import('firebase/app')> | null = null;
+let messagingModule: Promise<typeof import('firebase/messaging')> | null = null;
+
+const loadApp = () => (appModule ||= import('firebase/app'));
+const loadMessaging = () => (messagingModule ||= import('firebase/messaging'));
+
+const messagingApp = async (): Promise<FirebaseApp | null> => {
   if (!config.projectId || !config.apiKey || !config.messagingSenderId) return null;
+  const { initializeApp, getApp, getApps } = await loadApp();
   try {
     const existing = getApps().find((app) => app.name === MESSAGING_APP);
     return existing || initializeApp(config, MESSAGING_APP);
@@ -120,10 +140,11 @@ export const getPushState = async (): Promise<PushState> => {
     // له كيف يفعّلها بدل «متصفّحك غير مدعوم»
     return isIos() && !isStandalone() ? 'ios-needs-pwa' : 'unsupported';
   }
+  const { isSupported } = await loadMessaging();
   if (!(await isSupported().catch(() => false))) {
     return isIos() && !isStandalone() ? 'ios-needs-pwa' : 'unsupported';
   }
-  if (!messagingApp() || !VAPID_KEY) return 'not-configured';
+  if (!(await messagingApp()) || !VAPID_KEY) return 'not-configured';
 
   return Notification.permission as PushState;
 };
@@ -205,10 +226,11 @@ export const enablePush = async (audience: PushAudience = 'merchant'): Promise<E
       return { ok: false, state: permission as PushState, error: 'لم يُمنح إذن الإشعارات' };
     }
 
-    const app = messagingApp();
+    const app = await messagingApp();
     if (!app) return { ok: false, state: 'not-configured', error: 'إشعارات الويب غير مضبوطة على المنصّة بعد' };
 
     const registration = await registerServiceWorker();
+    const { getMessaging, getToken } = await loadMessaging();
     const messaging = getMessaging(app);
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
@@ -249,10 +271,11 @@ export const enablePush = async (audience: PushAudience = 'merchant'): Promise<E
 /** يوقف الإشعارات على هذا الجهاز وحده — لا على بقية أجهزة التاجر */
 export const disablePush = async (): Promise<boolean> => {
   try {
-    const app = messagingApp();
+    const app = await messagingApp();
     if (!app) return false;
 
     const registration = await navigator.serviceWorker.getRegistration(SW_PATH);
+    const { getMessaging, getToken, deleteToken } = await loadMessaging();
     const messaging = getMessaging(app);
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
@@ -277,14 +300,28 @@ export const disablePush = async (): Promise<boolean> => {
  * الشاشة أصلاً، وإشعارٌ يغطّيها يزعج ولا يفيد.
  */
 export const onForegroundPush = (handler: (payload: any) => void): (() => void) => {
-  try {
-    const app = messagingApp();
-    if (!app) return () => undefined;
-    const messaging = getMessaging(app);
-    return onMessage(messaging, handler);
-  } catch {
-    return () => undefined;
-  }
+  // التوقيع يبقى متزامناً رغم أن الحزمة صارت تُحمَّل عند الطلب: المستدعي
+  // يستعمله داخل `useEffect` ويُرجع نتيجته للتنظيف. فيُشترك متى وصلت
+  // الحزمة، ومن فكّ الارتباط قبل وصولها يُلغى اشتراكه فور إنشائه.
+  let stop: (() => void) | null = null;
+  let cancelled = false;
+
+  (async () => {
+    try {
+      const app = await messagingApp();
+      if (!app || cancelled) return;
+      const { getMessaging, onMessage } = await loadMessaging();
+      if (cancelled) return;
+      stop = onMessage(getMessaging(app), handler);
+    } catch {
+      /* بلا إشعارات مقدّمة — واللوحة تعمل */
+    }
+  })();
+
+  return () => {
+    cancelled = true;
+    stop?.();
+  };
 };
 
 /**

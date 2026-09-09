@@ -9,6 +9,8 @@ import { usePermissions } from '@/hooks/usePermissions';
 import Loader from '@/components/common/Loader';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
+import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker';
+import { DEFAULT_DESIGN, resolveDesign, type StorefrontDesign } from '@/utils/storefrontDesign';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
 import LanguageDisplaySettings from '@/components/settings/LanguageDisplaySettings';
 import useFeatures from '@/hooks/useFeatures';
@@ -180,6 +182,11 @@ const StoreSettingsPage: React.FC = () => {
   });
 
   // ✅ بيانات التصميم - جميع الألوان
+  // شكل الواجهة منفصل عن ألوانها: الألوان حقولٌ مسطّحة والشكل كائنٌ واحد
+  // يُحفظ كما هو. وخلطهما في نفس الحالة كان سيجعل كل تعديل لونٍ يعيد إرسال
+  // القالب كاملاً
+  const [designShape, setDesignShape] = useState<StorefrontDesign>(DEFAULT_DESIGN);
+
   const [designForm, setDesignForm] = useState({
     primaryColor: '#3B82F6',
     secondaryColor: '#10B981',
@@ -264,6 +271,8 @@ const StoreSettingsPage: React.FC = () => {
         fontFamily: store.fontFamily || 'Cairo',
       });
 
+      setDesignShape(resolveDesign((store as any).storefrontDesign));
+
       setDomainForm({
         subdomain: store.subdomain || '',
         customDomain: store.customDomain || '',
@@ -304,7 +313,7 @@ const StoreSettingsPage: React.FC = () => {
       return;
     }
     try {
-      await updateStore(designForm);
+      await updateStore({ ...designForm, storefrontDesign: designShape });
       
       const updatedColors = {
         primaryColor: designForm.primaryColor,
@@ -1067,6 +1076,25 @@ const StoreSettingsPage: React.FC = () => {
             <div style={{ marginTop: 12, padding: 12, background: previewColors.surf, borderRadius: 10 }}>
               <input type="text" placeholder="مثال لحقل إدخال" style={{ width: '100%', padding: 10, borderRadius: 8, border: `1px solid ${previewColors.accent}40`, background: previewColors.bg, color: previewColors.text }} readOnly />
             </div>
+          </div>
+
+          {/* الشكل بعد اللون: التاجر يضبط هويته أولاً ثم يرى كيف تُرسم */}
+          <div style={{ ...sectionCard, marginTop: 20 }}>
+            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <IoBrush style={{ color: C.accent }} />
+              شكل الواجهة والقوالب
+            </h2>
+            <p style={{ color: C.muted, fontSize: 12.5, margin: '0 0 20px', lineHeight: 1.9 }}>
+              الألوان أعلاه تخصّ هويتك، وهذه تخصّ شكلها: القالب ونماذج البطاقات
+              والصفحات واستدارة كل عنصر. المعاينة أدناه بألوان متجرك نفسها.
+            </p>
+            <StorefrontDesignPicker
+              value={designShape}
+              onChange={setDesignShape}
+              colors={designForm}
+              kind="store"
+              disabled={!canUpdateSettings}
+            />
           </div>
 
           <button style={saveBtn} onClick={handleSaveDesign} disabled={!canUpdateSettings}>

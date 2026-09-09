@@ -5,6 +5,7 @@ import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { IoBagHandleOutline, IoChevronBack } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 
@@ -63,7 +64,7 @@ const BottomCartBar: React.FC<BottomCartBarProps> = ({
               justifyContent: 'space-between',
               gap: 12,
               padding: '0 8px 0 18px',
-              borderRadius: 16,
+              borderRadius: sd.rButton,
               border: 'none',
               background: sf.accent,
               color: sf.onAccent,
@@ -79,7 +80,7 @@ const BottomCartBar: React.FC<BottomCartBarProps> = ({
                 alignItems: 'center',
                 gap: 8,
                 background: 'rgba(0,0,0,0.14)',
-                borderRadius: 12,
+                borderRadius: sd.rChip,
                 padding: '8px 12px',
                 fontSize: 14,
                 fontWeight: 800,

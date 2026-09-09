@@ -31,7 +31,9 @@ import {
 } from 'react-icons/io5';
 import { AnimatePresence, motion } from 'framer-motion';
 import { sf } from '@/utils/storefrontTheme';
-import { getImageUrl } from '@/utils/imageHelpers';
+import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
+import { sd } from '@/utils/storefrontDesign';
+import { useDesign } from '@/utils/storefrontDesignContext';
 import { useT } from '@/i18n/storefront';
 
 export interface ShopCategoryTile {
@@ -144,16 +146,32 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
       : null
   ].filter(Boolean) as Array<{ key: string; icon: React.ReactNode; label: string; href: string }>;
 
+  /**
+   * نموذج الشريط — ثلاثة أشكال لسلوكٍ واحد.
+   *
+   * الالتصاق بأعلى الشاشة (`sticky`) لا يتغيّر في أيٍّ منها: زرّ السلّة
+   * والبحث يجب أن يبقيا في المتناول مهما نزل الزبون. المتغيّر شكله فقط.
+   */
+  const { nav } = useDesign();
+  const floating = nav === 'floating';
+  const minimalNav = nav === 'minimal';
+
   return (
     <div style={{ background: sf.bg, minHeight: '100vh', fontFamily: sf.font, color: sf.text }} dir="rtl">
       {/* ===== شريط علوي دائم ===== */}
       <header
         style={{
           position: 'sticky',
-          top: 0,
+          top: floating ? 10 : 0,
           zIndex: 40,
+          // «عائم» يبتعد عن الحافّة ويحمل ظلّاً؛ و«بسيط» يتخلّى عن الحدّ
+          // ويكتفي بالتمويه؛ و«صلب» هو الشريط الملتصق المعتاد
           background: sf.bg,
-          borderBottom: `1px solid ${sf.border}`,
+          borderBottom: minimalNav || floating ? 'none' : `${sd.borderW} solid ${sf.border}`,
+          borderRadius: floating ? sd.rCard : 0,
+          boxShadow: floating ? sd.shadowPop : 'none',
+          margin: floating ? '10px 10px 0' : 0,
+          border: floating ? `${sd.borderW} solid ${sf.border}` : undefined,
           backdropFilter: 'blur(8px)'
         }}
       >
@@ -163,18 +181,18 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
         >
           {logo ? (
             <img
-              src={getImageUrl(logo)}
+              src={getImageUrl(sizedImage(logo, 'sm'))}
               alt=""
               width={36}
               height={36}
-              style={{ borderRadius: 11, objectFit: 'cover', flexShrink: 0, background: sf.surface }}
+              style={{ borderRadius: sd.rImage, objectFit: 'cover', flexShrink: 0, background: sf.surface }}
             />
           ) : (
             <div
               style={{
                 width: 36,
                 height: 36,
-                borderRadius: 11,
+                borderRadius: sd.rImage,
                 background: sf.accent,
                 color: sf.onAccent,
                 display: 'grid',
@@ -499,7 +517,7 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
                 >
                   {category.image ? (
                     <img
-                      src={getImageUrl(category.image)}
+                      src={getImageUrl(sizedImage(category.image, 'sm'))}
                       alt=""
                       loading="lazy"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}

@@ -11,6 +11,7 @@ import {
   IoOptionsOutline
 } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
@@ -93,7 +94,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
         gap: 12,
         background: sf.card,
         border: `1px solid ${sf.border}`,
-        borderRadius: 16,
+        borderRadius: sd.rCard,
         padding: 10,
         cursor: unavailable ? 'default' : onOpenDetails ? 'pointer' : 'default',
         opacity: unavailable ? 0.62 : 1,
@@ -107,7 +108,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
           width: 104,
           height: 104,
           flexShrink: 0,
-          borderRadius: 12,
+          borderRadius: sd.rImage,
           overflow: 'hidden',
           background: sf.surface
         }}
@@ -164,7 +165,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
               fontSize: 10,
               fontWeight: 800,
               padding: '2px 7px',
-              borderRadius: 999
+              borderRadius: sd.rChip
             }}
           >
             -{Math.round(((beforePrice - finalPrice) / beforePrice) * 100)}%
@@ -225,7 +226,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
                 flexShrink: 0,
                 display: 'grid',
                 placeItems: 'center',
-                borderRadius: 10,
+                borderRadius: sd.rButton,
                 border: 'none',
                 background: 'transparent',
                 color: isFavorite ? DISCOUNT_RED : sf.muted,
@@ -324,7 +325,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
                     justifyContent: 'center',
                     gap: 5,
                     padding: withOptions ? '0 12px' : 0,
-                    borderRadius: 12,
+                    borderRadius: sd.rButton,
                     border: 'none',
                     background: sf.accent,
                     color: sf.onAccent,
@@ -344,7 +345,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
                     <span
                       style={{
                         background: 'rgba(0,0,0,0.18)',
-                        borderRadius: 999,
+                        borderRadius: sd.rChip,
                         padding: '0 6px',
                         fontSize: 11
                       }}
@@ -369,7 +370,7 @@ const badgeStyle: React.CSSProperties = {
   background: sf.surface,
   border: `1px solid ${sf.border}`,
   color: sf.muted,
-  borderRadius: 999,
+  borderRadius: sd.rChip,
   padding: '2px 8px',
   fontSize: 10.5,
   fontWeight: 700
