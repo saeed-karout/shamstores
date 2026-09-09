@@ -121,21 +121,9 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
   footer
 }) => {
   const { t } = useT();
-  const [showScrollTop, setShowScrollTop] = useState(false);
-
-  useEffect(() => {
-    let ticking = false;
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(() => {
-        setShowScrollTop(window.scrollY > 700);
-        ticking = false;
-      });
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  // الخطّاف المشترك بدل نسخةٍ محلّية: النسخة هنا كانت تخنق بـrAF، وهو
+  // موقوفٌ في صفحةٍ محجوبة فتبقى رايته مرفوعة ويُهمَل كل تمريرٍ بعدها
+  const showScrollTop = useScrolledPast(700);
 
   const contacts = [
     phone ? { key: 'phone', icon: <IoCallOutline size={14} />, label: 'اتصال', href: `tel:${phone}` } : null,
@@ -584,35 +572,7 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
 
       {footer}
 
-      <AnimatePresence>
-        {showScrollTop && (
-          <motion.button
-            type="button"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            aria-label={t('العودة إلى الأعلى')}
-            style={{
-              position: 'fixed',
-              insetInlineEnd: 14,
-              bottom: 92,
-              width: 42,
-              height: 42,
-              borderRadius: '50%',
-              border: `1px solid ${sf.border}`,
-              background: sf.card,
-              color: sf.text,
-              display: 'grid',
-              placeItems: 'center',
-              cursor: 'pointer',
-              zIndex: 45
-            }}
-          >
-            <IoArrowUp size={19} />
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <ScrollTopButton show={showScrollTop} />
     </div>
   );
 };

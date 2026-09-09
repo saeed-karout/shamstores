@@ -230,22 +230,22 @@ export const BranchChips: React.FC<{ branches: BranchLink[] }> = ({ branches }) 
 /**
  * هل تجاوز التمرير حدّاً؟
  *
- * `requestAnimationFrame` لا استدعاءٌ مباشر: حدث التمرير يقع عشرات المرّات
- * في الثانية، وتحديث الحالة في كلٍّ منها يجعل الصفحة تتلعثم تحت الإصبع.
+ * **بلا `requestAnimationFrame` عمداً.** الخنق به يبدو أرخص، لكنه يحمل
+ * مزلاقاً: الراية التي تمنع الجدولة المكرّرة تُرفع قبل الاستدعاء وتُخفض
+ * داخله — وrAF **لا يعمل إطلاقاً وصفحةٌ محجوبة** (لسانٌ خلفي، أو نافذة
+ * وراء أخرى). فتبقى الراية مرفوعة ويُهمَل كل تمريرٍ بعدها حتى تعود
+ * الصفحة إلى الواجهة. رُصد فعلاً: `visibilityState: hidden` والشريط لا
+ * يظهر مهما مُرِّر.
+ *
+ * والبديل ليس أغلى: المتصفّح يطلق حدث التمرير مرّةً لكل إطارٍ أصلاً،
+ * وReact يتجاهل ضبط الحالة بنفس القيمة فلا يُعاد التصيير إلا عند العبور
+ * الحقيقيّ للحدّ — مرّتان في الصفحة كلّها لا مرّتان في الثانية.
  */
 export const useScrolledPast = (threshold: number): boolean => {
   const [passed, setPassed] = useState(false);
 
   useEffect(() => {
-    let ticking = false;
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(() => {
-        setPassed(window.scrollY > threshold);
-        ticking = false;
-      });
-    };
+    const onScroll = () => setPassed(window.scrollY > threshold);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);

@@ -153,7 +153,11 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
 
   return (
     <div>
-      {/* الهيكل أوّلاً: هو ما يغيّر الصفحة كلّها، والباقي يضبطه داخلها */}
+      {/* الهيكل أوّلاً: هو ما يغيّر الصفحة كلّها، والباقي يضبطه داخلها.
+          **وللمتجر وحده اليوم:** واجهة المطعم مكوّنٌ مستقلّ (غلاف وبطاقة
+          هوية وقائمة صفوف) لا تمرّ بهياكل المتجر. وعرضُ الخيار هناك كان
+          سيَعِد بما لا يقع — وهو أسوأ من غيابه. */}
+      {kind === 'store' && (
       <Section
         icon={<IoLayersOutline size={17} />}
         title="قالب الواجهة"
@@ -192,6 +196,7 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
           })}
         </div>
       </Section>
+      )}
 
       <Section
         icon={<IoSparklesOutline size={17} />}
@@ -246,7 +251,7 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
           معاينة — بألوان {kind === 'store' ? 'متجرك' : 'مطعمك'}
         </div>
 
-        <PreviewShell design={design} tokens={tokens} kind={kind} />
+        <PreviewShell design={kind === 'store' ? design : { ...design, shell: 'classic' }} tokens={tokens} kind={kind} />
 
         <div
           style={{
@@ -291,7 +296,7 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
 
       {/* لا يُعرض إلا مع «كلاسيكي»: القالبان الآخران بلا شريطٍ يُنمَّط،
           وعرضُ خيارٍ لا أثر له يجعل التاجر يظنّ الميزة معطّلة */}
-      {design.shell === 'classic' && (
+      {(kind === 'restaurant' || design.shell === 'classic') && (
         <Section
           icon={<IoMenuOutline size={17} />}
           title="شكل الشريط العلوي"
