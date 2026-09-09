@@ -173,7 +173,7 @@ const letterIcon = (name: string, size: number, bg: string, fg: string): Buffer 
     <rect width="${size}" height="${size}" fill="${bg}"/>
     <text x="50%" y="50%" dy=".35em" text-anchor="middle"
       font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
-      font-size="${Math.round(size * 0.46)}" font-weight="700" fill="${fg}">${letter}</text>
+      font-size="${Math.round(size * 0.5)}" font-weight="700" fill="${fg}">${letter}</text>
   </svg>`;
   return Buffer.from(svg);
 };
@@ -205,30 +205,36 @@ export const getStoreIcon = async (req: Request, res: Response): Promise<void> =
 
     const bg = hexOrDefault(business.primaryColor, '#0D4A3A');
     const logo = business.logo ? await fetchLogo(business.logo) : null;
-    const source = logo ?? letterIcon(business.name, size, bg, '#FFFFFF');
 
-    // **الأيقونة المقنَّعة تُصغَّر إلى ٦٠٪ داخل خلفية مصمتة:** أندرويد
-    // يقتطعها دائرةً أو معيّناً، وشعارٌ يملأ المربّع تُقصّ أطرافه.
-    // والعادية تُحاط بخلفيةٍ أيضاً لأن شعاراً شفّافاً على خلفية سوداء
-    // يختفي، وعلى بيضاء يبهت.
-    const inner = maskable ? Math.round(size * 0.6) : Math.round(size * 0.78);
+    let png: Buffer;
 
-    const resized = await sharp(source, { density: 400 })
-      .resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toBuffer();
+    if (logo) {
+      // **المقنَّعة تُصغَّر إلى ٦٠٪ داخل خلفية مصمتة:** أندرويد يقتطعها
+      // دائرةً أو معيّناً، وشعارٌ يملأ المربّع تُقصّ أطرافه. والعادية
+      // تُحاط بخلفيةٍ أيضاً لأن شعاراً شفّافاً يختفي على خلفية داكنة.
+      const inner = maskable ? Math.round(size * 0.6) : Math.round(size * 0.78);
 
-    const png = await sharp({
-      create: {
-        width: size,
-        height: size,
-        channels: 4,
-        background: bg
-      }
-    })
-      .composite([{ input: resized, gravity: 'center' }])
-      .png()
-      .toBuffer();
+      const resized = await sharp(logo, { density: 400 })
+        .resize(inner, inner, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+        .png()
+        .toBuffer();
+
+      png = await sharp({
+        create: { width: size, height: size, channels: 4, background: bg }
+      })
+        .composite([{ input: resized, gravity: 'center' }])
+        .png()
+        .toBuffer();
+    } else {
+      // **بديل الحرف يُرسَم بمقاسه النهائي مباشرةً — بلا تصغيرٍ ثانٍ.**
+      //
+      // تمريره في مسار الشعار كان يُصغّره مرّتين: حجم خطٍّ نصفُ اللوحة، ثمّ
+      // تصغيرٌ إلى ٧٨٪ — فيخرج الحرف بثلث الأيقونة تقريباً، تائهاً في
+      // مربّعٍ فارغ. وهو أصلاً يحمل خلفيته وحوافه الصحيحة.
+      png = await sharp(letterIcon(business.name, size, bg, '#FFFFFF'), { density: 400 })
+        .png()
+        .toBuffer();
+    }
 
     res.setHeader('Content-Type', 'image/png');
     res.setHeader('Cache-Control', 'public, max-age=86400');
