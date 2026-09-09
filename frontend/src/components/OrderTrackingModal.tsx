@@ -39,6 +39,7 @@ import api from '../services/api';
 import FollowOrderPrompt from './storefront/FollowOrderPrompt';
 import { Order, OrderStatus } from '../services/types';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 
 export type TrackingKind = 'store' | 'restaurant';
 
@@ -224,7 +225,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
         style={{
           background: `${color}22`,
           color,
-          borderRadius: 999,
+          borderRadius: sd.rChip,
           padding: '3px 11px',
           fontSize: 12,
           fontWeight: 700,
@@ -337,7 +338,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                   gap: 10,
                   background: '#FF6B6B14',
                   border: '1px solid #FF6B6B44',
-                  borderRadius: 12,
+                  borderRadius: sd.rCard,
                   padding: 14,
                   color: '#FF6B6B',
                   fontSize: 13.5,
@@ -427,7 +428,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 style={{
                   background: sf.surface,
                   border: `1px solid ${sf.border}`,
-                  borderRadius: 12,
+                  borderRadius: sd.rCard,
                   padding: 14,
                   marginBottom: 12
                 }}
@@ -452,7 +453,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                     marginTop: 12,
                     background: sf.card,
                     border: `1px solid ${sf.border}`,
-                    borderRadius: 10,
+                    borderRadius: sd.rButton,
                     padding: '10px 12px',
                     color: sf.text,
                     fontFamily: 'inherit',
@@ -470,7 +471,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                     width: '100%',
                     marginTop: 10,
                     minHeight: 44,
-                    borderRadius: 10,
+                    borderRadius: sd.rButton,
                     border: 'none',
                     background: orderStars < 1 ? sf.border : sf.accent,
                     color: orderStars < 1 ? sf.muted : sf.onAccent,
@@ -491,7 +492,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 style={{
                   background: sf.surface,
                   border: `1px solid ${sf.border}`,
-                  borderRadius: 12,
+                  borderRadius: sd.rCard,
                   padding: 14,
                   marginBottom: 12
                 }}
@@ -513,11 +514,11 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                         <img
                           src={item.imageUrl}
                           alt=""
-                          style={{ width: 34, height: 34, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                          style={{ width: 34, height: 34, borderRadius: sd.rImage, objectFit: 'cover', flexShrink: 0 }}
                         />
                       ) : (
                         <span style={{
-                          width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+                          width: 34, height: 34, borderRadius: sd.rImage, flexShrink: 0,
                           background: sf.card, display: 'grid', placeItems: 'center',
                           color: sf.muted, fontSize: 15
                         }}>
@@ -560,7 +561,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                   gap: 8,
                   background: sf.surface,
                   border: `1px solid ${sf.border}`,
-                  borderRadius: 12,
+                  borderRadius: sd.rCard,
                   padding: 12,
                   marginBottom: 12,
                   color: sf.muted,
@@ -580,7 +581,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                   gap: 8,
                   background: sf.surface,
                   border: `1px solid ${sf.border}`,
-                  borderRadius: 12,
+                  borderRadius: sd.rCard,
                   padding: 12,
                   marginBottom: 12,
                   color: sf.muted,
@@ -599,7 +600,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 style={{
                   background: sf.surface,
                   border: `1px solid ${sf.border}`,
-                  borderRadius: 12,
+                  borderRadius: sd.rCard,
                   overflow: 'hidden',
                   marginBottom: 12
                 }}
@@ -638,7 +639,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 flexWrap: 'wrap',
                 background: sf.card,
                 border: `1px solid ${sf.border}`,
-                borderRadius: 12,
+                borderRadius: sd.rCard,
                 padding: 14
               }}
             >
@@ -649,7 +650,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                   gap: 4,
                   background: trackingOrder.isPaid ? '#4ADE801F' : '#F59E0B1F',
                   color: trackingOrder.isPaid ? '#4ADE80' : '#F59E0B',
-                  borderRadius: 999,
+                  borderRadius: sd.rChip,
                   padding: '3px 10px',
                   fontSize: 11.5,
                   fontWeight: 700
@@ -682,7 +683,7 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                   textAlign: 'right',
                   background: sf.surface,
                   border: `1px solid ${sf.border}`,
-                  borderRadius: 12,
+                  borderRadius: sd.rButton,
                   padding: 14,
                   cursor: 'pointer',
                   fontFamily: 'inherit',

@@ -12,6 +12,7 @@ import {
   IoArrowUp
 } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { useT } from '@/i18n/storefront';
 
@@ -130,7 +131,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                   alt=""
                   width={34}
                   height={34}
-                  style={{ width: 34, height: 34, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }}
+                  style={{ width: 34, height: 34, borderRadius: sd.rImage, objectFit: 'cover', flexShrink: 0 }}
                 />
               )}
               {/* <span
@@ -160,7 +161,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                     height: 40,
                     display: 'grid',
                     placeItems: 'center',
-                    borderRadius: 12,
+                    borderRadius: sd.rButton,
                     border: `1px solid ${sf.border}`,
                     background: sf.surface,
                     color: sf.text,
@@ -178,7 +179,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                         insetInlineEnd: -5,
                         minWidth: 19,
                         height: 19,
-                        borderRadius: 999,
+                        borderRadius: sd.rChip,
                         background: sf.accent,
                         color: sf.onAccent,
                         fontSize: 10.5,
@@ -236,7 +237,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
             marginTop: -46,
             background: sf.card,
             border: `1px solid ${sf.border}`,
-            borderRadius: 18,
+            borderRadius: sd.rCard,
             padding: 16,
             boxShadow: `0 12px 32px ${sf.shadow}`
           }}
@@ -252,7 +253,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                 style={{
                   width: 72,
                   height: 72,
-                  borderRadius: 16,
+                  borderRadius: sd.rCard,
                   objectFit: 'cover',
                   flexShrink: 0,
                   border: `2px solid ${sf.border}`,
@@ -264,7 +265,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                 style={{
                   width: 72,
                   height: 72,
-                  borderRadius: 16,
+                  borderRadius: sd.rCard,
                   background: sf.surface,
                   display: 'grid',
                   placeItems: 'center',
@@ -293,7 +294,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                       gap: 5,
                       background: sf.accentSoft,
                       border: `1px solid ${sf.border}`,
-                      borderRadius: 999,
+                      borderRadius: sd.rChip,
                       padding: '4px 11px',
                       color: sf.accent,
                       fontSize: 11.5,
@@ -325,7 +326,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                           minWidth: 190,
                           background: sf.surface,
                           border: `1px solid ${sf.border}`,
-                          borderRadius: 12,
+                          borderRadius: sd.rButton,
                           boxShadow: `0 10px 26px ${sf.shadow}`
                         }}
                       >
@@ -336,7 +337,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                               style={{
                                 display: 'block',
                                 padding: '9px 11px',
-                                borderRadius: 9,
+                                borderRadius: sd.rImage,
                                 color: sf.text,
                                 fontSize: 12.5,
                                 textDecoration: 'none'
@@ -438,7 +439,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
               zIndex: 55,
               width: 44,
               height: 44,
-              borderRadius: 14,
+              borderRadius: sd.rButton,
               border: `1px solid ${sf.border}`,
               background: sf.card,
               color: sf.text,
@@ -464,7 +465,7 @@ const contactButton: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 7,
-  borderRadius: 12,
+  borderRadius: sd.rButton,
   border: `1px solid ${sf.border}`,
   background: sf.surface,
   color: sf.text,

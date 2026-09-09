@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import { useT } from '@/i18n/storefront';
+import { sd } from '@/utils/storefrontDesign';
 
 export interface BannerSlide {
   id: string;
@@ -114,7 +115,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
 
   const wrapperStyle: React.CSSProperties = {
     position: 'relative',
-    borderRadius: 18,
+    borderRadius: sd.rCard,
     overflow: 'hidden',
     background: 'var(--sf-surface)'
   };
@@ -241,7 +242,7 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
                   minHeight: 7,
                   minWidth: 7,
                   padding: 0,
-                  borderRadius: 999,
+                  borderRadius: sd.rChip,
                   border: 'none',
                   cursor: 'pointer',
                   background: index === active ? 'var(--sf-accent)' : 'rgba(255,255,255,0.55)',

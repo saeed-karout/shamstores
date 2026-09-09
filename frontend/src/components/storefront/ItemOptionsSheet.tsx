@@ -6,6 +6,7 @@ import { IoCheckmark, IoBagAddOutline } from 'react-icons/io5';
 import BottomSheet from './BottomSheet';
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
@@ -116,7 +117,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
             justifyContent: 'space-between',
             gap: 12,
             padding: '0 18px',
-            borderRadius: 14,
+            borderRadius: sd.rButton,
             border: 'none',
             background: sf.accent,
             color: sf.onAccent,
@@ -142,7 +143,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
             decoding="async"
             width={82}
             height={82}
-            style={{ width: 82, height: 82, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }}
+            style={{ width: 82, height: 82, borderRadius: sd.rImage, objectFit: 'cover', flexShrink: 0 }}
           />
         )}
         <div style={{ minWidth: 0 }}>
@@ -220,7 +221,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
                       style={{
                         width: 20,
                         height: 20,
-                        borderRadius: 6,
+                        borderRadius: sd.rImage,
                         border: `2px solid ${active ? sf.accent : sf.muted}`,
                         background: active ? sf.accent : 'transparent',
                         color: sf.onAccent,
@@ -261,7 +262,7 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
             width: '100%',
             background: sf.surface,
             border: `1px solid ${sf.border}`,
-            borderRadius: 12,
+            borderRadius: sd.rCard,
             padding: '11px 13px',
             color: sf.text,
             fontSize: 13.5,
@@ -291,7 +292,7 @@ const requiredTag: React.CSSProperties = {
   fontWeight: 700,
   background: sf.accentSoft,
   color: sf.accent,
-  borderRadius: 999,
+  borderRadius: sd.rChip,
   padding: '2px 8px'
 };
 
@@ -303,7 +304,7 @@ const optionRow: React.CSSProperties = {
   gap: 12,
   minHeight: 50,
   padding: '0 14px',
-  borderRadius: 12,
+  borderRadius: sd.rButton,
   border: `1.5px solid ${sf.border}`,
   background: sf.surface,
   color: sf.text,

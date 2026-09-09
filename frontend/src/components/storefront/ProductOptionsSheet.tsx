@@ -13,6 +13,7 @@ import { IoCheckmark } from 'react-icons/io5';
 import BottomSheet from './BottomSheet';
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { useT } from '@/i18n/storefront';
@@ -197,7 +198,7 @@ const ProductOptionsSheet: React.FC<Props> = ({
                           position: 'relative',
                           width: 64,
                           height: 64,
-                          borderRadius: 12,
+                          borderRadius: sd.rButton,
                           overflow: 'hidden',
                           border: `2px solid ${picked ? sf.accent : sf.border}`,
                           background: sf.surface,
@@ -261,7 +262,7 @@ const ProductOptionsSheet: React.FC<Props> = ({
                       gap: 6,
                       padding: '9px 14px',
                       minHeight: 42,
-                      borderRadius: 12,
+                      borderRadius: sd.rCard,
                       border: `2px solid ${picked ? sf.accent : sf.border}`,
                       background: picked ? 'rgba(200,226,53,0.12)' : sf.card,
                       color: picked ? sf.accent : sf.text,
@@ -307,7 +308,7 @@ const ProductOptionsSheet: React.FC<Props> = ({
             width: '100%',
             marginTop: 14,
             minHeight: 50,
-            borderRadius: 14,
+            borderRadius: sd.rButton,
             border: 'none',
             background: missing ? sf.surface : sf.accent,
             color: missing ? sf.muted : sf.onAccent,

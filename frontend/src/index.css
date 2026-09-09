@@ -423,6 +423,15 @@ textarea:focus-visible,
 .shop-only-wide { display: none; }
 @media (min-width: 1024px) { .shop-only-wide { display: inline-flex; } }
 
+/* ما يظهر على الجوال وحده — نقيض `shop-only-wide` */
+.shop-only-narrow { display: block; }
+@media (min-width: 1024px) { .shop-only-narrow { display: none; } }
+
+/* الصفّ الثاني في رأس المتجر: البحث ومبدّلا العملة واللغة.
+   يختفي على اللابتوب حيث يتّسع الصفّ الأوّل للجميع. */
+.shop-header-row2 { display: flex; }
+@media (min-width: 1024px) { .shop-header-row2 { display: none; } }
+
 /* غلاف البانر: بلا حشوة على الجوال ليملأ العرض، وبحشوة الحاوية على
    اللابتوب حيث يبدو الالتصاق بالحافتين خاماً لا جريئاً. */
 .shop-banner-wrap { padding-inline: 0; padding-top: 0; }

@@ -239,12 +239,57 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
             />
           </div>
 
-          {/* زرّ مختصر — جوال. لوح بحث بملء الشاشة أنسب لإبهام واحد. */}
+          {/* اسم المتجر يملأ الصفّ الأوّل على الجوال — حيث لا حقل بحث */}
+          <div
+            className="shop-only-narrow"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              color: sf.text,
+              fontSize: 14.5,
+              fontWeight: 800,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {name}
+          </div>
+
+          {/* الحساب · المفضلة · السلة */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+            <span className="shop-only-wide" style={{ alignItems: 'center', gap: 7 }}>{headerExtra}</span>
+            <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
+            <IconAction
+              icon={<IoHeartOutline size={19} />}
+              label={t('المفضلة')}
+              badge={favoritesCount}
+              onClick={onFavoritesClick}
+            />
+            <IconAction
+              icon={<IoBagHandleOutline size={19} />}
+              label={t('السلة')}
+              badge={cartCount}
+              onClick={onCartClick}
+              emphasis
+            />
+          </div>
+        </div>
+
+        {/* ===== صفٌّ ثانٍ — جوال فقط =====
+            سبعة عناصر لا تدخل في ٣٧٥ بكسل: الشعار وحقل البحث ومبدّلا
+            العملة واللغة وثلاثة أزرار. وكانت المجموعة تفيض فعلاً فتنزلق
+            الصفحة أفقياً — وهو أسوأ ما يحدث لواجهةٍ على الجوال.
+            الصفّ الثاني يُعطي البحث عرضاً حقيقياً بدل ست وعشرين بكسل. */}
+        <div
+          className="shop-shell shop-header-row2"
+          style={{ alignItems: 'center', gap: 8, paddingBottom: 9 }}
+        >
           <button
             type="button"
-            className="shop-search-compact"
             onClick={onSearchOpen}
             style={{
+              display: 'flex',
               flex: 1,
               minWidth: 0,
               minHeight: 38,
@@ -265,27 +310,10 @@ const ShopLayout: React.FC<ShopLayoutProps> = ({
             }}
           >
             <IoSearchOutline size={16} style={{ flexShrink: 0 }} />
-            {searchValue || 'ابحث في المنتجات…'}
+            {searchValue || t('ابحث في المنتجات…')}
           </button>
 
-          {/* الحساب · المفضلة · السلة */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-            {headerExtra}
-            <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
-            <IconAction
-              icon={<IoHeartOutline size={19} />}
-              label={t('المفضلة')}
-              badge={favoritesCount}
-              onClick={onFavoritesClick}
-            />
-            <IconAction
-              icon={<IoBagHandleOutline size={19} />}
-              label={t('السلة')}
-              badge={cartCount}
-              onClick={onCartClick}
-              emphasis
-            />
-          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>{headerExtra}</div>
         </div>
 
         {/* شريط الأقسام النصّي — لابتوب فقط */}

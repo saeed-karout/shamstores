@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 
 const shimmerCss = `
 @keyframes sf-shimmer {
@@ -44,7 +45,7 @@ const StorefrontSkeleton: React.FC<{ cards?: number }> = ({ cards = 6 }) => (
         style={{
           background: sf.card,
           border: `1px solid ${sf.border}`,
-          borderRadius: 18,
+          borderRadius: sd.rCard,
           padding: 16,
           marginTop: -42,
           position: 'relative',
@@ -52,7 +53,7 @@ const StorefrontSkeleton: React.FC<{ cards?: number }> = ({ cards = 6 }) => (
           gap: 14
         }}
       >
-        <div className="sf-skel" style={{ width: 72, height: 72, borderRadius: 16, flexShrink: 0 }} />
+        <div className="sf-skel" style={{ width: 72, height: 72, borderRadius: sd.rImage, flexShrink: 0 }} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 4 }}>
           <Line w="60%" h={16} />
           <Line w="85%" h={11} />
@@ -63,7 +64,7 @@ const StorefrontSkeleton: React.FC<{ cards?: number }> = ({ cards = 6 }) => (
       {/* شريط الفئات */}
       <div style={{ display: 'flex', gap: 8, marginTop: 18, overflow: 'hidden' }}>
         {[76, 92, 68, 104, 80].map((w, i) => (
-          <Line key={i} w={w} h={36} style={{ borderRadius: 999, flexShrink: 0 }} />
+          <Line key={i} w={w} h={36} style={{ borderRadius: sd.rChip, flexShrink: 0 }} />
         ))}
       </div>
 
@@ -77,18 +78,18 @@ const StorefrontSkeleton: React.FC<{ cards?: number }> = ({ cards = 6 }) => (
               gap: 12,
               background: sf.card,
               border: `1px solid ${sf.border}`,
-              borderRadius: 16,
+              borderRadius: sd.rCard,
               padding: 12
             }}
           >
-            <div className="sf-skel" style={{ width: 96, height: 96, borderRadius: 12, flexShrink: 0 }} />
+            <div className="sf-skel" style={{ width: 96, height: 96, borderRadius: sd.rImage, flexShrink: 0 }} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9, paddingTop: 6 }}>
               <Line w="55%" h={14} />
               <Line w="90%" h={10} />
               <Line w="70%" h={10} />
               <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between' }}>
                 <Line w={70} h={14} />
-                <Line w={40} h={30} style={{ borderRadius: 10 }} />
+                <Line w={40} h={30} style={{ borderRadius: sd.rButton }} />
               </div>
             </div>
           </div>

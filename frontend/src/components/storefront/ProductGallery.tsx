@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { IoChevronBack, IoChevronForward, IoExpandOutline, IoClose } from 'react-icons/io5';
 import { useT } from '@/i18n/storefront';
+import { sd } from '@/utils/storefrontDesign';
 
 interface Props {
   images: string[];
@@ -57,7 +58,7 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
           aspectRatio,
           background: 'var(--sf-surface)',
           border: '1px solid var(--sf-border)',
-          borderRadius: 16,
+          borderRadius: sd.rImage,
           display: 'grid',
           placeItems: 'center',
           color: 'var(--sf-muted)',
@@ -72,7 +73,7 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       {/* الصورة الكبيرة */}
-      <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', background: 'var(--sf-surface)' }}>
+      <div style={{ position: 'relative', borderRadius: sd.rImage, overflow: 'hidden', background: 'var(--sf-surface)' }}>
         <img
           src={usable[active]}
           alt={count > 1 ? `${alt} — صورة ${active + 1} من ${count}` : alt}
@@ -127,7 +128,7 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
                 minWidth: 62,
                 minHeight: 62,
                 padding: 0,
-                borderRadius: 11,
+                borderRadius: sd.rImage,
                 overflow: 'hidden',
                 cursor: 'pointer',
                 scrollSnapAlign: 'start',
@@ -178,7 +179,7 @@ const ProductGallery: React.FC<Props> = ({ images, alt, aspectRatio = '1 / 1' })
             src={usable[active]}
             alt={alt}
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '100%', maxHeight: '86vh', objectFit: 'contain', borderRadius: 10 }}
+            style={{ maxWidth: '100%', maxHeight: '86vh', objectFit: 'contain', borderRadius: sd.rImage }}
           />
 
           {count > 1 && (
@@ -217,7 +218,7 @@ const counterStyle: React.CSSProperties = {
   color: '#fff',
   fontSize: 11.5,
   padding: '3px 9px',
-  borderRadius: 999,
+  borderRadius: sd.rChip,
   fontVariantNumeric: 'tabular-nums'
 };
 
