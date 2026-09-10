@@ -51,8 +51,24 @@ router.get('/', authenticate, checkPlanFeature('online_orders'), authorizeStaff,
  * @desc    الحصول على طلبات اليوم
  * @access  Private (Owner/Staff)
  */
-// قبل `/:id`: إكسبريس يطابق بترتيب التعريف
-router.get('/export', exportOrders);
+/**
+ * تصدير الطلبات.
+ *
+ * **قبل `/:id`** لأن إكسبريس يطابق بترتيب التعريف — ولولا ذلك لالتُقطت
+ * كلمة «export» معرّفَ طلب.
+ *
+ * **وبنفس حرّاس `GET /`:** هذا الملفّ يحرس كل مسارٍ على حدة لا بـ
+ * `router.use`، فسطرٌ بلا `authenticate` يصير مساراً عامّاً. رُصد فعلاً:
+ * ردّ ٤٠٠ بلا رمزٍ إطلاقاً — أي أنه بلغ المعالج، ولم يسرّب شيئاً لأن شرط
+ * «لا معرّف نشاط» أوقفه، وهو حظٌّ لا تصميم.
+ */
+router.get(
+  '/export',
+  authenticate,
+  checkPlanFeature('online_orders'),
+  authorizeStaff,
+  exportOrders
+);
 router.get('/today', authenticate, checkPlanFeature('online_orders'), authorizeStaff, getTodayOrders);
 
 /**
