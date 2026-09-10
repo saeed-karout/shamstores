@@ -1,6 +1,9 @@
 // frontend/src/components/a11y/SkipToContent.tsx
 
-import { useT } from '@/i18n/storefront';
+import { useMemo } from 'react';
+import { makeT } from '@/i18n/storefront';
+import { readLastLang } from '@/hooks/useStorefrontLanguage';
+
 /**
  * رابط «تخطَّ إلى المحتوى».
  *
@@ -10,10 +13,15 @@ import { useT } from '@/i18n/storefront';
  *
  * الهدف `#main-content` معرَّف في App.tsx حول شجرة المسارات، ويحمل
  * `tabIndex={-1}` ليقبل التركيز برمجياً عند القفز إليه.
+ *
+ * **ولماذا `makeT` لا `useT`:** هذا المكوّن يُصيَّر في `App` **فوق** شجرة
+ * المسارات، أي خارج مزوّد لغة المتجر. فكان `useT` يرتدّ إلى العربية دائماً
+ * — أوّل عنصرٍ يبلغه قارئُ الشاشة في متجرٍ إنجليزيّ بالكامل يخاطبه بالعربية.
+ * وآخر لغةٍ اختارها الزائر تصيب الحالتين: عربيةٌ لمن لم يبدّل قطّ، وهو
+ * حال صفحات المنصّة.
  */
 const SkipToContent: React.FC = () => {
-  // خارج مزوّد المتجر يرتدّ إلى العربية — وهو الصحيح في صفحات المنصّة
-  const { t } = useT();
+  const t = useMemo(() => makeT(readLastLang() || 'ar'), []);
   return (
     <a href="#main-content" className="skip-link">
       {t('تخطَّ إلى المحتوى')}

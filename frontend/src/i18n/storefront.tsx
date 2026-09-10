@@ -115,6 +115,9 @@ const EN: Record<string, string> = {
   'حسابك': 'Your account',
   'بياناتي': 'My profile',
   'طلباتي': 'My orders',
+  // إتاحة الوصول — أوّل ما يبلغه قارئ الشاشة
+  'تخطَّ إلى المحتوى': 'Skip to content',
+
   'شكراً لتقييمك': 'Thank you for your review',
   'تعذّر إرسال التقييم': 'Could not send the review',
   'تعذّر حفظ تقييم المنتج': 'Could not save the product review',
