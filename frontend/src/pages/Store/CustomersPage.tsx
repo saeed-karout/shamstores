@@ -17,7 +17,7 @@ import toast from 'react-hot-toast';
 import api from '@/services/api';
 import Loader from '@/components/common/Loader';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
-import { ExportButton } from '@/components/common/CsvTools';
+import { CustomerCsvTools } from '@/components/common/CsvTools';
 
 const C = {
   bg: '#082E24',
@@ -49,6 +49,7 @@ interface Customer {
   phone: string | null;
   email: string | null;
   isGuest: boolean;
+  isImported?: boolean;
   ordersCount: number;
   totalSpent: number;
   lastOrderAt: string | null;
@@ -152,14 +153,14 @@ const CustomersPage: React.FC = () => {
     <div style={{ background: C.bg, minHeight: '100vh', padding: '20px 16px', color: C.text }} dir="rtl">
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
 
-        <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <header style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
           <div style={{ flex: 1 }}>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 900 }}>الزبائن</h1>
             <p style={{ margin: '3px 0 0', fontSize: 12.5, color: C.muted }}>
               مرتّبون بالإنفاق — الأوفى أولاً
             </p>
           </div>
-          <ExportButton path="/customers/export" filename="customers.csv" colors={csvColors} />
+          <CustomerCsvTools colors={csvColors} onDone={load} />
           <button
             onClick={load}
             title="تحديث"
@@ -258,6 +259,9 @@ const CustomersPage: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 13.5, fontWeight: 800 }}>{customer.name}</span>
                         {customer.isGuest && <Tag text="بلا حساب" color={C.blue} />}
+                        {/* المستورد قد يظهر بصفر طلبات — والبيان يمنع
+                            أن يُقرأ ذلك عيباً في الحساب */}
+                        {customer.isImported && <Tag text="مستورد" color={C.warn} />}
                         {customer.isLapsed && <Tag text="انقطع" color={C.warn} />}
                       </div>
                       <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>

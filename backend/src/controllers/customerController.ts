@@ -42,6 +42,8 @@ interface CustomerRow {
   firstOrderAt: string | null;
   /** لا طلب منذ ستّين يوماً — وهو الجمهور الذي تستهدفه حملة استرجاع */
   isLapsed: boolean;
+  /** أُدخل بملفٍّ أو باليد لا باستنتاجٍ من طلب */
+  isImported?: boolean;
 }
 
 const LAPSED_DAYS = 60;
@@ -114,6 +116,51 @@ const buildCustomerRows = async (scope: Record<string, unknown>): Promise<Custom
           isLapsed: order.createdAt < lapsedBefore
         });
       }
+    }
+
+    /**
+     * الزبائن المستوردون — يُدمجون بنفس المفتاح لا يُضافون بعده.
+     *
+     * الضيف يُميَّز بـ`guest:<هاتف>` في كل هذا المشروع، والمستورد يحمل
+     * نفس المفتاح. فمن استُورد ثمّ طلب يظهر **صفّاً واحداً** بطلباته
+     * الحقيقية — لا مرّتين، إحداهما بصفرٍ والأخرى بطلباته.
+     *
+     * ومن لم يطلب بعد يظهر بصفرِ طلبات: هذا كتاب زبائن التاجر، وإخفاء من
+     * لم يشترِ منه يُفرغه من فائدته.
+     */
+    const contacts = await prisma.customerContact.findMany({
+      where: {
+        businessId: (scope as any).storeId || (scope as any).restaurantId,
+        businessType: (scope as any).storeId ? 'store' : 'restaurant'
+      },
+      select: { name: true, phone: true, email: true, marketingOptIn: true }
+    });
+
+    for (const contact of contacts) {
+      const key = `guest:${contact.phone}`;
+      const existing = byKey.get(key);
+      if (existing) {
+        // الاسم المكتوب من التاجر أدقّ من اسمٍ كتبه الزبون عند الدفع
+        existing.name = contact.name || existing.name;
+        existing.email = existing.email || contact.email || null;
+        existing.isImported = true;
+        continue;
+      }
+      byKey.set(key, {
+        key,
+        userId: null,
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+        isGuest: true,
+        ordersCount: 0,
+        totalSpent: 0,
+        lastOrderAt: null,
+        firstOrderAt: null,
+        // من لم يطلب قطُّ ليس «متغيّباً» — المتغيّب من طلب ثمّ انقطع
+        isLapsed: false,
+        isImported: true
+      });
     }
 
     return Array.from(byKey.values()).sort((a, b) => b.totalSpent - a.totalSpent);

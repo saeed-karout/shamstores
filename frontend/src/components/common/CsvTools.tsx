@@ -102,18 +102,41 @@ interface ImportReport {
   newCategories?: string[];
   unknownHeaders?: string[];
   errors?: { row: number; sku: string; message: string }[];
+  subscribed?: number;
+  reachableByEmail?: number;
   errorsTotal?: number;
 }
 
+interface ToolsProps {
+  colors: CsvPalette;
+  onDone: () => void;
+  /** المسار الأساس: `/store/products` أو `/customers` */
+  base: string;
+  templateName: string;
+  exportName: string;
+  /**
+   * سؤال الموافقة التسويقية — للزبائن وحدهم.
+   *
+   * قائمةٌ مستوردة ليست جمهوراً موافقاً، والافتراض ألّا تُراسَل. ومن يملك
+   * موافقةً يؤكّدها هنا صريحاً.
+   */
+  askOptIn?: boolean;
+}
+
 /**
- * أدوات المنتجات: قالبٌ فارغ، وتصدير، واستيراد بمعاينة.
+ * قالبٌ فارغ، وتصدير، واستيراد بمعاينة — للمنتجات والزبائن معاً.
  *
  * القالب أوّلاً في الترتيب: من لا يملك جدولاً يحتاجه قبل أن يفهم البقيّة.
  */
-export const ProductCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void }> = ({
+export const CsvTools: React.FC<ToolsProps> = ({
   colors,
-  onDone
+  onDone,
+  base,
+  templateName,
+  exportName,
+  askOptIn
 }) => {
+  const [optIn, setOptIn] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [csvText, setCsvText] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
@@ -124,11 +147,8 @@ export const ProductCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void 
     setBusy(true);
     try {
       // نصّ خامّ لا JSON: المسار له محلّلٌ خاصّ بحدٍّ أعلى على الخادم
-      const data: any = await api.postRaw(
-        `/store/products/import${dryRun ? '?dryRun=1' : ''}`,
-        text,
-        'text/csv'
-      );
+      const query = dryRun ? '?dryRun=1' : optIn ? '?optIn=1' : '';
+      const data: any = await api.postRaw(`${base}/import${query}`, text, 'text/csv');
       setReport(data);
       if (!dryRun) {
         toast.success(`أُضيف ${data.created} وحُدّث ${data.updated}`);
@@ -162,12 +182,12 @@ export const ProductCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void 
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <ExportButton
-          path="/store/products/template"
-          filename="products-template.csv"
+          path={`${base}/template`}
+          filename={templateName}
           label="قالب فارغ"
           colors={colors}
         />
-        <ExportButton path="/store/products/export" filename="products.csv" colors={colors} />
+        <ExportButton path={`${base}/export`} filename={exportName} colors={colors} />
 
         <button type="button" onClick={() => fileRef.current?.click()} style={btn(colors)}>
           <IoCloudUploadOutline size={16} />
@@ -274,6 +294,12 @@ export const ProductCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void 
                   />
                 </div>
 
+                {!!report.subscribed && (
+                  <Note colors={colors} icon={<IoCheckmarkCircleOutline size={15} />}>
+                    {report.subscribed} منهم صاروا قابلين للوصول بالبريد
+                  </Note>
+                )}
+
                 {!!report.newCategories?.length && (
                   <Note colors={colors} icon={<IoCheckmarkCircleOutline size={15} />}>
                     فئاتٌ ستُنشأ: {report.newCategories.join(' · ')}
@@ -320,6 +346,35 @@ export const ProductCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void 
                       ))}
                     </div>
                   </div>
+                )}
+
+                {!applied && askOptIn && (
+                  <label
+                    style={{
+                      display: 'flex',
+                      gap: 9,
+                      alignItems: 'flex-start',
+                      marginTop: 14,
+                      padding: '11px 12px',
+                      background: colors.surface,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: 10,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={optIn}
+                      onChange={(e) => setOptIn(e.target.checked)}
+                      style={{ width: 17, height: 17, accentColor: colors.accent, marginTop: 2, flexShrink: 0 }}
+                    />
+                    <span style={{ color: colors.muted, fontSize: 12.5, lineHeight: 1.85 }}>
+                      <b style={{ color: colors.text }}>هؤلاء وافقوا على تواصلٍ تسويقيّ.</b>{' '}
+                      بلا هذا يُضافون إلى كتاب زبائنك ولا تصلهم حملة. ومن له بريدٌ
+                      في الملفّ يصير قابلاً للوصول بالبريد — أمّا الهاتف وحده فلا
+                      قناة له.
+                    </span>
+                  </label>
                 )}
 
                 {!applied && (
@@ -424,4 +479,25 @@ const Note: React.FC<{
   </div>
 );
 
-export default ProductCsvTools;
+/** غلافٌ للمنتجات — يحفظ نقطة النداء القائمة */
+export const ProductCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void }> = (props) => (
+  <CsvTools
+    {...props}
+    base="/store/products"
+    templateName="products-template.csv"
+    exportName="products.csv"
+  />
+);
+
+/** وغلافٌ للزبائن — بسؤال الموافقة */
+export const CustomerCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void }> = (props) => (
+  <CsvTools
+    {...props}
+    base="/customers"
+    templateName="customers-template.csv"
+    exportName="customers.csv"
+    askOptIn
+  />
+);
+
+export default CsvTools;

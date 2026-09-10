@@ -10,6 +10,7 @@ import { getCustomers, getCustomerOrders,
   exportCustomers
 } from '../controllers/customerController';
 import { getStoreReviews, setReviewVisibility } from '../controllers/productReviewController';
+import { importCustomers, customerTemplate } from '../controllers/customerCsvController';
 
 const router = Router();
 
@@ -21,6 +22,8 @@ router.get('/', getCustomers);
 /** `key` بصيغة `user:<id>` أو `guest:<هاتف>` — نفس ما تعيده القائمة */
 // قبل `/:key/orders`
 router.get('/export', exportCustomers);
+router.get('/template', customerTemplate);
+router.post('/import', importCustomers);
 router.get('/:key/orders', getCustomerOrders);
 
 // ==================== إشراف التقييمات ====================

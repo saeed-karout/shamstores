@@ -157,10 +157,13 @@ const BODY_LIMIT = process.env.JSON_BODY_LIMIT || '1mb';
  * بخمسة ميغا. فيُخصّ هذا المسار وحده — ويُقرأ نصّاً لا JSON، فلا تُهرَّب
  * علامات التنصيص مرّتين.
  */
-app.use(
-  '/api/store/products/import',
-  express.text({ type: ['text/csv', 'text/plain'], limit: process.env.CSV_BODY_LIMIT || '5mb' })
-);
+const csvText = express.text({
+  type: ['text/csv', 'text/plain'],
+  limit: process.env.CSV_BODY_LIMIT || '5mb'
+});
+
+app.use('/api/store/products/import', csvText);
+app.use('/api/customers/import', csvText);
 
 app.use(express.json({ limit: BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));

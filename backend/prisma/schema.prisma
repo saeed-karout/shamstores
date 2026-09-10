@@ -255,6 +255,37 @@ model AutomationSend {
   @@map("automation_sends")
 }
 
+/// زبونٌ يعرفه التاجر ولم يطلب من المتجر بعد.
+///
+/// **لماذا جدولٌ جديد ولا يكفي `CustomerSubscription`:** الأخير جدول
+/// اشتراكاتٍ يحمل قناةً وموافقة، ولا يحمل اسماً — الأسماء تعيش على `User`،
+/// والمستورد لا حساب له. فتخزينه هناك يفقد اسمه، وهو أوّل ما يريده التاجر.
+///
+/// **والهاتف مطلوب لا اختياريّ:** هو المعرّف الذي يُميّز الضيوف في كل هذا
+/// المشروع (`guest:<هاتف>`). وجهةُ الاستيراد أن يندمج المستورد بطلباته
+/// حين يطلب — وبلا هاتفٍ لا اندماج ولا وصول، فيصير صفّاً لا يُنتفع به.
+///
+/// **والموافقة التسويقية `false` افتراضاً:** قائمةٌ مستوردة ليست جمهوراً
+/// موافقاً. التاجر يؤكّد الموافقة صريحاً عند الاستيراد إن كانت لديه.
+model CustomerContact {
+  id             String   @id @default(cuid())
+  businessId     String   @map("business_id")
+  businessType   String   @map("business_type")
+  name           String
+  phone          String
+  email          String?
+  note           String?  @db.Text
+  /// `import` أو `manual` — يميّز من أُدخل بالملفّ عمّن أُضيف باليد
+  source         String   @default("import")
+  marketingOptIn Boolean  @default(false) @map("marketing_opt_in")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([businessId, businessType, phone])
+  @@index([businessId, businessType])
+  @@map("customer_contacts")
+}
+
 model CustomerSubscription {
   id           String @id @default(cuid())
   /// **المفتاح الثابت للمشترك** — معرّف الحساب أو معرّف الزائر.
