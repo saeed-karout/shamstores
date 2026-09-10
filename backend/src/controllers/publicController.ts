@@ -67,7 +67,7 @@ export const getBusinessBySlug = async (
       const [categories, menuItems] = await Promise.all([
         prisma.category.findMany({
           where: { restaurantId: restaurant.id, isActive: true },
-          orderBy: { position: 'asc' }
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
         }),
         prisma.menuItem.findMany({
           // **المتتبَّع النافد يُستبعَد كما المخفيّ.**
@@ -83,7 +83,7 @@ export const getBusinessBySlug = async (
             isAvailable: true,
             OR: [{ trackStock: false }, { stock: { gt: 0 } }]
           },
-          orderBy: { position: 'asc' }
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
         })
       ]);
       
@@ -172,11 +172,11 @@ export const getBusinessBySlug = async (
       const [categories, products] = await Promise.all([
         prisma.category.findMany({
           where: { storeId: store.id, isActive: true },
-          orderBy: { position: 'asc' }
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
         }),
         prisma.product.findMany({
           where: { storeId: store.id, isAvailable: true },
-          orderBy: { sortOrder: 'asc' }
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
         })
       ]);
       
@@ -319,7 +319,7 @@ export const getTableById = async (
     
     const categories = await prisma.category.findMany({
       where: { restaurantId: restaurant.id, isActive: true },
-      orderBy: { position: 'asc' }
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
     });
     
     const menuItems = await prisma.menuItem.findMany({
@@ -328,7 +328,7 @@ export const getTableById = async (
         isAvailable: true,
         OR: [{ trackStock: false }, { stock: { gt: 0 } }]
       },
-      orderBy: { position: 'asc' }
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
     });
     
     res.json({
@@ -561,7 +561,7 @@ export const getCategoriesBySlug = async (
     
     const categories = await prisma.category.findMany({
       where: { restaurantId: restaurant.id, isActive: true },
-      orderBy: { position: 'asc' }
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
     });
     
     res.json({
@@ -594,7 +594,7 @@ export const getMenuItemsBySlug = async (
     
     const menuItems = await prisma.menuItem.findMany({
       where: { restaurantId: restaurant.id, isAvailable: true },
-      orderBy: { position: 'asc' }
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
     });
     
     res.json({
@@ -627,7 +627,7 @@ export const getProductsBySlug = async (
     
     const products = await prisma.product.findMany({
       where: { storeId: store.id, isAvailable: true },
-      orderBy: { sortOrder: 'asc' }
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
     });
     
     res.json({

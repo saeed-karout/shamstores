@@ -330,6 +330,18 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const searchTerm = searchQuery.trim().toLowerCase();
   const isSearching = searchTerm.length > 0;
 
+  /**
+   * هل رتّب التاجر منتجاته؟
+   *
+   * المنتجات غير المرتّبة كلّها `sortOrder = 0`، فوجود قيمتين مختلفتين
+   * هو الدليل الوحيد على تدخّلٍ مقصود. ولا يكفي «> 0»: التاجر قد يجعل
+   * منتجاً واحداً أوّلَ القائمة فيبقى صفراً وما بعده يكبر.
+   */
+  const isCurated = useMemo(() => {
+    const first = (products[0] as any)?.sortOrder;
+    return products.some((p) => (p as any).sortOrder !== first);
+  }, [products]);
+
   const sortProducts = useCallback(
     (list: StorefrontProduct[]): StorefrontProduct[] => {
       const copy = [...list];
@@ -347,11 +359,22 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             (a, b) => (resolveBadges(b).discountPercent || 0) - (resolveBadges(a).discountPercent || 0)
           );
         default:
-          // «المقترح»: المخفَّض ثم الرائج ثم الباقي — لا ترتيب عشوائي
+          /**
+           * «المقترح»: **ترتيب التاجر إن رتّب، وإلا فالمخفَّض ثم الرائج.**
+           *
+           * كان يفرز بالنتيجة دائماً — فيرفع المخفَّض فوق كل شيء ويدهس
+           * الترتيب الذي سحبه التاجر بيده. رُصد فعلاً: الخادم يرسل
+           * «بيجامة» أوّلاً والصفحة تعرض «بلوزة» لأن لها خصماً.
+           *
+           * والقاعدة تخدم الحالتين: من رتّب متجره يُعرض ترتيبه كما هو،
+           * ومن لم يرتّب (كل القيم صفر) لا يُعرض له ترتيبٌ تُقرّره القاعدة
+           * بل يُرفَع المخفَّض ليُرى.
+           */
+          if (isCurated) return copy;
           return copy.sort((a, b) => score(b) - score(a));
       }
     },
-    [sortBy]
+    [sortBy, isCurated]
   );
 
   /** المنتجات بعد البحث والتصفية والترتيب */

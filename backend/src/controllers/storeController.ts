@@ -900,7 +900,7 @@ export const getCategories = async (req: AuthRequest, res: Response): Promise<vo
     const categories = await prisma.category.findMany({ 
       where: { storeId, isActive: true }, 
       include: { products: { take: 5 } },
-      orderBy: { position: 'asc' } 
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }] 
     });
     res.json({ success: true, data: categories });
   } catch (error) {
@@ -2016,18 +2016,18 @@ export const getPublicStore = async (req: Request, res: Response) => {
       include: {
         categories: {
           where: { isActive: true },
-          orderBy: { position: 'asc' },
+          orderBy: [{ position: 'asc' }, { createdAt: 'asc' }],
           include: {
             products: {
               where: { isAvailable: true },
-              orderBy: { sortOrder: 'asc' },
+              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
               take: 50
             }
           }
         },
         products: {
           where: { isAvailable: true },
-          orderBy: { sortOrder: 'asc' },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
           take: 100
         },
         plan: true
@@ -2136,7 +2136,7 @@ export const getPublicProducts = async (req: Request, res: Response) => {
       where: { storeId: store.id, isAvailable: true },
       include: { category: true },
       take: 100,
-      orderBy: { sortOrder: 'asc' }
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
     });
     res.json({ success: true, data: products });
   } catch (error) {
@@ -2153,7 +2153,7 @@ export const getPublicCategories = async (req: Request, res: Response) => {
     const categories = await prisma.category.findMany({ 
       where: { storeId: store.id, isActive: true },
       include: { products: { where: { isAvailable: true }, take: 10 } },
-      orderBy: { position: 'asc' }
+      orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
     });
     res.json({ success: true, data: categories });
   } catch (error) {
