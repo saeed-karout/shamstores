@@ -9,10 +9,10 @@
 //
 // الأسماء مطابقة لما يولّده Prisma (`Product_storeId_sku_key`) حتى يرى
 // `db push` التالي المخطّط متوافقاً فلا يحاول تغييره ثانية.
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    process.env.JAWSDB_URL || process.env.JAWSDB_MARIA_URL || process.env.CLEARDB_DATABASE_URL;
-}
+// الاشتقاق وسقف الاتصالات من وحدةٍ واحدة — انظر `db-env.js`
+const { prepareDatabaseUrl } = require('./db-env');
+
+prepareDatabaseUrl();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 

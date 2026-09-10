@@ -20,24 +20,10 @@
 // **ولا تُعرَّف ميزةٌ تمنحها كل الخطط**: `online_orders` و`table_qr`
 // و`whatsapp` مفعّلة حتى في المجاني، فبيعها بيعُ هواء.
 
-const path = require('path');
+// الاشتقاق وسقف الاتصالات من وحدةٍ واحدة — انظر `db-env.js`
+const { prepareDatabaseUrl } = require('./db-env');
 
-try {
-  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-} catch {
-  /* dotenv غير مثبت — المتغيرات من البيئة */
-}
-
-if (!process.env.DATABASE_URL) {
-  const addonUrl =
-    process.env.JAWSDB_URL ||
-    process.env.JAWSDB_MARIA_URL ||
-    process.env.CLEARDB_DATABASE_URL;
-  if (addonUrl) {
-    process.env.DATABASE_URL = addonUrl;
-    console.log('ℹ️  DATABASE_URL مشتق من رابط إضافة قاعدة البيانات');
-  }
-}
+prepareDatabaseUrl();
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();

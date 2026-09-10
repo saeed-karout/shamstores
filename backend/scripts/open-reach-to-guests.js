@@ -11,10 +11,10 @@
 //
 // نُفِّذ على الإنتاج في ٢٠٢٦-٠٩-٠٩.
 
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    process.env.JAWSDB_URL || process.env.JAWSDB_MARIA_URL || process.env.CLEARDB_DATABASE_URL;
-}
+// الاشتقاق وسقف الاتصالات من وحدةٍ واحدة — انظر `db-env.js`
+const { prepareDatabaseUrl } = require('./db-env');
+
+prepareDatabaseUrl();
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();

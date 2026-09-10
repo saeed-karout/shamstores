@@ -17,28 +17,20 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-// محلياً: DATABASE_URL في backend/.env لا في البيئة. الفحص أدناه كان يسبق
-// تحميل .env — فينجح الغلاف على Heroku (المتغير في البيئة) ويفشل محلياً
-// دائماً برسالة «لا DATABASE_URL» وهو موجود في الملف.
-try {
-  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-} catch {
-  /* dotenv غير مثبت — المتغيرات من البيئة */
-}
+// **سقف الاتصالات هو ما كان يُفشل النشر.** التطبيق يحدّ تجمّعه بخمسة في
+// `src/config/env.ts`، وهذا السكربت كان يمرّر الرابط خامّاً — فيفتح Prisma
+// افتراضيَّه (عدد الأنوية × ٢ + ١)، أي تسعة على دينو بأربعة أنوية. ودينو
+// الويب القديم يعمل أثناء مرحلة الإصدار ممسكاً بخمسة، فيتجاوز المجموع
+// حدَّ JawsDB (عشرة) ويسقط الإصدار بـ:
+//   User '…' has exceeded the 'max_user_connections' resource
+// وقع فعلاً على الإصدار v110 فبقي الخادم على كودٍ أقدم بثلاث إيداعات.
+//
+// والاشتقاق من رابط الإضافة هنا أيضاً: محلياً يكون DATABASE_URL في
+// `backend/.env` لا في البيئة، وفحصٌ يسبق تحميل `.env` كان ينجح على
+// Heroku ويفشل محلياً دائماً.
+const { prepareDatabaseUrl } = require('./db-env');
 
-if (!process.env.DATABASE_URL) {
-  const addonUrl =
-    process.env.JAWSDB_URL ||
-    process.env.JAWSDB_MARIA_URL ||
-    process.env.CLEARDB_DATABASE_URL;
-
-  if (addonUrl) {
-    process.env.DATABASE_URL = addonUrl;
-    console.log('ℹ️  DATABASE_URL مشتق من رابط إضافة قاعدة البيانات');
-  }
-}
-
-if (!process.env.DATABASE_URL) {
+if (!prepareDatabaseUrl()) {
   console.error('❌ لا DATABASE_URL ولا رابط إضافة (JAWSDB_URL / CLEARDB_DATABASE_URL).');
   process.exit(1);
 }
