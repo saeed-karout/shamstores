@@ -382,19 +382,26 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   );
 
   /**
-   * فرعيّات القسم المختار — صفٌّ ثانٍ يظهر عند اختيار أبٍ له أبناء.
+   * فرعيّات الفرع المفتوح — صفٌّ ثانٍ يظهر عند اختيار أبٍ له أبناء.
+   *
+   * **والصفّ يبقى بعد اختيار الفرعيّ نفسه.** كان يُبنى على أبناء المختار
+   * وحده، فمن نقر «قمصان» اختفى صفُّه: لا «بناطيل» ولا طريقٌ جانبيٌّ
+   * إليها إلا بالعودة إلى الأب. فمرجع الصفّ هو **الأب** — أي المختارُ إن
+   * كان رئيسياً، وأبوه إن كان فرعياً — فتظهر الأخوات في الحالتين.
    *
    * وتُصفَّى بما فيه منتجات: قسمٌ فرعيّ فارغ في الشريط يُحبط الزبون.
    */
   const subCategories = useMemo(() => {
     if (activeCategory === 'all' || isSearching) return [];
+    const selected = categories.find((c) => c.id === activeCategory);
+    const rowParent = (selected as any)?.parentId || activeCategory;
     const counts = new Map<string, number>();
     products.forEach((p) => {
       const id = (p as any).categoryId;
       if (id) counts.set(id, (counts.get(id) || 0) + 1);
     });
     return categories
-      .filter((c) => (c as any).parentId === activeCategory && (counts.get(c.id) || 0) > 0)
+      .filter((c) => (c as any).parentId === rowParent && (counts.get(c.id) || 0) > 0)
       .map((c) => ({
         id: c.id,
         name: language.pick(c, 'name'),
@@ -402,6 +409,20 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         count: counts.get(c.id) || 0
       }));
   }, [categories, products, activeCategory, isSearching, language]);
+
+  /**
+   * ما يُبرزه الشريط الرئيسيّ — الأبُ حين يكون المختار ابنه.
+   *
+   * الشريط الرئيسيّ لا يعرض إلا الرئيسيّات، ومقارنته بالهوية في ثلاثة
+   * مواضع. فلو مرّرنا الابن لم تُبرَز شريحةٌ أصلاً: يرى الزبون منتجاتٍ
+   * مصفّاة ولا قسمَ مختاراً — فيقرأها خللاً. والقيمةُ الواحدة هنا تُصلح
+   * المواضع الثلاثة بلا لمس القوالب.
+   */
+  const navActiveCategory = useMemo(() => {
+    if (activeCategory === 'all') return activeCategory;
+    const selected = categories.find((c) => c.id === activeCategory);
+    return ((selected as any)?.parentId as string | undefined) || activeCategory;
+  }, [categories, activeCategory]);
 
   /** معرّفات القسم المختار وفرعيّاته — بها تُصفّى المنتجات */
   const activeCategoryIds = useMemo(() => {
@@ -985,7 +1006,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           isCurrent: b.id === store.id
         }))}
         categories={isSearching ? [] : navCategories}
-        activeCategory={activeCategory}
+        activeCategory={navActiveCategory}
         onCategorySelect={setActiveCategory}
         cartCount={cartCount}
         onCartClick={() => setCartOpen(true)}
@@ -1102,32 +1123,46 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
             aria-label={t('الأقسام الفرعية')}
             style={{ display: 'flex', gap: 7, overflowX: 'auto', marginTop: 10, paddingBottom: 2 }}
           >
-            {subCategories.map((sub) => (
-              <button
-                key={sub.id}
-                type="button"
-                onClick={() => setActiveCategory(sub.id)}
-                style={{
-                  flex: '0 0 auto',
-                  minHeight: 32,
-                  padding: '0 13px',
-                  borderRadius: sd.rChip,
-                  border: `${sd.borderW} solid ${sf.border}`,
-                  background: sf.surface,
-                  color: sf.text,
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  fontFamily: 'inherit',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {sub.name}
-                <span style={{ color: sf.muted, fontWeight: 500, marginInlineStart: 5, fontSize: 11 }}>
-                  {sub.count}
-                </span>
-              </button>
-            ))}
+            {subCategories.map((sub) => {
+              const picked = activeCategory === sub.id;
+              return (
+                <button
+                  key={sub.id}
+                  type="button"
+                  aria-pressed={picked}
+                  // نقرةٌ ثانية على المختار تعود إلى الأب — وإلا كانت
+                  // الشريحة المفعّلة زرّاً لا يفعل شيئاً
+                  onClick={() => setActiveCategory(picked ? navActiveCategory : sub.id)}
+                  style={{
+                    flex: '0 0 auto',
+                    minHeight: 32,
+                    padding: '0 13px',
+                    borderRadius: sd.rChip,
+                    border: `${sd.borderW} solid ${picked ? sf.primary : sf.border}`,
+                    background: picked ? sf.primary : sf.surface,
+                    color: picked ? sf.onPrimary : sf.text,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {sub.name}
+                  <span
+                    style={{
+                      color: picked ? sf.onPrimary : sf.muted,
+                      opacity: picked ? 0.75 : 1,
+                      fontWeight: 500,
+                      marginInlineStart: 5,
+                      fontSize: 11
+                    }}
+                  >
+                    {sub.count}
+                  </span>
+                </button>
+              );
+            })}
           </nav>
         )}
 
