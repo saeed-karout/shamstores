@@ -211,17 +211,17 @@ const BoutiqueShell: React.FC<ShopLayoutProps> = ({
               />
             </div>
 
-            {/* الأيقونات تدخل حين تغادر الهوية الشاشة — وتبقى مساحتها
-                محجوزة قبل ذلك لئلّا يقفز الصفّ عند ظهورها */}
+            {/* الأيقونات ظاهرةٌ دائماً.
+                كانت تدخل عند التمرير وحده، لكن ذلك يعني سلّةً لا تُرى في
+                أوّل شاشة — وهي ما يعود إليه الزبون. والعرض بلا نقرٍ أسوأ
+                من الاثنين: `pointerEvents` كان يبقى مقيّداً بعد فتح
+                الظهور، فتظهر أزرارٌ لا تستجيب. */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                flexShrink: 0,
-                opacity: scrolled ? 1 : 0,
-                pointerEvents: scrolled ? 'auto' : 'none',
-                transition: 'opacity .18s'
+                flexShrink: 0
               }}
             >
               <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
