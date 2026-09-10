@@ -53,6 +53,8 @@ import {
   updateStoreStaffPermissions,
   // ✅ الدوال العامة (Public Routes)
   getPublicStore,
+  reorderProducts,
+  reorderCategories,
   getPublicProduct,
   getPublicProducts,
   getPublicCategories,
@@ -97,6 +99,9 @@ router.post('/upload/cover', uploadSingleImage('image', 'cover'), uploadStoreCov
 
 // ==================== المنتجات ====================
 router.get('/products', getProducts);
+// **قبل `/products/:id`:** إكسبريس يطابق بترتيب التعريف، ولو جاء بعده
+// لالتُقطت كلمة «reorder» معرّفَ منتجٍ وردّ الخادم «غير موجود»
+router.put('/products/reorder', reorderProducts);
 router.get('/products/:id', getProduct);
 router.post('/products', createProduct);
 router.put('/products/:id', updateProduct);
@@ -126,6 +131,7 @@ router.post('/drivers', createStoreDriver);
 
 // ==================== الفئات ====================
 router.get('/categories', getCategories);
+router.put('/categories/reorder', reorderCategories);
 router.get('/categories/:id', getCategory);
 router.post('/categories', createCategory);
 router.put('/categories/:id', updateCategory);

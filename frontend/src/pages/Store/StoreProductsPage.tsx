@@ -8,10 +8,13 @@ import { useTheme } from '@/context/ThemeContext';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
-import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoCube, IoWarning, IoImage, IoCloudUpload } from 'react-icons/io5';
+import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoCube, IoWarning, IoImage, IoCloudUpload,
+  IoReorderThreeOutline
+} from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
+import ReorderList, { type ReorderItem } from '@/components/common/ReorderList';
 import MultiImageUploader from '@/components/settings/MultiImageUploader';
 import ProductOptionsEditor, { OptionGroup } from '@/components/settings/ProductOptionsEditor';
 import { getDiscountPercent } from '@/utils/catalogBadges';
@@ -72,6 +75,37 @@ const extractData = (response: any) => {
   return [];
 };
 
+/** زرّ تبديل وضع الترتيب — نفسه للفئات والمنتجات */
+const ReorderToggle: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  colors: { accent: string; muted: string; border: string; bg: string };
+}> = ({ active, onClick, colors }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={active}
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      minHeight: 34,
+      padding: '0 12px',
+      borderRadius: 10,
+      border: `1px solid ${active ? colors.accent : colors.border}`,
+      background: active ? colors.accent : 'transparent',
+      color: active ? colors.bg : colors.muted,
+      fontSize: 12.5,
+      fontWeight: 700,
+      fontFamily: 'inherit',
+      cursor: 'pointer'
+    }}
+  >
+    <IoReorderThreeOutline size={17} />
+    {active ? 'إنهاء الترتيب' : 'ترتيب'}
+  </button>
+);
+
 const StoreProductsPage: React.FC = () => {
   const { store, loading: storeLoading } = useStore();
   const permissions = usePermissions();
@@ -94,6 +128,15 @@ const StoreProductsPage: React.FC = () => {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+
+  /**
+   * وضع الترتيب — قائمةٌ واحدة في كل مرّة.
+   *
+   * فتحُ القائمتين معاً يعني شريطَي حفظٍ ملتصقَين أسفل الشاشة، ولا يعرف
+   * التاجر أيّهما يحفظ ماذا.
+   */
+  const [reordering, setReordering] = useState<'none' | 'categories' | 'products'>('none');
+  const [savingOrder, setSavingOrder] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -141,6 +184,36 @@ const StoreProductsPage: React.FC = () => {
       fetchData();
     }
   }, [store, selectedBranchId]);
+
+  /**
+   * يحفظ الترتيب ثمّ يُعيد الجلب.
+   *
+   * **الجلب بعد الحفظ لا قبله:** الخادم هو من يرقّم بالموضع، وإعادة القراءة
+   * تُثبت أن ما يراه التاجر هو ما حُفظ فعلاً — لا نسخةً متفائلة في الذاكرة
+   * قد تختلف عمّا ستعرضه واجهة المتجر للزبون.
+   */
+  const saveOrder = async (kind: 'categories' | 'products', ids: string[]) => {
+    setSavingOrder(true);
+    try {
+      await api.put(`/store/${kind}/reorder`, { ids });
+      await fetchData();
+      toast.success('حُفظ الترتيب — هذا ما سيراه الزبون');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'تعذّر حفظ الترتيب');
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const reorderColors = {
+    text: dynamicColors.text,
+    muted: dynamicColors.muted,
+    card: dynamicColors.card,
+    surface: dynamicColors.surf,
+    border: dynamicColors.border,
+    accent: dynamicColors.accent,
+    bg: dynamicColors.bg
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -470,10 +543,36 @@ const StoreProductsPage: React.FC = () => {
             <span style={{ width: 4, height: 22, background: dynamicColors.accent, borderRadius: 4, display: 'inline-block' }}></span>
             الفئات
           </h2>
-          <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{categories.length} فئة</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{categories.length} فئة</span>
+            {(isSuperAdmin || isStoreOwner) && categories.length > 1 && (
+              <ReorderToggle
+                active={reordering === 'categories'}
+                onClick={() =>
+                  setReordering((prev) => (prev === 'categories' ? 'none' : 'categories'))
+                }
+                colors={dynamicColors}
+              />
+            )}
+          </div>
         </div>
 
-        {categories.length === 0 ? (
+        {reordering === 'categories' ? (
+          <ReorderList
+            items={categories.map(
+              (cat): ReorderItem => ({
+                id: cat.id,
+                name: cat.name,
+                image: cat.image,
+                meta: `${products.filter((p) => p.categoryId === cat.id).length} منتج`
+              })
+            )}
+            onSave={(ids) => saveOrder('categories', ids)}
+            onCancel={() => setReordering('none')}
+            colors={reorderColors}
+            saving={savingOrder}
+          />
+        ) : categories.length === 0 ? (
           <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
             <IoCube style={{ color: dynamicColors.muted, fontSize: 48, marginBottom: 12 }} />
             <p style={{ color: dynamicColors.muted, margin: 0 }}>لا توجد فئات. أضف فئة جديدة!</p>
@@ -523,10 +622,37 @@ const StoreProductsPage: React.FC = () => {
             <span style={{ width: 4, height: 22, background: dynamicColors.accent, borderRadius: 4, display: 'inline-block' }}></span>
             المنتجات
           </h2>
-          <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{products.length} منتج</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{products.length} منتج</span>
+            {(isSuperAdmin || isStoreOwner) && products.length > 1 && (
+              <ReorderToggle
+                active={reordering === 'products'}
+                onClick={() =>
+                  setReordering((prev) => (prev === 'products' ? 'none' : 'products'))
+                }
+                colors={dynamicColors}
+              />
+            )}
+          </div>
         </div>
 
-        {products.length === 0 ? (
+        {reordering === 'products' ? (
+          <ReorderList
+            items={products.map(
+              (product): ReorderItem => ({
+                id: product.id,
+                name: product.name,
+                image: (product as any).imageUrl || (product as any).image,
+                meta:
+                  categories.find((c) => c.id === product.categoryId)?.name || 'بدون فئة'
+              })
+            )}
+            onSave={(ids) => saveOrder('products', ids)}
+            onCancel={() => setReordering('none')}
+            colors={reorderColors}
+            saving={savingOrder}
+          />
+        ) : products.length === 0 ? (
           <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
             <IoCube style={{ color: dynamicColors.muted, fontSize: 48, marginBottom: 12 }} />
             <p style={{ color: dynamicColors.muted, margin: 0 }}>لا توجد منتجات. أضف منتجاً جديداً!</p>

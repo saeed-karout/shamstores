@@ -670,10 +670,19 @@ export const getProducts = async (req: AuthRequest, res: Response): Promise<void
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
     }
-    const products = await prisma.product.findMany({ 
-      where: { storeId }, 
+    // بترتيب التاجر ثمّ بالأحدث.
+    //
+    // **الثاني ليس زخرفة:** المنتجات التي لم تُرتَّب بعد كلّها
+    // `sortOrder = 0`، فالفرز بالأوّل وحده يعطيها ترتيباً تُقرّره القاعدة
+    // ويتبدّل بين نداءَين. والأحدثُ فاصلاً يُبقي القائمة كما اعتادها
+    // التاجر حتى يسحب أوّل منتج.
+    //
+    // وكان الفرز بالتاريخ وحده — أي أن السحب لم يكن له أثرٌ يُرى هنا حتى
+    // لو حُفظ، لأن الشاشة تُعيد رسم القائمة بترتيبٍ آخر.
+    const products = await prisma.product.findMany({
+      where: { storeId },
       include: { category: true },
-      orderBy: { createdAt: 'desc' } 
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
     });
     res.json({ success: true, data: products });
   } catch (error) {
@@ -922,6 +931,73 @@ export const getCategory = async (req: AuthRequest, res: Response): Promise<void
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب الفئة' });
   }
 };
+
+/**
+ * ترتيب المنتجات أو التصنيفات بالسحب.
+ *
+ * **الرقم يُشتقّ من الموضع ولا يُرسَل:** لو أرسلت الواجهة `sortOrder` لكل
+ * عنصر لاختلفت الأرقام بين متصفّحَين يسحبان معاً، وظهر عنصران في نفس
+ * الموضع. أمّا قائمة المعرّفات فتصف الترتيب النهائيّ وحده، والخادم يرقّمها.
+ *
+ * **وكل معرّفٍ يُتحقَّق أنه لهذا المتجر:** بلا ذلك يستطيع تاجرٌ أن يرسل
+ * معرّف منتجٍ لمتجرٍ آخر فيُعاد ترتيبه عنده.
+ *
+ * **والكتابة في معاملةٍ واحدة:** ترتيبٌ نصفه محفوظ أسوأ من ترتيبٍ لم يُحفظ.
+ */
+const reorderRows = async (
+  req: AuthRequest,
+  res: Response,
+  table: 'product' | 'category',
+  field: 'sortOrder' | 'position'
+): Promise<void> => {
+  try {
+    const storeId = await getStoreId(req);
+    if (!storeId) {
+      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+      return;
+    }
+
+    const ids: unknown = req.body?.ids;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => typeof id === 'string')) {
+      res.status(400).json({ success: false, error: 'أرسل قائمة المعرّفات بالترتيب المطلوب' });
+      return;
+    }
+
+    // حدٌّ أعلى: قائمةٌ بمئة ألف معرّف تعني مئة ألف كتابة في معاملةٍ واحدة
+    if (ids.length > 2000) {
+      res.status(400).json({ success: false, error: 'القائمة أطول من أن تُرتَّب دفعةً واحدة' });
+      return;
+    }
+
+    const delegate: any = table === 'product' ? prisma.product : prisma.category;
+    const owned = await delegate.findMany({
+      where: { id: { in: ids as string[] }, storeId },
+      select: { id: true }
+    });
+
+    if (owned.length !== ids.length) {
+      res.status(403).json({ success: false, error: 'بعض العناصر ليست في متجرك' });
+      return;
+    }
+
+    await prisma.$transaction(
+      (ids as string[]).map((id, index) =>
+        delegate.update({ where: { id }, data: { [field]: index } })
+      )
+    );
+
+    res.json({ success: true, message: 'حُفظ الترتيب', data: { count: ids.length } });
+  } catch (error) {
+    console.error(`reorder ${table} failed:`, error);
+    res.status(500).json({ success: false, error: 'تعذّر حفظ الترتيب' });
+  }
+};
+
+export const reorderProducts = (req: AuthRequest, res: Response): Promise<void> =>
+  reorderRows(req, res, 'product', 'sortOrder');
+
+export const reorderCategories = (req: AuthRequest, res: Response): Promise<void> =>
+  reorderRows(req, res, 'category', 'position');
 
 export const createCategory = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
