@@ -21,6 +21,7 @@ import { sd, resolveDesign } from '@/utils/storefrontDesign';
 import { useIsDesktop } from '@/hooks/useMediaQuery';
 import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
 import { makeT } from '@/i18n/storefront';
+import LanguageSwitcher from '@/components/storefront/LanguageSwitcher';
 import ProductOptionsSheet, {
   parseProductOptions,
   hasOptions,
@@ -523,14 +524,42 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       {/* آخر لون ثابت بقي — كان يُبقي الرأس أخضر فوق صفحة بلون التاجر */}
       <div style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ maxWidth: 1152, margin: '0 auto', padding: '12px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Link to={`/${store.slug}`} style={{ color: C.muted, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 15 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+            <Link to={`/${store.slug}`} style={{ color: C.muted, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontSize: 15, flexShrink: 0 }}>
               <IoChevronForward size={18} />
-              {t('العودة إلى المتجر')}
+              <span className="shop-only-wide">{t('العودة إلى المتجر')}</span>
             </Link>
-            <Link to={`/${store.slug}`} style={{ fontSize: 20, fontWeight: 700, color: C.text, textDecoration: 'none' }}>
-              {store.name}
+
+            <Link
+              to={`/${store.slug}`}
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                color: C.text,
+                textDecoration: 'none',
+                flex: 1,
+                minWidth: 0,
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {language.pick(store, 'name')}
             </Link>
+
+            {/* زرّ اللغة هنا لا في واجهة المتجر وحدها.
+                الزبون قد يهبط على صفحة منتجٍ مباشرةً — من جوجل أو من رابطٍ
+                في منشور — فلا يمرّ بالمتجر أصلاً. وبلا الزرّ هنا كان
+                عالقاً بلغةٍ لم يخترها، والاختيار يُحفظ لكل متجر فينتقل
+                معه إلى بقيّة الصفحات. */}
+            <div style={{ flexShrink: 0 }}>
+              <LanguageSwitcher
+                options={language.options}
+                lang={language.lang}
+                onChange={language.setLang}
+              />
+            </div>
           </div>
         </div>
       </div>
