@@ -115,6 +115,9 @@ const EN: Record<string, string> = {
   'حسابك': 'Your account',
   'بياناتي': 'My profile',
   'طلباتي': 'My orders',
+  'الأقسام الفرعية': 'Subcategories',
+  'تصفية': 'Filter',
+
   // إتاحة الوصول — أوّل ما يبلغه قارئ الشاشة
   'تخطَّ إلى المحتوى': 'Skip to content',
 

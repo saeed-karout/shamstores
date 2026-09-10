@@ -1,6 +1,6 @@
 // pages/Store/StoreProductsPage.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../hooks/useStore';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,6 +16,7 @@ import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import ReorderList, { type ReorderItem } from '@/components/common/ReorderList';
 import { ProductCsvTools } from '@/components/common/CsvTools';
+import TagsInput from '@/components/common/TagsInput';
 import MultiImageUploader from '@/components/settings/MultiImageUploader';
 import ProductOptionsEditor, { OptionGroup } from '@/components/settings/ProductOptionsEditor';
 import { getDiscountPercent } from '@/utils/catalogBadges';
@@ -148,6 +149,7 @@ const StoreProductsPage: React.FC = () => {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const [categoryForm, setCategoryForm] = useState({
+    parentId: '',
     storeId: '',
     name: '',
     nameEn: '',
@@ -157,6 +159,7 @@ const StoreProductsPage: React.FC = () => {
   });
 
   const [productForm, setProductForm] = useState({
+    tags: [] as string[],
     storeId: '',
     categoryId: '',
     name: '',
@@ -205,6 +208,28 @@ const StoreProductsPage: React.FC = () => {
       setSavingOrder(false);
     }
   };
+
+  /**
+   * وسوم المتجر كلّها — للاقتراح في حقل الوسوم.
+   *
+   * تُشتقّ من المنتجات لا من جدول: الوسم كلمةٌ لا كيان. ومرتّبةٌ بالشيوع
+   * فالأكثر استعمالاً أوّل ما يُقترح.
+   */
+  const storeTags = useMemo(() => {
+    const counts = new Map<string, { label: string; n: number }>();
+    products.forEach((p) => {
+      const raw = (p as any).tags;
+      const list = Array.isArray(raw) ? raw : [];
+      list.forEach((tag: unknown) => {
+        if (typeof tag !== 'string' || !tag.trim()) return;
+        const key = tag.trim().toLowerCase();
+        const entry = counts.get(key);
+        if (entry) entry.n += 1;
+        else counts.set(key, { label: tag.trim(), n: 1 });
+      });
+    });
+    return [...counts.values()].sort((a, b) => b.n - a.n).map((e) => e.label);
+  }, [products]);
 
   const reorderColors = {
     text: dynamicColors.text,
@@ -276,12 +301,12 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const resetCategoryForm = () => {
-    setCategoryForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
+    setCategoryForm({ parentId: '', storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, name: '', nameEn: '', description: '', descriptionEn: '', image: '' });
     setSelectedCategory(null);
   };
 
   const resetProductForm = () => {
-    setProductForm({ storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', options: [], isAvailable: true });
+    setProductForm({ tags: [], storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', options: [], isAvailable: true });
     setSelectedProduct(null);
   };
 
@@ -290,7 +315,7 @@ const StoreProductsPage: React.FC = () => {
     if (selectedBranchId === 'all') { toast.error('اختر فرعاً محدداً لإدارة الفئات'); return; }
     if (category) {
       setSelectedCategory(category);
-      setCategoryForm({ storeId: category.storeId, name: category.name, nameEn: category.nameEn || '', description: category.description || '', descriptionEn: category.descriptionEn || '', image: category.image || '' });
+      setCategoryForm({ parentId: (category as any).parentId || '', storeId: category.storeId, name: category.name, nameEn: category.nameEn || '', description: category.description || '', descriptionEn: category.descriptionEn || '', image: category.image || '' });
     } else { resetCategoryForm(); }
     setShowCategoryModal(true);
   };
@@ -301,6 +326,20 @@ const StoreProductsPage: React.FC = () => {
     if (product) {
       setSelectedProduct(product);
       setProductForm({
+        // الوسوم تصل مصفوفةً أو نصّاً JSON حسب مسار الحفظ — كالخيارات
+        tags: (() => {
+          const raw = (product as any).tags;
+          if (Array.isArray(raw)) return raw.filter((t: unknown) => typeof t === 'string');
+          if (typeof raw === 'string' && raw.trim()) {
+            try {
+              const parsed = JSON.parse(raw);
+              return Array.isArray(parsed) ? parsed.filter((t: unknown) => typeof t === 'string') : [];
+            } catch {
+              return [];
+            }
+          }
+          return [];
+        })(),
         storeId: product.storeId,
         categoryId: product.categoryId || '',
         name: product.name,
@@ -759,6 +798,29 @@ const StoreProductsPage: React.FC = () => {
             <input type="text" value={categoryForm.nameEn} onChange={(e) => setCategoryForm({ ...categoryForm, nameEn: e.target.value })} style={dynamicInputStyle} placeholder="Example: Electronics" />
           </div>
           <div>
+            {/* الأب — والقائمة تُصفّى مرّتين:
+                • التصنيفات الفرعية لا تصلح آباءً (مستويان لا ثلاثة).
+                • والتصنيف الذي يُعدَّل لا يكون أباً لنفسه.
+                والذي له أبناء يُمنع من الخارج ويُرفض من الخادم كذلك. */}
+            <label style={dynamicLabelStyle}>يتبع تصنيفاً رئيسياً؟</label>
+            <select
+              value={categoryForm.parentId}
+              onChange={(e) => setCategoryForm({ ...categoryForm, parentId: e.target.value })}
+              style={dynamicInputStyle}
+            >
+              <option value="">— تصنيف رئيسي —</option>
+              {categories
+                .filter((c) => !(c as any).parentId && c.id !== selectedCategory?.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+            </select>
+            <p style={{ color: dynamicColors.muted, fontSize: 11.5, marginTop: 5, lineHeight: 1.75 }}>
+              اختيار أبٍ يجعل هذا تصنيفاً فرعياً. واختيار تصنيفٍ رئيسيّ في
+              المتجر يعرض منتجاته ومنتجات فرعيّاته معاً.
+            </p>
+          </div>
+          <div>
             <label style={dynamicLabelStyle}>الوصف</label>
             <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} style={{ ...dynamicInputStyle, resize: 'vertical' }} rows={3} placeholder="وصف الفئة..." />
           </div>
@@ -851,6 +913,19 @@ const StoreProductsPage: React.FC = () => {
               <label style={dynamicLabelStyle}>SKU (رمز المنتج)</label>
               <input type="text" value={productForm.sku} onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })} style={dynamicInputStyle} placeholder="PRD-001" />
             </div>
+          </div>
+          <div>
+            <label style={dynamicLabelStyle}>الوسوم</label>
+            <TagsInput
+              value={productForm.tags}
+              onChange={(tags) => setProductForm({ ...productForm, tags })}
+              suggestions={storeTags}
+              colors={reorderColors}
+            />
+            <p style={{ color: dynamicColors.muted, fontSize: 11.5, marginTop: 6, lineHeight: 1.75 }}>
+              يفرز بها الزبون في المتجر. ويمكن وسمُ منتجاتٍ كثيرة دفعةً
+              واحدة من عمود «الوسوم» في ملفّ CSV.
+            </p>
           </div>
           <div>
             <label style={dynamicLabelStyle}>الوصف (عربي)</label>

@@ -696,10 +696,21 @@ model Category {
   updatedAt     DateTime @updatedAt
 
   // Relations
+  /// التصنيف الأب — فارغٌ يعني تصنيفاً رئيسياً.
+  ///
+  /// **مستويان لا شجرةٌ مفتوحة:** العمق الحرّ يعني شريط أقسامٍ لا يُرسم
+  /// على شاشة جوال، ومسارَ تصفّحٍ يضيع فيه الزبون. والقاعدة مفروضةٌ في
+  /// المتحكّم: من له أبٌ لا يصير أباً.
+  parentId String? @map("parent_id")
+
   store      Store?      @relation(fields: [storeId], references: [id])
   restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
   products   Product[]
   menuItems  MenuItem[]
+  parent     Category?   @relation("CategoryTree", fields: [parentId], references: [id])
+  children   Category[]  @relation("CategoryTree")
+
+  @@index([parentId])
 }
 
 model MenuItem {
@@ -789,6 +800,16 @@ model Product {
   /// مصفوفة روابط الصور. الغلاف أولها.
   images        Json?
   categoryId    String?
+
+  /// وسومٌ حرّة يفرز بها الزبون — مصفوفة نصوص.
+  ///
+  /// **عمودٌ لا جدول:** الوسم هنا كلمةٌ لا كيان — لا وصف له ولا صورة ولا
+  /// ترتيب. والتصفية تجري في الواجهة حيث المنتجات محمَّلة أصلاً، فجدولُ
+  /// وصلٍ يضيف انضماماً في كل استعلامٍ بلا مقابل. وقائمة وسوم المتجر
+  /// تُشتقّ من منتجاته.
+  ///
+  /// ويصير جدولاً يوم يحتاج الوسم صورةً أو إعادةَ تسميةٍ بضغطة — لا قبله.
+  tags          Json?
   /// خيارات يختارها الزبون قبل الطلب — راجع services/productOptions.service.ts
   options       Json?
   isAvailable   Boolean  @default(true)

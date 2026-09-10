@@ -61,6 +61,7 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useTheme } from '@/context/ThemeContext';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
+import { sd } from '@/utils/storefrontDesign';
 import { StorefrontDesignProvider } from '@/utils/storefrontDesignContext';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
@@ -146,6 +147,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [sortSheetOpen, setSortSheetOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [onlyDiscounted, setOnlyDiscounted] = useState(false);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+
+
 
   const [cartOpen, setCartOpen] = useState(false);
   const [favoritesOpen, setFavoritesOpen] = useState(false);
@@ -377,6 +381,39 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     [sortBy, isCurated]
   );
 
+  /**
+   * فرعيّات القسم المختار — صفٌّ ثانٍ يظهر عند اختيار أبٍ له أبناء.
+   *
+   * وتُصفَّى بما فيه منتجات: قسمٌ فرعيّ فارغ في الشريط يُحبط الزبون.
+   */
+  const subCategories = useMemo(() => {
+    if (activeCategory === 'all' || isSearching) return [];
+    const counts = new Map<string, number>();
+    products.forEach((p) => {
+      const id = (p as any).categoryId;
+      if (id) counts.set(id, (counts.get(id) || 0) + 1);
+    });
+    return categories
+      .filter((c) => (c as any).parentId === activeCategory && (counts.get(c.id) || 0) > 0)
+      .map((c) => ({
+        id: c.id,
+        name: language.pick(c, 'name'),
+        image: c.image,
+        count: counts.get(c.id) || 0
+      }));
+  }, [categories, products, activeCategory, isSearching, language]);
+
+  /** معرّفات القسم المختار وفرعيّاته — بها تُصفّى المنتجات */
+  const activeCategoryIds = useMemo(() => {
+    if (activeCategory === 'all') return null;
+    const children = categories
+      .filter((c) => (c as any).parentId === activeCategory)
+      .map((c) => c.id);
+    return new Set([activeCategory, ...children]);
+  }, [categories, activeCategory]);
+
+
+
   /** المنتجات بعد البحث والتصفية والترتيب */
   /**
    * المنتجات بلغة العرض.
@@ -396,6 +433,29 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     }));
   }, [products, language]);
 
+  /**
+   * وسوم المنتجات المعروضة — شريط تصفيةٍ ثانٍ.
+   *
+   * تُشتقّ من المنتجات المرئية لا من الكتالوج كلّه: وسمٌ لا منتج له في
+   * القسم الحالي شريحةٌ تُفرغ الشاشة عند نقرها.
+   */
+  const visibleTags = useMemo(() => {
+    const counts = new Map<string, { label: string; n: number }>();
+    localizedProducts.forEach((p) => {
+      if (activeCategoryIds && !activeCategoryIds.has((p as any).categoryId)) return;
+      const raw = (p as any).tags;
+      const list = Array.isArray(raw) ? raw : [];
+      list.forEach((tag: unknown) => {
+        if (typeof tag !== 'string' || !tag.trim()) return;
+        const key = tag.trim().toLowerCase();
+        const entry = counts.get(key);
+        if (entry) entry.n += 1;
+        else counts.set(key, { label: tag.trim(), n: 1 });
+      });
+    });
+    return [...counts.values()].sort((a, b) => b.n - a.n).slice(0, 20);
+  }, [localizedProducts, activeCategoryIds]);
+
   const visibleProducts = useMemo(() => {
     let list = localizedProducts;
 
@@ -405,8 +465,17 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           p.name?.toLowerCase().includes(searchTerm) ||
           p.description?.toLowerCase().includes(searchTerm)
       );
-    } else if (activeCategory !== 'all') {
-      list = list.filter((p) => ((p as any).categoryId || UNCATEGORIZED) === activeCategory);
+    } else if (activeCategoryIds) {
+      // القسم **وفرعيّاته**: اختيار «ملابس» يعرض ما تحت «قمصان» و«بناطيل»
+      list = list.filter((p) => activeCategoryIds.has((p as any).categoryId || UNCATEGORIZED));
+    }
+
+    if (activeTag) {
+      const needle = activeTag.toLowerCase();
+      list = list.filter((p) => {
+        const raw = (p as any).tags;
+        return Array.isArray(raw) && raw.some((t: unknown) => typeof t === 'string' && t.toLowerCase() === needle);
+      });
     }
 
     if (onlyDiscounted) {
@@ -414,7 +483,17 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     }
 
     return sortProducts(list);
-  }, [localizedProducts, isSearching, searchTerm, activeCategory, onlyDiscounted, sortProducts]);
+  }, [localizedProducts, isSearching, searchTerm, activeCategoryIds, activeTag, onlyDiscounted, sortProducts]);
+
+  /**
+   * الوسم يسقط عند تبديل القسم أو البحث.
+   *
+   * وسمٌ اختاره الزبون في «ملابس» قد لا يوجد في «أحذية»، فيبقى مفعّلاً
+   * وتُفرَغ الشاشة بلا سببٍ يظهر — ويظنّ القسم فارغاً.
+   */
+  useEffect(() => {
+    setActiveTag(null);
+  }, [activeCategory, isSearching]);
 
   /**
    * صفوف صفحة البداية — لهيكل «صفحة أقسام» وحده.
@@ -456,13 +535,27 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       counts.set(id, (counts.get(id) || 0) + 1);
     });
 
+    /**
+     * عدد المنتجات في التصنيف **وفرعيّاته**.
+     *
+     * بلا الجمع يظهر التصنيف الرئيسيّ بصفرٍ لمن وزّع منتجاته على
+     * الفرعيّات — فيُخفى من الشريط، وهو أوّل ما يفعله من يستعمل الميزة.
+     */
+    const deepCount = (categoryId: string) =>
+      (counts.get(categoryId) || 0) +
+      categories
+        .filter((c) => (c as any).parentId === categoryId)
+        .reduce((sum, child) => sum + (counts.get(child.id) || 0), 0);
+
+    // الشريط يعرض الرئيسيّات وحدها — والفرعيّات تظهر في صفٍّ تحته بعد
+    // اختيار أبيها، فلا يمتلئ الشريط بعشرين قسماً لا يعرف الزبون علاقتها
     const named = categories
-      .filter((c) => (counts.get(c.id) || 0) > 0)
+      .filter((c) => !(c as any).parentId && deepCount(c.id) > 0)
       .map((c) => ({
         id: c.id,
         name: language.pick(c, 'name'),
         image: c.image,
-        count: counts.get(c.id) || 0
+        count: deepCount(c.id)
       }));
 
     if ((counts.get(UNCATEGORIZED) || 0) > 0) {
@@ -1001,6 +1094,88 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         )}
 
         </div>
+
+        {/* ===== الأقسام الفرعية ===== */}
+        {subCategories.length > 0 && (
+          <nav
+            className="no-scrollbar"
+            aria-label={t('الأقسام الفرعية')}
+            style={{ display: 'flex', gap: 7, overflowX: 'auto', marginTop: 10, paddingBottom: 2 }}
+          >
+            {subCategories.map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setActiveCategory(sub.id)}
+                style={{
+                  flex: '0 0 auto',
+                  minHeight: 32,
+                  padding: '0 13px',
+                  borderRadius: sd.rChip,
+                  border: `${sd.borderW} solid ${sf.border}`,
+                  background: sf.surface,
+                  color: sf.text,
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {sub.name}
+                <span style={{ color: sf.muted, fontWeight: 500, marginInlineStart: 5, fontSize: 11 }}>
+                  {sub.count}
+                </span>
+              </button>
+            ))}
+          </nav>
+        )}
+
+        {/* ===== تصفية بالوسوم =====
+            صفٌّ ثانٍ لا شرائح داخل شريط الأقسام: الوسم والقسم بعدان
+            مختلفان، وخلطهما في صفٍّ واحد يجعل الزبون يظنّهما بديلين. */}
+        {visibleTags.length > 0 && (
+          <div
+            className="no-scrollbar"
+            style={{ display: 'flex', gap: 7, overflowX: 'auto', marginTop: 10, paddingBottom: 2, alignItems: 'center' }}
+          >
+            <span style={{ color: sf.muted, fontSize: 11.5, flexShrink: 0, marginInlineEnd: 2 }}>
+              {t('تصفية')}
+            </span>
+            {visibleTags.map((tag) => {
+              const active = activeTag?.toLowerCase() === tag.label.toLowerCase();
+              return (
+                <button
+                  key={tag.label}
+                  type="button"
+                  onClick={() => setActiveTag(active ? null : tag.label)}
+                  aria-pressed={active}
+                  style={{
+                    flex: '0 0 auto',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    minHeight: 30,
+                    padding: '0 11px',
+                    borderRadius: sd.rChip,
+                    border: `${sd.borderW} solid ${active ? 'transparent' : sf.border}`,
+                    background: active ? sf.accent : sf.card,
+                    color: active ? sf.onAccent : sf.muted,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {tag.label}
+                  <span style={{ opacity: 0.7, fontWeight: 500 }}>{tag.n}</span>
+                  {active && <IoClose size={13} />}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* الشبكة */}
         <section style={{ marginTop: 16 }}>

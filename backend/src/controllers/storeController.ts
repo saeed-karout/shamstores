@@ -23,6 +23,7 @@ import { normalizeOptions } from '../services/productOptions.service';
 import { sanitizeDesign } from '../config/storefrontDesign';
 import { getPublicPaymentOptions } from '../services/payment.service';
 import { resolveLanguageSettings } from '../services/language.service';
+import { sanitizeTags, resolveParent, categoryWithChildren, TaxonomyError } from '../services/catalogTaxonomy.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -736,7 +737,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
+    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular, tags } = req.body;
     
     if (!name) {
       res.status(400).json({ success: false, error: 'اسم المنتج مطلوب' });
@@ -775,6 +776,8 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
             ? parseFloat(originalPrice)
             : null,
         isPopular: isPopular === true,
+        // الوسوم تُنقّى: تُطبَّع وتُزال تكراراتها ويُحدّ عددها
+        tags: sanitizeTags(tags),
         // الخيارات تُطبَّع عند الحفظ لا عند القراءة: شكل فاسد في قاعدة
         // البيانات يظهر لاحقاً في واجهة الزبون لا في شاشة التاجر
         options: normalizeOptions(req.body?.options) as any,
@@ -813,7 +816,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular } = req.body;
+    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular, tags } = req.body;
     
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
@@ -827,6 +830,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     if (categoryId !== undefined) updateData.categoryId = categoryId;
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
     if (unit !== undefined) updateData.unit = unit;
+    if (tags !== undefined) updateData.tags = sanitizeTags(tags);
     
 
     // null يعني أن الطلب لم يمسّ الصور — لا نمحو صوراً قائمة لأن التاجر
@@ -1007,26 +1011,33 @@ export const createCategory = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
     
-    const { name, nameEn, description, image, position } = req.body;
+    const { name, nameEn, description, image, position, parentId } = req.body;
     if (!name) {
       res.status(400).json({ success: false, error: 'اسم الفئة مطلوب' });
       return;
     }
     
     const category = await prisma.category.create({
-      data: { 
-        storeId, 
-        name, 
+      data: {
+        storeId,
+        name,
         nameEn: nameEn || null,
         description: description || null,
         image: image || null,
         position: position || 0,
-        isActive: true 
+        // الأب يمرّ بالتحقّق: نفس النشاط، ومستويان لا ثلاثة
+        parentId: await resolveParent({ parentId: parentId || null, storeId }),
+        isActive: true
       }
     });
     
     res.status(201).json({ success: true, message: 'تم إنشاء الفئة بنجاح', data: category });
   } catch (error) {
+    // خطأ الشجرة سببٌ يفهمه التاجر لا عطلٌ في الخادم
+    if (error instanceof TaxonomyError) {
+      res.status(400).json({ success: false, error: error.message });
+      return;
+    }
     console.error('Error creating category:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في إنشاء الفئة' });
   }
@@ -1047,7 +1058,7 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
       return;
     }
     
-    const { name, nameEn, description, image, position, isActive } = req.body;
+    const { name, nameEn, description, image, position, isActive, parentId } = req.body;
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (nameEn !== undefined) updateData.nameEn = nameEn;
@@ -1055,11 +1066,23 @@ export const updateCategory = async (req: AuthRequest, res: Response): Promise<v
     if (image !== undefined) updateData.image = image;
     if (position !== undefined) updateData.position = position;
     if (isActive !== undefined) updateData.isActive = isActive;
+    if (parentId !== undefined) {
+      updateData.parentId = await resolveParent({
+        categoryId: id,
+        parentId: parentId || null,
+        storeId
+      });
+    }
     
     const updatedCategory = await prisma.category.update({ where: { id }, data: updateData });
     
     res.json({ success: true, message: 'تم تحديث الفئة بنجاح', data: updatedCategory });
   } catch (error) {
+    // خطأ الشجرة سببٌ يفهمه التاجر لا عطلٌ في الخادم
+    if (error instanceof TaxonomyError) {
+      res.status(400).json({ success: false, error: error.message });
+      return;
+    }
     console.error('Error updating category:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في تحديث الفئة' });
   }

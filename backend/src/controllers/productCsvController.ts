@@ -20,6 +20,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { toCsv, sendCsv, parseCsv, rowsToObjects } from '../services/csv.service';
+import { sanitizeTags, readTags } from '../services/catalogTaxonomy.service';
 
 /** رؤوس الملفّ المصدَّر — وهي نفسها التي يقبلها الاستيراد */
 const COLUMNS = [
@@ -36,7 +37,8 @@ const COLUMNS = [
   'الفئة',
   'الوحدة',
   'متوفر',
-  'رابط الصورة'
+  'رابط الصورة',
+  'الوسوم'
 ];
 
 /**
@@ -61,7 +63,8 @@ const ALIASES: Record<string, string[]> = {
   category: ['الفئة', 'التصنيف', 'category'],
   unit: ['الوحدة', 'unit'],
   isAvailable: ['متوفر', 'متوفّر', 'available', 'is available', 'isavailable', 'الحالة'],
-  imageUrl: ['رابط الصورة', 'الصورة', 'image', 'image url', 'imageurl']
+  imageUrl: ['رابط الصورة', 'الصورة', 'image', 'image url', 'imageurl'],
+  tags: ['الوسوم', 'الوسم', 'tags', 'tag', 'labels']
 };
 
 const getStoreId = (req: AuthRequest): string | null => req.user?.storeId || null;
@@ -98,7 +101,9 @@ export const exportProducts = async (req: AuthRequest, res: Response): Promise<v
       // «نعم/لا» لا `true/false`: الملفّ يُقرأ بعينٍ عربية ويُعاد رفعه،
       // والاستيراد يقبل الصيغتين
       p.isAvailable ? 'نعم' : 'لا',
-      p.imageUrl ?? ''
+      p.imageUrl ?? '',
+      // الفاصلة المنقوطة داخل الخلية: الفاصلة تفصل الأعمدة نفسها
+      readTags(p.tags).join('; ')
     ]);
 
     sendCsv(res, `products-${new Date().toISOString().slice(0, 10)}.csv`, toCsv(COLUMNS, rows));
@@ -111,7 +116,11 @@ export const exportProducts = async (req: AuthRequest, res: Response): Promise<v
 /** ملفّ فارغ بالرؤوس وحدها — نقطة البداية لمن لا يملك جدولاً */
 export const productTemplate = (_req: AuthRequest, res: Response): void => {
   const sample = [
-    ['SKU-001', 'قميص قطن', 'Cotton shirt', 'قميص قطن ١٠٠٪', '', 45000, 55000, 30000, 12, 3, 'ملابس', 'piece', 'نعم', '']
+    [
+      'SKU-001', 'قميص قطن', 'Cotton shirt', 'قميص قطن ١٠٠٪', '',
+      45000, 55000, 30000, 12, 3, 'ملابس', 'piece', 'نعم', '',
+      'قطن; صيفي; رجالي'
+    ]
   ];
   sendCsv(res, 'products-template.csv', toCsv(COLUMNS, sample));
 };
@@ -244,6 +253,9 @@ const buildPlan = async (storeId: string, csvText: string) => {
     if ('unit' in record && record.unit) data.unit = record.unit;
     if ('isAvailable' in record) data.isAvailable = toBool(record.isAvailable);
     if ('imageUrl' in record) data.imageUrl = record.imageUrl || null;
+    // الوسوم تصل نصّاً بفواصل منقوطة، و`sanitizeTags` تقبله وتطبّعه —
+    // وبها يوسم التاجر مئة منتجٍ في Excel بدل مئة فتحةٍ للنموذج
+    if ('tags' in record) data.tags = sanitizeTags(record.tags);
     if (categoryId !== undefined) data.categoryId = categoryId;
 
     if (isUpdate) {
