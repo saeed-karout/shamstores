@@ -7,12 +7,14 @@
 // شريط تصفية الزبون لوسمٍ واحد. والقائمة المقترحة تُشتقّ من منتجاته نفسها
 // — لا جدول وسومٍ يُدار.
 //
-// **والإدخال يُقبل بمسافةٍ أو فاصلة أو Enter**: التاجر لا يعرف أيّها
-// يُثبّت الوسم، فتُقبل الثلاثة. و`Backspace` على حقلٍ فارغ يحذف آخر شريحة
-// — وهو ما يتوقّعه من استعمل أي حقل وسوم.
+// **والإثبات لا يعتمد على مفتاحٍ يُعرَف:** المسافة وEnter والفاصلة
+// تُثبّت، لكنّ **زرّ «أضف» المرئيّ** هو الطريق المضمون — تاجرٌ حقيقيّ
+// كتب وسماً وضغط «حفظ المنتج» فخرجت المصفوفة فارغة وسأل «ما هي
+// الشرائح؟». الحقل الذي يحتاج تعليماً حقلٌ ناقص. و`Backspace` على حقلٍ
+// فارغ يحذف آخر شريحة — وهو ما يتوقّعه من استعمل أي حقل وسوم.
 
 import React, { useMemo, useState } from 'react';
-import { IoCloseOutline, IoPricetagOutline } from 'react-icons/io5';
+import { IoAddOutline, IoCloseOutline, IoPricetagOutline } from 'react-icons/io5';
 
 interface Props {
   value: string[];
@@ -28,19 +30,33 @@ const MAX_TAG_LENGTH = 28;
 const TagsInput: React.FC<Props> = ({ value, onChange, suggestions = [], colors, max = 12 }) => {
   const [draft, setDraft] = useState('');
 
-  const add = (raw: string) => {
-    const tag = raw.replace(/\s+/g, ' ').trim();
-    if (!tag || tag.length > MAX_TAG_LENGTH) return;
+  /**
+   * يضيف وسماً أو عدّة في **نداءٍ واحد** لـ`onChange`.
+   *
+   * كان كلٌّ منها نداءً مستقلاً يبني على `value` نفسها من الإغلاق، فلصقُ
+   * «قطن, صيفي» كان يُنتج وسماً واحداً: الثاني يكتب فوق الأوّل.
+   */
+  const addMany = (raws: string[]) => {
+    const next = [...value];
     // المقارنة بعد التطبيع، والمحفوظ ما كتبه التاجر: حالة الأحرف قد تكون
     // مقصودة في «SHEIN»
-    if (value.some((t) => t.toLowerCase() === tag.toLowerCase())) {
-      setDraft('');
-      return;
+    const seen = new Set(next.map((t) => t.toLowerCase()));
+
+    for (const raw of raws) {
+      const tag = raw.replace(/\s+/g, ' ').trim();
+      if (!tag || tag.length > MAX_TAG_LENGTH) continue;
+      const key = tag.toLowerCase();
+      if (seen.has(key)) continue;
+      if (next.length >= max) break;
+      seen.add(key);
+      next.push(tag);
     }
-    if (value.length >= max) return;
-    onChange([...value, tag]);
+
     setDraft('');
+    if (next.length !== value.length) onChange(next);
   };
+
+  const add = (raw: string) => addMany([raw]);
 
   const remove = (tag: string) => onChange(value.filter((t) => t !== tag));
 
@@ -106,7 +122,7 @@ const TagsInput: React.FC<Props> = ({ value, onChange, suggestions = [], colors,
             // «قطن, صيفي» يريد وسمين لا وسماً واحداً باسمٍ فيه فاصلة
             const raw = e.target.value;
             if (/[,;،]/.test(raw)) {
-              raw.split(/[,;،]/).forEach(add);
+              addMany(raw.split(/[,;،]/));
               return;
             }
             setDraft(raw);
@@ -122,7 +138,7 @@ const TagsInput: React.FC<Props> = ({ value, onChange, suggestions = [], colors,
             }
           }}
           onBlur={() => draft.trim() && add(draft)}
-          placeholder={value.length >= max ? `الحدّ ${max} وسماً` : 'اكتب وسماً ثمّ مسافة…'}
+          placeholder={value.length >= max ? `الحدّ ${max} وسماً` : 'مثال: قطن'}
           disabled={value.length >= max}
           maxLength={MAX_TAG_LENGTH}
           style={{
@@ -137,7 +153,37 @@ const TagsInput: React.FC<Props> = ({ value, onChange, suggestions = [], colors,
             minHeight: 28
           }}
         />
+
+        {/* زرُّ الإضافة — يظهر ما دام في الحقل نصٌّ لم يُثبَّت.
+            **هذا هو الإصلاح:** المسافة وEnter كانا الطريقَين الوحيدين،
+            وكلاهما غير مرئيّ. فمن كتب «قطن» وضغط «حفظ المنتج» ظنّ أنه
+            وسم منتجه، والمصفوفة تخرج فارغة. زرٌّ مكتوبٌ عليه ما يفعل
+            يُغني عن أن يعرف التاجر شيئاً. */}
+        {draft.trim() && value.length < max && (
+          <button
+            type="button"
+            onClick={() => add(draft)}
+            style={chip({
+              background: colors.accent,
+              color: colors.bg,
+              border: 'none',
+              cursor: 'pointer',
+              minHeight: 28
+            })}
+          >
+            <IoAddOutline size={14} />
+            أضف «{draft.trim()}»
+          </button>
+        )}
       </div>
+
+      {/* سطرٌ يقول ما يحدث — لا تعليماتٍ عن مفاتيح */}
+      {!value.length && !draft.trim() && (
+        <div style={{ color: colors.muted, fontSize: 11.5, marginTop: 6 }}>
+          كلماتٌ يبحث بها زبونك: «قطن»، «صيفي»، «هدية». اكتب الكلمة ثمّ اضغط «أضف»
+          — الوسم لا يُحفظ حتى يصير شريحةً ملوّنة.
+        </div>
+      )}
 
       {unused.length > 0 && (
         <div style={{ marginTop: 9 }}>
