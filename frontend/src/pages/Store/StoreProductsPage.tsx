@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import ReorderList, { type ReorderItem } from '@/components/common/ReorderList';
+import { ProductCsvTools } from '@/components/common/CsvTools';
 import MultiImageUploader from '@/components/settings/MultiImageUploader';
 import ProductOptionsEditor, { OptionGroup } from '@/components/settings/ProductOptionsEditor';
 import { getDiscountPercent } from '@/utils/catalogBadges';
@@ -622,8 +623,11 @@ const StoreProductsPage: React.FC = () => {
             <span style={{ width: 4, height: 22, background: dynamicColors.accent, borderRadius: 4, display: 'inline-block' }}></span>
             المنتجات
           </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{products.length} منتج</span>
+            {(isSuperAdmin || isStoreOwner) && (
+              <ProductCsvTools colors={reorderColors} onDone={fetchData} />
+            )}
             {(isSuperAdmin || isStoreOwner) && products.length > 1 && (
               <ReorderToggle
                 active={reordering === 'products'}

@@ -12,6 +12,7 @@ import { ar } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useSocket } from '../../hooks/useSocket';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { ExportButton } from '@/components/common/CsvTools';
 
 const C = {
   bg:     '#082E24',
@@ -29,6 +30,17 @@ const C = {
   yellow: '#F59E0B',
   purple: '#A78BFA',
 };
+/** لوحة أدوات CSV — نفس ألوان الشاشة باسمٍ يفهمه المكوّن المشترك */
+const csvColors = {
+  text: C.text,
+  muted: C.muted,
+  card: C.card,
+  surface: C.surf,
+  border: C.border,
+  accent: C.accent,
+  bg: C.bg
+};
+
 
 interface StoreOrder {
   id: string;
@@ -233,7 +245,10 @@ const StoreOrdersPage: React.FC = () => {
           <h1 style={{ fontSize: 22, fontWeight: 700, color: C.text, margin: 0 }}>إدارة طلبات المتجر</h1>
           <p style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>متابعة وإدارة جميع طلبات الشراء</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* التصدير من الخادم لا من الشاشة: الشاشة مُصفَّحة والملفّ
+              يجب أن يشمل المدى كلّه */}
+          <ExportButton path="/orders/export" filename="orders.csv" colors={csvColors} />
           <button
             onClick={() => setShowFilters(!showFilters)}
             style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.muted, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}

@@ -337,6 +337,32 @@ class ApiService {
     }
   }
 
+  /**
+   * ينزّل ملفّاً من مسارٍ محروس.
+   *
+   * **لماذا طريقةٌ خاصّة:** `get` يفكّ الغلاف عن `response.data.data`
+   * ويمرّر وسيطه الثاني كمعاملات استعلام — فلا سبيل لطلب `blob` ولا
+   * لتفادي الفكّ. والرابط المباشر في `<a href>` لا يحمل ترويسة المصادقة،
+   * فيرتدّ بـ401 أو — أسوأ — يُنزّل ملفّاً محتواه رسالة الخطأ.
+   */
+  async downloadBlob(url: string): Promise<Blob> {
+    const response = await this.api.get(url, { responseType: 'blob' });
+    return response.data as Blob;
+  }
+
+  /**
+   * يرسل جسماً خامّاً بنوعٍ محدَّد — لاستيراد CSV.
+   *
+   * `post` يرسل JSON دائماً، وتغليف ملفٍّ بميغابايت في سلسلة JSON يهرّب
+   * علامات التنصيص مرّتين ويتجاوز حدّ الجسم العامّ على الخادم.
+   */
+  async postRaw<T>(url: string, body: string, contentType: string): Promise<T> {
+    const response = await this.api.post<ApiResponse<T>>(url, body, {
+      headers: { 'Content-Type': contentType }
+    });
+    return response.data.data as T;
+  }
+
   async upload<T>(url: string, file: File, type: string = 'general'): Promise<T> {
     try {
       console.log('📤 Upload request:', url, type);

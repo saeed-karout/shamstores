@@ -148,6 +148,20 @@ app.options('*', cors(corsOptions));
 // تحليل الجسم — حد منخفض: الصور تمر عبر multer لا عبر JSON
 // ==============================================
 const BODY_LIMIT = process.env.JSON_BODY_LIMIT || '1mb';
+
+/**
+ * استيراد CSV يصل نصّاً خامّاً بحدٍّ أعلى — **قبل** المحلّل العامّ.
+ *
+ * الحدّ العامّ منخفضٌ عن قصد (الصور تمرّ بـmulter)، وملفّ منتجاتٍ بألف صفٍّ
+ * يتجاوز الميجابايت. ورفعُ الحدّ للجميع يفتح كل مسارٍ في المشروع لجسمٍ
+ * بخمسة ميغا. فيُخصّ هذا المسار وحده — ويُقرأ نصّاً لا JSON، فلا تُهرَّب
+ * علامات التنصيص مرّتين.
+ */
+app.use(
+  '/api/store/products/import',
+  express.text({ type: ['text/csv', 'text/plain'], limit: process.env.CSV_BODY_LIMIT || '5mb' })
+);
+
 app.use(express.json({ limit: BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 app.use(hpp());

@@ -63,6 +63,7 @@ import {
   getAllBranchesProducts,
   updateShowAllBranchesProducts
 } from '../controllers/storeController';
+import { exportProducts, productTemplate, importProducts } from '../controllers/productCsvController';
 
 const router = Router();
 
@@ -102,6 +103,10 @@ router.get('/products', getProducts);
 // **قبل `/products/:id`:** إكسبريس يطابق بترتيب التعريف، ولو جاء بعده
 // لالتُقطت كلمة «reorder» معرّفَ منتجٍ وردّ الخادم «غير موجود»
 router.put('/products/reorder', reorderProducts);
+// كلّها قبل `/products/:id` لنفس السبب: إكسبريس يطابق بترتيب التعريف
+router.get('/products/export', exportProducts);
+router.get('/products/template', productTemplate);
+router.post('/products/import', importProducts);
 router.get('/products/:id', getProduct);
 router.post('/products', createProduct);
 router.put('/products/:id', updateProduct);

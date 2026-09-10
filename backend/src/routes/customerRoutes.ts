@@ -6,7 +6,9 @@
 
 import { Router } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
-import { getCustomers, getCustomerOrders } from '../controllers/customerController';
+import { getCustomers, getCustomerOrders,
+  exportCustomers
+} from '../controllers/customerController';
 import { getStoreReviews, setReviewVisibility } from '../controllers/productReviewController';
 
 const router = Router();
@@ -17,6 +19,8 @@ router.use(authorize(['owner', 'staff', 'super_admin']));
 router.get('/', getCustomers);
 
 /** `key` بصيغة `user:<id>` أو `guest:<هاتف>` — نفس ما تعيده القائمة */
+// قبل `/:key/orders`
+router.get('/export', exportCustomers);
 router.get('/:key/orders', getCustomerOrders);
 
 // ==================== إشراف التقييمات ====================

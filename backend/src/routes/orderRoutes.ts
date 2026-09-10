@@ -17,6 +17,7 @@ import { authenticate, authorizeOwner, authorizeStaff, authorize } from '../midd
 import { checkPlanFeature } from '../middleware/checkPlan';
 import { rateOrder } from '../controllers/deliveryController';
 import { getReviewableItems, submitReview } from '../controllers/productReviewController';
+import { exportOrders } from '../controllers/orderCsvController';
 
 const router = Router();
 
@@ -50,6 +51,8 @@ router.get('/', authenticate, checkPlanFeature('online_orders'), authorizeStaff,
  * @desc    الحصول على طلبات اليوم
  * @access  Private (Owner/Staff)
  */
+// قبل `/:id`: إكسبريس يطابق بترتيب التعريف
+router.get('/export', exportOrders);
 router.get('/today', authenticate, checkPlanFeature('online_orders'), authorizeStaff, getTodayOrders);
 
 /**

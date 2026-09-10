@@ -12,6 +12,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { toCsv, sendCsv } from '../services/csv.service';
 
 /** النشاط من الرمز لا من الطلب — فلا يقرأ تاجرٌ زبائن غيره */
 const getBusinessScope = (
@@ -53,14 +54,14 @@ const LAPSED_DAYS = 60;
  * `UNION` نيئاً يكسر أمان Prisma النوعي. وحجم البيانات هنا حجم طلبات متجرٍ
  * واحد لا المنصّة كلها.
  */
-export const getCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const scope = getBusinessScope(req);
-    if (!scope) {
-      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
-      return;
-    }
-
+/**
+ * صفوف الزبائن — **دالّةٌ واحدة تخدم الشاشة والتصدير**.
+ *
+ * كان التجميع داخل معالج الشاشة، فالتصدير كان سيحتاج نسخةً ثانية منه —
+ * ونسختان من قاعدة «الضيف بلا هاتف لا يُحتسب» تتفرّقان عند أوّل تعديل،
+ * فيُصدَّر عددٌ لا يطابق ما على الشاشة.
+ */
+const buildCustomerRows = async (scope: Record<string, unknown>): Promise<CustomerRow[]> => {
     const orders = await prisma.order.findMany({
       where: { ...scope, status: { in: [...COUNTED_STATUSES] } },
       select: {
@@ -115,9 +116,21 @@ export const getCustomers = async (req: AuthRequest, res: Response): Promise<voi
       }
     }
 
-    const customers = Array.from(byKey.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+    return Array.from(byKey.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+};
+
+export const getCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const scope = getBusinessScope(req);
+    if (!scope) {
+      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
+      return;
+    }
+
+    const customers = await buildCustomerRows(scope as Record<string, unknown>);
 
     const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0);
+    const countedOrders = customers.reduce((sum, c) => sum + c.ordersCount, 0);
     const returning = customers.filter((c) => c.ordersCount > 1).length;
 
     res.json({
@@ -132,8 +145,15 @@ export const getCustomers = async (req: AuthRequest, res: Response): Promise<voi
           returning,
           lapsed: customers.filter((c) => c.isLapsed).length,
           totalRevenue,
+          /**
+           * متوسّط قيمة الطلب.
+           *
+           * المقام مجموع طلبات الزبائن المعروفين لا كل الطلبات المحسوبة.
+           * وكان الثاني — فتُقسَم إيراداتٌ مَنسوبة على طلباتٍ بعضها غير
+           * منسوب (ضيفٌ بلا هاتف)، فيخرج متوسّطٌ أقلّ من الحقيقة.
+           */
           averageOrderValue:
-            orders.length > 0 ? Math.round((totalRevenue / orders.length) * 100) / 100 : 0
+            countedOrders > 0 ? Math.round((totalRevenue / countedOrders) * 100) / 100 : 0
         }
       }
     });
@@ -209,3 +229,60 @@ export const getCustomerOrders = async (req: AuthRequest, res: Response): Promis
 };
 
 export default { getCustomers, getCustomerOrders };
+
+// ==================== التصدير ====================
+
+/**
+ * قائمة الزبائن ملفَّ CSV.
+ *
+ * **ما فيه وما ليس فيه:** الاسم والهاتف والبريد وعدد الطلبات والإنفاق
+ * وتاريخا أوّل طلبٍ وآخره. ولا معرّفات داخلية — الملفّ يُفتح في Excel
+ * ويُرسل إلى محاسبٍ أو يُستعمل في حملة، ومعرّف الحساب لا يعني شيئاً هناك
+ * ويصعّب قراءة الجدول.
+ */
+export const exportCustomers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const scope = getBusinessScope(req);
+    if (!scope) {
+      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
+      return;
+    }
+
+    const customers = await buildCustomerRows(scope as Record<string, unknown>);
+    const day = (value: string | null) => (value ? value.slice(0, 10) : '');
+
+    const rows = customers.map((c) => [
+      c.name,
+      c.phone ?? '',
+      c.email ?? '',
+      c.isGuest ? 'ضيف' : 'مسجَّل',
+      c.ordersCount,
+      c.totalSpent,
+      day(c.firstOrderAt),
+      day(c.lastOrderAt),
+      c.isLapsed ? 'نعم' : 'لا'
+    ]);
+
+    sendCsv(
+      res,
+      `customers-${new Date().toISOString().slice(0, 10)}.csv`,
+      toCsv(
+        [
+          'الاسم',
+          'الهاتف',
+          'البريد',
+          'النوع',
+          'عدد الطلبات',
+          'إجمالي الإنفاق',
+          'أول طلب',
+          'آخر طلب',
+          'متغيّب'
+        ],
+        rows
+      )
+    );
+  } catch (error) {
+    console.error('exportCustomers failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر تصدير قائمة الزبائن' });
+  }
+};

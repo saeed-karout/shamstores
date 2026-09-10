@@ -17,6 +17,7 @@ import toast from 'react-hot-toast';
 import api from '@/services/api';
 import Loader from '@/components/common/Loader';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { ExportButton } from '@/components/common/CsvTools';
 
 const C = {
   bg: '#082E24',
@@ -29,6 +30,17 @@ const C = {
   warn: '#FB923C',
   blue: '#60A5FA'
 };
+/** لوحة أدوات CSV — نفس ألوان الشاشة باسمٍ يفهمه المكوّن المشترك */
+const csvColors = {
+  text: C.text,
+  muted: C.muted,
+  card: C.card,
+  surface: C.surf,
+  border: C.border,
+  accent: C.accent,
+  bg: C.bg
+};
+
 
 interface Customer {
   key: string;
@@ -147,6 +159,7 @@ const CustomersPage: React.FC = () => {
               مرتّبون بالإنفاق — الأوفى أولاً
             </p>
           </div>
+          <ExportButton path="/customers/export" filename="customers.csv" colors={csvColors} />
           <button
             onClick={load}
             title="تحديث"
