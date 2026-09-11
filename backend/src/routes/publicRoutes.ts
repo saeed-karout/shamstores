@@ -13,12 +13,32 @@ import {
 } from '../controllers/publicController';
 import { getProductReviews } from '../controllers/productReviewController';
 import { getStoreManifest, getStoreIcon, getPwaStatus, getSeoSummary } from '../controllers/pwaController';
+import rateLimit from 'express-rate-limit';
+import { ingestEvents } from '../controllers/storefrontEventController';
 
 const router = express.Router();
 
 // ==================== المسارات العامة (بدون مصادقة) ====================
 
 router.post('/contact-messages', createContactMessage);
+
+/**
+ * مدخل أحداث الإحصاء — **المسار الوحيد الذي يكتب بلا مصادقة.**
+ *
+ * فله حدٌّ صريح: متصفّحٌ واحد يُرسل دفعةً كلّ بضع ثوانٍ، ومئةٌ في الدقيقة
+ * تكفي زائراً نشطاً بأريحيّة وتوقف من يقصد ملء الجدول. والمتحكّم يتأكّد
+ * فوق ذلك من وجود النشاط قبل أن يكتب صفّاً واحداً.
+ */
+const eventsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 100,
+  standardHeaders: false,
+  legacyHeaders: false,
+  // 429 لا يبلغ `sendBeacon` أحداً، فالسقوط صامتٌ بلا جسم
+  handler: (_req, res) => res.status(204).end()
+});
+
+router.post('/events', eventsLimiter, ingestEvents);
 
 // حل النطاق المخصص/الفرعي إلى معرّف نشاط تجاري (يجب أن يسبق /:identifier)
 router.get('/resolve-host', resolveHost);

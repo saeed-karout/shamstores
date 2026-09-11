@@ -1516,3 +1516,49 @@ model Notification {
   @@index([type])
   @@map("notifications")
 }
+
+/// حدثٌ واحد في واجهة متجرٍ — أساس تقارير الزيارات.
+///
+/// **لماذا جدول أحداثٍ خام لا عدّادات:** العدّاد يجيب سؤالاً واحداً عرفتَه
+/// مسبقاً («كم زيارة؟»)، والتاجر يسأل ما لم نتوقّعه: أيّ منتجٍ يُشاهَد ولا
+/// يُشترى؟ من أين يأتي من يشتري فعلاً؟ والحدثُ الخام يجيب هذه كلّها من
+/// نفس الصفوف، والعدّاداتُ تُشتقّ منه لا العكس.
+///
+/// **ولا يُخزَّن ما يُعرِّف شخصاً:** لا IP ولا سلسلة متصفّح ولا كعكة.
+/// `sessionId` رقمٌ عشوائيّ يعيش في تبويب الزائر وينتهي بإغلاقه — يكفي
+/// لتمييز زيارةٍ من زيارة، ولا يتبع أحداً بين المتاجر ولا بين الأيام.
+model StorefrontEvent {
+  id String @id @default(cuid())
+
+  /// restaurant | store
+  businessType String @map("business_type")
+  businessId   String @map("business_id")
+
+  /// view_store | view_product | add_to_cart | begin_checkout | order_placed
+  type String
+
+  /// المنتج المعنيّ — لأحداث المشاهدة والإضافة إلى السلّة
+  productId String? @map("product_id")
+
+  /// **الزيارة لا التحميل:** معرّفٌ عشوائيّ لجلسة التبويب، فمن تنقّل بين
+  /// عشر صفحات زيارةٌ واحدة لا عشر. بلا هذا يصير كلُّ تحديثٍ «زائراً».
+  sessionId String @map("session_id")
+
+  /// مضيف المُحيل بعد التطبيع: instagram.com أو whatsapp أو direct.
+  /// المضيف وحده — لا المسار الكامل، فهو يحمل أحياناً معرّفاتٍ خاصّة.
+  source String @default("direct")
+
+  /// mobile | desktop
+  device String @default("mobile")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /// الاستعلام الغالب: أحداثُ نشاطٍ في مدّة، مصنّفةً بالنوع
+  @@index([businessId, businessType, createdAt])
+  @@index([businessId, type, createdAt])
+  /// لتقرير «الأكثر مشاهدةً» ولحذف أحداث منتجٍ حُذف
+  @@index([productId])
+  /// للحذف الدوريّ بالعمر
+  @@index([createdAt])
+  @@map("storefront_events")
+}

@@ -4,6 +4,7 @@ import { checkAndUpdateExpiredSubscriptions, checkExpiringSubscriptions } from '
 import { createBackup, pruneOldBackups, checkBackupTarget } from '../services/backup.service';
 import emailService from '../services/emailService';
 import { runAllAutomations } from '../services/automation.service';
+import { pruneEvents } from '../services/storefrontEvents.service';
 
 /**
  * تشغيل جميع المهام المجدولة
@@ -62,6 +63,21 @@ export const startSchedulers = () => {
   //
   // تُتخطّى صامتةً إن لم تُضبط حاوية نسخ خاصة؛ لكن التحذير يُطبع عند الإقلاع
   // مرة واحدة (أدناه) حتى لا يظن أحد أن النسخ يعمل بينما هو معطّل.
+  // حذف أحداث الإحصاء القديمة — 03:40، بعد النسخة الاحتياطية لا قبلها،
+  // فما يُحذف يكون قد دخل نسخة الأمس.
+  //
+  // **جدولُ أحداثٍ بلا سقفٍ عمريّ يبتلع القاعدة:** متجرٌ نشط يكتب آلاف
+  // الصفوف شهرياً، وقاعدتنا صغيرة. وأربعة أشهرٍ تكفي لمقارنة موسمٍ بموسم
+  // وهو أطول مدّةٍ يعرضها التقرير أصلاً.
+  cron.schedule('40 3 * * *', async () => {
+    try {
+      const removed = await pruneEvents(120);
+      if (removed > 0) console.warn(`🧹 حُذف ${removed} حدث إحصاء أقدم من 120 يوماً`);
+    } catch (error) {
+      console.error('❌ فشل حذف أحداث الإحصاء القديمة:', error);
+    }
+  });
+
   cron.schedule('0 3 * * *', async () => {
     const configError = checkBackupTarget();
     if (configError) return;

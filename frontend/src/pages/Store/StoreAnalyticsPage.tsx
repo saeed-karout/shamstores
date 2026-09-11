@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { IoStatsChart, IoTrendingUp, IoCart, IoCash, IoCube, IoWarning } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+import VisitsPanel from '../../components/store/VisitsPanel';
 
 const C = {
   bg:     '#082E24',
@@ -118,6 +119,13 @@ const StoreAnalyticsPage: React.FC = () => {
           <button onClick={() => setPeriod('week')} style={periodBtnStyle(period === 'week')}>أسبوع</button>
           <button onClick={() => setPeriod('month')} style={periodBtnStyle(period === 'month')}>شهر</button>
         </div>
+      </div>
+
+      {/* ===== الزيارات =====
+          قبل بطاقات المبيعات مقصوداً: الطلبُ نتيجةٌ، والزيارةُ سببها.
+          والتاجر الذي لا طلبات له اليوم يحتاج أن يعرف هل جاء أحدٌ أصلاً. */}
+      <div style={{ marginBottom: 32 }}>
+        <VisitsPanel period={period} colors={C} />
       </div>
 
       {/* بطاقات الإحصائيات */}

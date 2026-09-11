@@ -58,6 +58,7 @@ import { PickedLocation } from '@/components/storefront/LocationPickerMap';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { useFavorites } from '@/hooks/useFavorites';
+import { track, setTrackScope } from '../../services/track';
 import { useTheme } from '@/context/ThemeContext';
 import api, { getCurrentSubdomain } from '@/services/api';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
@@ -244,6 +245,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         };
 
         setStore(merged);
+        // التتبّع بعد معرفة المتجر لا قبله: حدثٌ بلا معرّفٍ يُهمَل صامتاً
+        setTrackScope('store', merged.id);
+        track('view_store');
         applyStorefrontTheme(merged, 'store');
         // ThemeContext يخدم بقية الصفحات — يبقى متزامناً مع متغيرات المتجر
         setThemeColors({
@@ -637,6 +641,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       setOptionsProduct(product);
       return;
     }
+    track('add_to_cart', (product as any).id);
     addToCart(toCartItem(product));
   };
 
@@ -655,6 +660,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       });
     });
 
+    // ومن مرّ بلوح الخيارات أضاف إلى السلّة أيضاً — تخطّيه هنا يُنقص
+    // العدّاد لكل منتجٍ له مقاسٌ أو لون، وهي أكثر منتجات المتاجر
+    track('add_to_cart', (optionsProduct as any).id);
     addToCart({
       ...toCartItem(optionsProduct),
       price: result.unitPrice,
@@ -837,6 +845,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       return;
     }
 
+    // **بعد التحقّق لا قبله:** من ضغط الزرّ وحقولُه ناقصة لم يبدأ دفعاً،
+    // وحسابُه يجعل «بدأوا الدفع» أعلى من «أضافوا للسلّة» بلا معنى
+    track('begin_checkout');
+
     setSubmitting(true);
     try {
       const subtotal = cartTotal;
@@ -877,6 +889,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       const response: any = await api.post('/orders', orderData);
 
+      track('order_placed');
       toast.success(t('تم إرسال طلبك — يتابعه المتجر الآن 🎉'));
       // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
       clearRef((store as any)?.id);

@@ -64,6 +64,7 @@ import {
   updateShowAllBranchesProducts
 } from '../controllers/storeController';
 import { exportProducts, productTemplate, importProducts } from '../controllers/productCsvController';
+import { getStoreVisits } from '../controllers/storefrontEventController';
 
 const router = Router();
 
@@ -84,6 +85,9 @@ router.use(authorizeOwner);
 router.use('/inventory', checkPlanFeature('inventory'));
 router.use('/orders', checkPlanFeature('online_orders'));
 router.use('/coupons', checkPlanFeature('coupons'));
+// **الجمع لا يُقيَّد، العرضُ يُقيَّد:** الأحداث تُسجَّل لكلّ متجر مهما
+// كانت خطّته، فمن اشترك اليوم يجد تاريخه لا صفحةً فارغة تبدأ من الآن.
+router.use('/analytics', checkPlanFeature('analytics'));
 router.use('/drivers', checkPlanFeature('online_orders'));
 
 
@@ -114,6 +118,7 @@ router.patch('/products/:id', updateProduct);
 router.delete('/products/:id', deleteProduct);
 
 // ==================== المخزون ====================
+router.get('/analytics/visits', getStoreVisits);
 router.get('/inventory/stats', getInventoryStats);
 router.patch('/inventory/:productId', updateInventory);
 

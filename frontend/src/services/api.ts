@@ -69,6 +69,9 @@ class ApiService {
     '/orders/stats',
     '/menu/items',
     '/store/inventory/stats',
+    // قسمٌ مقيَّدٌ بالخطة: 403 هنا حالةٌ متوقّعة تُعرض بلوحةِ ترقية،
+    // لا خطأٌ يُصرخ به في وجه من لم يشترك بعد
+    '/analytics/visits',
   ];
 
   constructor() {

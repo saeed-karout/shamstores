@@ -27,6 +27,7 @@ import ProductOptionsSheet, {
   hasOptions,
   OptionsResult
 } from '@/components/storefront/ProductOptionsSheet';
+import { track, setTrackScope } from '@/services/track';
 
 /**
  * ألوان الصفحة = ألوان التاجر.
@@ -143,6 +144,22 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   );
   const t = useMemo(() => makeT(language.lang), [language.lang]);
   const design = resolveDesign((store as any)?.storefrontDesign);
+
+  /**
+   * مشاهدةُ المنتج — أثرٌ واحد لا نداءٌ في كل مسار تحميل.
+   *
+   * الصفحة تُحمّل المنتج من ثلاثة مسارات (بيانات مُمرَّرة، ومتجرٌ يُجلب
+   * بالمُعرِّف، ومنتجٌ بلا متجر). ونداءُ التتبّع في كلٍّ منها يعني رابعاً
+   * يُضاف بلا نداء فتُفقد المشاهدات صامتةً. والشرطُ هنا يغطّيها كلّها:
+   * حين يتوفّر المتجر والمنتج، يُسجَّل — و`track` نفسه يمنع التكرار.
+   */
+  useEffect(() => {
+    const storeId = (store as any)?.id;
+    const productId = (product as any)?.id;
+    if (!storeId || !productId) return;
+    setTrackScope('store', storeId);
+    track('view_product', productId);
+  }, [store, product]);
 
   const actualProductId = productIdParam || paramProductId;
   const actualSlug = slug || store?.slug;
@@ -315,6 +332,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       return;
     }
 
+    track('add_to_cart', product.id);
     addToCart({
       id: product.id,
       name: product.name,
@@ -344,6 +362,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       });
     });
 
+    track('add_to_cart', product.id);
     addToCart({
       id: product.id,
       name: product.name,
