@@ -150,7 +150,7 @@ const VisitsPanel: React.FC<Props> = ({ period, colors: C }) => {
           {value.toLocaleString('ar-SY')}
         </div>
         <div style={{ color: C.accent, fontSize: 11.5, marginTop: 3 }}>
-          {pct}% من الزيارات
+          {pct.toLocaleString('ar-SY')}% من الزيارات
         </div>
         <div style={{ color: C.muted, fontSize: 11, marginTop: 6, lineHeight: 1.7 }}>{hint}</div>
       </div>
@@ -182,7 +182,7 @@ const VisitsPanel: React.FC<Props> = ({ period, colors: C }) => {
           {step(<IoEyeOutline />, 'فتحوا منتجاً', report.productViews, 'مشاهدةٌ واحدة لكل منتجٍ في الزيارة')}
           {step(<IoCartOutline />, 'أضافوا للسلّة', report.addToCart, 'كلُّ إضافةٍ تُحسب')}
           {step(<IoBagCheckOutline />, 'بدأوا الدفع', report.beginCheckout, 'ضغط «إتمام الطلب» ببياناتٍ مكتملة')}
-          {step(<IoTrendingUpOutline />, 'أتمّوا طلباً', report.ordersPlaced, `نسبة التحويل ${report.conversionRate}%`)}
+          {step(<IoTrendingUpOutline />, 'أتمّوا طلباً', report.ordersPlaced, `نسبة التحويل ${report.conversionRate.toLocaleString('ar-SY')}%`)}
         </div>
       </div>
 
@@ -222,14 +222,17 @@ const VisitsPanel: React.FC<Props> = ({ period, colors: C }) => {
             من أين يأتي زوّارك
           </div>
           <div style={{ color: C.muted, fontSize: 11.5, marginBottom: 14, lineHeight: 1.7 }}>
-            مصدرُ **الزيارة** لا الصفحة: من دخل من إنستغرام يبقى محسوباً عليه وإن تنقّل بعدها
+            مصدرُ <strong style={{ color: C.text }}>الزيارة</strong> لا الصفحة: من دخل من إنستغرام
+            يبقى محسوباً عليه وإن تنقّل بعدها
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
             {report.sources.map((s) => (
               <div key={s.source}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: C.text, marginBottom: 5 }}>
                   <span>{SOURCE_LABELS[s.source] || s.source}</span>
-                  <span style={{ color: C.muted, fontVariantNumeric: 'tabular-nums' }}>{s.visits}</span>
+                  <span style={{ color: C.muted, fontVariantNumeric: 'tabular-nums' }}>
+                    {s.visits.toLocaleString('ar-SY')}
+                  </span>
                 </div>
                 <div style={{ height: 7, borderRadius: 99, background: C.surf, overflow: 'hidden' }}>
                   <div
@@ -251,7 +254,9 @@ const VisitsPanel: React.FC<Props> = ({ period, colors: C }) => {
               <div key={d.device} style={{ display: 'flex', alignItems: 'center', gap: 7, color: C.muted, fontSize: 12.5 }}>
                 {d.device === 'desktop' ? <IoDesktopOutline /> : <IoPhonePortraitOutline />}
                 {d.device === 'desktop' ? 'حاسب' : 'جوّال'}
-                <span style={{ color: C.text, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{d.visits}</span>
+                <span style={{ color: C.text, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                  {d.visits.toLocaleString('ar-SY')}
+                </span>
               </div>
             ))}
           </div>
@@ -282,14 +287,14 @@ const VisitsPanel: React.FC<Props> = ({ period, colors: C }) => {
                   }}
                 >
                   <span style={{ color: C.muted, fontSize: 11.5, minWidth: 16, fontVariantNumeric: 'tabular-nums' }}>
-                    {i + 1}
+                    {(i + 1).toLocaleString('ar-SY')}
                   </span>
                   <span style={{ color: C.text, fontSize: 13, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
                   </span>
                   <span style={{ color: C.muted, fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <IoEyeOutline />
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.views}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.views.toLocaleString('ar-SY')}</span>
                   </span>
                   <span
                     style={{
@@ -301,7 +306,7 @@ const VisitsPanel: React.FC<Props> = ({ period, colors: C }) => {
                     }}
                   >
                     <IoCartOutline />
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.addToCart}</span>
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.addToCart.toLocaleString('ar-SY')}</span>
                   </span>
                 </div>
               ))}
