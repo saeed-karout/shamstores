@@ -1,510 +1,825 @@
 // frontend/src/pages/HomePage.tsx
+//
+// الموقع التسويقي — استقطاب التجّار. بهوية شام ستورز: الأخضر #084835،
+// البنفسجي #C07CDF، وليمونيّ علامة S، بخطّي Cairo وInter.
+//
+// قاعدة المحتوى باقية كما كانت: لا شهادات عملاء ولا أرقام إنجاز مخترعة.
+// الأرقام داخل شاشات الأجهزة أمثلة عرضٍ لواجهةٍ حقيقية، والأسعار تُقرأ حيّةً
+// من الخادم بسعر الصرف الموحّد — لا نسخة مكتوبة هنا تتقادم.
 
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { useAuth } from '@/hooks/useAuth';
 import {
-  IoMenu, IoClose, IoArrowForward, IoCheckmarkCircle,
-  IoQrCode, IoCart, IoStatsChart, IoFlash, IoTrophy, IoShield,
-  IoRestaurant, IoStorefront, IoCall, IoLogoWhatsapp,
-  IoLogoInstagram, IoLogoFacebook, IoLogoTwitter,
-  IoArrowUp, IoRocket, IoBusiness, IoServer,
-  IoStar, IoPeople, IoTime, IoWallet, IoAnalytics,
-  IoChatbubbles, IoLockClosed, IoGrid, IoLogOut
+  IoMenu, IoClose, IoArrowBack, IoCheckmarkCircle, IoQrCode, IoStatsChart, IoShieldCheckmark,
+  IoRestaurant, IoStorefront, IoArrowUp, IoWallet, IoChatbubbles, IoFlash, IoGlobeOutline,
+  IoCubeOutline, IoPeopleOutline, IoPricetagOutline, IoMegaphoneOutline, IoBicycleOutline,
+  IoCardOutline, IoTrendingUpOutline, IoNotificationsOutline, IoColorPaletteOutline,
+  IoPhonePortraitOutline, IoLanguageOutline, IoAdd, IoGrid, IoLogOut, IoReceiptOutline,
+  IoRocketOutline, IoSparkles, IoMapOutline
 } from 'react-icons/io5';
+import type { IconType } from 'react-icons';
+import { useAuth } from '@/hooks/useAuth';
+import api from '@/services/api';
+import '@/styles/brand.css';
+import { BrandLogo, BrandMark } from '@/components/marketing/Brand';
+import { PhoneFrame, LaptopFrame, Scaled, useElementWidth } from '@/components/marketing/Devices';
+import {
+  RestaurantScreen, StoreScreen, DashboardScreen, TrackingScreen, StoreDesktopScreen, THEMES, StoreLayout
+} from '@/components/marketing/MockScreens';
+
+// ===== ظهورٌ تدريجيّ عند التمرير =====
+const useReveal = () => {
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('.ss-reveal:not(.is-in)'));
+    if (typeof IntersectionObserver === 'undefined') {
+      nodes.forEach((n) => n.classList.add('is-in'));
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add('is-in');
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+    nodes.forEach((n) => io.observe(n));
+    return () => io.disconnect();
+  });
+};
+
+// ===== المحتوى =====
+
+const NAV = [
+  { id: 'solutions', label: 'الحلول' },
+  { id: 'templates', label: 'القوالب' },
+  { id: 'features', label: 'المميزات' },
+  { id: 'pricing', label: 'الأسعار' },
+  { id: 'faq', label: 'الأسئلة' }
+];
+
+const TRUST: Array<{ icon: IconType; title: string; desc: string }> = [
+  { icon: IoFlash, title: 'جاهز في دقائق', desc: 'سجّل، أضف أصنافك، وشارك رابطك' },
+  { icon: IoWallet, title: 'بالليرة وشام كاش', desc: 'نقداً عند الاستلام أو إلى محفظتك' },
+  { icon: IoChatbubbles, title: 'عربيّ أولاً', desc: 'الواجهة والدعم بالعربية' },
+  { icon: IoShieldCheckmark, title: 'بياناتك ملكك', desc: 'صدّرها متى شئت، بلا احتجاز' }
+];
+
+const FEATURES: Array<{ icon: IconType; title: string; desc: string; tag?: string; purple?: boolean }> = [
+  { icon: IoQrCode, title: 'قائمة رقمية ورموز QR', desc: 'رمز لكل طاولة، والطلب يصل مطبخك برقمها. تعديل الأسعار فوريّ بلا إعادة طباعة.' },
+  { icon: IoReceiptOutline, title: 'طلبات حيّة', desc: 'كلّ طلب يصل لحظياً مع تنبيه صوتيّ وإشعار متصفّح ورسالة تيليغرام.' },
+  { icon: IoCubeOutline, title: 'منتجات ومخزون', desc: 'تصنيفات فرعية، وسوم، خيارات مقاس ولون، صور متعددة، وتنبيه عند نفاد الكمية.' },
+  { icon: IoBicycleOutline, title: 'توصيل وشحن', desc: 'سائقوك بتتبّعٍ مباشر، وأجرة شحن لكل محافظة من المحافظات الأربع عشرة.' },
+  { icon: IoPeopleOutline, title: 'زبائنك في مكان واحد', desc: 'من يعود ومن انقطع، وسجلّ طلبات كلّ زبون، وتصدير بملفّ CSV.' },
+  { icon: IoPricetagOutline, title: 'كوبونات وعروض', desc: 'خصم بنسبة أو مبلغ، بحدّ أدنى وتاريخ انتهاء وعدد استخدامات.' },
+  { icon: IoMegaphoneOutline, title: 'حملات ورسائل تلقائية', desc: 'تذكير بالسلّة المتروكة، ورسالة لمن انقطع — لمن وافق فقط.', purple: true },
+  { icon: IoCardOutline, title: 'كاشير POS', desc: 'بيع من المحلّ بقارئ الباركود، وإيصال قابل للطباعة، وملخّص الوردية.', tag: 'إضافة', purple: true },
+  { icon: IoTrendingUpOutline, title: 'مسوّقون بالعمولة', desc: 'رابط لكل مسوّق، وعمولة تُحسب تلقائياً على ما يبيعه.', tag: 'إضافة', purple: true },
+  { icon: IoStatsChart, title: 'تحليلات ومالية', desc: 'رحلة الزائر حتى الطلب، ومصادر الزيارات، والربح الفعليّ لكل طلب.' },
+  { icon: IoGlobeOutline, title: 'نطاقك الخاص', desc: 'رابط فرعيّ مجانيّ فوراً، أو اربط نطاقك مع شهادة SSL تلقائية.' },
+  { icon: IoLanguageOutline, title: 'عربي وإنجليزي، ليرة ودولار', desc: 'واجهة بلغتين، والأسعار بالدولار بسعر صرف موحّد على المنصّة.' }
+];
+
+const RESTAURANT_THEMES: Array<{ key: keyof typeof THEMES; label: string }> = [
+  { key: 'forest', label: 'كلاسيكي' },
+  { key: 'noir', label: 'داكن' },
+  { key: 'citrus', label: 'عصري' },
+  { key: 'mono', label: 'مينيمال' },
+  { key: 'ocean', label: 'بحري' }
+];
+
+// القوالب الأربعة الموجودة فعلاً في إعدادات المتجر (`storefrontDesign.shell`)
+const STORE_LAYOUTS: Array<{ key: StoreLayout; label: string; desc: string }> = [
+  { key: 'classic', label: 'كلاسيكي', desc: 'بانر عروض وشبكة منتجات' },
+  { key: 'boutique', label: 'بوتيك', desc: 'صورة كبيرة للمجموعات' },
+  { key: 'showcase', label: 'معرض', desc: 'داكن للإلكترونيات' },
+  { key: 'landing', label: 'صفحة أقسام', desc: 'لمتاجر متعددة الأقسام' }
+];
+
+const STORE_SWATCHES: Array<keyof typeof THEMES> = ['forest', 'tech', 'rose', 'royal', 'citrus', 'mono'];
+
+const STEPS = [
+  { title: 'أنشئ حسابك', desc: 'اختر مطعماً أو متجراً. خطة مجانية بلا بطاقة ائتمان.' },
+  { title: 'أضف أصنافك وألوانك', desc: 'ارفع الصور، اختر القالب والألوان، وحدّد طرق الدفع والتوصيل.' },
+  { title: 'شارك رابطك واستقبل الطلبات', desc: 'رابط باسمك ورموز QR للطاولات، والطلبات تصلك لحظياً.' }
+];
+
+const FAQS = [
+  { q: 'كم تكلّفني المنصة؟', a: 'تبدأ بخطة مجانية بلا بطاقة ائتمان وبلا التزام. الأسعار أعلاه بالليرة السورية بسعر الصرف الموحّد، ويمكنك الترقية أو البقاء على المجانية ما شئت.' },
+  { q: 'هل يحتاج زبوني إلى تطبيق أو حساب؟', a: 'لا. يمسح رمز QR أو يفتح رابط متجرك فتظهر القائمة في المتصفح مباشرة. طلبات المطاعم تتمّ بلا تسجيل دخول.' },
+  { q: 'كيف يدفع الزبون؟', a: 'نقداً عند الاستلام، أو تحويلاً عبر شام كاش إلى محفظتك أنت — تُفعّلها وتضع رقمها من إعداداتك، فيظهر للزبون عند الدفع. التحويل يصلك مباشرة ولا نقتطع منه.' },
+  { q: 'هل الأسعار بالليرة السورية؟', a: 'نعم، الليرة هي الأساس. ويمكنك عرض متجرك بالدولار أيضاً بسعر صرف موحّد على المنصّة.' },
+  { q: 'ماذا لو أردت المغادرة؟', a: 'بياناتك ملكك: قوائمك وطلباتك وزبائنك. تصدّرها بملفّات CSV وتغادر متى شئت، بلا رسوم خروج.' },
+  { q: 'هل أحصل على نطاق باسمي؟', a: 'نعم. رابط فرعيّ مجانيّ فوراً مثل name.shamstores.com، وفي خطة المؤسسات تربط نطاقك الخاص مع شهادة أمان تلقائية.' }
+];
+
+// ===== الأسعار الحيّة =====
+
+interface PublicPlan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  isPopular?: boolean;
+  maxMenuItems?: number;
+  maxProducts?: number;
+  maxOrders?: number;
+  maxUsers?: number;
+  hasTableQr?: boolean;
+  hasOnlineOrders?: boolean;
+  hasCoupons?: boolean;
+  hasAnalytics?: boolean;
+  hasBrandingRemoval?: boolean;
+  hasCustomDomain?: boolean;
+  hasMultiLanguage?: boolean;
+  pricing?: { amountUsd: number; amountSyp: number | null; isFree: boolean };
+}
+
+const PLAN_LABEL: Record<string, string> = {
+  free: 'المجانية',
+  basic: 'الأساسية',
+  pro: 'الاحترافية',
+  enterprise: 'المؤسسات'
+};
+
+const UNLIMITED = 99999;
+// أرقامٌ لاتينية كأسعار المتاجر نفسها — لا خليط من ١٠٠ و100 في البطاقة الواحدة
+const limit = (n?: number) => (!n ? '—' : n >= UNLIMITED ? 'غير محدود' : n.toLocaleString('en-US'));
+
+const usePlans = () => {
+  const [plans, setPlans] = useState<PublicPlan[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get('/plans')
+      .then((res: any) => {
+        const list: PublicPlan[] = Array.isArray(res) ? res : res?.data || [];
+        if (!cancelled) setPlans(list.filter(Boolean));
+      })
+      .catch(() => !cancelled && setFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { plans, failed };
+};
+
+// ===== الصفحة =====
 
 const HomePage: React.FC = () => {
-  const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [showTop, setShowTop] = useState(false);
+  const [galleryTab, setGalleryTab] = useState<'restaurant' | 'store'>('restaurant');
+  const [storeTheme, setStoreTheme] = useState<keyof typeof THEMES>('forest');
+  const { plans, failed: plansFailed } = usePlans();
+  const [stageRef, stageW] = useElementWidth<HTMLDivElement>(520);
+  const [panelRef, panelW] = useElementWidth<HTMLDivElement>(360);
+  const [laptopRef, laptopW] = useElementWidth<HTMLDivElement>(700);
 
-  /**
-   * لوحة كل دور. الزبون العادي لا لوحة له فيبقى `null` — زرٌّ يقود إلى
-   * صفحة تردّه عنها أسوأ من غيابه.
-   */
+  useReveal();
+
   const dashboardPath =
-    user?.role === 'super_admin' ? '/admin/dashboard'
+    user?.role === 'super_admin' ? '/admin'
       : user?.role === 'owner' || user?.role === 'staff' ? '/dashboard'
-        : user?.role === 'delivery_driver' ? '/delivery/dashboard'
+        : user?.role === 'delivery_driver' ? '/driver/dashboard'
           : null;
 
-  const handleLogout = () => {
-    setIsMenuOpen(false);
-    logout(); // يوجّه إلى الرئيسية ويعرض رسالته بنفسه
-  };
-
   useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 500);
+    const onScroll = () => {
+      setScrolled(window.scrollY > 12);
+      setShowTop(window.scrollY > 900);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-
-  const scrollToSection = (id: string) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    setIsMenuOpen(false);
+  const go = (id: string) => {
+    setMenuOpen(false);
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  // مقاسات الأجهزة تتبع الحاوية — الجوال يرى المشهد كاملاً لا مقصوصاً
+  const heroPhone = Math.round(Math.min(260, Math.max(170, stageW * 0.5)));
+  const heroPhoneB = Math.round(heroPhone * 0.86);
 
-  // بيانات الصفحة
-  //
-  // ملاحظة مقصودة: لا شهادات عملاء ولا أرقام إنجاز هنا. كانت الصفحة تعرض
-  // اسمين مخترَعين بصور من randomuser.me و«1000+ عميل» و«50K+ طلب شهرياً»
-  // بينما المنصة في أول أيامها. زائر واحد يبحث بالصورة عكسياً، أو تاجر
-  // يسأل «من هم الألف عميل؟»، يكلّفك الصفقة والسمعة معاً. الثقة تُبنى بما
-  // يمكن التحقق منه: ما يفعله المنتج فعلاً، وبأي شروط.
-  //
-  // حين تصير لديك أرقام حقيقية وعملاء يوافقون على ذكر أسمائهم، أعِد القسم
-  // بأسمائهم ونشاطاتهم — لا بصور مخزون.
-
-  const features = [
-    { icon: IoQrCode, title: 'قوائم رقمية ورموز QR', desc: 'قائمة تفاعلية لكل طاولة، تُحدَّث فوراً بلا إعادة طباعة', color: '#C8E235' },
-    { icon: IoCart, title: 'طلبات أونلاين', desc: 'يطلب الزبون بلا تسجيل دخول — كل خطوة إضافية تعني سلة متروكة', color: '#C8E235' },
-    { icon: IoStatsChart, title: 'تقارير المبيعات', desc: 'ما يُباع ومتى وبأي قيمة، بلا جداول تملؤها يدوياً', color: '#C8E235' },
-    { icon: IoFlash, title: 'توصيل وتتبّع', desc: 'إسناد السائقين وتتبّع الطلب لحظياً حتى باب الزبون', color: '#C8E235' },
-    { icon: IoTrophy, title: 'كوبونات وعروض', desc: 'خصومات ورموز ترويجية تضبط صلاحيتها وحدودها بنفسك', color: '#C8E235' },
-    { icon: IoShield, title: 'نطاقك ولوحتك', desc: 'نطاق فرعي مجاني أو نطاقك الخاص — المتجر باسمك لا باسمنا', color: '#C8E235' },
-  ];
-
-  /** أسئلة ما قبل التسجيل. كل جواب صحيح عن المنتج كما هو اليوم. */
-  const faqs = [
-    {
-      q: 'كم تكلّفني المنصة؟',
-      a: 'تبدأ بخطة مجانية بلا بطاقة ائتمان وبلا التزام. تفاصيل الخطط المدفوعة وحدودها تظهر داخل لوحتك بعد التسجيل، وتبقى على المجانية ما شئت.'
-    },
-    {
-      q: 'هل يحتاج زبوني إلى تطبيق أو حساب؟',
-      a: 'لا. يمسح رمز QR أو يفتح رابط متجرك فتظهر القائمة في المتصفح مباشرة، ويطلب بلا تسجيل دخول. كل خطوة إضافية تعني سلة متروكة.'
-    },
-    {
-      q: 'كيف يدفع الزبون؟',
-      a: 'نقداً عند الاستلام، أو عبر شام كاش إلى محفظتك أنت — تُفعّلها وتضع رقمها من إعداداتك. التحويل يصلك مباشرة، ونحن لا نمرّ عليه ولا نقتطع منه.'
-    },
-    {
-      q: 'هل الأسعار بالليرة السورية؟',
-      a: 'نعم، الليرة هي الأساس. ويمكنك عرض متجرك بالدولار أيضاً بسعر صرف موحّد على المنصة، فلا يختلف السعر بين متجر وآخر.'
-    },
-    {
-      q: 'ماذا لو أردت المغادرة؟',
-      a: 'بياناتك ملكك: قوائمك وطلباتك وزبائنك. تصدّرها وتغادر متى شئت، بلا احتجاز ولا رسوم خروج.'
-    },
-    {
-      q: 'هل أحصل على نطاق باسمي؟',
-      a: 'نعم. نطاق فرعي مجاني فوراً، وإن كان لديك نطاق خاص فاربطه بمتجرك — يظهر باسمك لا باسمنا.'
-    },
-  ];
-
-  /** ما نلتزم به صراحةً — كل بند قابل للتحقق من المنتج نفسه لا وعد تسويقي */
-  const commitments = [
-    {
-      icon: IoShield,
-      title: 'بياناتك ملكك',
-      desc: 'قوائمك وطلباتك وزبائنك بياناتك أنت. تصدّرها متى شئت، وتغادر بلا احتجاز.'
-    },
-    {
-      icon: IoWallet,
-      title: 'أسعار بالليرة السورية',
-      desc: 'التسعير بالليرة والدفع عبر شام كاش أو نقداً عند الاستلام — بلا بطاقة أجنبية.'
-    },
-    {
-      icon: IoChatbubbles,
-      title: 'دعم بالعربية',
-      desc: 'الواجهة والدعم بالعربية أولاً، لا ترجمة حرفية عن منتج أجنبي.'
-    },
-    {
-      icon: IoLockClosed,
-      title: 'حساب محميّ',
-      desc: 'اتصال مشفّر، جلسات موقّعة، وحدّ لمحاولات الدخول يوقف التخمين الآلي.'
-    },
-  ];
+  const sortedPlans = useMemo(
+    () => (plans || []).slice().sort((a, b) => (a.price || 0) - (b.price || 0)),
+    [plans]
+  );
 
   return (
-    <>
+    <div className="ss" dir="rtl">
       <Helmet>
-        <title>شام ستورز | الحل الرقمي المتكامل للمطاعم والمتاجر</title>
-        <meta name="description" content="حوّل مطعمك أو متجرك إلى تجربة رقمية متكاملة مع شام ستورز" />
+        <title>شام ستورز | منصة واحدة لمطعمك ومتجرك الإلكتروني</title>
+        <meta
+          name="description"
+          content="أنشئ قائمة طعام رقمية أو متجراً إلكترونياً خلال دقائق: طلبات أونلاين، رموز QR، توصيل وشحن بين المحافظات، دفع نقداً أو عبر شام كاش، وأسعار بالليرة السورية."
+        />
       </Helmet>
 
-      <div className="min-h-screen" style={{ backgroundColor: '#082E24', color: '#E8F5E9' }} dir="rtl">
+      {/* ===== التنقّل ===== */}
+      <nav className={`ss-nav ${scrolled || menuOpen ? 'is-scrolled' : ''}`} aria-label="التنقّل الرئيسي">
+        <div className="ss-container ss-nav-inner">
+          <Link to="/" aria-label="شام ستورز — الرئيسية" style={{ textDecoration: 'none' }}>
+            <BrandLogo tone="light" size="md" />
+          </Link>
+          <div className="ss-nav-links">
+            {NAV.map((n) => (
+              <button key={n.id} className="ss-nav-link" onClick={() => go(n.id)}>{n.label}</button>
+            ))}
+          </div>
+          <div className="ss-nav-actions" style={{ color: '#fff' }}>
+            {isAuthenticated ? (
+              <>
+                {dashboardPath && (
+                  <Link to={dashboardPath} className="ss-btn ss-btn-primary ss-btn-sm"><IoGrid /> لوحة التحكم</Link>
+                )}
+                <button className="ss-nav-link" onClick={() => logout()} style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                  <IoLogOut /> خروج
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="ss-nav-link">دخول التجّار</Link>
+                <Link to="/register" className="ss-btn ss-btn-primary ss-btn-sm">ابدأ مجاناً</Link>
+              </>
+            )}
+          </div>
+          <button
+            className="ss-nav-toggle"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'إغلاق القائمة' : 'فتح القائمة'}
+          >
+            {menuOpen ? <IoClose size={22} /> : <IoMenu size={22} />}
+          </button>
+        </div>
+      </nav>
+      {menuOpen && (
+        <div className="ss-drawer">
+          {NAV.map((n) => (
+            <button key={n.id} className="ss-nav-link" onClick={() => go(n.id)}>{n.label}</button>
+          ))}
+          <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+            {isAuthenticated ? (
+              <>
+                {dashboardPath && <Link to={dashboardPath} className="ss-btn ss-btn-primary"><IoGrid /> لوحة التحكم</Link>}
+                <button className="ss-btn ss-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }} onClick={() => logout()}>
+                  <IoLogOut /> تسجيل الخروج
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/register" className="ss-btn ss-btn-primary">ابدأ مجاناً</Link>
+                <Link to="/login" className="ss-btn ss-btn-ghost" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}>دخول التجّار</Link>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-        {/* ===== NAVBAR ===== */}
-        <nav className="fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: 'rgba(8,46,36,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(200,226,53,0.15)' }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              
-              {/* Logo */}
-              <Link to="/" className="flex items-center gap-3">
-                <img src="/images/logo-width1.png" width={200} alt="logo width" />
-              </Link>
-
-              {/* Desktop Menu */}
-              <div className="hidden md:flex items-center gap-8">
-                {['المميزات', 'الحلول', 'الأسئلة الشائعة'].map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => scrollToSection(['features', 'solutions', 'faq'][idx])}
-                    className="text-sm font-medium transition-colors hover:text-[#C8E235]"
-                    style={{ color: '#9DC4AC' }}
-                  >
-                    {item}
+      <main id="main">
+        {/* ===== البطل ===== */}
+        <header className="ss-hero">
+          <div className="ss-grid-bg" />
+          <BrandMark className="ss-hero-watermark" color="#cdef7c" size={520} />
+          <div className="ss-container">
+            <div className="ss-hero-grid">
+              <div className="ss-hero-copy">
+                <span className="ss-eyebrow"><IoSparkles /> منصة سورية — بالليرة ودفع عبر شام كاش</span>
+                <h1 className="ss-h1">
+                  منصة واحدة..
+                  <br />
+                  <span className="ss-accent-text">لكل أعمالك</span>
+                </h1>
+                <p className="ss-lead" style={{ maxWidth: 560 }}>
+                  ابدأ متجرك الإلكتروني أو قائمة مطعمك الرقمية بسهولة. طلبات أونلاين، رموز QR للطاولات،
+                  توصيل وشحن بين المحافظات، ولوحة تحكم تريك كل شيء في مكان واحد.
+                </p>
+                <div className="ss-hero-actions">
+                  {isAuthenticated && dashboardPath ? (
+                    <Link to={dashboardPath} className="ss-btn ss-btn-primary">
+                      الذهاب إلى لوحتي <IoArrowBack />
+                    </Link>
+                  ) : (
+                    <Link to="/register" className="ss-btn ss-btn-primary">
+                      ابدأ الآن مجاناً <IoArrowBack />
+                    </Link>
+                  )}
+                  <button className="ss-btn ss-btn-ghost" onClick={() => go('templates')}>
+                    شاهد القوالب
                   </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 20px', fontSize: 13.5, color: 'var(--ss-on-dark-muted)' }}>
+                  {['بلا بطاقة ائتمان', 'رابط باسمك فوراً', 'مطعم أو متجر'].map((t) => (
+                    <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <IoCheckmarkCircle style={{ color: 'var(--ss-lime)' }} /> {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div ref={stageRef} className="ss-stage" style={{ height: heroPhone * 2.02 + 40 }} aria-hidden="true">
+                <div className="ss-phone-b">
+                  <PhoneFrame width={heroPhoneB}>
+                    <RestaurantScreen compact />
+                  </PhoneFrame>
+                </div>
+                <div className="ss-phone-a">
+                  <PhoneFrame width={heroPhone}>
+                    <StoreScreen layout="classic" />
+                  </PhoneFrame>
+                </div>
+                <div className="ss-float" style={{ top: '12%', insetInlineStart: 0 }}>
+                  <span className="ss-float-icon" style={{ background: 'var(--ss-purple-soft)', color: 'var(--ss-purple-strong)' }}>
+                    <IoNotificationsOutline size={18} />
+                  </span>
+                  <span>طلب جديد <bdi className="latin">#1256</bdi><small>185,000 ل.س — توصيل</small></span>
+                </div>
+                <div className="ss-float" style={{ bottom: '14%', insetInlineEnd: 0, animationDelay: '-3s' }}>
+                  <span className="ss-float-icon" style={{ background: 'var(--ss-lime-soft)', color: 'var(--ss-forest-700)' }}>
+                    <IoWallet size={18} />
+                  </span>
+                  <span>دفع عبر شام كاش<small>يصل محفظتك مباشرة</small></span>
+                </div>
+              </div>
+            </div>
+
+            <div className="ss-trust">
+              {TRUST.map((t) => (
+                <div key={t.title} className="ss-trust-item">
+                  <span className="ss-float-icon" style={{ width: 38, height: 38, borderRadius: 12, display: 'grid', placeItems: 'center', background: 'var(--ss-lime-soft)', color: 'var(--ss-lime)', flexShrink: 0 }}>
+                    <t.icon size={19} />
+                  </span>
+                  <div>
+                    <strong>{t.title}</strong>
+                    <span>{t.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        {/* ===== اللوحات الثلاث ===== */}
+        <section className="ss-section ss-dark" style={{ paddingTop: 24, background: 'var(--ss-forest-950)' }}>
+          <div className="ss-container">
+            <div className="ss-triptych">
+              <article className="ss-panel ss-reveal">
+                <BrandMark className="ss-panel-mark" color="#ffffff" size={36} />
+                <h2 className="ss-panel-title">منصة مصمّمة<br />لتسهّل إدارة متجرك</h2>
+                <p className="ss-panel-sub">طلباتك ومنتجاتك وزبائنك ومبيعاتك — على لوحة واحدة، من الجوال أو الحاسوب.</p>
+                <div ref={panelRef} className="ss-panel-art" style={{ marginInline: -28, paddingInlineStart: 28 }}>
+                  {/* اللوحة مكبّرةً ومقصوصة: الشريط الجانبيّ والمؤشّرات تُقرأ،
+                      بدل لوحةٍ كاملة مصغّرة إلى خطوطٍ لا تُرى */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: 250,
+                      overflow: 'hidden',
+                      borderStartStartRadius: 18,
+                      boxShadow: '0 -10px 40px rgba(0,0,0,0.35)',
+                      border: '1px solid rgba(255,255,255,0.14)',
+                      borderInlineEnd: 'none',
+                      borderBottom: 'none'
+                    }}
+                  >
+                    <div style={{ position: 'absolute', top: 0, right: 0 }}>
+                      <Scaled baseW={1280} baseH={800} width={Math.max(420, panelW * 1.55)}>
+                        <DashboardScreen />
+                      </Scaled>
+                    </div>
+                  </div>
+                </div>
+              </article>
+
+              <article className="ss-warehouse ss-reveal" aria-label="شام ستورز — مستودعك الرقمي">
+                <div className="ss-warehouse-top" />
+                <div className="ss-warehouse-hall">
+                  <div className="ss-warehouse-shelves" />
+                  <div className="ss-warehouse-lights">
+                    {[64, 52, 42, 34, 27, 21, 16, 12].map((w) => <i key={w} style={{ width: w }} />)}
+                  </div>
+                  <div className="ss-warehouse-floor" />
+                </div>
+                <div className="ss-warehouse-brand">
+                  <BrandMark color="#ffffff" size={30} />
+                  <b>SHAM STORES</b>
+                </div>
+              </article>
+
+              <article className="ss-panel ss-reveal">
+                <BrandMark className="ss-panel-mark" color="#ffffff" size={36} />
+                <h2 className="ss-panel-title">أنت ركّز على تجارتك</h2>
+                <p className="ss-panel-sub" style={{ fontSize: 17, color: '#fff', fontWeight: 700 }}>وشام ستورز يرتّب لك التجربة الرقمية</p>
+                <div className="ss-panel-art" style={{ minHeight: 300 }}>
+                  <div style={{ position: 'relative' }}>
+                    <PhoneFrame width={Math.min(230, Math.max(180, panelW * 0.62))} style={{ transform: 'rotate(-4deg) translateY(40px)' }}>
+                      <StoreScreen layout="classic" name="Online Store" />
+                    </PhoneFrame>
+                    <span className="ss-float" style={{ top: 30, insetInlineEnd: -58, padding: '8px 12px', transform: 'rotate(8deg)' }}>
+                      <IoPricetagOutline /> <span className="latin">-30%</span>
+                    </span>
+                    <span className="ss-float" style={{ top: 270, insetInlineStart: -48, padding: '8px 12px', animationDelay: '-2s' }}>
+                      <IoAdd /> أضيف إلى السلّة
+                    </span>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        {/* ===== الحلول ===== */}
+        <section id="solutions" className="ss-section">
+          <div className="ss-container">
+            <div className="ss-section-head ss-reveal">
+              <span className="ss-eyebrow">حلّ لكلّ نشاط</span>
+              <h2 className="ss-h2">مطعم أو متجر — منصة واحدة</h2>
+              <p className="ss-lead">اختر نوع نشاطك عند التسجيل، وتتكيّف اللوحة والواجهة معه تلقائياً.</p>
+            </div>
+            <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+              {[
+                {
+                  icon: IoRestaurant,
+                  title: 'قائمة رقمية للمطاعم',
+                  sub: 'للمطاعم والمقاهي ومحلات الوجبات',
+                  items: ['قائمة بالصور والأسعار تُحدَّث فوراً', 'رمز QR لكل طاولة والطلب برقمها', 'استلام وتوصيل وطلب داخل المطعم', 'مقاسات وإضافات لكل صنف', 'طلب بلا تسجيل دخول للزبون'],
+                  screen: <RestaurantScreen theme={THEMES.forest} compact />
+                },
+                {
+                  icon: IoStorefront,
+                  title: 'متجر إلكتروني متكامل',
+                  sub: 'للملابس والإلكترونيات والمنزل وغيرها',
+                  items: ['أربعة قوالب وألوانك الخاصة', 'مخزون وخيارات مقاس ولون', 'شحن بين المحافظات بأجرة لكل محافظة', 'تقييمات من مشترين موثّقين', 'استيراد وتصدير المنتجات بملفّ CSV'],
+                  screen: <StoreScreen theme={THEMES.royal} layout="boutique" />
+                }
+              ].map((s, idx) => (
+                <article key={s.title} className="ss-card ss-solution ss-reveal" style={{ transitionDelay: `${idx * 80}ms` }}>
+                  <div style={{ padding: 28, display: 'grid', gap: 16 }}>
+                    <span className={`ss-icon-tile ${idx ? 'is-purple' : ''}`}><s.icon size={26} /></span>
+                    <div>
+                      <h3 className="ss-h3">{s.title}</h3>
+                      <p style={{ color: 'var(--ss-muted)', fontSize: 14.5, marginTop: 4 }}>{s.sub}</p>
+                    </div>
+                    <ul className="ss-checklist" style={{ gap: 8 }}>
+                      {s.items.map((i) => (
+                        <li key={i} style={{ fontSize: 14.5 }}>
+                          <IoCheckmarkCircle size={18} style={{ color: idx ? 'var(--ss-purple)' : 'var(--ss-forest-500)' }} /> {i}
+                        </li>
+                      ))}
+                    </ul>
+                    <Link to="/register" className="ss-btn ss-btn-forest" style={{ justifySelf: 'start' }}>
+                      ابدأ {idx ? 'متجرك' : 'قائمتك'} <IoArrowBack />
+                    </Link>
+                  </div>
+                  <div className="ss-solution-art" style={{ background: idx ? 'linear-gradient(180deg, #f6eefb, #efe3f7)' : 'linear-gradient(180deg, #eef5ef, #e2ede4)' }}>
+                    <PhoneFrame width={220}>{s.screen}</PhoneFrame>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== القوالب ===== */}
+        <section id="templates" className="ss-section" style={{ background: 'var(--ss-white)' }}>
+          <div className="ss-container">
+            <div className="ss-section-head ss-reveal">
+              <span className="ss-eyebrow"><IoColorPaletteOutline /> قوالب قابلة للتخصيص</span>
+              <h2 className="ss-h2">واجهة تشبه علامتك التجارية</h2>
+              <p className="ss-lead">اختر القالب، وضع ألوانك وشعارك وخطّك — وشاهد النتيجة مباشرة قبل النشر.</p>
+              <div className="ss-tabs" role="tablist" aria-label="نوع الواجهة">
+                <button role="tab" className="ss-tab" aria-selected={galleryTab === 'restaurant'} onClick={() => setGalleryTab('restaurant')}>
+                  <IoRestaurant /> القائمة الرقمية
+                </button>
+                <button role="tab" className="ss-tab" aria-selected={galleryTab === 'store'} onClick={() => setGalleryTab('store')}>
+                  <IoStorefront /> المتجر الإلكتروني
+                </button>
+              </div>
+            </div>
+
+            {galleryTab === 'restaurant' ? (
+              <div className="ss-gallery" role="tabpanel">
+                {RESTAURANT_THEMES.map((t) => (
+                  <figure key={t.key} className="ss-gallery-item">
+                    <PhoneFrame width={200} label={`قالب ${t.label}`}>
+                      <RestaurantScreen theme={THEMES[t.key]} />
+                    </PhoneFrame>
+                    <figcaption>
+                      <strong>{t.label}</strong>
+                      <span>ألوان {THEMES[t.key].name}</span>
+                    </figcaption>
+                  </figure>
                 ))}
               </div>
-
-              {/* أزرار سطح المكتب — دعوةٌ للتسجيل للزائر، وطريق عودة للمسجَّل */}
-              <div className="hidden md:flex items-center gap-3">
-                {isAuthenticated ? (
-                  <>
-                    {dashboardPath && (
-                      <Link
-                        to={dashboardPath}
-                        className="px-5 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105 flex items-center gap-2"
-                        style={{ background: '#C8E235', color: '#082E24' }}
-                      >
-                        <IoGrid size={16} />
-                        لوحة التحكم
-                      </Link>
-                    )}
-                    <button
-                      onClick={handleLogout}
-                      className="px-4 py-2 text-sm font-medium transition-colors hover:text-[#C8E235] flex items-center gap-2"
-                      style={{ color: '#9DC4AC' }}
-                    >
-                      <IoLogOut size={16} />
-                      تسجيل الخروج
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/user/login" className="px-4 py-2 text-sm font-medium transition-colors hover:text-[#C8E235]" style={{ color: '#9DC4AC' }}>
-                      تسجيل الدخول
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="px-5 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105"
-                      style={{ background: '#C8E235', color: '#082E24' }}
-                    >
-                      ابدأ مجاناً
-                    </Link>
-                  </>
-                )}
-              </div>
-
-              {/* Mobile Menu Button */}
-              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 rounded-lg" style={{ backgroundColor: 'rgba(200,226,53,0.1)' }}>
-                {isMenuOpen ? <IoClose size={24} style={{ color: '#C8E235' }} /> : <IoMenu size={24} style={{ color: '#C8E235' }} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          <AnimatePresence>
-            {isMenuOpen && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="md:hidden border-t" style={{ backgroundColor: '#082E24', borderColor: 'rgba(200,226,53,0.15)' }}>
-                <div className="p-4 space-y-3">
-                  {['المميزات', 'الحلول', 'الأسئلة الشائعة'].map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => scrollToSection(['features', 'solutions', 'faq'][idx])}
-                      className="block w-full text-right p-3 rounded-lg transition-colors"
-                      style={{ color: '#9DC4AC' }}
-                    >
-                      {item}
+            ) : (
+              <div role="tabpanel">
+                <div className="ss-swatches" style={{ marginBottom: 8 }}>
+                  {STORE_SWATCHES.map((k) => (
+                    <button key={k} className="ss-swatch" aria-pressed={storeTheme === k} onClick={() => setStoreTheme(k)}>
+                      <i style={{ background: `linear-gradient(135deg, ${THEMES[k].hero[0]}, ${THEMES[k].primary})` }} />
+                      {THEMES[k].name}
                     </button>
                   ))}
-                  {/* على الموبايل هذه القائمة هي المكان الوحيد الذي يبلغه
-                      المستخدم — فبلا زر خروج هنا لا سبيل له إليه أصلاً */}
-                  <div className="pt-3 space-y-2">
-                    {isAuthenticated ? (
-                      <>
-                        {dashboardPath && (
-                          <Link
-                            to={dashboardPath}
-                            onClick={() => setIsMenuOpen(false)}
-                            className="flex items-center justify-center gap-2 w-full text-center p-3 rounded-lg font-semibold"
-                            style={{ background: '#C8E235', color: '#082E24' }}
-                          >
-                            <IoGrid size={17} />
-                            لوحة التحكم
-                          </Link>
-                        )}
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center justify-center gap-2 w-full text-center p-3 rounded-lg border transition-colors"
-                          style={{ borderColor: 'rgba(255,107,107,0.4)', color: '#FF6B6B' }}
-                        >
-                          <IoLogOut size={17} />
-                          تسجيل الخروج
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Link to="/user/login" className="block w-full text-center p-3 rounded-lg border transition-colors" style={{ borderColor: 'rgba(200,226,53,0.3)', color: '#C8E235' }}>
-                          تسجيل الدخول
-                        </Link>
-                        <Link to="/register" className="block w-full text-center p-3 rounded-lg font-semibold" style={{ background: '#C8E235', color: '#082E24' }}>
-                          ابدأ مجاناً
-                        </Link>
-                      </>
-                    )}
-                  </div>
                 </div>
-              </motion.div>
+                <div className="ss-gallery">
+                  {STORE_LAYOUTS.map((l) => (
+                    <figure key={l.key} className="ss-gallery-item">
+                      <PhoneFrame width={210} label={`قالب ${l.label}`}>
+                        <StoreScreen layout={l.key} theme={THEMES[storeTheme]} />
+                      </PhoneFrame>
+                      <figcaption>
+                        <strong>{l.label}</strong>
+                        <span>{l.desc}</span>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+                <div ref={laptopRef} className="ss-reveal" style={{ marginTop: 24 }}>
+                  <LaptopFrame width={Math.min(860, laptopW)} label="واجهة المتجر على سطح المكتب">
+                    <StoreDesktopScreen theme={THEMES[storeTheme]} />
+                  </LaptopFrame>
+                  <p style={{ textAlign: 'center', color: 'var(--ss-muted)', marginTop: 18, fontSize: 14.5 }}>
+                    <IoPhonePortraitOutline style={{ verticalAlign: 'middle' }} /> القالب نفسه يتكيّف مع الجوال والحاسوب تلقائياً
+                  </p>
+                </div>
+              </div>
             )}
-          </AnimatePresence>
-        </nav>
-
-        {/* ===== HERO SECTION (مثل الصورة) ===== */}
-        <section className="relative min-h-screen flex items-center justify-center pt-20 overflow-hidden">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#C8E235 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
-          
-          <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
-            {/* Badge */}
-            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-8" style={{ backgroundColor: 'rgba(200,226,53,0.1)', border: '1px solid rgba(200,226,53,0.2)' }}>
-              <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#C8E235' }} />
-              <span className="text-sm font-medium" style={{ color: '#C8E235' }}>منصة سورية — تسعير بالليرة ودفع عبر شام كاش</span>
-            </motion.div>
-
-            {/* Main Title */}
-            <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="text-5xl sm:text-6xl md:text-7xl font-bold mb-6">
-              حوّل عملك إلى{' '}
-              <span style={{ color: '#C8E235' }}>تجربة رقمية</span>{' '}
-              متكاملة
-            </motion.h1>
-
-            {/* Subtitle */}
-            <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-              className="text-lg sm:text-xl mb-10 max-w-2xl mx-auto" style={{ color: '#9DC4AC' }}>
-              شام ستورز هو الحل الذكي للمطاعم والمتاجر — قوائم رقمية تفاعلية، طلبات أونلاين،
-              QR Code ذكي، وتحليلات متقدمة لتنمية أعمالك.
-            </motion.p>
-
-            {/* CTA Buttons */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              className="flex flex-wrap gap-4 justify-center mb-16">
-              <Link to="/register" className="px-8 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }}>
-                <IoRocket size={20} /> ابدأ الآن مجاناً <IoArrowForward size={18} />
-              </Link>
-              <button onClick={() => scrollToSection('features')} className="px-8 py-3 rounded-xl font-semibold transition-all" style={{ border: '1px solid rgba(200,226,53,0.5)', color: '#C8E235' }}>
-                اكتشف المزيد
-              </button>
-            </motion.div>
-
-            {/* Stats Row */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-4 rounded-2xl p-6" style={{ backgroundColor: 'rgba(13,74,58,0.5)', border: '1px solid rgba(200,226,53,0.1)' }}>
-              {commitments.map((item, idx) => (
-                <div key={idx} className="text-center px-2">
-                  <item.icon size={22} style={{ color: '#C8E235', margin: '0 auto 8px' }} />
-                  <div className="text-sm font-bold">{item.title}</div>
-                  <div className="text-xs mt-1 leading-relaxed" style={{ color: '#9DC4AC' }}>{item.desc}</div>
-                </div>
-              ))}
-            </motion.div>
           </div>
         </section>
 
-        {/* ===== FEATURES SECTION ===== */}
-        <section id="features" className="py-24 px-4" style={{ backgroundColor: '#0D4A3A' }}>
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <span className="text-sm font-semibold tracking-wider uppercase" style={{ color: '#C8E235' }}>المميزات</span>
-              <h2 className="text-3xl md:text-5xl font-bold mt-3 mb-4">لماذا تختار شام ستورز؟</h2>
-              <p className="text-lg max-w-2xl mx-auto" style={{ color: '#9DC4AC' }}>نقدم لك كل ما تحتاجه لإدارة مطعمك أو متجرك بكفاءة واحترافية</p>
+        {/* ===== المميزات ===== */}
+        <section id="features" className="ss-section">
+          <div className="ss-container">
+            <div className="ss-section-head ss-reveal">
+              <span className="ss-eyebrow">كل ما تحتاجه</span>
+              <h2 className="ss-h2">أدوات تاجرٍ محترف، بلا تعقيد</h2>
+              <p className="ss-lead">كلّ ميزة هنا موجودة في لوحتك اليوم — ما هو إضافة مدفوعة مُعلَّمٌ بوضوح.</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {features.map((feature, idx) => (
-                <motion.div key={idx} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }}
-                  whileHover={{ y: -4 }} className="rounded-2xl p-6 transition-all" style={{ backgroundColor: '#112E23', border: '1px solid rgba(200,226,53,0.1)' }}>
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(200,226,53,0.15)' }}>
-                    <feature.icon size={24} style={{ color: '#C8E235' }} />
+            <div className="ss-features">
+              {FEATURES.map((f, i) => (
+                <article key={f.title} className="ss-card ss-card-hover ss-feature ss-reveal" style={{ transitionDelay: `${(i % 4) * 60}ms` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <span className={`ss-icon-tile ${f.purple ? 'is-purple' : ''}`}><f.icon size={24} /></span>
+                    {f.tag && <span className="ss-badge">{f.tag}</span>}
                   </div>
-                  <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: '#9DC4AC' }}>{feature.desc}</p>
-                </motion.div>
+                  <h3 className="ss-h3" style={{ fontSize: 18 }}>{f.title}</h3>
+                  <p>{f.desc}</p>
+                </article>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ===== SOLUTIONS SECTION (مطاعم + متاجر) ===== */}
-        <section id="solutions" className="py-24 px-4" style={{ backgroundColor: '#082E24' }}>
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <span className="text-sm font-semibold tracking-wider uppercase" style={{ color: '#C8E235' }}>حلول متكاملة</span>
-              <h2 className="text-3xl md:text-5xl font-bold mt-3 mb-4">حلول مخصصة لمختلف الأنشطة</h2>
-              <p className="text-lg max-w-2xl mx-auto" style={{ color: '#9DC4AC' }}>نظام واحد يدير جميع احتياجاتك الرقمية بكل سهولة ومرونة</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Restaurant Card */}
-              <div className="rounded-2xl overflow-hidden transition-all hover:-translate-y-1" style={{ backgroundColor: '#0F3D31', border: '1px solid rgba(200,226,53,0.15)' }}>
-                <div className="p-8">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: 'rgba(200,226,53,0.15)' }}>
-                    <IoRestaurant size={32} style={{ color: '#C8E235' }} />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2">حلول المطاعم</h3>
-                  <p className="mb-6" style={{ color: '#9DC4AC' }}>أدر مطعمك رقمياً بكل سهولة</p>
-                  <ul className="space-y-3 mb-8">
-                    {['قوائم طعام رقمية', 'رموز QR للطاولات', 'طلبات أونلاين', 'نظام إدارة الطاولات', 'تحليلات المبيعات'].map((item, i) => (
-                      <li key={i} className="flex items-center gap-3"><IoCheckmarkCircle style={{ color: '#C8E235' }} /><span>{item}</span></li>
-                    ))}
-                  </ul>
-                  <Link to="/register" className="block w-full text-center px-6 py-3 rounded-xl font-semibold transition-all" style={{ border: '1px solid rgba(200,226,53,0.3)', color: '#C8E235' }}>
-                    ابدأ الآن
-                  </Link>
-                </div>
+        {/* ===== لوحة التحكم ===== */}
+        <section className="ss-section ss-dark" style={{ background: 'linear-gradient(180deg, var(--ss-forest-800), var(--ss-forest-950))', overflow: 'hidden' }}>
+          <div className="ss-container">
+            <div className="ss-split">
+              <div className="ss-reveal" style={{ display: 'grid', gap: 20 }}>
+                <span className="ss-eyebrow" style={{ justifySelf: 'start' }}>لوحة التحكم</span>
+                <h2 className="ss-h2">تجربة أسهل.. إدارة أذكى.. نموّ أكبر</h2>
+                <p className="ss-lead">كل طلب يصلك لحظياً أينما كنت، وتتابعه حتى باب الزبون.</p>
+                <ul className="ss-checklist">
+                  <li><IoCheckmarkCircle size={20} /> تنبيه صوتيّ وإشعار متصفّح ورسالة تيليغرام مع كل طلب</li>
+                  <li><IoCheckmarkCircle size={20} /> موظّفون بصلاحيات تحدّدها أنت لكل شاشة</li>
+                  <li><IoCheckmarkCircle size={20} /> تتبّع مباشر للزبون من التحضير حتى التسليم</li>
+                  <li><IoCheckmarkCircle size={20} /> تحليلات الزيارات: من أين يأتي زبائنك وأين يتوقّفون</li>
+                </ul>
               </div>
-
-              {/* Store Card */}
-              <div className="rounded-2xl overflow-hidden transition-all hover:-translate-y-1" style={{ backgroundColor: '#0F3D31', border: '2px solid #C8E235' }}>
-                <div className="p-8">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6" style={{ backgroundColor: 'rgba(200,226,53,0.15)' }}>
-                    <IoStorefront size={32} style={{ color: '#C8E235' }} />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2">حلول المتاجر</h3>
-                  <p className="mb-6" style={{ color: '#9DC4AC' }}>أدر متجرك الإلكتروني باحترافية</p>
-                  <ul className="space-y-3 mb-8">
-                    {['عرض المنتجات', 'نظام إدارة المخزون', 'طلبات أونلاين', 'عروض وخصومات', 'تحليلات المبيعات'].map((item, i) => (
-                      <li key={i} className="flex items-center gap-3"><IoCheckmarkCircle style={{ color: '#C8E235' }} /><span>{item}</span></li>
-                    ))}
-                  </ul>
-                  <Link to="/register" className="block w-full text-center px-6 py-3 rounded-xl font-semibold transition-all" style={{ background: '#C8E235', color: '#082E24' }}>
-                    ابدأ الآن
-                  </Link>
-                </div>
+              <div className="ss-reveal" style={{ position: 'relative', paddingBottom: 30 }}>
+                <DashboardShowcase />
               </div>
             </div>
           </div>
         </section>
 
-        {/* ===== FAQ SECTION ===== */}
-        {/*
-          أسئلة التاجر الحقيقية قبل التسجيل — لا أسئلة تسويقية مصاغة لتُمدَح
-          الإجابة عنها. كل جواب هنا صحيح عن المنتج كما هو اليوم؛ لا تُضِف
-          سؤالاً لا تستطيع الإجابة عنه بصدق.
-        */}
-        <section id="faq" className="py-24 px-4" style={{ backgroundColor: '#082E24' }}>
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-14">
-              <span className="text-sm font-semibold tracking-wider" style={{ color: '#C8E235' }}>قبل أن تبدأ</span>
-              <h2 className="text-3xl md:text-4xl font-bold mt-3">أسئلة يطرحها كل تاجر</h2>
+        {/* ===== الخطوات ===== */}
+        <section className="ss-section">
+          <div className="ss-container">
+            <div className="ss-section-head ss-reveal">
+              <span className="ss-eyebrow"><IoRocketOutline /> ثلاث خطوات</span>
+              <h2 className="ss-h2">من التسجيل إلى أول طلب</h2>
+            </div>
+            <div className="ss-steps">
+              {STEPS.map((s, i) => (
+                <article key={s.title} className="ss-card ss-step ss-reveal" style={{ transitionDelay: `${i * 90}ms` }}>
+                  <span className="ss-step-num">0{i + 1}</span>
+                  <h3 className="ss-h3">{s.title}</h3>
+                  <p style={{ color: 'var(--ss-muted)', lineHeight: 1.9, fontSize: 15 }}>{s.desc}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== الأسعار ===== */}
+        <section id="pricing" className="ss-section" style={{ background: 'var(--ss-paper-2)' }}>
+          <div className="ss-container">
+            <div className="ss-section-head ss-reveal">
+              <span className="ss-eyebrow"><IoWallet /> أسعار واضحة بالليرة</span>
+              <h2 className="ss-h2">ابدأ مجاناً، وادفع حين تكبر</h2>
+              <p className="ss-lead">
+                {sortedPlans.some((p) => p.pricing?.amountSyp)
+                  ? 'الأسعار شهرية بالليرة السورية وفق سعر الصرف الموحّد على المنصّة. تدفع عبر شام كاش أو بالتواصل معنا.'
+                  : 'الأسعار شهرية. تدفع عبر شام كاش أو بالتواصل معنا، ولا تحتاج بطاقة ائتمان للبدء.'}
+              </p>
             </div>
 
-            <div className="space-y-4">
-              {faqs.map((item, idx) => (
-                <details
-                  key={idx}
-                  className="rounded-2xl overflow-hidden"
-                  style={{ backgroundColor: '#0D4A3A', border: '1px solid rgba(200,226,53,0.12)' }}
-                >
-                  <summary
-                    className="cursor-pointer px-5 py-4 font-semibold flex items-center gap-3"
-                    style={{ listStyle: 'none' }}
-                  >
-                    <IoCheckmarkCircle size={18} style={{ color: '#C8E235', flexShrink: 0 }} />
-                    {item.q}
+            {plansFailed ? (
+              <p style={{ textAlign: 'center', color: 'var(--ss-muted)' }}>
+                تعذّر تحميل الخطط الآن — <Link to="/contact" style={{ color: 'var(--ss-forest-700)', fontWeight: 800 }}>تواصل معنا</Link> لمعرفة الأسعار.
+              </p>
+            ) : !plans ? (
+              <div className="ss-pricing" aria-busy="true">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="ss-card" style={{ height: 420, background: 'linear-gradient(90deg, #fff, #f1f5f1, #fff)' }} />
+                ))}
+              </div>
+            ) : (
+              <div className="ss-pricing">
+                {sortedPlans.map((p) => {
+                  const items = Math.max(p.maxMenuItems || 0, p.maxProducts || 0);
+                  const syp = p.pricing?.amountSyp;
+                  const isFree = p.pricing?.isFree ?? p.price <= 0;
+                  const rows: Array<[string, boolean]> = [
+                    [`حتى ${limit(items)} صنف أو منتج`, true],
+                    [`${limit(p.maxOrders)} طلب شهرياً`, true],
+                    ['رموز QR وطلبات أونلاين', !!(p.hasTableQr || p.hasOnlineOrders)],
+                    ['كوبونات وعروض', !!p.hasCoupons],
+                    ['تحليلات متقدّمة', !!p.hasAnalytics],
+                    ['إزالة شارة المنصّة', !!p.hasBrandingRemoval],
+                    ['نطاق خاص وتعدّد اللغات', !!(p.hasCustomDomain || p.hasMultiLanguage)]
+                  ];
+                  return (
+                    <article key={p.id} className={`ss-card ss-plan ss-reveal ${p.isPopular ? 'is-popular' : ''}`}>
+                      {p.isPopular && <span className="ss-plan-tag">الأكثر اختياراً</span>}
+                      <div>
+                        <h3 className="ss-h3">{PLAN_LABEL[p.name] || p.name}</h3>
+                        <p className="ss-plan-desc">{p.description}</p>
+                      </div>
+                      <div className="ss-plan-price">
+                        {isFree ? (
+                          <b>مجاناً</b>
+                        ) : syp ? (
+                          <>
+                            <b>{syp.toLocaleString('en-US')}</b>
+                            <span>ل.س / شهرياً</span>
+                          </>
+                        ) : (
+                          <>
+                            <b className="latin">${p.price}</b>
+                            <span>شهرياً</span>
+                          </>
+                        )}
+                      </div>
+                      <ul>
+                        {rows.map(([label, on]) => (
+                          <li key={label} className={on ? '' : 'is-off'}>
+                            <IoCheckmarkCircle size={18} style={{ color: p.isPopular ? 'var(--ss-lime)' : 'var(--ss-forest-500)', flexShrink: 0 }} />
+                            {label}
+                          </li>
+                        ))}
+                      </ul>
+                      <Link to="/register" className={`ss-btn ${p.isPopular ? 'ss-btn-primary' : 'ss-btn-forest'}`}>
+                        {isFree ? 'ابدأ مجاناً' : 'اختر الخطة'}
+                      </Link>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+            <p className="ss-reveal" style={{ textAlign: 'center', marginTop: 28, color: 'var(--ss-muted)', fontSize: 14 }}>
+              <IoMapOutline style={{ verticalAlign: 'middle' }} /> إضافات منفردة متاحة من لوحتك: الكاشير، المسوّقون، تطبيق باسم متجرك، والنطاق الخاص.
+            </p>
+          </div>
+        </section>
+
+        {/* ===== الأسئلة ===== */}
+        <section id="faq" className="ss-section">
+          <div className="ss-container">
+            <div className="ss-section-head ss-reveal">
+              <span className="ss-eyebrow">قبل أن تبدأ</span>
+              <h2 className="ss-h2">أسئلة يطرحها كل تاجر</h2>
+            </div>
+            <div className="ss-faq">
+              {FAQS.map((f) => (
+                <details key={f.q} className="ss-reveal">
+                  <summary>
+                    {f.q}
+                    <IoAdd size={22} />
                   </summary>
-                  <div className="px-5 pb-5 text-sm leading-loose" style={{ color: '#9DC4AC' }}>
-                    {item.a}
-                  </div>
+                  <div>{f.a}</div>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ===== CTA SECTION ===== */}
-        <section className="py-24 px-4" style={{ backgroundColor: '#0D4A3A' }}>
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">جاهز لتحويل عملك إلى تجربة رقمية؟</h2>
-            <p className="text-lg mb-8" style={{ color: '#9DC4AC' }}>ابدأ بخطة مجانية، وافتح متجرك اليوم. بلا بطاقة ائتمان وبلا التزام.</p>
-            <div className="flex flex-wrap gap-4 justify-center">
-              {/* «ابدأ مجاناً» بلا معنى لمن هو مشترك أصلاً */}
-              {isAuthenticated && dashboardPath ? (
-                <Link to={dashboardPath} className="px-8 py-3 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2" style={{ background: '#C8E235', color: '#082E24' }}>
-                  <IoGrid size={18} />
-                  الذهاب إلى لوحة التحكم
-                </Link>
-              ) : (
-                <>
-                  <Link to="/register" className="px-8 py-3 rounded-xl font-semibold transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }}>
-                    ابدأ الآن مجاناً
-                  </Link>
-                  <Link to="/user/login" className="px-8 py-3 rounded-xl font-semibold transition-all" style={{ border: '1px solid rgba(200,226,53,0.5)', color: '#C8E235' }}>
-                    تسجيل الدخول
-                  </Link>
-                </>
-              )}
+        {/* ===== الدعوة الختامية ===== */}
+        <section className="ss-section" style={{ paddingTop: 0 }}>
+          <div className="ss-container">
+            <div className="ss-cta ss-reveal">
+              <BrandMark color="#cdef7c" size={44} />
+              <h2 className="ss-h2">جاهز لنقل تجارتك إلى الإنترنت؟</h2>
+              <p className="ss-lead" style={{ maxWidth: 560 }}>ابدأ بخطة مجانية وافتح متجرك اليوم. بلا بطاقة ائتمان وبلا التزام.</p>
+              <div className="ss-hero-actions" style={{ justifyContent: 'center' }}>
+                {isAuthenticated && dashboardPath ? (
+                  <Link to={dashboardPath} className="ss-btn ss-btn-primary"><IoGrid /> الذهاب إلى لوحتي</Link>
+                ) : (
+                  <>
+                    <Link to="/register" className="ss-btn ss-btn-primary">ابدأ الآن مجاناً <IoArrowBack /></Link>
+                    <Link to="/contact" className="ss-btn ss-btn-ghost">تحدّث معنا</Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </section>
+      </main>
 
-        {/* ===== FOOTER ===== */}
-        <footer className="py-12 px-4 border-t" style={{ backgroundColor: '#082E24', borderColor: 'rgba(200,226,53,0.1)' }}>
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#C8E235' }}>
-                    <span className="font-bold text-sm" style={{ color: '#082E24' }}>ش</span>
-                  </div>
-                  <span className="font-bold">شام ستورز</span>
-                </div>
-                <p className="text-sm" style={{ color: '#9DC4AC' }}>الحل الرقمي المتكامل للمطاعم والمتاجر</p>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-4">المنتج</h4>
-                <ul className="space-y-2 text-sm" style={{ color: '#9DC4AC' }}>
-                  <li><button onClick={() => scrollToSection('features')}>المميزات</button></li>
-                  <li><button onClick={() => scrollToSection('faq')}>الأسئلة الشائعة</button></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-4">الدعم</h4>
-                <ul className="space-y-2 text-sm" style={{ color: '#9DC4AC' }}>
-                  <li><Link to="/contact">تواصل معنا</Link></li>
-                  <li><Link to="/faq">الأسئلة الشائعة</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-4">القانوني</h4>
-                <ul className="space-y-2 text-sm" style={{ color: '#9DC4AC' }}>
-                  <li><Link to="/terms">شروط الاستخدام</Link></li>
-                  <li><Link to="/privacy">سياسة الخصوصية</Link></li>
-                  <li><Link to="/about">من نحن</Link></li>
-                </ul>
-              </div>
+      {/* ===== التذييل ===== */}
+      <footer className="ss-footer">
+        <div className="ss-container">
+          <div className="ss-footer-grid">
+            <div style={{ display: 'grid', gap: 14, alignContent: 'start', gridColumn: 'span 2' }}>
+              <BrandLogo tone="light" />
+              <p style={{ maxWidth: 360, lineHeight: 1.9 }}>منصة متكاملة للتجارة الإلكترونية والمطاعم — صُمّمت للسوق السوري.</p>
             </div>
-            <div className="text-center pt-8 border-t" style={{ borderColor: 'rgba(200,226,53,0.1)' }}>
-              <p className="text-sm" style={{ color: '#9DC4AC' }}>© {new Date().getFullYear()} شام ستورز. جميع الحقوق محفوظة.</p>
+            <div>
+              <h4>المنتج</h4>
+              <ul>
+                <li><button onClick={() => go('solutions')}>الحلول</button></li>
+                <li><button onClick={() => go('templates')}>القوالب</button></li>
+                <li><button onClick={() => go('pricing')}>الأسعار</button></li>
+              </ul>
+            </div>
+            <div>
+              <h4>الدعم</h4>
+              <ul>
+                <li><Link to="/contact">تواصل معنا</Link></li>
+                <li><Link to="/faq">الأسئلة الشائعة</Link></li>
+                <li><Link to="/about">من نحن</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4>القانوني</h4>
+              <ul>
+                <li><Link to="/terms">شروط الاستخدام</Link></li>
+                <li><Link to="/privacy">سياسة الخصوصية</Link></li>
+              </ul>
             </div>
           </div>
-        </footer>
+          <div className="ss-footer-bottom">
+            <span>© {new Date().getFullYear()} شام ستورز. جميع الحقوق محفوظة.</span>
+            <span className="latin">Sham Stores</span>
+          </div>
+        </div>
+      </footer>
 
-        {/* Scroll to Top */}
-        {showScrollTop && (
-          <button onClick={scrollToTop} className="fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105" style={{ background: '#C8E235', color: '#082E24' }} aria-label="العودة إلى أعلى الصفحة">
-            <IoArrowUp size={22} />
-          </button>
-        )}
+      {showTop && (
+        <button className="ss-to-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="العودة إلى أعلى الصفحة">
+          <IoArrowUp size={22} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+/** حاسوبٌ عليه لوحة التاجر وجوالٌ عليه تتبّع الطلب — يتكيّفان مع العرض. */
+const DashboardShowcase: React.FC = () => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [w, setW] = useState(640);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((e) => setW(Math.round(e[0].contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const phone = Math.round(Math.min(200, Math.max(120, w * 0.28)));
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div style={{ paddingInlineEnd: phone * 0.35 }}>
+        <LaptopFrame width={Math.max(280, w - phone * 0.35)} label="لوحة تحكم التاجر">
+          <DashboardScreen />
+        </LaptopFrame>
       </div>
-    </>
+      <div style={{ position: 'absolute', insetInlineEnd: 0, bottom: -20 }}>
+        <PhoneFrame width={phone} label="تتبّع الطلب للزبون">
+          <TrackingScreen />
+        </PhoneFrame>
+      </div>
+    </div>
   );
 };
 

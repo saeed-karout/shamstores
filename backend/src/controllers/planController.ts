@@ -2,6 +2,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { withDisplayPrices } from '../services/planPricing.service';
 import { notifyAdmins } from '../services/notification.service';
 
 // دالة مساعدة للحصول على businessId (مطعم أو متجر)
@@ -37,7 +38,9 @@ export const getPlans = async (req: AuthRequest, res: Response): Promise<void> =
       orderBy: { price: 'asc' }
     });
 
-    res.json({ success: true, data: plans });
+    // `pricing` بالليرة بسعر الصرف الموحّد — صفحة الأسعار العامّة تعرضه
+    // كما تراه لوحة التاجر، بلا نسخةٍ ثانية من حساب التقريب في الواجهة.
+    res.json({ success: true, data: await withDisplayPrices(plans) });
   } catch (error) {
     console.error('خطأ في جلب الخطط:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب البيانات' });

@@ -305,17 +305,20 @@ textarea:focus-visible,
    الحشوة 24 (128 موضعاً) والشبكات الثابتة (6). أما شبكات auto-fill
    (84 موضعاً) فمتجاوبة أصلاً ولا تُمَسّ. */
 
+/* `:not(.ss *)`: نظام الهوية (`styles/brand.css`) متجاوبٌ بفئاته، وشاشاتُ
+   الأجهزة التوضيحية فيه تُرسم بمقاسٍ ثابت ثم تُصغَّر — فرضُ عمودٍ واحد
+   عليها كان يكدّس مؤشّرات لوحة التاجر فوق بعضها داخل الحاسوب المرسوم. */
 @media (max-width: 768px) {
   /* الحشوة الكبيرة تلتهم ثُمن شاشة الهاتف */
-  [style*="padding: 24px"] { padding: 14px !important; }
-  [style*="padding: 20px"] { padding: 13px !important; }
+  [style*="padding: 24px"]:not(.ss *) { padding: 14px !important; }
+  [style*="padding: 20px"]:not(.ss *) { padding: 13px !important; }
 
   /* شبكات بأعمدة ثابتة تنهار: عمودان بدل أربعة، لا عمود واحد — البطاقات
      الصغيرة (إحصاءات مثلاً) تبدو ضائعة وحدها في سطر كامل. */
-  [style*="repeat(3,"],
-  [style*="repeat(4,"],
-  [style*="repeat(5,"],
-  [style*="repeat(6,"] {
+  [style*="repeat(3,"]:not(.ss *),
+  [style*="repeat(4,"]:not(.ss *),
+  [style*="repeat(5,"]:not(.ss *),
+  [style*="repeat(6,"]:not(.ss *) {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
@@ -337,15 +340,15 @@ textarea:focus-visible,
 @media (max-width: 480px) {
   /* على الشاشات الأضيق: عمود واحد. عمودان بعرض 160 بكسل لا يتّسعان لرقم
      وعنوانه معاً. */
-  [style*="repeat(2,"],
-  [style*="repeat(3,"],
-  [style*="repeat(4,"],
-  [style*="repeat(5,"],
-  [style*="repeat(6,"] {
+  [style*="repeat(2,"]:not(.ss *),
+  [style*="repeat(3,"]:not(.ss *),
+  [style*="repeat(4,"]:not(.ss *),
+  [style*="repeat(5,"]:not(.ss *),
+  [style*="repeat(6,"]:not(.ss *) {
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
-  [style*="padding: 24px"] { padding: 11px !important; }
+  [style*="padding: 24px"]:not(.ss *) { padding: 11px !important; }
 }
 
 /* ============================================================
