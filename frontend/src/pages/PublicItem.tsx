@@ -36,10 +36,11 @@ const C = {
 const PublicItem: React.FC = () => {
   const { slug, itemId } = useParams<{ slug: string; itemId: string }>();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
 
   const [item, setItem] = useState<MenuItem | null>(null);
+  // سلّة مطعم هذا الصنف — لا سلّة مشتركة للمنصّة
+  const { addToCart } = useCart((item as any)?.restaurantId || (item as any)?.restaurant?.id || null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>('');

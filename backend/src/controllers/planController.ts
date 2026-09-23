@@ -408,7 +408,7 @@ export const createUpgradeRequest = async (req: AuthRequest, res: Response): Pro
       event: 'upgrade_request.created',
       title: 'طلب ترقية جديد',
       message: `${requester?.name || requester?.email || 'مستخدم'} يطلب الترقية إلى ${plan?.name || 'خطة أعلى'}`,
-      link: '/admin/upgrade-requests',
+      link: '/admin/plans', // طلبات الترقية تُدار في صفحة الخطط — لا مسار باسمها
       entityId: upgradeRequest.id
     });
 

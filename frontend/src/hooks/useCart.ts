@@ -2,43 +2,59 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { CartItem } from '../services/types';
 
-export const useCart = () => {
+const LEGACY_KEY = 'cart';
+const keyFor = (scope: string) => `cart:${scope}`;
+
+/**
+ * سلّة لكلّ نشاط.
+ *
+ * كانت مفتاحاً واحداً `cart` للمنصّة كلّها: زبونٌ أضاف ساعةً من متجرٍ ثم
+ * فتح مطعماً يجد الساعة في سلّة المطعم، ويُرسلها معه فيرفضها الخادم (ليست
+ * من أصنافه) أو يضيع الطلب. `scope` معرّف النشاط؛ قبل معرفته السلّة فارغة
+ * ولا تُحفظ، كي لا تُكتب سلّةٌ فارغة فوق سلّة النشاط قبل تحميلها.
+ */
+export const useCart = (scope?: string | null) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const loadCart = () => {
-      try {
-        const savedCart = localStorage.getItem('cart');
-        console.log('Loading cart from localStorage:', savedCart);
-        
-        if (savedCart) {
-          const parsedCart = JSON.parse(savedCart);
-          const validatedCart = parsedCart.map((item: any) => ({
-            ...item,
-            originalPrice: Number(item.price) || 0,
-            price: Number(item.price) || 0,
-            quantity: Number(item.quantity) || 1
-          }));
-          console.log('Validated cart:', validatedCart);
-          setCart(validatedCart);
+    setIsInitialized(false);
+    setCart([]);
+    if (!scope) return;
+    try {
+      // السلّة المشتركة القديمة لا يُعرف لأيّ نشاطٍ أصنافها — تُترك
+      localStorage.removeItem(LEGACY_KEY);
+      const savedCart = localStorage.getItem(keyFor(scope));
+      if (savedCart) {
+        const parsedCart = JSON.parse(savedCart);
+        if (Array.isArray(parsedCart)) {
+          setCart(
+            parsedCart.map((item: any) => ({
+              ...item,
+              // كان يُستبدل بالسعر النهائي عند كلّ تحميل، فيضيع السعر قبل الخصم
+              originalPrice: Number(item.originalPrice ?? item.price) || 0,
+              price: Number(item.price) || 0,
+              quantity: Number(item.quantity) || 1
+            }))
+          );
         }
-      } catch (error) {
-        console.error('Error loading cart:', error);
-      } finally {
-        setIsInitialized(true);
       }
-    };
-
-    loadCart();
-  }, []);
+    } catch (error) {
+      console.error('Error loading cart:', error);
+    } finally {
+      setIsInitialized(true);
+    }
+  }, [scope]);
 
   useEffect(() => {
-    if (isInitialized) {
-      console.log('Saving cart to localStorage:', cart);
-      localStorage.setItem('cart', JSON.stringify(cart));
+    if (!isInitialized || !scope) return;
+    try {
+      if (cart.length === 0) localStorage.removeItem(keyFor(scope));
+      else localStorage.setItem(keyFor(scope), JSON.stringify(cart));
+    } catch {
+      // التخزين ممنوع (تصفّح خاصّ) — السلّة تعمل في الذاكرة
     }
-  }, [cart, isInitialized]);
+  }, [cart, isInitialized, scope]);
 
   /**
    * هوية سطر السلة.
@@ -100,7 +116,6 @@ export const useCart = () => {
 
   const clearCart = () => {
     setCart([]);
-    localStorage.removeItem('cart');
     toast.success('تم إفراغ السلة');
   };
 

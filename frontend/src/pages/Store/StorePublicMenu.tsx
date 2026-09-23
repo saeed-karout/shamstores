@@ -42,7 +42,7 @@ import OrderTrackingModal from '@/components/OrderTrackingModal';
 
 import ShopLayout from '@/components/storefront/ShopLayout';
 import ProductGridCard, { StorefrontProduct } from '@/components/storefront/ProductGridCard';
-import CartSheet, { StorefrontOrderType } from '@/components/storefront/CartSheet';
+import CartSheet, { StorefrontOrderType, StorefrontPaymentMethod } from '@/components/storefront/CartSheet';
 import BottomCartBar from '@/components/storefront/BottomCartBar';
 import BottomSheet from '@/components/storefront/BottomSheet';
 import ProductOptionsSheet, {
@@ -130,7 +130,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const { slug: urlSlug } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
-  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart();
+  // سلّة هذا المتجر وحده — المعرّف من الموجّه إن مرّره، وإلا حين تُحمَّل بياناته
+  const [cartScope, setCartScope] = useState<string | null>(propBusinessId || null);
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart(cartScope);
   const { favorites, toggleFavorite } = useFavorites();
   const { setThemeColors } = useTheme();
 
@@ -157,6 +159,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [optionsProduct, setOptionsProduct] = useState<StorefrontProduct | null>(null);
   const [accountOpen, setAccountOpen] = useState(false);
   const [orderType, setOrderType] = useState<StorefrontOrderType>('delivery');
+  // طريقة الدفع — كانت ترسل 'cash' حكماً، فشام كاش الذي يفعّله التاجر
+  // لا يراه زبونٌ أبداً. يُعاد إلى النقد إن أطفأه التاجر بعد الاختيار.
+  const [paymentMethod, setPaymentMethod] = useState<StorefrontPaymentMethod>('cash');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [governorate, setGovernorate] = useState('');
@@ -232,6 +237,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
         if (cancelled) return;
         if (!business?.id) throw new Error('بيانات غير صالحة');
+        setCartScope(business.id);
 
         const merged = {
           ...business,
@@ -874,7 +880,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         discountAmount,
         couponCode: couponCode || undefined,
         total,
-        paymentMethod: 'cash',
+        paymentMethod: (store as any)?.paymentOptions?.methods?.includes(paymentMethod) ? paymentMethod : 'cash',
         orderType,
         deliveryAddress:
           orderType === 'delivery' ? deliveryLocation?.address || address.trim() : undefined,
@@ -1421,6 +1427,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           setCouponCode('');
           setDiscountAmount(0);
         }}
+        paymentOptions={(store as any)?.paymentOptions}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
         submitting={submitting}
         onSubmit={submitOrder}
       />

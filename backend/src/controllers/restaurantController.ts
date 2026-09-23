@@ -2,6 +2,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { sanitizeStaffPermissions } from '../config/staffPermissions';
 import { validatePaymentSettings } from '../services/payment.service';
 import { validateLanguageUpdate } from '../services/language.service';
 import { validateCurrencyUpdate, resolveCurrencySettings } from '../services/currency.service';
@@ -1051,7 +1052,7 @@ export const addStaff = async (
         phone: phone || null,
         role: 'staff',
         restaurantId,
-        permissions: permissions || {},
+        permissions: sanitizeStaffPermissions(permissions),
         isActive: true,
         isEmailVerified: true
       },
@@ -1120,7 +1121,7 @@ export const updateStaff = async (
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (phone !== undefined) updateData.phone = phone;
-    if (permissions) updateData.permissions = permissions;
+    if (permissions) updateData.permissions = sanitizeStaffPermissions(permissions);
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const updatedStaff = await prisma.user.update({

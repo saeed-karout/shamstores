@@ -1,4 +1,10 @@
 // pages/Store/StoreDriversPage.tsx
+//
+// إدارة سائقي النشاط — للمتجر **والمطعم** معاً (`/drivers` و`/store/drivers`).
+// المسارات كلّها `/delivery/drivers*`: الخادم يستنتج النشاط من الرمز ويحصر
+// كلّ عملية في سائقيه. كانت التفعيل والحذف يذهبان إلى `/admin/drivers/*`
+// وهي للسوبر أدمن وحده، فيفشلان دائماً للتاجر؛ وكانت صفحة المطعم نسخةً من
+// لوحة السائق نفسه (قبول طلبات وإرسال موقع) لا إدارةً للسائقين.
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -47,7 +53,7 @@ const StoreDriversPage: React.FC = () => {
 
   const fetchDrivers = useCallback(async () => {
     try {
-      const res = await api.get('/store/drivers');
+      const res = await api.get('/delivery/drivers');
       // `api.get` يفكّ التغليف أصلاً ويعيد المصفوفة. وقراءة `res.data` منها
       // تعطي `undefined` دائماً، فتسقط إلى `[]` — الصفحة كانت فارغة مهما
       // كان عدد السائقين، لا لعلّة في الخادم بل لفكّ تغليفٍ مرّتين.
@@ -72,7 +78,7 @@ const StoreDriversPage: React.FC = () => {
     }
     setSaving(true);
     try {
-      await api.post('/store/drivers', form);
+      await api.post('/delivery/drivers', form);
       toast.success('تم إضافة السائق بنجاح');
       setShowModal(false);
       setForm(emptyForm);
@@ -86,7 +92,7 @@ const StoreDriversPage: React.FC = () => {
 
   const toggleStatus = async (driver: Driver) => {
     try {
-      await api.patch(`/admin/drivers/${driver.id}/toggle`);
+      await api.patch(`/delivery/drivers/${driver.id}/status`, { isActive: !driver.isActive });
       toast.success(driver.isActive ? 'تم تعطيل السائق' : 'تم تفعيل السائق');
       await fetchDrivers();
     } catch (error) {
@@ -98,7 +104,7 @@ const StoreDriversPage: React.FC = () => {
     if (!window.confirm('هل أنت متأكد من حذف هذا السائق؟')) return;
     setDeletingId(id);
     try {
-      await api.delete(`/admin/drivers/${id}`);
+      await api.delete(`/delivery/drivers/${id}`);
       toast.success('تم حذف السائق');
       setDrivers(prev => prev.filter(d => d.id !== id));
     } catch (error) {

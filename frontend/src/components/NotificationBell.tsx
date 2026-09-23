@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { resolveNotificationLink } from '@/utils/notificationLink';
 import {
   IoNotificationsOutline,
   IoCheckmarkDoneOutline,
@@ -131,7 +132,8 @@ const NotificationBell: React.FC<{ colors: Palette }> = ({ colors: C }) => {
       setUnreadCount((count) => Math.max(0, count - 1));
       try { await api.patch(`/notifications/${row.id}/read`, {}); } catch { /* صامت */ }
     }
-    if (row.link) { setOpen(false); navigate(row.link); }
+    const destination = resolveNotificationLink(row.link, (row as any).type);
+    if (destination) { setOpen(false); navigate(destination); }
   };
 
   const markAll = async () => {

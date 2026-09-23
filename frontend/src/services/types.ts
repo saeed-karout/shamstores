@@ -4,6 +4,7 @@ export interface User {
   email: string;
   role: 'super_admin' | 'owner' | 'staff' | 'user' | 'delivery_driver';
   restaurantId?: string;
+  storeId?: string;
   phone?: string;
   whatsapp?: string;
   isActive: boolean;

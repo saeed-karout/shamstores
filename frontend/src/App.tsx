@@ -184,15 +184,27 @@ const DashboardRouter: React.FC = () => {
         </div>
         <h2 className="text-2xl font-bold mb-2">مرحباً بك!</h2>
         <p className="text-gray-600 mb-6">
-          يبدو أنك لم تقم بإنشاء مطعم أو متجر بعد. يرجى إنشاء مطعم أو متجر للبدء.
+          حسابك غير مرتبط بمطعم أو متجر بعد. راسلنا وسنربطه لك.
         </p>
+        {/* كان هنا رابطا «إنشاء مطعم/متجر» إلى `/register` و`/register-store`:
+            الأوّل يُنشئ حساباً **ثانياً** لمن سجّل دخوله فعلاً، والثاني بلا
+            مسار أصلاً. ربطُ نشاطٍ بحسابٍ قائم عملُ الأدمن
+            (`POST /admin/users/:id/business`) فالطريق إليه هو التواصل. */}
         <div className="space-y-3">
-          <Link to="/register" className="block w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-xl">🍽️ إنشاء مطعم</Link>
-          <Link to="/register-store" className="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl">🛍️ إنشاء متجر</Link>
+          <Link to="/contact" className="block w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl">تواصل معنا</Link>
         </div>
       </div>
     </div>
   );
+};
+
+// ==================== لوحة المالك أو الموظّف ====================
+// مسارٌ واحد لـ `/dashboard`: كان معرَّفاً مرّتين (للمالك ثم للموظّف)،
+// فيطابق الأوّلُ دائماً، وحارسُه يردّ الموظّف إلى `/dashboard` — أي إليه
+// نفسه، حلقةً لا تنتهي.
+const DashboardHome: React.FC = () => {
+  const { user } = useAuth();
+  return user?.role === 'staff' ? <StaffDashboard /> : <DashboardRouter />;
 };
 
 // ==================== صفحة 404 ====================
@@ -288,14 +300,17 @@ const MainApp: React.FC = () => {
         {/* ==================== الحساب — لكل من سجّل دخوله ==================== */}
         {/* بلا allowedRoles عمداً: الزبون يملك حساباً كالمالك، وحصرُ الصفحة
             بدور واحد كان سيحرم أكثر المستخدمين عدداً من تعديل بياناتهم. */}
-        <Route element={<ProtectedRoute />}>
+        <Route element={<ProtectedRoute redirectTo="/user/login" />}>
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
-        {/* ==================== مسارات المالكين (Owner) - يجب أن تأتي أولاً ==================== */}
-        <Route element={<ProtectedRoute allowedRoles={['owner']} />}>
+        {/* ==================== مسارات المالك وموظّف النشاط ==================== */}
+        {/* مجموعةٌ واحدة للدورين: الموظّف يصل إلى شاشات مالكه نفسها، والحارس
+            يحصره فيما منحه المالك (`utils/staffAccess.ts`) فيردّه عمّا سواه.
+            كانت للموظّف مجموعةٌ ثانية بالمسارات نفسها لا تُطابَق أبداً. */}
+        <Route element={<ProtectedRoute allowedRoles={['owner', 'staff']} />}>
           <Route element={<Layout />}>
-            <Route path="/dashboard" element={<DashboardRouter />} />
+            <Route path="/dashboard" element={<DashboardHome />} />
             
             {/* مسارات المطعم */}
             <Route path="/menu" element={<RestaurantMenuPage />} />
@@ -348,29 +363,10 @@ const MainApp: React.FC = () => {
           </Route>
         </Route>
 
-        {/* ==================== مسارات الموظفين (Staff) ==================== */}
-        <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
-          <Route element={<Layout />}>
-            <Route path="/dashboard" element={<StaffDashboard />} />
-            <Route path="/menu" element={<RestaurantMenuPage />} />
-            <Route path="/orders" element={<RestaurantOrdersPage />} />
-            <Route path="/tables" element={<RestaurantTablesPage />} />
-            <Route path="/delivery" element={<RestaurantDeliveryDashboard />} />
-            
-            {/* إعادة توجيه الصفحات المحظورة للموظفين */}
-            <Route path="/settings" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/staff" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/analytics" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/plans" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/drivers" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/qr-codes" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/coupons" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/marketing" element={<Navigate to="/dashboard" replace />} />
-          </Route>
-        </Route>
-
         {/* ==================== مسارات السوبر أدمن ==================== */}
-        <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+        {/* موظّف المنصّة هنا أيضاً، والحارس يحصره في الصفحات التي يفتحها له
+            الخادم؛ موظّف النشاط يُردّ إلى لوحته. */}
+        <Route element={<ProtectedRoute allowedRoles={['super_admin', 'staff']} />}>
           <Route element={<Layout />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/restaurants" element={<AdminRestaurants />} />
@@ -401,7 +397,7 @@ const MainApp: React.FC = () => {
         </Route>
 
         {/* ==================== مسارات مندوبي التوصيل ==================== */}
-        <Route element={<ProtectedRoute allowedRoles={['delivery_driver']} />}>
+        <Route element={<ProtectedRoute allowedRoles={['delivery_driver']} redirectTo="/delivery/login" />}>
           <Route path="/driver/dashboard" element={<DriverDashboard />} />
         </Route>
 

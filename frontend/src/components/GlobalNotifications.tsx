@@ -12,23 +12,18 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useSocket, NotificationEvent } from '@/hooks/useSocket';
+import { resolveNotificationLink } from '@/utils/notificationLink';
 
 interface Props {
   token: string | null;
 }
-
-/** إشعارات لها وجهة معروفة — النقر عليها ينقل المستخدم إليها */
-const LINK_BY_TYPE: Record<string, string> = {
-  upgrade_request: '/plans',
-  order: '/orders'
-};
 
 const GlobalNotifications: React.FC<Props> = ({ token }) => {
   const navigate = useNavigate();
 
   const handleNotification = useCallback(
     (data: NotificationEvent & { link?: string | null }) => {
-      const destination = data.link || LINK_BY_TYPE[data.type] || null;
+      const destination = resolveNotificationLink(data.link, data.type);
 
       // يوقظ الجرس ليرفع عدّاده فوراً بلا انتظار فتح اللوحة
       window.dispatchEvent(new CustomEvent('app:notification', { detail: data }));

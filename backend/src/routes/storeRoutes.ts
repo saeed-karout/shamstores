@@ -1,7 +1,7 @@
 // backend/src/routes/storeRoutes.ts
 
 import { Router } from 'express';
-import { authenticate, authorizeOwner } from '../middleware/auth';
+import { authenticate, authorizeOwner, requireStaffPermission } from '../middleware/auth';
 import { checkPlanFeature, requirePaidPlanForStaff } from '../middleware/checkPlan';
 import { uploadSingleImage } from '../middleware/upload';
 import {
@@ -46,6 +46,7 @@ import {
   updateSubdomain,
   // ✅ دوال الموظفين
   getStoreStaff,
+  addStoreStaff,
   getStoreStaffDetails,
   updateStoreStaff,
   toggleStoreStaffStatus,
@@ -79,6 +80,35 @@ router.get('/public/:slug/related-products/:productId', getPublicRelatedProducts
 // ==================== مسارات المصادقة ====================
 // جميع المسارات بعد هذا الخط تحتاج مصادقة
 router.use(authenticate);
+
+// ==================== ما يصله موظّف المتجر ====================
+// **قبل `authorizeOwner`** لأنه يُغلق كلّ ما بعده على المالك: كانت شاشات
+// موظّف المتجر كلّها تتلقّى ٤٠٣، فلا عمل له في لوحةٍ دخلها. هنا فقط ما
+// تحتاجه شاشاته الثلاث، وكلٌّ بصلاحيته؛ المالك يمرّ من الحارس نفسه.
+// **وقيود الخطة مكرّرة هنا عمداً:** `router.use('/orders', …)` أدناه لا
+// يبلغه طلبٌ أُجيب هنا.
+// ملفّ المتجر قراءةً: شاشة المنتجات تنتظر معرّفه لتجلب شيئاً، فبدونه
+// تبقى على «جاري التحميل» للأبد. التعديل (`PUT`) للمالك أدناه.
+router.get('/profile', requireStaffPermission('viewProducts', 'viewOrders', 'viewInventory'), getProfile);
+router.get('/products', requireStaffPermission('viewProducts', 'viewInventory'), getProducts);
+router.get('/categories', requireStaffPermission('viewProducts'), getCategories);
+router.post('/products', requireStaffPermission('updateProducts'), createProduct);
+router.put('/products/:id', requireStaffPermission('updateProducts'), updateProduct);
+router.patch('/products/:id', requireStaffPermission('updateProducts'), updateProduct);
+router.get('/orders', checkPlanFeature('online_orders'), requireStaffPermission('viewOrders'), getStoreOrders);
+// `stats` و`top-products` للمالك وحده وتُعرَّف أدناه — `next('route')` يتخطّى
+// هذا التعريف كلّه فلا يلتقطهما `:id` معرّفَ طلب.
+router.get(
+  '/orders/:id',
+  (req, _res, next) => (['stats', 'top-products'].includes(req.params.id) ? next('route') : next()),
+  checkPlanFeature('online_orders'),
+  requireStaffPermission('viewOrders'),
+  getStoreOrderById
+);
+router.patch('/orders/:id/status', checkPlanFeature('online_orders'), requireStaffPermission('updateOrderStatus'), updateStoreOrderStatus);
+router.get('/inventory/stats', checkPlanFeature('inventory'), requireStaffPermission('viewInventory'), getInventoryStats);
+router.patch('/inventory/:productId', checkPlanFeature('inventory'), requireStaffPermission('updateInventory'), updateInventory);
+
 router.use(authorizeOwner);
 
 // ==================== قيود الخطة حسب الأقسام ====================
@@ -150,6 +180,7 @@ router.delete('/categories/:id', deleteCategory);
 // ==================== الموظفين ====================
 router.use('/staff', requirePaidPlanForStaff('store'));
 router.get('/staff', getStoreStaff);
+router.post('/staff', addStoreStaff);
 router.get('/staff/:staffId', getStoreStaffDetails);
 router.put('/staff/:staffId', updateStoreStaff);
 router.patch('/staff/:staffId/status', toggleStoreStaffStatus);

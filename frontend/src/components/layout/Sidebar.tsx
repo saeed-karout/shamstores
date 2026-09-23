@@ -4,6 +4,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
+import { staffAreas } from '../../utils/staffAccess';
 import {
   IoHome,
   IoRestaurant,
@@ -32,7 +33,8 @@ import {
   IoTrendingUp,
   IoCheckmarkCircle,
   IoWarning,
-  IoDocumentText,
+  IoCube,
+  IoLayers,
   IoNotifications,
   IoCard,
   IoFlash
@@ -118,23 +120,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   };
 
   // ==================== قائمة موظف المنصة ====================
-  const getPlatformStaffMenuItems = () => {
-    const sp = (user as any)?.permissions || {};
-    const items: any[] = [{ path: '/admin', icon: IoHome, label: 'الرئيسية' }];
-    
-    if (sp.canManageRestaurants) items.push({ path: '/admin/restaurants', icon: IoRestaurant, label: 'المطاعم' });
-    if (sp.canManageStores) items.push({ path: '/admin/stores', icon: IoStorefront, label: 'المتاجر' });
-    if (sp.canManageUsers) items.push({ path: '/admin/users', icon: IoPeople, label: 'المستخدمين' });
-    if (sp.canManageDrivers) items.push({ path: '/admin/drivers', icon: IoCar, label: 'السائقين' });
-    if (sp.canManagePlans) items.push({ path: '/admin/plans', icon: IoRocket, label: 'الخطط' });
-    if (sp.canManageSettings) items.push({ path: '/admin/platform-settings', icon: IoSettings, label: 'إعدادات المنصة' });
-    if (sp.canViewReports) items.push({ path: '/admin/reports', icon: IoDocumentText, label: 'التقارير' });
-    items.push({ path: '/admin/orders', icon: IoReceipt, label: 'الطلبات' });
-    items.push({ path: '/admin/qr-codes', icon: IoQrCode, label: 'رموز QR' });
-    items.push({ path: '/admin/advertisements', icon: IoMegaphone, label: 'الإعلانات' });
-    
-    return items;
+  // ما يفتحه الخادم لموظّف المنصّة فعلاً (قراءةٌ فقط). كانت هنا روابط
+  // `/admin` (إحصاءات للسوبر أدمن وحده) و`/admin/reports` (بلا مسار أصلاً)
+  // والخطط والإعدادات والإعلانات — كلّها ٤٠٣ أو ٤٠٤ لمن يضغطها.
+  const PLATFORM_ICONS: Record<string, any> = {
+    '/admin/restaurants': IoRestaurant,
+    '/admin/stores': IoStorefront,
+    '/admin/users': IoPeople,
+    '/admin/drivers': IoCar,
+    '/admin/orders': IoReceipt,
   };
+  const getPlatformStaffMenuItems = () =>
+    staffAreas(user).map((area) => ({ path: area.path, icon: PLATFORM_ICONS[area.path] || IoHome, label: area.label }));
 
   // ==================== قائمة مالك المطعم ====================
   const getRestaurantOwnerMenuItems = () => {
@@ -200,16 +197,21 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   };
 
   // ==================== قائمة موظف مطعم/متجر ====================
-  const getStaffMenuItems = () => {
-    const items: any[] = [
-      { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
-    ];
-    if (permissions.canViewMenu) items.push({ path: '/menu', icon: IoFastFood, label: 'القائمة' });
-    if (permissions.canViewOrders) items.push({ path: '/orders', icon: IoReceipt, label: 'الطلبات' });
-    if (permissions.canViewTables) items.push({ path: '/tables', icon: IoRestaurant, label: 'الطاولات' });
-    if (permissions.canViewDelivery) items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
-    return items;
+  // صلاحيات الموظّف كما منحها المالك — لا صلاحيات الخطة كما كان.
+  const STAFF_ICONS: Record<string, any> = {
+    '/menu': IoFastFood,
+    '/orders': IoReceipt,
+    '/tables': IoRestaurant,
+    '/delivery': IoNavigate,
+    '/store/products': IoCube,
+    '/store/orders': IoReceipt,
+    '/store/inventory': IoLayers,
   };
+  const getStaffMenuItems = () => [
+    { path: '/dashboard', icon: IoHome, label: 'الرئيسية' },
+    ...staffAreas(user).map((area) => ({ path: area.path, icon: STAFF_ICONS[area.path] || IoReceipt, label: area.label })),
+    { path: '/profile', icon: IoPerson, label: 'حسابي' },
+  ];
 
   // تحديد القائمة حسب الدور
   const getMenuItems = () => {

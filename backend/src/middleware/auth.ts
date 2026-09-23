@@ -3,6 +3,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest, UserPayload } from '../types';
 import { verifyToken } from '../config/auth';
 import prisma from '../services/prisma';
+import { resolveStaffPermissions, StaffPermissionKey } from '../config/staffPermissions';
 
 // ==================== المصادقة الأساسية ====================
 
@@ -169,6 +170,36 @@ export const authorizeStaff = (
     return;
   }
   next();
+};
+
+/**
+ * المالك والسوبر أدمن يمرّان؛ وموظّف النشاط يمرّ إن ملك إحدى الصلاحيات.
+ *
+ * بديلُ `authorizeStaff` حيث تعني الشاشة شيئاً محدّداً: ذاك يسمح لأيّ موظّف
+ * بأيّ شيء، فكانت مربّعات الصلاحيات في شاشة الموظّفين زينةً لا أثر لها.
+ * موظّف المنصّة (بلا نشاط) لا يمرّ — لا نشاط له تُقرأ بياناته.
+ */
+export const requireStaffPermission = (...anyOf: StaffPermissionKey[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    const user = req.user;
+    if (!user) {
+      res.status(401).json({ success: false, error: 'غير مصرح' });
+      return;
+    }
+    if (user.role === 'super_admin') return next();
+    if (user.role === 'owner') {
+      if (!user.restaurantId && !user.storeId) {
+        res.status(403).json({ success: false, error: 'لا يوجد مطعم أو متجر مرتبط بحسابك' });
+        return;
+      }
+      return next();
+    }
+    if (user.role === 'staff' && (user.restaurantId || user.storeId)) {
+      const effective = resolveStaffPermissions(user.permissions);
+      if (anyOf.some((key) => effective[key])) return next();
+    }
+    res.status(403).json({ success: false, error: 'لا تملك صلاحية الوصول' });
+  };
 };
 
 export const authorizeUser = (

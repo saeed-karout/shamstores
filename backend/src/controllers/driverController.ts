@@ -324,6 +324,10 @@ export const updateDriverStatus = async (
         where.restaurantId = userRestaurantId;
       } else if (userStoreId) {
         where.storeId = userStoreId;
+      } else {
+        // بلا نشاط يبقى الشرط `{ id }` وحده — أي سائقٍ في المنصّة
+        res.status(403).json({ success: false, error: 'لا يوجد نشاط تجاري مرتبط بحسابك' });
+        return;
       }
     }
 
@@ -384,6 +388,10 @@ export const toggleDriverStatus = async (
         where.restaurantId = userRestaurantId;
       } else if (userStoreId) {
         where.storeId = userStoreId;
+      } else {
+        // بلا نشاط يبقى الشرط `{ id }` وحده — أي سائقٍ في المنصّة
+        res.status(403).json({ success: false, error: 'لا يوجد نشاط تجاري مرتبط بحسابك' });
+        return;
       }
     }
 
@@ -444,6 +452,10 @@ export const deleteDriver = async (
         where.restaurantId = userRestaurantId;
       } else if (userStoreId) {
         where.storeId = userStoreId;
+      } else {
+        // بلا نشاط يبقى الشرط `{ id }` وحده — أي سائقٍ في المنصّة
+        res.status(403).json({ success: false, error: 'لا يوجد نشاط تجاري مرتبط بحسابك' });
+        return;
       }
     }
 
@@ -504,6 +516,10 @@ export const resetDriverPassword = async (
         where.restaurantId = userRestaurantId;
       } else if (userStoreId) {
         where.storeId = userStoreId;
+      } else {
+        // بلا نشاط يبقى الشرط `{ id }` وحده — أي سائقٍ في المنصّة
+        res.status(403).json({ success: false, error: 'لا يوجد نشاط تجاري مرتبط بحسابك' });
+        return;
       }
     }
 

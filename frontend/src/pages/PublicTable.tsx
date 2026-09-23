@@ -1,67 +1,68 @@
+// frontend/src/pages/PublicTable.tsx
+//
+// `/table/:tableId` على النطاق الرئيسي — رابط طاولةٍ بلا اسم المطعم.
+//
+// كانت الصفحة تعرض `<PublicMenu />` بلا أيّ بيانات، فيبقى الزائر على
+// «جاري التحميل» للأبد، وتطلب `/tables/:id` وهو مسارٌ للمالك يردّ ٤٠١
+// على كلّ زبون. الطاولة تعرف مطعمها: نسأل المسار العامّ عنه ثم نحوّل إلى
+// `/<slug>/table/<id>` — الرابط الذي يعمل كاملاً مع رقم الطاولة.
+
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import api from '../services/api';
-import PublicMenu from './PublicMenu';
 import Loader from '../components/common/Loader';
 
-interface TableInfo {
-  id: string;
-  name: string;
-  restaurantId: string;
-  restaurant?: {
-    name: string;
-    slug: string;
-  };
-}
-
 const PublicTable: React.FC = () => {
-  const { slug, tableId } = useParams<{ slug: string; tableId: string }>();
-  const [table, setTable] = useState<TableInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { tableId } = useParams<{ tableId: string }>();
+  const [target, setTarget] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (tableId) {
-      fetchTable();
-    } else {
-      setLoading(false);
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const response: any = await api.get(`/public/table/${encodeURIComponent(tableId || '')}`);
+        const data = response?.data || response;
+        const slug = data?.restaurant?.slug;
+        if (!slug) throw new Error('no-slug');
+        if (!cancelled) setTarget(`/${encodeURIComponent(slug)}/table/${encodeURIComponent(tableId || '')}`);
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [tableId]);
 
-  const fetchTable = async () => {
-    try {
-      const data = await api.get(`/tables/${tableId}`);
-      setTable(data);
-      if (data.restaurantId && slug && data.restaurantId !== slug) {
-        setError('هذه الطاولة لا تنتمي لهذا المطعم');
-      }
-    } catch (error) {
-      setError('لم نتمكن من العثور على الطاولة');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (target) return <Navigate to={target} replace />;
 
-  if (loading) return <Loader fullScreen />;
+  if (failed) {
+    return (
+      <div
+        dir="rtl"
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#082E24',
+          color: '#E8F5E9',
+          fontFamily: 'Cairo, sans-serif',
+          padding: 24,
+          textAlign: 'center'
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 44, marginBottom: 10 }}>🍽️</div>
+          <h1 style={{ fontSize: 19, fontWeight: 800, marginBottom: 8 }}>لم نعثر على هذه الطاولة</h1>
+          <p style={{ color: '#9DC4AC', fontSize: 14 }}>ربما أُزيلت أو عُطّلت. اطلب من فريق المطعم رمزاً جديداً.</p>
+        </div>
+      </div>
+    );
+  }
 
-  return (
-    <div>
-      {error ? (
-        <div style={{ background: '#FF6B6B', color: '#fff', textAlign: 'center', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-            <span style={{ fontWeight: 700, fontFamily: 'Cairo, sans-serif' }}>⚠️ {error}</span>
-          </div>
-        </div>
-      ) : table ? (
-        <div style={{ background: 'linear-gradient(90deg, #0D4A3A, #0F5C48)', color: '#C8E235', textAlign: 'center', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <span style={{ fontWeight: 700, fontFamily: 'Cairo, sans-serif' }}>🔹 أنت على طاولة: {table.name}</span>
-          </div>
-        </div>
-      ) : null}
-      <PublicMenu />
-    </div>
-  );
+  return <Loader fullScreen />;
 };
 
 export default PublicTable;

@@ -1,11 +1,11 @@
 // frontend/src/pages/Staff/StaffDashboard.tsx
 import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { usePermissions } from '../../hooks/usePermissions';
+import { staffAreas } from '../../utils/staffAccess';
 import { Link } from 'react-router-dom';
 import { 
   IoFastFood, IoReceipt, IoRestaurant, IoNavigate,
-  IoStatsChart, IoQrCode, IoPricetag, IoPeople
+  IoCube, IoLayers
 } from 'react-icons/io5';
 
 const C = {
@@ -19,38 +19,21 @@ const C = {
 
 const StaffDashboard: React.FC = () => {
   const { user } = useAuth();
-  const permissions = usePermissions();
-
-  const menuItems = [
-    { 
-      path: '/menu', 
-      icon: IoFastFood, 
-      label: 'القائمة', 
-      description: 'عرض وإدارة الأصناف',
-      allowed: permissions.canViewMenu 
-    },
-    { 
-      path: '/orders', 
-      icon: IoReceipt, 
-      label: 'الطلبات', 
-      description: 'عرض وتحديث حالة الطلبات',
-      allowed: permissions.canViewOrders 
-    },
-    { 
-      path: '/tables', 
-      icon: IoRestaurant, 
-      label: 'الطاولات', 
-      description: 'إدارة الطاولات ورموز QR',
-      allowed: permissions.canViewTables 
-    },
-    { 
-      path: '/delivery', 
-      icon: IoNavigate, 
-      label: 'التوصيل', 
-      description: 'متابعة طلبات التوصيل',
-      allowed: permissions.canViewDelivery 
-    },
-  ].filter(item => item.allowed);
+  // صلاحيات **الموظّف** كما منحها المالك — كانت هذه تقرأ صلاحيات الخطة
+  // (`usePermissions`) فيرى الموظّف كلّ ما في الخطة مهما عطّل المالك.
+  const ICONS: Record<string, React.ComponentType<{ size?: number; color?: string }>> = {
+    '/menu': IoFastFood,
+    '/orders': IoReceipt,
+    '/tables': IoRestaurant,
+    '/delivery': IoNavigate,
+    '/store/products': IoCube,
+    '/store/orders': IoReceipt,
+    '/store/inventory': IoLayers,
+  };
+  const menuItems = staffAreas(user).map((area) => ({ ...area, icon: ICONS[area.path] || IoReceipt }));
+  const can = (path: string) => menuItems.some((item) => item.path === path);
+  const ordersPath = user?.storeId ? '/store/orders' : '/orders';
+  const catalogPath = user?.storeId ? '/store/products' : '/menu';
 
   // إذا لم تكن هناك صلاحيات، عرض رسالة
   if (menuItems.length === 0) {
@@ -88,16 +71,16 @@ const StaffDashboard: React.FC = () => {
           <div style={{ color: C.muted, fontSize: 12 }}>الصفحات المتاحة</div>
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 28, fontWeight: 700, color: permissions.canViewOrders ? C.accent : C.muted }}>
-            {permissions.canViewOrders ? '✅' : '❌'}
+          <div style={{ fontSize: 28, fontWeight: 700, color: can(ordersPath) ? C.accent : C.muted }}>
+            {can(ordersPath) ? '✅' : '❌'}
           </div>
           <div style={{ color: C.muted, fontSize: 12 }}>الطلبات</div>
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 28, fontWeight: 700, color: permissions.canViewMenu ? C.accent : C.muted }}>
-            {permissions.canViewMenu ? '✅' : '❌'}
+          <div style={{ fontSize: 28, fontWeight: 700, color: can(catalogPath) ? C.accent : C.muted }}>
+            {can(catalogPath) ? '✅' : '❌'}
           </div>
-          <div style={{ color: C.muted, fontSize: 12 }}>القائمة</div>
+          <div style={{ color: C.muted, fontSize: 12 }}>{user?.storeId ? 'المنتجات' : 'القائمة'}</div>
         </div>
       </div>
 

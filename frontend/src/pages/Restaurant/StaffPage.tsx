@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { resolveStaffPermissions } from '../../utils/staffAccess';
 import { User } from '../../services/types';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
@@ -42,6 +43,13 @@ const labelStyle: React.CSSProperties = {
   fontWeight: 500,
   marginBottom: 4,
   color: C.muted,
+};
+
+// ما يسري فعلاً على الموظّف — `{}` المحفوظ يعني الافتراضيّ لا «لا شيء»،
+// وكانت المربّعات تظهر كلّها فارغةً فيحفظ المالك ما لم يقصده.
+const effectivePermissions = (raw: unknown) => {
+  const all = resolveStaffPermissions(raw);
+  return { viewOrders: all.viewOrders, updateOrderStatus: all.updateOrderStatus, viewMenu: all.viewMenu, updateMenu: all.updateMenu, viewTables: all.viewTables, updateTables: all.updateTables };
 };
 
 const StaffPage: React.FC = () => {
@@ -111,20 +119,14 @@ const StaffPage: React.FC = () => {
         password: '',
         phone: staffMember.phone || '',
       });
-      if (staffMember.permissions) {
-        setPermissions(staffMember.permissions as any);
-      }
+      setPermissions(effectivePermissions(staffMember.permissions));
     }
     setShowModal(true);
   };
 
   const handleOpenPermissionsModal = (staffMember: User) => {
     setSelectedStaff(staffMember);
-    if (staffMember.permissions) {
-      setPermissions(staffMember.permissions as any);
-    } else {
-      resetPermissions();
-    }
+    setPermissions(effectivePermissions(staffMember.permissions));
     setShowPermissionsModal(true);
   };
 

@@ -16,7 +16,7 @@ import {
   fixMissingShareTokens,
   getMenuItemById
 } from '../controllers/menuController';
-import { authenticate, authorizeOwner, authorizeStaff } from '../middleware/auth';
+import { authenticate, authorizeOwner, requireStaffPermission } from '../middleware/auth';
 
 const router = Router();
 
@@ -28,18 +28,18 @@ router.get('/share/:token', getMenuItemByShare);
 router.use(authenticate);
 
 // مسارات الفئات
-router.get('/categories', authorizeStaff, getCategories);
+router.get('/categories', requireStaffPermission('viewMenu'), getCategories);
 router.post('/categories', authorizeOwner, createCategory);
 router.put('/categories/:id', authorizeOwner, updateCategory);
 router.delete('/categories/:id', authorizeOwner, deleteCategory);
 
 // مسارات عناصر القائمة
-router.get('/items', authorizeStaff, getMenuItems);
-router.get('/items/:id', authorizeStaff, getMenuItem);
+router.get('/items', requireStaffPermission('viewMenu'), getMenuItems);
+router.get('/items/:id', requireStaffPermission('viewMenu'), getMenuItem);
 router.post('/items', authorizeOwner, createMenuItem);
 router.put('/items/:id', authorizeOwner, updateMenuItem);
 router.delete('/items/:id', authorizeOwner, deleteMenuItem);
-router.patch('/items/:id/toggle', authorizeStaff, toggleAvailability);
+router.patch('/items/:id/toggle', requireStaffPermission('updateMenu'), toggleAvailability);
 
 // مسارات إضافية
 router.post('/fix-tokens', authorizeOwner, fixMissingShareTokens);

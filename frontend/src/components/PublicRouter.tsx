@@ -152,9 +152,27 @@ const BusinessLoader: React.FC<{ children: (data: any) => React.ReactNode }> = (
   return <>{children(businessData)}</>;
 };
 
+// واجهة النشاط بخصائصه — مكتوبةً مرّةً لا في كلّ مسار
+const renderMenu = (businessData: any) => (
+  <PublicMenu
+    businessId={businessData.id}
+    businessName={businessData.name}
+    businessSlug={businessData.slug}
+    businessSubdomain={businessData.subdomain}
+    businessType={businessData.type}
+    businessLogo={businessData.logo}
+    businessCoverImage={businessData.coverImage}
+    businessDescription={businessData.description}
+    businessPhone={businessData.phone}
+    businessWhatsapp={businessData.whatsapp}
+    businessPrimaryColor={businessData.primaryColor}
+    businessSecondaryColor={businessData.secondaryColor}
+  />
+);
+
 const PublicRouter: React.FC = () => {
-  const subdomain = getCurrentSubdomain();
-  
+  const hasOwnHost = !!getCurrentSubdomain() || isCustomDomain();
+
   return (
     <Suspense fallback={<Loader />}>
     <Routes>
@@ -206,59 +224,21 @@ const PublicRouter: React.FC = () => {
       />
       
       {/* الصفحة الرئيسية - مع slug في URL */}
-      <Route 
-        path="/:slug" 
-        element={
-          <BusinessLoader>
-            {(businessData) => (
-              <PublicMenu
-                businessId={businessData.id}
-                businessName={businessData.name}
-                businessSlug={businessData.slug}
-                businessSubdomain={businessData.subdomain}
-                businessType={businessData.type}
-                businessLogo={businessData.logo}
-                businessCoverImage={businessData.coverImage}
-                businessDescription={businessData.description}
-                businessPhone={businessData.phone}
-                businessWhatsapp={businessData.whatsapp}
-                businessPrimaryColor={businessData.primaryColor}
-                businessSecondaryColor={businessData.secondaryColor}
-              />
-            )}
-          </BusinessLoader>
-        } 
-      />
-      
+      <Route path="/:slug" element={<BusinessLoader>{renderMenu}</BusinessLoader>} />
+
+      {/* رابط الطاولة — ما يطبعه رمز QR الطاولة. `RestaurantPublicMenu` يقرأ
+          `tableId` من المسار فيفتح السلّة على «في المطعم».
+          كان المساران غائبين هنا، فقاعدة `*` تُعيد كلّ رمزٍ مطبوع لنطاقٍ
+          فرعيّ أو مخصّص إلى الرئيسية ويضيع رقم الطاولة. */}
+      <Route path="/table/:tableId" element={hasOwnHost ? <BusinessLoader>{renderMenu}</BusinessLoader> : <Navigate to="/" replace />} />
+      <Route path="/:slug/table/:tableId" element={<BusinessLoader>{renderMenu}</BusinessLoader>} />
+
       {/* الصفحة الرئيسية - بدون slug (تعتمد على subdomain) */}
-      <Route 
-        path="/" 
-        element={
-          subdomain || isCustomDomain() ? (
-            <BusinessLoader>
-              {(businessData) => (
-                <PublicMenu
-                  businessId={businessData.id}
-                  businessName={businessData.name}
-                  businessSlug={businessData.slug}
-                  businessSubdomain={businessData.subdomain}
-                  businessType={businessData.type}
-                  businessLogo={businessData.logo}
-                  businessCoverImage={businessData.coverImage}
-                  businessDescription={businessData.description}
-                  businessPhone={businessData.phone}
-                  businessWhatsapp={businessData.whatsapp}
-                  businessPrimaryColor={businessData.primaryColor}
-                  businessSecondaryColor={businessData.secondaryColor}
-                />
-              )}
-            </BusinessLoader>
-          ) : (
-            <Navigate to="/user/login" replace />
-          )
-        } 
+      <Route
+        path="/"
+        element={hasOwnHost ? <BusinessLoader>{renderMenu}</BusinessLoader> : <Navigate to="/user/login" replace />}
       />
-      
+
       {/* إعادة توجيه أي مسار آخر إلى الصفحة الرئيسية */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -46,6 +46,15 @@ const EN: Record<string, string> = {
   'أي ملاحظة إضافية...': 'Any additional note…',
 
   // ---------- الكوبون والحساب ----------
+  // ---------- الدفع ----------
+  'طريقة الدفع': 'Payment method',
+  'نقداً عند الاستلام': 'Cash on delivery',
+  'شام كاش': 'Sham Cash',
+  'حوّل الإجمالي إلى محفظة شام كاش التالية، وسيؤكّد المتجر الدفع عند استلامه:': 'Transfer the total to this Sham Cash wallet. The shop will confirm payment once received:',
+  'نسخ': 'Copy',
+  'تم النسخ': 'Copied',
+  'باسم': 'Name',
+
   'كوبون خصم': 'Discount coupon',
   'أدخل الكود': 'Enter code',
   'تطبيق الكوبون': 'Apply coupon',
@@ -233,7 +242,7 @@ const EN: Record<string, string> = {
 
   // ===== السلة وإتمام الطلب =====
   'أكمل': 'Complete',
-  'طلب من الطاولة رقم': 'Order from table',
+  'الطلب من الطاولة': 'Ordering from table',
   'شحن': 'Shipping',
   'اختر المحافظة…': 'Choose a governorate…',
   'المحافظة': 'Governorate',

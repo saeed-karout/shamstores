@@ -110,7 +110,8 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   const [optionsOpen, setOptionsOpen] = useState(false);
   /** المنتج موجود لكن أوقفه التاجر — حالة مختلفة عن الرابط الخاطئ */
   const [unavailable, setUnavailable] = useState<{ name?: string } | null>(null);
-  const { addToCart } = useCart();
+  // سلّة المتجر نفسه الذي تعرضه واجهته — لا سلّة مشتركة للمنصّة
+  const { addToCart } = useCart((store as any)?.id || product?.storeId || null);
   const [showShareMenu, setShowShareMenu] = useState(false);
 
   /**

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { resolveStaffPermissions } from '../../utils/staffAccess';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
@@ -32,6 +33,13 @@ interface StaffMember {
     updateInventory: boolean;
   };
 }
+
+// ما يسري فعلاً على الموظّف — `{}` المحفوظ يعني الافتراضيّ لا «لا شيء»،
+// وكانت المربّعات تظهر كلّها فارغةً فيحفظ المالك ما لم يقصده.
+const effectivePermissions = (raw: unknown) => {
+  const all = resolveStaffPermissions(raw);
+  return { viewOrders: all.viewOrders, updateOrderStatus: all.updateOrderStatus, viewProducts: all.viewProducts, updateProducts: all.updateProducts, viewInventory: all.viewInventory, updateInventory: all.updateInventory };
+};
 
 const StoreStaffPage: React.FC = () => {
   const { isFree, loading: planLoading } = useCurrentPlan();
@@ -96,18 +104,14 @@ const StoreStaffPage: React.FC = () => {
     if (staff) {
       setSelectedStaff(staff);
       setFormData({ name: staff.name, email: staff.email, password: '', phone: staff.phone || '' });
-      if (staff.permissions) setPermissions(staff.permissions);
+      setPermissions(effectivePermissions(staff.permissions));
     }
     setShowModal(true);
   };
 
   const handleOpenPermissionsModal = (staff: StaffMember) => {
     setSelectedStaff(staff);
-    if (staff.permissions) {
-      setPermissions(staff.permissions);
-    } else {
-      resetPermissions();
-    }
+    setPermissions(effectivePermissions(staff.permissions));
     setShowPermissionsModal(true);
   };
 

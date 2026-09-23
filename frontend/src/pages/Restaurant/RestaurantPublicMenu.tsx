@@ -26,7 +26,7 @@ import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import StickyCategoryNav from '@/components/storefront/StickyCategoryNav';
 import MenuItemListCard, { StorefrontMenuItem } from '@/components/storefront/MenuItemListCard';
 import ItemOptionsSheet, { SelectedOptions } from '@/components/storefront/ItemOptionsSheet';
-import CartSheet, { StorefrontOrderType, cartLineKey } from '@/components/storefront/CartSheet';
+import CartSheet, { StorefrontOrderType, StorefrontPaymentMethod, cartLineKey } from '@/components/storefront/CartSheet';
 import BottomCartBar from '@/components/storefront/BottomCartBar';
 import BottomSheet from '@/components/storefront/BottomSheet';
 import StorefrontSkeleton from '@/components/storefront/StorefrontSkeleton';
@@ -113,7 +113,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const navigate = useNavigate();
 
   const { user, isAuthenticated, logout } = useAuth();
-  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart();
+  // سلّة هذا المطعم وحده — المعرّف من الموجّه إن مرّره، وإلا حين تُحمَّل بياناته
+  const [cartScope, setCartScope] = useState<string | null>(propBusinessId || null);
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart, getCartCount } = useCart(cartScope);
   const { favorites, toggleFavorite } = useFavorites();
 
   // ---------- الحالة ----------
@@ -162,6 +164,32 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const [cartOpen, setCartOpen] = useState(false);
 
   const [orderType, setOrderType] = useState<StorefrontOrderType>(tableId ? 'dine_in' : 'takeaway');
+  // طريقة الدفع — كانت ترسل 'cash' حكماً، فشام كاش الذي يفعّله التاجر
+  // لا يراه زبونٌ أبداً. يُعاد إلى النقد إن أطفأه التاجر بعد الاختيار.
+  const [paymentMethod, setPaymentMethod] = useState<StorefrontPaymentMethod>('cash');
+
+  // اسم الطاولة كما سمّاها المطعم — كانت السلّة تعرض «طاولة رقم» ثم
+  // معرّفها الداخليّ (cmuel…). المعرّف يبقى ما يُرسل مع الطلب.
+  const [tableName, setTableName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!tableId) {
+      setTableName(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .get(`/public/table/${encodeURIComponent(tableId)}`)
+      .then((response: any) => {
+        const name = (response?.data || response)?.table?.name;
+        if (!cancelled && name) setTableName(String(name));
+      })
+      .catch(() => {
+        // الطلب يعمل بالمعرّف وحده؛ الاسم للعرض فقط
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tableId]);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
@@ -224,6 +252,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
         if (!business?.id) throw new Error('بيانات غير صالحة');
 
+        setCartScope(business.id);
         setRestaurant({
           ...business,
           name: business.name || propBusinessName,
@@ -449,7 +478,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         })),
         subtotal,
         total: subtotal,
-        paymentMethod: 'cash',
+        paymentMethod: (restaurant as any)?.paymentOptions?.methods?.includes(paymentMethod) ? paymentMethod : 'cash',
         orderType,
         // يُتجاهَل بصمت إن كان منتهياً أو لنشاطٍ آخر — الخادم يتحقّق
         referralCode: getRef((restaurant as any)?.id) || undefined
@@ -1001,7 +1030,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         onQuantityChange={handleCartQuantityChange}
         onRemove={(item) => removeFromCart(item.id, item.size)}
         onClear={clearCart}
-        tableNumber={tableId || null}
+        tableNumber={tableId ? tableName || '…' : null}
         availableOrderTypes={tableId ? ['dine_in'] : ['takeaway', 'delivery']}
         orderType={orderType}
         onOrderTypeChange={setOrderType}
@@ -1014,6 +1043,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         address={address}
         onAddressChange={setAddress}
         deliveryFee={Number(restaurant?.deliverySettings?.deliveryFee) || 0}
+        paymentOptions={(restaurant as any)?.paymentOptions}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={setPaymentMethod}
         submitting={submitting}
         onSubmit={submitOrder}
       />

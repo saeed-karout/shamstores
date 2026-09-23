@@ -21,6 +21,7 @@ import env from '../config/env';
 import { renameStorefront } from '../services/storefrontIdentity.service';
 import { normalizeOptions } from '../services/productOptions.service';
 import { sanitizeDesign } from '../config/storefrontDesign';
+import { sanitizeStaffPermissions } from '../config/staffPermissions';
 import { getPublicPaymentOptions } from '../services/payment.service';
 import { resolveLanguageSettings } from '../services/language.service';
 import { sanitizeTags, resolveParent, categoryWithChildren, TaxonomyError } from '../services/catalogTaxonomy.service';
@@ -1642,10 +1643,18 @@ export const updatePaymentSettings = async (req: AuthRequest, res: Response): Pr
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
     }
-    const paymentSettings = req.body;
+    // بالتحقّق نفسه الذي يمرّ به `PUT /store/profile`. كان يخزّن الجسم كما
+    // وصل، فيقبل `{ paymentSettings: {...} }` مغلَّفاً مرّتين أو محفظةً
+    // مفعّلة بلا رقم — ثم تقرأ الواجهة العامّة «نقداً فقط» والتاجر يرى «حُفظ».
+    const body = req.body || {};
+    const result = validatePaymentSettings(body.paymentSettings !== undefined ? body.paymentSettings : body);
+    if (!result.ok) {
+      res.status(400).json({ success: false, error: result.error });
+      return;
+    }
     const updatedStore = await prisma.store.update({
       where: { id: storeId },
-      data: { paymentSettings: paymentSettings as any }
+      data: { paymentSettings: result.value as any }
     });
     res.json({ success: true, message: 'تم تحديث إعدادات الدفع', data: updatedStore.paymentSettings });
   } catch (error) {
@@ -1911,10 +1920,57 @@ export const getStoreStaff = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+// شاشة موظّفي المتجر ترسل `POST /store/staff` منذ كُتبت، ولم يكن له مسار:
+// فكان «إضافة موظّف» يفشل دائماً ولم يكن لأيّ متجرٍ موظّفٌ إلا عبر الأدمن.
+export const addStoreStaff = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const storeId = await getStoreId(req);
+    if (!storeId) {
+      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+      return;
+    }
+    const { name, email, password, phone, permissions } = req.body || {};
+    const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    if (!name || !cleanEmail || typeof password !== 'string' || password.length < 6) {
+      res.status(400).json({ success: false, error: 'الاسم والبريد وكلمة مرور من ٦ أحرف على الأقل مطلوبة' });
+      return;
+    }
+    const existingUser = await prisma.user.findUnique({ where: { email: cleanEmail } });
+    if (existingUser) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني موجود بالفعل' });
+      return;
+    }
+    const staff = await prisma.user.create({
+      data: {
+        name: String(name).trim(),
+        email: cleanEmail,
+        password: await bcrypt.hash(password, 12),
+        phone: phone || null,
+        role: 'staff',
+        storeId,
+        isActive: true,
+        isEmailVerified: true,
+        permissions: sanitizeStaffPermissions(permissions)
+      },
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, permissions: true, createdAt: true }
+    });
+    res.status(201).json({ success: true, message: 'تم إضافة الموظف بنجاح', data: staff });
+  } catch (error) {
+    console.error('Error creating store staff:', error);
+    res.status(500).json({ success: false, error: 'حدث خطأ في إضافة الموظف' });
+  }
+};
+
 export const getStoreStaffDetails = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
-    const { id } = req.params;
+    // المسار يسمّيه `:staffId`؛ قراءةُ `id` كانت تعطي undefined، وبريزما تُسقط
+    // الشرطَ غير المعرَّف فيطابق **أوّلَ** موظّفٍ في المتجر لا المقصود.
+    const id = req.params.staffId || req.params.id;
+    if (!id) {
+      res.status(400).json({ success: false, error: 'معرف الموظف مطلوب' });
+      return;
+    }
     if (!storeId) {
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
@@ -1937,7 +1993,13 @@ export const getStoreStaffDetails = async (req: AuthRequest, res: Response): Pro
 export const updateStoreStaff = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
-    const { id } = req.params;
+    // المسار يسمّيه `:staffId`؛ قراءةُ `id` كانت تعطي undefined، وبريزما تُسقط
+    // الشرطَ غير المعرَّف فيطابق **أوّلَ** موظّفٍ في المتجر لا المقصود.
+    const id = req.params.staffId || req.params.id;
+    if (!id) {
+      res.status(400).json({ success: false, error: 'معرف الموظف مطلوب' });
+      return;
+    }
     if (!storeId) {
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
@@ -1952,8 +2014,13 @@ export const updateStoreStaff = async (req: AuthRequest, res: Response): Promise
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (phone !== undefined) updateData.phone = phone;
-    if (permissions !== undefined) updateData.permissions = permissions;
-    const updatedStaff = await prisma.user.update({ where: { id }, data: updateData });
+    if (permissions !== undefined) updateData.permissions = sanitizeStaffPermissions(permissions);
+    // اختيارٌ صريح: الردّ بالسجلّ كاملاً كان يُرسل تجزئة كلمة المرور للمتصفّح.
+    const updatedStaff = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: { id: true, name: true, email: true, phone: true, role: true, isActive: true, permissions: true, createdAt: true }
+    });
     res.json({ success: true, message: 'تم تحديث بيانات الموظف', data: updatedStaff });
   } catch (error) {
     console.error('Error updating store staff:', error);
@@ -1964,7 +2031,13 @@ export const updateStoreStaff = async (req: AuthRequest, res: Response): Promise
 export const toggleStoreStaffStatus = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
-    const { id } = req.params;
+    // المسار يسمّيه `:staffId`؛ قراءةُ `id` كانت تعطي undefined، وبريزما تُسقط
+    // الشرطَ غير المعرَّف فيطابق **أوّلَ** موظّفٍ في المتجر لا المقصود.
+    const id = req.params.staffId || req.params.id;
+    if (!id) {
+      res.status(400).json({ success: false, error: 'معرف الموظف مطلوب' });
+      return;
+    }
     if (!storeId) {
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
@@ -1985,7 +2058,13 @@ export const toggleStoreStaffStatus = async (req: AuthRequest, res: Response): P
 export const deleteStoreStaff = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
-    const { id } = req.params;
+    // المسار يسمّيه `:staffId`؛ قراءةُ `id` كانت تعطي undefined، وبريزما تُسقط
+    // الشرطَ غير المعرَّف فيطابق **أوّلَ** موظّفٍ في المتجر لا المقصود.
+    const id = req.params.staffId || req.params.id;
+    if (!id) {
+      res.status(400).json({ success: false, error: 'معرف الموظف مطلوب' });
+      return;
+    }
     if (!storeId) {
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
       return;
@@ -2006,7 +2085,13 @@ export const deleteStoreStaff = async (req: AuthRequest, res: Response): Promise
 export const updateStoreStaffPermissions = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const storeId = await getStoreId(req);
-    const { id } = req.params;
+    // المسار يسمّيه `:staffId`؛ قراءةُ `id` كانت تعطي undefined، وبريزما تُسقط
+    // الشرطَ غير المعرَّف فيطابق **أوّلَ** موظّفٍ في المتجر لا المقصود.
+    const id = req.params.staffId || req.params.id;
+    if (!id) {
+      res.status(400).json({ success: false, error: 'معرف الموظف مطلوب' });
+      return;
+    }
     const { permissions } = req.body;
     if (!storeId) {
       res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
@@ -2017,7 +2102,11 @@ export const updateStoreStaffPermissions = async (req: AuthRequest, res: Respons
       res.status(404).json({ success: false, error: 'الموظف غير موجود' });
       return;
     }
-    const updatedStaff = await prisma.user.update({ where: { id }, data: { permissions: permissions || {} } });
+    const updatedStaff = await prisma.user.update({
+      where: { id },
+      data: { permissions: sanitizeStaffPermissions(permissions) },
+      select: { permissions: true }
+    });
     res.json({ success: true, message: 'تم تحديث صلاحيات الموظف', data: updatedStaff.permissions });
   } catch (error) {
     console.error('Error updating staff permissions:', error);

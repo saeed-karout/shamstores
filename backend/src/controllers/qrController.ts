@@ -33,7 +33,8 @@ const getStoreId = async (req: AuthRequest): Promise<string | null> => {
 // ✅ دالة للحصول على الرابط الصحيح للمطعم (مع subdomain أو customDomain)
 const getRestaurantUrl = (restaurant: any): string => {
   // إذا كان هناك customDomain
-  if (restaurant.customDomain) {
+  // المُتحقَّق منه فقط: رمزٌ مطبوع لنطاقٍ لم يُربط بعد يقود إلى لا شيء
+  if (restaurant.customDomain && restaurant.customDomainVerified) {
     return `https://${restaurant.customDomain}`;
   }
   // إذا كان هناك subdomain
@@ -47,7 +48,8 @@ const getRestaurantUrl = (restaurant: any): string => {
 // ✅ دالة للحصول على الرابط الصحيح للمتجر (مع subdomain أو customDomain)
 const getStoreUrl = (store: any): string => {
   // إذا كان هناك customDomain
-  if (store.customDomain) {
+  // المُتحقَّق منه فقط: رمزٌ مطبوع لنطاقٍ لم يُربط بعد يقود إلى لا شيء
+  if (store.customDomain && store.customDomainVerified) {
     return `https://${store.customDomain}`;
   }
   // إذا كان هناك subdomain

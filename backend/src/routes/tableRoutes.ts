@@ -8,7 +8,7 @@ import {
   generateTableQR,
   generateAllTableQRs
 } from '../controllers/tableController';
-import { authenticate, authorizeOwner, authorizeStaff } from '../middleware/auth';
+import { authenticate, authorizeOwner, requireStaffPermission } from '../middleware/auth';
 import { checkPlanFeature } from '../middleware/checkPlan';
 
 const router = Router();
@@ -22,14 +22,14 @@ router.use(checkPlanFeature('table_qr'));
  * @desc    الحصول على جميع الطاولات
  * @access  Private (Owner/Staff)
  */
-router.get('/', authorizeStaff, getTables);
+router.get('/', requireStaffPermission('viewTables'), getTables);
 
 /**
  * @route   GET /api/tables/:id
  * @desc    الحصول على طاولة محددة
  * @access  Private (Owner/Staff)
  */
-router.get('/:id', authorizeStaff, getTable);  // أضف هذا
+router.get('/:id', requireStaffPermission('viewTables'), getTable);  // أضف هذا
 
 /**
  * @route   POST /api/tables

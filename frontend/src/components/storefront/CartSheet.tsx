@@ -9,7 +9,10 @@ import {
   IoRestaurantOutline,
   IoStorefrontOutline,
   IoBicycleOutline,
-  IoCheckmarkCircle
+  IoCheckmarkCircle,
+  IoCashOutline,
+  IoWalletOutline,
+  IoCopyOutline
 } from 'react-icons/io5';
 import BottomSheet from './BottomSheet';
 import LocationPickerMap, { PickedLocation } from './LocationPickerMap';
@@ -34,6 +37,14 @@ import type { CartItem } from '@/services/types';
 import { useT } from '@/i18n/storefront';
 
 export type StorefrontOrderType = 'dine_in' | 'takeaway' | 'delivery';
+
+export type StorefrontPaymentMethod = 'cash' | 'sham_cash';
+
+/** ما يرسله الخادم في `paymentOptions` — النقد دائماً، وشام كاش إن فعّله التاجر. */
+export interface StorefrontPaymentOptions {
+  methods: string[];
+  shamCash: { accountNumber: string; accountName?: string; note?: string } | null;
+}
 
 export interface CartSheetProps {
   open: boolean;
@@ -77,6 +88,11 @@ export interface CartSheetProps {
   couponCode?: string;
   onCouponApply?: (code: string) => Promise<void> | void;
   onCouponRemove?: () => void;
+
+  /** طرق الدفع المتاحة — بدونها أو بطريقةٍ واحدة لا يُعرض قسم الدفع */
+  paymentOptions?: StorefrontPaymentOptions | null;
+  paymentMethod?: StorefrontPaymentMethod;
+  onPaymentMethodChange?: (method: StorefrontPaymentMethod) => void;
 
   submitting?: boolean;
   onSubmit: () => void;
@@ -127,6 +143,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
   couponCode,
   onCouponApply,
   onCouponRemove,
+  paymentOptions = null,
+  paymentMethod = 'cash',
+  onPaymentMethodChange,
   submitting = false,
   onSubmit
 }) => {
@@ -159,6 +178,22 @@ const CartSheet: React.FC<CartSheetProps> = ({
   if (addressRequired && shippingZones.length > 0 && !governorate) missing.push('المحافظة');
 
   const canSubmit = missing.length === 0 && !submitting;
+
+  // شام كاش لا يُعرض إلا إن فعّله التاجر **وأرسل الخادم رقم محفظته**: خيارٌ
+  // بلا رقمٍ يحوّل إليه الزبون أسوأ من غيابه.
+  const shamCash = paymentOptions?.methods?.includes('sham_cash') ? paymentOptions.shamCash : null;
+  const showPayment = !!shamCash && !!onPaymentMethodChange;
+  const [copied, setCopied] = useState(false);
+  const copyAccount = async () => {
+    if (!shamCash) return;
+    try {
+      await navigator.clipboard.writeText(shamCash.accountNumber);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // الحافظة ممنوعة في بعض المتصفّحات — الرقم ظاهرٌ ويُنسخ يدوياً
+    }
+  };
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim() || !onCouponApply) return;
@@ -400,7 +435,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                 fontWeight: 700
               }}
             >
-              <IoRestaurantOutline size={17} /> {t('طلب من الطاولة رقم')} {tableNumber}
+              <IoRestaurantOutline size={17} /> {t('الطلب من الطاولة')}: {tableNumber}
             </div>
           ) : (
             availableOrderTypes.length > 1 && (
@@ -553,6 +588,96 @@ const CartSheet: React.FC<CartSheetProps> = ({
               </div>
             </div>
           </section>
+
+          {/* طريقة الدفع — تظهر فقط حين يفعّل التاجر شام كاش */}
+          {showPayment && shamCash && (
+            <section style={{ marginBottom: 18 }}>
+              <h4 style={sectionTitle}>{t('طريقة الدفع')}</h4>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['cash', 'sham_cash'] as StorefrontPaymentMethod[]).map((method) => {
+                  const active = paymentMethod === method;
+                  return (
+                    <button
+                      key={method}
+                      type="button"
+                      onClick={() => onPaymentMethodChange?.(method)}
+                      aria-pressed={active}
+                      style={{
+                        flex: 1,
+                        minHeight: 46,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        borderRadius: sd.rButton,
+                        border: `1.5px solid ${active ? sf.accent : sf.border}`,
+                        background: active ? sf.accentSoft : sf.surface,
+                        color: active ? sf.accent : sf.muted,
+                        fontSize: 12.5,
+                        fontWeight: 800,
+                        fontFamily: 'inherit',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {method === 'cash' ? <IoCashOutline size={17} /> : <IoWalletOutline size={17} />}
+                      {method === 'cash' ? t('نقداً عند الاستلام') : t('شام كاش')}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {paymentMethod === 'sham_cash' && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    background: sf.surface,
+                    border: `1px solid ${sf.border}`,
+                    borderRadius: sd.rCard,
+                    padding: '12px 14px',
+                    display: 'grid',
+                    gap: 7,
+                    fontSize: 12.5,
+                    color: sf.muted,
+                    lineHeight: 1.8
+                  }}
+                >
+                  <span>{t('حوّل الإجمالي إلى محفظة شام كاش التالية، وسيؤكّد المتجر الدفع عند استلامه:')}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                    <span style={{ color: sf.text, fontSize: 15, fontWeight: 800, direction: 'ltr', fontVariantNumeric: 'tabular-nums' }}>
+                      {shamCash.accountNumber}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyAccount}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        background: 'transparent',
+                        border: `1px solid ${sf.border}`,
+                        borderRadius: sd.rButton,
+                        color: copied ? '#4ADE80' : sf.text,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        fontFamily: 'inherit',
+                        padding: '6px 11px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {copied ? <IoCheckmarkCircle size={14} /> : <IoCopyOutline size={14} />}
+                      {copied ? t('تم النسخ') : t('نسخ')}
+                    </button>
+                  </div>
+                  {shamCash.accountName && (
+                    <span>
+                      {t('باسم')}: <strong style={{ color: sf.text }}>{shamCash.accountName}</strong>
+                    </span>
+                  )}
+                  {shamCash.note && <span>{shamCash.note}</span>}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* كوبون الخصم */}
           {onCouponApply && (
