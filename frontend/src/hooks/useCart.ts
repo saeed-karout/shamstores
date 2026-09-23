@@ -87,7 +87,7 @@ export const useCart = (scope?: string | null) => {
       return [...prev, validItem];
     });
     
-    toast.success('✅ تمت الإضافة إلى السلة');
+    toast.success('تمت الإضافة إلى السلة');
   };
 
   // `addons` اختياري في التوقيع كي لا تتغيّر النداءات القائمة: بلا تمريره

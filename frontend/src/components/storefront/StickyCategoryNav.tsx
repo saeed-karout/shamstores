@@ -129,11 +129,13 @@ const StickyCategoryNav: React.FC<StickyCategoryNavProps> = ({
         position: 'sticky',
         top: offsetTop,
         zIndex: 40,
-        background: sf.bg,
-        borderBottom: `1px solid ${sf.border}`,
-        // يمتد بعرض الشاشة كاملاً حتى داخل حاوية محدودة العرض
-        marginInline: -14,
-        paddingInline: 14
+        // زجاجيّ فوق المحتوى حين يلتصق — لونٌ صلب كان يقطع الصفحة بشريطٍ ثقيل
+        background: sf.overlay,
+        backdropFilter: 'saturate(170%) blur(16px)',
+        WebkitBackdropFilter: 'saturate(170%) blur(16px)',
+        // يمتد بعرض الحاوية كاملاً (حشوتها ١٦)
+        marginInline: -16,
+        paddingInline: 16
       }}
     >
       <style>{'.sf-cat-scroll::-webkit-scrollbar{display:none}'}</style>
@@ -146,7 +148,7 @@ const StickyCategoryNav: React.FC<StickyCategoryNavProps> = ({
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
-          padding: '10px 0',
+          padding: '12px 0',
           WebkitOverflowScrolling: 'touch'
         }}
       >
@@ -164,14 +166,15 @@ const StickyCategoryNav: React.FC<StickyCategoryNavProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                minHeight: 38,
-                padding: '0 16px',
+                minHeight: 40,
+                padding: '0 18px',
                 borderRadius: sd.rChip,
                 border: `1px solid ${isActive ? 'transparent' : sf.border}`,
                 background: isActive ? sf.accent : sf.card,
-                color: isActive ? sf.onAccent : sf.muted,
-                fontSize: 13,
-                fontWeight: isActive ? 800 : 600,
+                color: isActive ? sf.onAccent : sf.text,
+                boxShadow: isActive ? `0 6px 16px ${sf.shadow}` : 'none',
+                fontSize: 13.5,
+                fontWeight: isActive ? 800 : 700,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',

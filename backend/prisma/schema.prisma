@@ -487,14 +487,14 @@ model Restaurant {
   latitude                 Float?
   longitude                Float?
   showAllBranchesMenuItems Boolean @default(false)
-  primaryColor             String  @default("#3B82F6")
-  secondaryColor           String  @default("#10B981")
-  backgroundColor          String  @default("#082E24")
-  cardColor                String  @default("#112E23")
-  surfaceColor             String  @default("#0F3D31")
-  textColor                String  @default("#E8F5E9")
-  mutedColor               String  @default("#9DC4AC")
-  accentColor              String  @default("#C8E235")
+  primaryColor             String  @default("#084835")
+  secondaryColor           String  @default("#C07CDF")
+  backgroundColor          String  @default("#F6F8F5")
+  cardColor                String  @default("#FFFFFF")
+  surfaceColor             String  @default("#EEF3EF")
+  textColor                String  @default("#10231B")
+  mutedColor               String  @default("#647870")
+  accentColor              String  @default("#084835")
   fontFamily               String  @default("Cairo")
 
   /// شكل واجهة المتجر: القالب والنماذج والاستدارات — لا الألوان.
@@ -600,14 +600,14 @@ model Store {
   //
   // (وكان الافتراضي قبلهما خلفية بيضاء ونصاً أسود مع بطاقات وأسطح داكنة —
   // لوحة نصفها فاتح ونصفها داكن، أي نصٌّ رمادي على أبيض وبطاقات سوداء.)
-  primaryColor            String  @default("#0D4A3A")
-  secondaryColor          String  @default("#10B981")
-  backgroundColor         String  @default("#082E24")
-  textColor               String  @default("#E8F5E9")
-  cardColor               String  @default("#112E23")
-  surfaceColor            String  @default("#0F3D31")
-  mutedColor              String  @default("#9DC4AC")
-  accentColor             String  @default("#C8E235")
+  primaryColor            String  @default("#084835")
+  secondaryColor          String  @default("#C07CDF")
+  backgroundColor         String  @default("#F6F8F5")
+  textColor               String  @default("#10231B")
+  cardColor               String  @default("#FFFFFF")
+  surfaceColor            String  @default("#EEF3EF")
+  mutedColor              String  @default("#647870")
+  accentColor             String  @default("#084835")
   fontFamily              String  @default("Cairo")
 
   /// شكل واجهة المتجر — انظر التعليق نفسه على Restaurant.

@@ -44,7 +44,7 @@ import { track, setTrackScope } from '@/services/track';
 const C = {
   bg: sf.bg, card: sf.card, surf: sf.surface, accent: sf.accent,
   text: sf.text, muted: sf.muted, border: sf.border,
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+  red: '#E5484D', blue: '#2F6FE0', purple: '#8A45B8', orange: '#D9480F',
 };
 
 interface Product {

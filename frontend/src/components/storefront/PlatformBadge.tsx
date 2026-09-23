@@ -41,6 +41,12 @@ const BENEFITS = [
 
 const PlatformBadge: React.FC<Props> = ({ show }) => {
   const [open, setOpen] = useState(false);
+  // التسمية تُرى أوّل الزيارة ثم تنطوي — الدائرة وحدها تكفي بعدها
+  const [showLabel, setShowLabel] = useState(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowLabel(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, []);
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', businessName: '' });
@@ -93,44 +99,43 @@ const PlatformBadge: React.FC<Props> = ({ show }) => {
 
   return (
     <>
-      {/* الغلاف بلا التقاط للنقر كي لا يحجب محتوى التاجر خلفه */}
+      {/* الغلاف بلا التقاط للنقر كي لا يحجب محتوى التاجر خلفه.
+          دائرةٌ صغيرة بعلامة S؛ والتسمية تظهر ثوانيَ ثم تنطوي — كانت شارةً
+          ثابتة بحجم ٥٢ وتسمية دائمة تغطّي سعر المنتج في زاوية الشبكة. */}
       <div
         style={{
-          position: 'fixed', insetInlineStart: 14, bottom: 14, zIndex: 60,
-          pointerEvents: 'none', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', gap: 6
+          position: 'fixed', insetInlineStart: 12, bottom: 12, zIndex: 60,
+          pointerEvents: 'none', display: 'flex', alignItems: 'center', gap: 8
         }}
       >
-        <span
-          style={{
-            pointerEvents: 'none', background: C.bg, color: C.accent,
-            border: `1px solid ${C.border}`, borderRadius: 999,
-            padding: '3px 10px', fontSize: 11, fontWeight: 800,
-            boxShadow: '0 4px 14px rgba(0,0,0,0.35)', whiteSpace: 'nowrap'
-          }}
-        >
-          انضم لنا
-        </span>
         <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label="انضم إلى شام ستورز — تعرّف على المنصة"
           style={{
-            pointerEvents: 'auto', width: 52, height: 52, borderRadius: '50%',
-            border: `2px solid ${C.accent}`, background: C.bg, cursor: 'pointer',
-            padding: 0, overflow: 'hidden', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 6px 20px rgba(0,0,0,0.4)'
+            pointerEvents: 'auto', width: 42, height: 42, borderRadius: '50%',
+            border: '1px solid rgba(205,239,124,0.35)', background: '#084835', cursor: 'pointer',
+            padding: 0, display: 'grid', placeItems: 'center',
+            boxShadow: '0 8px 22px rgba(4,42,30,0.35)'
           }}
         >
-          <img
-            src="/logo.svg"
-            alt=""
-            width={52}
-            height={52}
-            style={{ display: 'block', objectFit: 'cover' }}
-          />
+          <svg viewBox="330 180 380 670" width={18} height={32} aria-hidden="true" fill="#CDEF7C">
+            <path d="M533.32,835.34c-25.23-138.24-87.03-228.67-182.84-274.34-2.74-1.3-4.67-4.23-5-7.68h0c-.36-3.67,1.16-7.22,3.87-9.05,25.45-17.26,51.75-35.1,79.7-54.05,3.53-2.39,8.02-1.17,10.29,2.81,4.25,7.46,9.21,16.17,14.63,25.69,2.33,4.08,1.49,9.61-1.9,12.48-4.37,3.7-9.24,7.83-14.57,12.35-2.99,2.54-2.93,6.57.14,8.99,43.03,33.87,76.13,81.45,99.09,145.43,2.83,7.9,7.8,8.12,11.08.47,7.44-17.37,14.68-34.25,22.13-51.64,1.38-3.21,1.03-7.07-.9-9.86-37.68-54.65-75.99-110.2-114.97-166.72-2.36-3.43-2.31-8.37.14-11.7,40.8-55.51,61.2-144.91,74.07-217.77,1.7-9.61,13.39-9.65,15.14-.06,26.63,145.78,96.57,262.08,193.99,301.95,6.42,2.63,6.99,13.07.93,16.7-27.22,16.31-56.27,33.72-86.9,52.08-3.39,2.03-7.53.87-9.77-2.74-4.03-6.52-9.1-14.69-14.8-23.91-2.53-4.09-1.75-9.82,1.74-12.76,4.95-4.18,10.14-8.56,15.69-13.24,2.66-2.25,2.58-5.79-.18-7.86-44.66-33.43-78.43-81.93-101.94-146.55-2.1-5.77-6.92-4.6-9.33,1-7.7,17.97-15.25,35.57-23.1,53.87-1.37,3.2.05,5.79,1.97,8.57,37.63,54.7,75.52,109.77,114.49,166.41,2.36,3.43,2.3,8.36-.14,11.7-39.27,53.57-64.66,116.74-77.61,189.39-1.71,9.59-13.39,9.64-15.14.06Z" />
+          </svg>
         </button>
+        <span
+          aria-hidden="true"
+          style={{
+            pointerEvents: 'none', background: '#084835', color: '#CDEF7C',
+            borderRadius: 999, padding: '5px 12px', fontSize: 11.5, fontWeight: 800,
+            boxShadow: '0 6px 18px rgba(4,42,30,0.3)', whiteSpace: 'nowrap',
+            opacity: showLabel ? 1 : 0,
+            transform: showLabel ? 'none' : 'translateX(8px)',
+            transition: 'opacity .4s ease, transform .4s ease'
+          }}
+        >
+          صُنع بشام ستورز — انضم لنا
+        </span>
       </div>
 
       {open && (

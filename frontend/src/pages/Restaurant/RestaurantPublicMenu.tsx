@@ -22,7 +22,7 @@ import PublicMarketingSections from '@/components/public/PublicMarketingSections
 import PublicFooter from '@/components/public/PublicFooter';
 import OrderTrackingModal from '@/components/OrderTrackingModal';
 
-import StorefrontLayout from '@/components/storefront/StorefrontLayout';
+import StorefrontLayout, { MINI_HEADER_HEIGHT } from '@/components/storefront/StorefrontLayout';
 import StickyCategoryNav from '@/components/storefront/StickyCategoryNav';
 import MenuItemListCard, { StorefrontMenuItem } from '@/components/storefront/MenuItemListCard';
 import ItemOptionsSheet, { SelectedOptions } from '@/components/storefront/ItemOptionsSheet';
@@ -38,6 +38,7 @@ import api, { getCurrentSubdomain } from '@/services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
 import { StorefrontDesignProvider } from '@/utils/storefrontDesignContext';
+import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import { captureRef, getRef, clearRef } from '@/utils/referral';
@@ -87,7 +88,8 @@ const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
   { key: 'newest', label: 'الأحدث' }
 ];
 
-const MINI_HEADER_OFFSET = 56;
+// من التخطيط نفسه — رقمٌ منسوخٌ هنا يتخلّف عنه عند أوّل تعديل
+const MINI_HEADER_OFFSET = MINI_HEADER_HEIGHT;
 
 // ==================== المكوّن ====================
 
@@ -685,8 +687,8 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            marginTop: 16,
+            gap: 10,
+            marginTop: 18,
             marginBottom: 4
           }}
         >
@@ -695,16 +697,17 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
             onClick={() => setSearchOpen(true)}
             style={{
               flex: 1,
-              minHeight: 44,
+              minHeight: 48,
               display: 'flex',
               alignItems: 'center',
-              gap: 9,
-              padding: '0 14px',
-              borderRadius: 13,
+              gap: 10,
+              padding: '0 16px',
+              borderRadius: sd.rButton,
               border: `1px solid ${sf.border}`,
               background: sf.card,
+              boxShadow: sd.shadowCard,
               color: sf.muted,
-              fontSize: 13,
+              fontSize: 14,
               fontFamily: 'inherit',
               cursor: 'pointer',
               textAlign: 'start'
@@ -1091,32 +1094,36 @@ const EmptyState: React.FC<{ text: string }> = ({ text }) => (
 
 const sectionHeading: React.CSSProperties = {
   display: 'flex',
-  alignItems: 'center',
-  gap: 9,
-  margin: '0 0 12px',
-  fontSize: 16,
-  fontWeight: 800,
+  alignItems: 'baseline',
+  gap: 10,
+  margin: '0 0 14px',
+  fontSize: 'clamp(18px, 2.2vw, 22px)',
+  fontWeight: 900,
+  letterSpacing: '-0.01em',
   color: sf.text
 };
 
+// عمودٌ على الجوال، وعمودان أو ثلاثة على الحاسوب — لا قائمةً بعرض الجوال
+// وسط شاشةٍ عريضة
 const itemListStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 11
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
+  gap: 12
 };
 
 const iconButtonStyle: React.CSSProperties = {
-  width: 44,
-  height: 44,
+  width: 48,
+  height: 48,
   display: 'grid',
   placeItems: 'center',
-  borderRadius: 13,
+  borderRadius: sd.rButton,
   border: `1px solid ${sf.border}`,
   background: sf.card,
   color: sf.text,
   cursor: 'pointer',
   flexShrink: 0,
-  padding: 0
+  padding: 0,
+  boxShadow: sd.shadowCard
 };
 
 export default RestaurantPublicMenu;

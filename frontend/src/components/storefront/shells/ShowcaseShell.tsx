@@ -18,7 +18,7 @@
 
 import React from 'react';
 import { IoSearchOutline, IoBagHandleOutline, IoHeartOutline, IoPersonOutline } from 'react-icons/io5';
-import { sf } from '@/utils/storefrontTheme';
+import { sf, sfBrandGradient, sfBrandPattern } from '@/utils/storefrontTheme';
 import { sd } from '@/utils/storefrontDesign';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { useT } from '@/i18n/storefront';
@@ -149,10 +149,11 @@ const ShowcaseShell: React.FC<ShopLayoutProps> = ({
         style={{
           position: 'relative',
           height: isDesktop ? 'min(62vh, 560px)' : 'min(52vh, 420px)',
-          background: coverImage ? sf.surface : `linear-gradient(135deg, ${sf.primary}, ${sf.accent})`,
+          background: coverImage ? sf.surface : sfBrandGradient,
           overflow: 'hidden'
         }}
       >
+        {!coverImage && <div aria-hidden="true" style={sfBrandPattern as React.CSSProperties} />}
         {coverImage && (
           <img
             src={getImageUrl(coverImage)}
@@ -294,13 +295,9 @@ const ShowcaseShell: React.FC<ShopLayoutProps> = ({
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                 ) : (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      background: `linear-gradient(135deg, ${sf.surface}, ${sf.card})`
-                    }}
-                  />
+                  // بلا صورة: تدرّج هوية المتجر — سطحٌ فاتح تحت تعتيمٍ أسود كان
+                  // يخرج مستطيلاً أبيض بحافّةٍ سوداء
+                  <div style={{ width: '100%', height: '100%', background: sfBrandGradient }} />
                 )}
                 <span
                   style={{

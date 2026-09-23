@@ -10,6 +10,7 @@ import Loader from '@/components/common/Loader';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker';
+import PalettePicker from '@/components/settings/PalettePicker';
 import { DEFAULT_DESIGN, resolveDesign, type StorefrontDesign } from '@/utils/storefrontDesign';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
 import LanguageDisplaySettings from '@/components/settings/LanguageDisplaySettings';
@@ -188,14 +189,14 @@ const StoreSettingsPage: React.FC = () => {
   const [designShape, setDesignShape] = useState<StorefrontDesign>(DEFAULT_DESIGN);
 
   const [designForm, setDesignForm] = useState({
-    primaryColor: '#3B82F6',
-    secondaryColor: '#10B981',
-    backgroundColor: '#082E24',
-    cardColor: '#112E23',
-    surfaceColor: '#0F3D31',
-    textColor: '#E8F5E9',
-    mutedColor: '#9DC4AC',
-    accentColor: '#C8E235',
+    primaryColor: '#084835',
+    secondaryColor: '#C07CDF',
+    backgroundColor: '#F6F8F5',
+    cardColor: '#FFFFFF',
+    surfaceColor: '#EEF3EF',
+    textColor: '#10231B',
+    mutedColor: '#647870',
+    accentColor: '#084835',
     fontFamily: 'Cairo',
   });
 
@@ -260,14 +261,14 @@ const StoreSettingsPage: React.FC = () => {
       });
 
       setDesignForm({
-        primaryColor: store.primaryColor || '#3B82F6',
-        secondaryColor: store.secondaryColor || '#10B981',
-        backgroundColor: store.backgroundColor || '#082E24',
-        cardColor: store.cardColor || '#112E23',
-        surfaceColor: store.surfaceColor || '#0F3D31',
-        textColor: store.textColor || '#E8F5E9',
-        mutedColor: store.mutedColor || '#9DC4AC',
-        accentColor: store.accentColor || '#C8E235',
+        primaryColor: store.primaryColor || '#084835',
+        secondaryColor: store.secondaryColor || '#C07CDF',
+        backgroundColor: store.backgroundColor || '#F6F8F5',
+        cardColor: store.cardColor || '#FFFFFF',
+        surfaceColor: store.surfaceColor || '#EEF3EF',
+        textColor: store.textColor || '#10231B',
+        mutedColor: store.mutedColor || '#647870',
+        accentColor: store.accentColor || '#084835',
         fontFamily: store.fontFamily || 'Cairo',
       });
 
@@ -844,6 +845,13 @@ const StoreSettingsPage: React.FC = () => {
               تخصيص ألوان المتجر
             </h2>
             
+            <PalettePicker
+              value={designForm}
+              onPick={(colors) => setDesignForm({ ...designForm, ...colors })}
+              disabled={!canUpdateSettings}
+              colors={C}
+            />
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
               
               <div>

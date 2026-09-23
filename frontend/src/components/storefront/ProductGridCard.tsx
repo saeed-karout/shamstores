@@ -20,7 +20,7 @@
 // لوحته فتتبدّل هنا بلا سطرٍ يُكتب.
 
 import React from 'react';
-import { IoHeart, IoHeartOutline, IoAddOutline, IoImageOutline } from 'react-icons/io5';
+import { IoHeart, IoHeartOutline, IoAddOutline, IoBagHandleOutline } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
 import { sd } from '@/utils/storefrontDesign';
 import { useDesign } from '@/utils/storefrontDesignContext';
@@ -83,10 +83,12 @@ const openInPlace = (event: React.MouseEvent, handler?: () => void): void => {
   handler();
 };
 
+// شاراتٌ بيضاء زجاجية فوق الصورة — تُقرأ على أيّ صورةٍ فاتحة أو داكنة؛
+// والحسم وحده أحمر صريح لأنه أوّل ما يبحث عنه المتسوّق
 const BADGE_TONE: Record<string, { bg: string; color: string }> = {
-  discount: { bg: '#FF6B6B', color: '#fff' },
-  trending: { bg: 'rgba(0,0,0,0.62)', color: '#FFD166' },
-  new: { bg: 'rgba(0,0,0,0.62)', color: '#8AE6B0' }
+  discount: { bg: '#E5484D', color: '#fff' },
+  trending: { bg: 'rgba(255,255,255,0.92)', color: '#B45309' },
+  new: { bg: 'rgba(255,255,255,0.92)', color: '#0C7A55' }
 };
 
 /** أول صورة صالحة: المنتجات الجديدة تحفظ مصفوفة، والقديمة حقلاً مفرداً */
@@ -150,8 +152,9 @@ const ProductGridCard: React.FC<Props> = ({
       <div
         style={{
           color: isOverlay ? '#fff' : sf.accent,
-          fontWeight: 800,
-          fontSize: isCompact ? 13 : 14,
+          fontWeight: 900,
+          fontSize: isCompact ? 13.5 : 15,
+          whiteSpace: 'nowrap',
           fontVariantNumeric: 'tabular-nums'
         }}
       >
@@ -186,9 +189,9 @@ const ProductGridCard: React.FC<Props> = ({
       onClick={() => onAdd(product)}
       aria-label={`أضف ${product.name} إلى السلة`}
       style={{
-        width: 34,
-        height: 34,
-        minWidth: 34,
+        width: 38,
+        height: 38,
+        minWidth: 38,
         // الاستدارة من رمز الأزرار: القالب «الجريء» يجعلها دائرة كاملة
         // والقالب «البسيط» مربّعاً مستدير الأركان قليلاً
         borderRadius: sd.rButton,
@@ -199,15 +202,16 @@ const ProductGridCard: React.FC<Props> = ({
         placeItems: 'center',
         cursor: 'pointer',
         flexShrink: 0,
-        boxShadow: isOverlay ? sd.shadowPop : undefined
+        boxShadow: isOverlay ? sd.shadowPop : `0 6px 14px ${sf.shadow}`
       }}
     >
-      <IoAddOutline size={19} />
+      <IoAddOutline size={20} />
     </button>
   );
 
   return (
     <article
+      className="sf-lift"
       style={{
         background: isOverlay ? sf.surface : sf.card,
         border: `${sd.borderW} solid ${sf.border}`,
@@ -258,8 +262,19 @@ const ProductGridCard: React.FC<Props> = ({
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', color: sf.muted }}>
-            <IoImageOutline size={30} />
+          // بلا صورة: لون المتجر الخفيف وأيقونة حقيبة — مربّعٌ رماديّ بأيقونة
+          // «صورة مكسورة» كان يقول للزبون إن شيئاً تعطّل
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'grid',
+              placeItems: 'center',
+              color: sf.accent,
+              background: `radial-gradient(120% 90% at 30% 15%, ${sf.card}, transparent 60%), ${sf.accentSoft}`
+            }}
+          >
+            <IoBagHandleOutline size={40} style={{ opacity: 0.5 }} />
           </div>
         )}
 
@@ -284,10 +299,11 @@ const ProductGridCard: React.FC<Props> = ({
                   background: tone.bg,
                   color: tone.color,
                   borderRadius: sd.rChip,
-                  padding: '2px 8px',
-                  fontSize: 10.5,
+                  padding: '3px 9px',
+                  fontSize: 11,
                   fontWeight: 800,
-                  backdropFilter: 'blur(4px)'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                  backdropFilter: 'blur(6px)'
                 }}
               >
                 {t(badge.label)}
@@ -307,16 +323,17 @@ const ProductGridCard: React.FC<Props> = ({
             aria-pressed={!!isFavorite}
             style={{
               position: 'absolute',
-              top: 6,
-              insetInlineEnd: 6,
-              width: 32,
-              height: 32,
+              top: 8,
+              insetInlineEnd: 8,
+              width: 34,
+              height: 34,
               // القلب يبقى دائرةً في كل القوالب: زرٌّ أيقونيّ مربّع في
               // زاوية صورة يقرأ كأنه جزءٌ منها لا عنصر تحكّم
               borderRadius: '50%',
               border: 'none',
-              background: 'rgba(0,0,0,0.42)',
-              color: isFavorite ? '#FF6B6B' : '#fff',
+              background: 'rgba(255,255,255,0.92)',
+              color: isFavorite ? '#E5484D' : '#1F2A24',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.14)',
               display: 'grid',
               placeItems: 'center',
               cursor: 'pointer',
@@ -401,7 +418,7 @@ const ProductGridCard: React.FC<Props> = ({
           <h3
             style={{
               color: sf.text,
-              fontSize: isCompact ? 12.5 : 13.5,
+              fontSize: isCompact ? 13 : 14,
               fontWeight: 700,
               margin: 0,
               lineHeight: 1.55,

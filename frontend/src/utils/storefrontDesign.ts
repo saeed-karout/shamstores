@@ -120,6 +120,13 @@ const SHADOWS: Record<ShadowLevel, [string, string]> = {
   strong: ['0 6px 22px rgba(0,0,0,0.38)', '0 18px 48px rgba(0,0,0,0.5)']
 };
 
+/** ظلال الخلفية الفاتحة — طبقتان رقيقتان بلون النصّ الأخضر لا بالأسود */
+const LIGHT_SHADOWS: Record<ShadowLevel, [string, string]> = {
+  none: ['none', '0 10px 30px rgba(16,35,27,0.12)'],
+  soft: ['0 1px 2px rgba(16,35,27,0.04), 0 6px 20px rgba(16,35,27,0.06)', '0 20px 50px rgba(16,35,27,0.16)'],
+  strong: ['0 4px 10px rgba(16,35,27,0.06), 0 14px 34px rgba(16,35,27,0.1)', '0 28px 60px rgba(16,35,27,0.22)']
+};
+
 const PRESET_KEYS: DesignPreset[] = ['modern', 'minimal', 'bold'];
 const SHELL_KEYS: ShellVariant[] = ['classic', 'boutique', 'showcase', 'landing'];
 const CARD_KEYS: CardVariant[] = ['standard', 'overlay', 'compact'];
@@ -182,9 +189,9 @@ export const applyPreset = (design: StorefrontDesign, preset: DesignPreset): Sto
 });
 
 /** المتغيّرات كما تُكتب على العنصر — مفصولةٌ لتُستعمل في المعاينة الحيّة أيضاً */
-export const designVars = (design: StorefrontDesign): Record<string, string> => {
+export const designVars = (design: StorefrontDesign, light = false): Record<string, string> => {
   const [gap, padCard, padSection] = DENSITY[design.density];
-  const [shadowCard, shadowPop] = SHADOWS[design.shadow];
+  const [shadowCard, shadowPop] = (light ? LIGHT_SHADOWS : SHADOWS)[design.shadow];
 
   return {
     '--sf-r-card': `${design.radii.card}px`,
@@ -210,12 +217,13 @@ export const designVars = (design: StorefrontDesign): Record<string, string> => 
  */
 export const applyStorefrontDesign = (
   design: StorefrontDesign,
-  target?: HTMLElement | null
+  target?: HTMLElement | null,
+  light = false
 ): (() => void) => {
   if (typeof document === 'undefined') return () => undefined;
 
   const root = target || document.documentElement;
-  const vars = designVars(design);
+  const vars = designVars(design, light);
   const previous: Array<[string, string]> = [];
 
   Object.entries(vars).forEach(([name, value]) => {

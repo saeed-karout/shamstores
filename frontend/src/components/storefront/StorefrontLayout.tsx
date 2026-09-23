@@ -1,5 +1,11 @@
 // frontend/src/components/storefront/StorefrontLayout.tsx
-// هيكل صفحة المتجر: غلاف، بطاقة الهوية، رأس مصغّر يظهر عند التمرير، وفتحات للمحتوى.
+//
+// هيكل واجهة المطعم: غلافٌ بعرض الشاشة عليه الهوية، ثمّ التواصل والأقسام
+// والمحتوى، ورأسٌ زجاجيّ مصغّر يظهر عند التمرير.
+//
+// **الاسم فوق الغلاف لا تحته في بطاقة:** الصورة هي أوّل ما يبيع الطعام، وبطاقة
+// الهوية المعلّقة تحتها كانت تقطعها وتكرّر ما يقوله الغلاف. والحاوية تتّسع
+// على الحاسوب (١١٢٠) بعد أن كانت عموداً بعرض الجوال (٦٤٠) وسط شاشةٍ فارغة.
 
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -9,9 +15,10 @@ import {
   IoLocationOutline,
   IoBagHandleOutline,
   IoChevronDown,
-  IoArrowUp
+  IoArrowUp,
+  IoRestaurantOutline
 } from 'react-icons/io5';
-import { sf } from '@/utils/storefrontTheme';
+import { sf, sfBrandGradient, sfBrandPattern } from '@/utils/storefrontTheme';
 import { sd } from '@/utils/storefrontDesign';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { useT } from '@/i18n/storefront';
@@ -35,7 +42,7 @@ export interface StorefrontLayoutProps {
   branchLabel?: string;
   branches?: StorefrontBranch[];
 
-  /** يُعرض أعلى الصفحة تحت بطاقة الهوية (شريط تسويقي رفيع) */
+  /** يُعرض تحت التواصل (شريط تسويقي رفيع) */
   marketingStrip?: React.ReactNode;
   /** شريط الفئات الملتصق */
   stickyNav?: React.ReactNode;
@@ -49,7 +56,10 @@ export interface StorefrontLayoutProps {
   footer?: React.ReactNode;
 }
 
-const MINI_HEADER_HEIGHT = 56;
+const MINI_HEADER_HEIGHT = 60;
+/** عرض المحتوى — تستعمله الصفحة ليتطابق شريط الأدوات مع الحاوية */
+export const STOREFRONT_MAX_WIDTH = 1120;
+export const STOREFRONT_GUTTER = 16;
 
 const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
   name,
@@ -81,8 +91,8 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
       ticking = true;
       window.requestAnimationFrame(() => {
         const y = window.scrollY;
-        setShowMiniHeader(y > 190);
-        setShowScrollTop(y > 700);
+        setShowMiniHeader(y > 260);
+        setShowScrollTop(y > 900);
         ticking = false;
       });
     };
@@ -92,6 +102,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
   }, []);
 
   const otherBranches = branches.filter((b) => !b.isCurrent);
+  const waNumber = whatsapp ? String(whatsapp).replace(/[^0-9]/g, '') : '';
 
   return (
     <div style={{ background: sf.bg, minHeight: '100vh', fontFamily: sf.font, color: sf.text }} dir="rtl">
@@ -102,96 +113,51 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
             initial={{ y: -MINI_HEADER_HEIGHT, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -MINI_HEADER_HEIGHT, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             style={{
               position: 'fixed',
               insetInline: 0,
               top: 0,
               zIndex: 50,
               height: MINI_HEADER_HEIGHT,
-              background: sf.card,
+              background: sf.overlay,
               borderBottom: `1px solid ${sf.border}`,
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'saturate(170%) blur(18px)',
+              WebkitBackdropFilter: 'saturate(170%) blur(18px)'
             }}
           >
             <div
               style={{
-                maxWidth: 640,
+                maxWidth: STOREFRONT_MAX_WIDTH,
                 margin: '0 auto',
                 height: '100%',
-                padding: '0 14px',
+                padding: `0 ${STOREFRONT_GUTTER}px`,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10
               }}
             >
-              {logo && (
-                <img
-                  src={getImageUrl(sizedImage(logo, 'sm'))}
-                  alt=""
-                  width={34}
-                  height={34}
-                  style={{ width: 34, height: 34, borderRadius: sd.rImage, objectFit: 'cover', flexShrink: 0 }}
-                />
-              )}
-              {/* <span
+              <LogoMark logo={logo} name={name} size={36} />
+              <span
                 style={{
-                  flex: 1,
-                  minWidth: 0,
-                  fontSize: 14.5,
+                  fontSize: 15,
                   fontWeight: 800,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  maxWidth: '38%'
                 }}
               >
                 {name}
-              </span> */}
+              </span>
 
+              <div style={{ flex: 1 }} />
               {headerActions}
 
               {onCartClick && (
-                <button
-                  type="button"
-                  onClick={onCartClick}
-                  aria-label={`السلة (${cartCount})`}
-                  style={{
-                    position: 'relative',
-                    width: 40,
-                    height: 40,
-                    display: 'grid',
-                    placeItems: 'center',
-                    borderRadius: sd.rButton,
-                    border: `1px solid ${sf.border}`,
-                    background: sf.surface,
-                    color: sf.text,
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    padding: 0
-                  }}
-                >
+                <button type="button" onClick={onCartClick} aria-label={`${t('السلة')} (${cartCount})`} style={roundButton}>
                   <IoBagHandleOutline size={19} />
-                  {cartCount > 0 && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        top: -5,
-                        insetInlineEnd: -5,
-                        minWidth: 19,
-                        height: 19,
-                        borderRadius: sd.rChip,
-                        background: sf.accent,
-                        color: sf.onAccent,
-                        fontSize: 10.5,
-                        fontWeight: 800,
-                        display: 'grid',
-                        placeItems: 'center',
-                        padding: '0 4px'
-                      }}
-                    >
-                      {cartCount}
-                    </span>
-                  )}
+                  {cartCount > 0 && <span style={countBadge}>{cartCount}</span>}
                 </button>
               )}
             </div>
@@ -200,7 +166,17 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
       </AnimatePresence>
 
       {/* ==================== الغلاف ==================== */}
-      <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 7', maxHeight: 260, overflow: 'hidden', background: sf.surface }}>
+      <header
+        style={{
+          position: 'relative',
+          width: '100%',
+          // الصورة تستحقّ المساحة؛ بلا صورة يكفي شريطٌ أقصر لا كتلةٌ صمّاء
+          height: coverImage ? 'clamp(280px, 62vw, 440px)' : 'clamp(230px, 46vw, 300px)',
+          overflow: 'hidden',
+          background: sfBrandGradient,
+          color: '#fff'
+        }}
+      >
         {coverImage ? (
           <img
             src={getImageUrl(coverImage)}
@@ -208,146 +184,123 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
             // @ts-expect-error — سمة قياسية لم تُضَف بعد إلى تعريفات React
             fetchpriority="high"
             decoding="async"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              background: `linear-gradient(135deg, ${sf.surface}, ${sf.card})`
-            }}
-          />
+          // بلا غلاف: نقشٌ خفيف فوق تدرّج لون المطعم بدل مساحةٍ صمّاء
+          <div aria-hidden="true" style={sfBrandPattern as React.CSSProperties} />
         )}
         <div
           aria-hidden="true"
           style={{
             position: 'absolute',
             inset: 0,
-            background: `linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, transparent 40%, ${sf.bg} 100%)`
+            // الصورة تحتاج تعتيماً ليُقرأ الاسم فوقها؛ التدرّج اللونيّ يكفيه ظلٌّ خفيف
+            background: coverImage
+              ? 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.35) 45%, rgba(0,0,0,0.08) 100%)'
+              : 'linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 60%)'
           }}
         />
-      </div>
 
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 14px' }}>
-        {/* ==================== بطاقة الهوية ==================== */}
-        <section
+        <div
           style={{
-            position: 'relative',
-            marginTop: -46,
-            background: sf.card,
-            border: `1px solid ${sf.border}`,
-            borderRadius: sd.rCard,
-            padding: 16,
-            boxShadow: `0 12px 32px ${sf.shadow}`
+            position: 'absolute',
+            insetInline: 0,
+            bottom: 0,
+            maxWidth: STOREFRONT_MAX_WIDTH,
+            margin: '0 auto',
+            padding: `0 ${STOREFRONT_GUTTER}px 26px`
           }}
         >
-          <div style={{ display: 'flex', gap: 13 }}>
-            {logo ? (
-              <img
-                src={getImageUrl(sizedImage(logo, 'sm'))}
-                alt={name}
-                width={72}
-                height={72}
-                decoding="async"
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+            <LogoMark logo={logo} name={name} size={72} ring />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1
                 style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: sd.rCard,
-                  objectFit: 'cover',
-                  flexShrink: 0,
-                  border: `2px solid ${sf.border}`,
-                  background: sf.surface
+                  margin: 0,
+                  fontSize: 'clamp(24px, 5.4vw, 40px)',
+                  fontWeight: 900,
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.01em',
+                  textShadow: '0 2px 18px rgba(0,0,0,0.25)'
                 }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: sd.rCard,
-                  background: sf.surface,
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: 30,
-                  flexShrink: 0
-                }}
-                aria-hidden="true"
               >
-                🍽️
-              </div>
-            )}
+                {name}
+              </h1>
+              {description && (
+                <p
+                  style={{
+                    margin: '6px 0 0',
+                    fontSize: 'clamp(13px, 1.6vw, 15.5px)',
+                    lineHeight: 1.7,
+                    color: 'rgba(255,255,255,0.86)',
+                    maxWidth: 620,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {description}
+                </p>
+              )}
+            </div>
+          </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <h1 style={{ margin: 0, fontSize: 19, fontWeight: 800, lineHeight: 1.4 }}>{name}</h1>
-
+          {(address || branchLabel) && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+              {address && (
+                <span style={glassChip}>
+                  <IoLocationOutline size={14} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{address}</span>
+                </span>
+              )}
               {branchLabel && (
-                <div style={{ marginTop: 5, position: 'relative', display: 'inline-block' }}>
+                <div style={{ position: 'relative' }}>
                   <button
                     type="button"
                     onClick={() => otherBranches.length > 0 && setBranchOpen((v) => !v)}
                     disabled={otherBranches.length === 0}
                     aria-expanded={branchOpen}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      background: sf.accentSoft,
-                      border: `1px solid ${sf.border}`,
-                      borderRadius: sd.rChip,
-                      padding: '4px 11px',
-                      color: sf.accent,
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      fontFamily: 'inherit',
-                      cursor: otherBranches.length > 0 ? 'pointer' : 'default'
-                    }}
+                    style={{ ...glassChip, cursor: otherBranches.length > 0 ? 'pointer' : 'default', fontFamily: 'inherit' }}
                   >
-                    <IoLocationOutline size={12} />
+                    <IoRestaurantOutline size={14} />
                     {branchLabel}
-                    {otherBranches.length > 0 && <IoChevronDown size={11} />}
+                    {otherBranches.length > 0 && <IoChevronDown size={12} />}
                   </button>
 
                   <AnimatePresence>
                     {branchOpen && otherBranches.length > 0 && (
                       <motion.ul
-                        initial={{ opacity: 0, y: -6 }}
+                        initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -6 }}
+                        exit={{ opacity: 0, y: 6 }}
                         transition={{ duration: 0.15 }}
                         style={{
                           position: 'absolute',
                           insetInlineStart: 0,
-                          top: 'calc(100% + 6px)',
+                          bottom: 'calc(100% + 8px)',
                           zIndex: 30,
                           listStyle: 'none',
                           margin: 0,
                           padding: 6,
-                          minWidth: 190,
-                          background: sf.surface,
+                          minWidth: 210,
+                          background: sf.card,
+                          color: sf.text,
                           border: `1px solid ${sf.border}`,
-                          borderRadius: sd.rButton,
-                          boxShadow: `0 10px 26px ${sf.shadow}`
+                          borderRadius: sd.rCard,
+                          boxShadow: sd.shadowPop
                         }}
                       >
                         {otherBranches.map((branch) => (
                           <li key={branch.id}>
                             <a
                               href={branch.url || '#'}
-                              style={{
-                                display: 'block',
-                                padding: '9px 11px',
-                                borderRadius: sd.rImage,
-                                color: sf.text,
-                                fontSize: 12.5,
-                                textDecoration: 'none'
-                              }}
+                              style={{ display: 'block', padding: '10px 12px', borderRadius: sd.rButton, color: sf.text, fontSize: 13, textDecoration: 'none' }}
                             >
                               {branch.name}
                               {branch.label && (
-                                <span style={{ color: sf.muted, fontSize: 11, display: 'block', marginTop: 2 }}>
-                                  {branch.label}
-                                </span>
+                                <span style={{ color: sf.muted, fontSize: 11.5, display: 'block', marginTop: 2 }}>{branch.label}</span>
                               )}
                             </a>
                           </li>
@@ -357,67 +310,35 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                   </AnimatePresence>
                 </div>
               )}
-
-              {description && (
-                <p
-                  style={{
-                    margin: '8px 0 0',
-                    fontSize: 12.5,
-                    color: sf.muted,
-                    lineHeight: 1.75,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
-                  }}
-                >
-                  {description}
-                </p>
-              )}
-
-              {address && (
-                <div
-                  style={{
-                    marginTop: 7,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    color: sf.muted,
-                    fontSize: 11.5
-                  }}
-                >
-                  <IoLocationOutline size={13} style={{ flexShrink: 0 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{address}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {(phone || whatsapp) && (
-            <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
-              {phone && (
-                <a href={`tel:${phone}`} style={contactButton} aria-label={t('اتصال')}>
-                  <IoCallOutline size={17} />{t('اتصال')}</a>
-              )}
-              {whatsapp && (
-                <a
-                  href={`https://wa.me/${String(whatsapp).replace(/[^0-9]/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ ...contactButton, color: '#25D366', borderColor: 'rgba(37,211,102,0.3)' }}
-                  aria-label={t('واتساب')}
-                >
-                  <IoLogoWhatsapp size={17} />{t('واتساب')}</a>
-              )}
             </div>
           )}
-        </section>
+        </div>
+      </header>
 
-        {marketingStrip && <div style={{ marginTop: 14 }}>{marketingStrip}</div>}
+      <div style={{ maxWidth: STOREFRONT_MAX_WIDTH, margin: '0 auto', padding: `0 ${STOREFRONT_GUTTER}px` }}>
+        {/* ==================== التواصل ==================== */}
+        {(phone || waNumber) && (
+          <div style={{ display: 'flex', gap: 10, marginTop: 16, maxWidth: 520 }}>
+            {phone && (
+              <a href={`tel:${phone}`} style={contactButton}>
+                <IoCallOutline size={18} />
+                {t('اتصال')}
+              </a>
+            )}
+            {waNumber && (
+              <a href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer" style={{ ...contactButton, color: '#128C4B' }}>
+                <IoLogoWhatsapp size={18} />
+                {t('واتساب')}
+              </a>
+            )}
+          </div>
+        )}
 
-        {stickyNav && <div style={{ marginTop: 14 }}>{stickyNav}</div>}
+        {marketingStrip && <div style={{ marginTop: 16 }}>{marketingStrip}</div>}
 
-        <main style={{ paddingBottom: 'calc(96px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
+        {stickyNav && <div style={{ marginTop: 12 }}>{stickyNav}</div>}
+
+        <main style={{ paddingBottom: 'calc(110px + env(safe-area-inset-bottom, 0px))' }}>{children}</main>
       </div>
 
       {footer}
@@ -433,21 +354,15 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             aria-label={t('العودة إلى الأعلى')}
             style={{
+              ...roundButton,
               position: 'fixed',
-              insetInlineStart: 14,
-              bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))',
+              insetInlineStart: 16,
+              bottom: 'calc(88px + env(safe-area-inset-bottom, 0px))',
               zIndex: 55,
-              width: 44,
-              height: 44,
-              borderRadius: sd.rButton,
-              border: `1px solid ${sf.border}`,
+              width: 46,
+              height: 46,
               background: sf.card,
-              color: sf.text,
-              display: 'grid',
-              placeItems: 'center',
-              cursor: 'pointer',
-              boxShadow: `0 6px 20px ${sf.shadow}`,
-              padding: 0
+              boxShadow: sd.shadowPop
             }}
           >
             <IoArrowUp size={19} />
@@ -458,20 +373,100 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
   );
 };
 
+/** شعار المطعم، أو أوّل حرفٍ من اسمه على لونه حين لا شعار — لا رمزاً تعبيرياً */
+const LogoMark: React.FC<{ logo?: string; name: string; size: number; ring?: boolean }> = ({ logo, name, size, ring }) => {
+  const style: React.CSSProperties = {
+    width: size,
+    height: size,
+    borderRadius: size >= 60 ? 22 : 12,
+    objectFit: 'cover',
+    flexShrink: 0,
+    background: sf.card,
+    boxShadow: ring ? '0 0 0 3px rgba(255,255,255,0.9), 0 12px 30px rgba(0,0,0,0.3)' : 'none'
+  };
+  if (logo) {
+    return <img src={getImageUrl(sizedImage(logo, 'sm'))} alt="" width={size} height={size} decoding="async" style={style} />;
+  }
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        ...style,
+        display: 'grid',
+        placeItems: 'center',
+        background: sf.accent,
+        color: sf.onAccent,
+        fontWeight: 900,
+        fontSize: size * 0.42
+      }}
+    >
+      {name.trim().charAt(0) || '•'}
+    </span>
+  );
+};
+
+const glassChip: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  minHeight: 32,
+  padding: '0 12px',
+  borderRadius: 999,
+  border: '1px solid rgba(255,255,255,0.22)',
+  background: 'rgba(255,255,255,0.14)',
+  backdropFilter: 'blur(10px)',
+  WebkitBackdropFilter: 'blur(10px)',
+  color: '#fff',
+  fontSize: 12.5,
+  fontWeight: 700
+};
+
+const roundButton: React.CSSProperties = {
+  position: 'relative',
+  width: 42,
+  height: 42,
+  display: 'grid',
+  placeItems: 'center',
+  borderRadius: 999,
+  border: `1px solid ${sf.border}`,
+  background: sf.card,
+  color: sf.text,
+  cursor: 'pointer',
+  flexShrink: 0,
+  padding: 0
+};
+
+const countBadge: React.CSSProperties = {
+  position: 'absolute',
+  top: -4,
+  insetInlineEnd: -4,
+  minWidth: 19,
+  height: 19,
+  borderRadius: 999,
+  background: sf.accent,
+  color: sf.onAccent,
+  fontSize: 10.5,
+  fontWeight: 800,
+  display: 'grid',
+  placeItems: 'center',
+  padding: '0 4px'
+};
+
 const contactButton: React.CSSProperties = {
   flex: 1,
-  minHeight: 44,
+  minHeight: 48,
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  gap: 7,
+  gap: 8,
   borderRadius: sd.rButton,
   border: `1px solid ${sf.border}`,
-  background: sf.surface,
+  background: sf.card,
   color: sf.text,
-  fontSize: 13,
-  fontWeight: 700,
-  textDecoration: 'none'
+  fontSize: 14,
+  fontWeight: 800,
+  textDecoration: 'none',
+  boxShadow: sd.shadowCard
 };
 
 export { MINI_HEADER_HEIGHT };

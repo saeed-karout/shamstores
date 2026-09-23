@@ -134,14 +134,20 @@ const BusinessLoader: React.FC<{ children: (data: any) => React.ReactNode }> = (
     return (
       <div
         className="min-h-screen flex items-center justify-center text-center p-6"
-        style={{ background: '#082E24', color: '#E8F5E9' }}
+        // بهوية شام الفاتحة — لا ألوان للمتجر هنا لأنه لم يُحمَّل أصلاً
+        style={{ background: '#F6F8F5', color: '#10231B', fontFamily: 'Cairo, sans-serif' }}
       >
-        <div style={{ maxWidth: 420 }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏪</div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
+        <div style={{ maxWidth: 420, display: 'grid', justifyItems: 'center', gap: 10 }}>
+          <div
+            aria-hidden="true"
+            style={{ width: 76, height: 76, borderRadius: 24, display: 'grid', placeItems: 'center', background: 'rgba(8,72,53,0.08)', color: '#084835', fontSize: 34 }}
+          >
+            ?
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>
             {error || 'لا يمكن الوصول إلى المتجر'}
           </h1>
-          <p style={{ color: '#9DC4AC', fontSize: 14, lineHeight: 1.8 }}>
+          <p style={{ color: '#647870', fontSize: 14.5, lineHeight: 1.9, margin: 0 }}>
             تأكد من صحة الرابط، أو تواصل مع صاحب المتجر إذا استمرت المشكلة.
           </p>
         </div>

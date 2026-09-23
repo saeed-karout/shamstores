@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker';
+import PalettePicker from '@/components/settings/PalettePicker';
 import { DEFAULT_DESIGN, resolveDesign, type StorefrontDesign } from '@/utils/storefrontDesign';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
@@ -193,14 +194,14 @@ export const SettingsPage: React.FC = () => {
   const [designShape, setDesignShape] = useState<StorefrontDesign>(DEFAULT_DESIGN);
 
   const [designForm, setDesignForm] = useState({
-    primaryColor: '#3B82F6',
-    secondaryColor: '#10B981',
-    backgroundColor: '#082E24',
-    cardColor: '#112E23',
-    surfaceColor: '#0F3D31',
-    textColor: '#E8F5E9',
-    mutedColor: '#9DC4AC',
-    accentColor: '#C8E235',
+    primaryColor: '#084835',
+    secondaryColor: '#C07CDF',
+    backgroundColor: '#F6F8F5',
+    cardColor: '#FFFFFF',
+    surfaceColor: '#EEF3EF',
+    textColor: '#10231B',
+    mutedColor: '#647870',
+    accentColor: '#084835',
     fontFamily: 'Cairo',
   });
 
@@ -255,14 +256,14 @@ export const SettingsPage: React.FC = () => {
 
       // ✅ تحميل جميع ألوان المطعم
       setDesignForm({
-        primaryColor: restaurant.primaryColor || '#3B82F6',
-        secondaryColor: restaurant.secondaryColor || '#10B981',
-        backgroundColor: restaurant.backgroundColor || '#082E24',
-        cardColor: restaurant.cardColor || '#112E23',
-        surfaceColor: restaurant.surfaceColor || '#0F3D31',
-        textColor: restaurant.textColor || '#E8F5E9',
-        mutedColor: restaurant.mutedColor || '#9DC4AC',
-        accentColor: restaurant.accentColor || '#C8E235',
+        primaryColor: restaurant.primaryColor || '#084835',
+        secondaryColor: restaurant.secondaryColor || '#C07CDF',
+        backgroundColor: restaurant.backgroundColor || '#F6F8F5',
+        cardColor: restaurant.cardColor || '#FFFFFF',
+        surfaceColor: restaurant.surfaceColor || '#EEF3EF',
+        textColor: restaurant.textColor || '#10231B',
+        mutedColor: restaurant.mutedColor || '#647870',
+        accentColor: restaurant.accentColor || '#084835',
         fontFamily: restaurant.fontFamily || 'Cairo',
       });
 
@@ -756,6 +757,12 @@ export const SettingsPage: React.FC = () => {
               تخصيص ألوان المطعم
             </h2>
             
+            <PalettePicker
+              value={designForm}
+              onPick={(colors) => setDesignForm({ ...designForm, ...colors })}
+              colors={C}
+            />
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
               
               {/* اللون الأساسي */}

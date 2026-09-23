@@ -30,7 +30,7 @@ import {
   IoArrowUp
 } from 'react-icons/io5';
 import { AnimatePresence, motion } from 'framer-motion';
-import { sf } from '@/utils/storefrontTheme';
+import { sf, sfBrandGradient, sfBrandPattern } from '@/utils/storefrontTheme';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { sd } from '@/utils/storefrontDesign';
 import { useDesign } from '@/utils/storefrontDesignContext';
@@ -178,13 +178,15 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
           zIndex: 40,
           // «عائم» يبتعد عن الحافّة ويحمل ظلّاً؛ و«بسيط» يتخلّى عن الحدّ
           // ويكتفي بالتمويه؛ و«صلب» هو الشريط الملتصق المعتاد
-          background: sf.bg,
+          // زجاجيّ: المحتوى يمرّ خلفه بلونٍ مطفأ بدل أن يقطعه شريطٌ صلب
+          background: sf.overlay,
           borderBottom: minimalNav || floating ? 'none' : `${sd.borderW} solid ${sf.border}`,
           borderRadius: floating ? sd.rCard : 0,
           boxShadow: floating ? sd.shadowPop : 'none',
           margin: floating ? '10px 10px 0' : 0,
           border: floating ? `${sd.borderW} solid ${sf.border}` : undefined,
-          backdropFilter: 'blur(8px)'
+          backdropFilter: 'saturate(170%) blur(18px)',
+          WebkitBackdropFilter: 'saturate(170%) blur(18px)'
         }}
       >
         <div
@@ -382,15 +384,17 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
         <div
           className="shop-banner"
           style={{
-            background: coverImage ? sf.surface : `linear-gradient(135deg, ${sf.primary}, ${sf.accent})`
+            background: coverImage ? sf.surface : sfBrandGradient
           }}
         >
-          {coverImage && (
+          {coverImage ? (
             <img
               src={getImageUrl(coverImage)}
               alt=""
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
+          ) : (
+            <div aria-hidden="true" style={sfBrandPattern as React.CSSProperties} />
           )}
 
           {/* حجاب متدرّج: النص فوق صورة تاجر مجهولة الألوان يحتاج أرضية */}
@@ -398,12 +402,14 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'linear-gradient(to top, rgba(0,0,0,0.82) 4%, rgba(0,0,0,0.42) 48%, rgba(0,0,0,0.08) 100%)'
+              background: coverImage
+                ? 'linear-gradient(to top, rgba(0,0,0,0.82) 4%, rgba(0,0,0,0.42) 48%, rgba(0,0,0,0.08) 100%)'
+                : 'linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 60%)'
             }}
           />
 
-          <div style={{ position: 'absolute', insetInline: 0, bottom: 0, padding: '0 18px 16px' }}>
-            <h1 style={{ margin: 0, fontSize: 'clamp(19px, 3.2vw, 28px)', fontWeight: 900, color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.5)' }}>
+          <div style={{ position: 'absolute', insetInline: 0, bottom: 0, padding: 'clamp(16px, 3vw, 32px)' }}>
+            <h1 style={{ margin: 0, fontSize: 'clamp(22px, 3.6vw, 38px)', fontWeight: 900, letterSpacing: '-0.01em', color: '#fff', textShadow: '0 2px 16px rgba(0,0,0,0.3)' }}>
               {name}
             </h1>
             {description && (
@@ -540,19 +546,22 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
                   gap: 6
                 }}
               >
+                {/* دوائر كتطبيقات التسوّق: الصورة إن وُجدت، وإلا الحرف الأوّل
+                    على لون المتجر الخفيف — لا مربّعاً فارغاً بحدٍّ رماديّ */}
                 <span
                   style={{
-                    width: 62,
-                    height: 62,
-                    borderRadius: 18,
-                    background: sf.card,
-                    border: `2px solid ${active ? sf.accent : sf.border}`,
+                    width: 64,
+                    height: 64,
+                    borderRadius: 999,
+                    background: active ? sf.accent : sf.accentSoft,
+                    boxShadow: active ? `0 0 0 3px ${sf.bg}, 0 0 0 5px ${sf.accent}` : 'none',
                     display: 'grid',
                     placeItems: 'center',
                     overflow: 'hidden',
-                    color: active ? sf.accent : sf.muted,
+                    color: active ? sf.onAccent : sf.accent,
                     fontWeight: 900,
-                    fontSize: 20
+                    fontSize: 22,
+                    transition: 'box-shadow .2s ease, background .2s ease'
                   }}
                 >
                   {category.image ? (

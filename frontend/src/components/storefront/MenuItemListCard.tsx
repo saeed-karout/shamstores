@@ -8,7 +8,8 @@ import {
   IoHeartOutline,
   IoTimeOutline,
   IoFlameOutline,
-  IoOptionsOutline
+  IoOptionsOutline,
+  IoRestaurantOutline
 } from 'react-icons/io5';
 import { sf } from '@/utils/storefrontTheme';
 import { sd } from '@/utils/storefrontDesign';
@@ -57,7 +58,7 @@ export interface MenuItemListCardProps {
   onToggleFavorite?: (item: StorefrontMenuItem) => void;
 }
 
-const DISCOUNT_RED = '#FF6B6B';
+const DISCOUNT_RED = '#E5484D';
 
 const hasOptions = (item: StorefrontMenuItem): boolean =>
   (item.sizes?.length || 0) > 0 || (item.addons?.length || 0) > 0;
@@ -88,14 +89,16 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
   return (
     <article
       onClick={() => !unavailable && onOpenDetails?.(item)}
+      className="sf-lift"
       style={{
         position: 'relative',
         display: 'flex',
-        gap: 12,
+        gap: 14,
         background: sf.card,
         border: `1px solid ${sf.border}`,
         borderRadius: sd.rCard,
-        padding: 10,
+        boxShadow: sd.shadowCard,
+        padding: 12,
         cursor: unavailable ? 'default' : onOpenDetails ? 'pointer' : 'default',
         opacity: unavailable ? 0.62 : 1,
         overflow: 'hidden'
@@ -105,8 +108,8 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
       <div
         style={{
           position: 'relative',
-          width: 104,
-          height: 104,
+          width: 112,
+          height: 112,
           flexShrink: 0,
           borderRadius: sd.rImage,
           overflow: 'hidden',
@@ -119,23 +122,24 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
             alt={item.name}
             loading="lazy"
             decoding="async"
-            width={104}
-            height={104}
+            width={112}
+            height={112}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         ) : (
+          // بلا صورة: لون المطعم الخفيف وأيقونة — لا رمزاً تعبيرياً يختلف شكله بين الأجهزة
           <div
             style={{
               width: '100%',
               height: '100%',
               display: 'grid',
               placeItems: 'center',
-              color: sf.muted,
-              fontSize: 26
+              color: sf.accent,
+              background: `radial-gradient(120% 90% at 30% 20%, ${sf.card}, transparent 60%), ${sf.accentSoft}`
             }}
             aria-hidden="true"
           >
-            🍽️
+            <IoRestaurantOutline size={34} style={{ opacity: 0.55 }} />
           </div>
         )}
 
@@ -181,10 +185,10 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
               flex: 1,
               minWidth: 0,
               margin: 0,
-              fontSize: 14.5,
+              fontSize: 15.5,
               fontWeight: 800,
               color: sf.text,
-              lineHeight: 1.5,
+              lineHeight: 1.45,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -283,8 +287,10 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
             gap: 8
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, minWidth: 0 }}>
-            <span style={{ fontSize: 15, fontWeight: 800, color: sf.accent, fontVariantNumeric: 'tabular-nums' }}>
+          {/* السعر لا ينكسر: «١٥٬٠٠٠» في سطر و«ل.س» في آخر كان يحدث مع الخصم.
+              السعر القديم يلتفّ تحته بدل أن يضغطه */}
+          <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 7, rowGap: 0, minWidth: 0 }}>
+            <span style={{ fontSize: 16, fontWeight: 900, color: sf.accent, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
               {formatPrice(finalPrice, currency)}
             </span>
             {hasDiscount && (
@@ -293,7 +299,8 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
                   fontSize: 11.5,
                   color: sf.muted,
                   textDecoration: 'line-through',
-                  fontVariantNumeric: 'tabular-nums'
+                  fontVariantNumeric: 'tabular-nums',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {formatPrice(beforePrice, currency)}
@@ -318,17 +325,18 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
                   onClick={() => onAdd(item)}
                   aria-label={withOptions ? `اختيار خيارات ${item.name}` : `إضافة ${item.name} إلى السلة`}
                   style={{
-                    minWidth: 44,
-                    height: 40,
+                    minWidth: 42,
+                    height: 42,
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 5,
-                    padding: withOptions ? '0 12px' : 0,
-                    borderRadius: sd.rButton,
+                    padding: withOptions ? '0 14px' : 0,
+                    borderRadius: withOptions ? sd.rButton : 999,
                     border: 'none',
                     background: sf.accent,
                     color: sf.onAccent,
+                    boxShadow: `0 6px 16px ${sf.shadow}`,
                     fontSize: 12.5,
                     fontWeight: 800,
                     fontFamily: 'inherit',
@@ -368,7 +376,7 @@ const badgeStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 3,
   background: sf.surface,
-  border: `1px solid ${sf.border}`,
+  border: 'none',
   color: sf.muted,
   borderRadius: sd.rChip,
   padding: '2px 8px',

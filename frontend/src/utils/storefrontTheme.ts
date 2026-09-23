@@ -26,41 +26,32 @@ export interface StorefrontBusiness {
 export type StorefrontKind = 'restaurant' | 'store';
 
 /**
- * لوحة المطعم — أخضر داكن. نفس الافتراضي في قاعدة البيانات.
+ * هوية شام ستورز الفاتحة — الافتراضيّ للمطعم والمتجر معاً.
+ *
+ * `accent` هو لون **الفعل** في كل المكوّنات (الأزرار، الأسعار، المحدَّد)،
+ * فهو الأخضر #084835 المقروء على الأبيض — لا ليمونيّ الشعار الذي يختفي
+ * نصّاً على خلفيةٍ فاتحة. الليمونيّ والبنفسجي يظهران في الغلاف والتفاصيل.
+ *
+ * كانت اللوحة الافتراضية أخضرَ داكناً (#082E24) بنصٍّ فاتح؛ المتاجر التي
+ * لم تغيّرها نُقلت إلى هذه بسكربت `migrate-storefront-palette.js`.
  */
 export const SF_FALLBACK = {
-  primary: '#3B82F6',
-  secondary: '#10B981',
-  bg: '#082E24',
-  card: '#112E23',
-  surface: '#0F3D31',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  accent: '#C8E235',
+  primary: '#084835',
+  secondary: '#C07CDF',
+  bg: '#F6F8F5',
+  card: '#FFFFFF',
+  surface: '#EEF3EF',
+  text: '#10231B',
+  muted: '#647870',
+  accent: '#084835',
   font: 'Cairo'
 } as const;
 
 /**
- * لوحة المتجر — هوية شام ستورز نفسها.
- *
- * الفرق بين المتجر والقائمة الرقمية في **الهيكل** لا في اللون: شريط علوي
- * دائم وبانر عريض وشبكة منتجات، مقابل غلاف وبطاقة هوية وقائمة صفوف.
- * لونان مختلفان كانا سيجعلان المنصة تبدو منصتين لا منتجين لمنصة واحدة.
- *
- * تبقى ثابتاً مستقلاً رغم تطابقه اليوم مع لوحة المطعم: الفصل يجعل تغيير
- * أحدهما لاحقاً تعديلَ سطر لا مطاردةَ قيم متطابقة في ملفين.
+ * لوحة المتجر — الهوية نفسها. الفرق بين المتجر والقائمة في **الهيكل** لا
+ * في اللون؛ وتبقى ثابتاً مستقلّاً ليكون تغيير أحدهما لاحقاً سطراً واحداً.
  */
-export const SF_STORE_FALLBACK = {
-  primary: '#0D4A3A',
-  secondary: '#10B981',
-  bg: '#082E24',
-  card: '#112E23',
-  surface: '#0F3D31',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  accent: '#C8E235',
-  font: 'Cairo'
-} as const;
+export const SF_STORE_FALLBACK = { ...SF_FALLBACK } as const;
 
 const paletteFor = (kind?: StorefrontKind) =>
   kind === 'store' ? SF_STORE_FALLBACK : SF_FALLBACK;
@@ -142,7 +133,10 @@ export const resolveTokens = (
     text: safeColor(business?.textColor, base.text),
     muted: safeColor(business?.mutedColor, base.muted),
     accent,
-    border: withAlpha(accent, 0.16),
+    // على الفاتح حدٌّ رماديّ من لون النصّ؛ حدٌّ من لون الفعل يلوّن كلّ بطاقة
+    border: isLightColor(safeColor(business?.backgroundColor, base.bg))
+      ? withAlpha(safeColor(business?.textColor, base.text), 0.09)
+      : withAlpha(accent, 0.16),
     font: (business?.fontFamily || base.font).trim() || base.font,
     onPrimary: readableOn(primary),
     onAccent: readableOn(accent)
@@ -186,11 +180,14 @@ export const applyStorefrontTheme = (
   });
 
   // ألوان مشتقة للحالات (تمرير/ضغط/ظل)
+  const light = isLightColor(tokens.bg);
   const derived: Array<[string, string]> = [
-    ['--sf-primary-soft', withAlpha(tokens.primary, 0.14)],
-    ['--sf-accent-soft', withAlpha(tokens.accent, 0.14)],
-    ['--sf-shadow', withAlpha('#000000', 0.35)],
-    ['--sf-overlay', withAlpha(tokens.bg, 0.72)]
+    ['--sf-primary-soft', withAlpha(tokens.primary, light ? 0.1 : 0.14)],
+    ['--sf-accent-soft', withAlpha(tokens.accent, light ? 0.1 : 0.14)],
+    // ظلّ الفاتح أخفّ بكثير: الأسود بـ٣٥٪ على الأبيض بقعةٌ لا عمق
+    ['--sf-shadow', light ? 'rgba(16, 35, 27, 0.14)' : withAlpha('#000000', 0.35)],
+    ['--sf-overlay', withAlpha(tokens.bg, 0.72)],
+    ['--sf-scheme', light ? 'light' : 'dark']
   ];
   derived.forEach(([name, value]) => {
     previous.push([name, root.style.getPropertyValue(name)]);
@@ -198,7 +195,7 @@ export const applyStorefrontTheme = (
   });
 
   // الشكل مع اللون في نداءٍ واحد — ودالّة تنظيفه تُضمّ إلى تنظيفنا
-  const restoreDesign = applyStorefrontDesign(resolveDesign(business?.storefrontDesign), root);
+  const restoreDesign = applyStorefrontDesign(resolveDesign(business?.storefrontDesign), root, light);
 
   return () => {
     restoreDesign();
@@ -236,3 +233,27 @@ export const sf = {
   shadow: 'var(--sf-shadow)',
   overlay: 'var(--sf-overlay)'
 } as const;
+
+/**
+ * غلاف التاجر حين لا صورة له — لغةٌ واحدة للمطعم والقوالب الأربعة.
+ *
+ * تدرّجٌ من لونه الأساسيّ، ووهجٌ من لونه الثانويّ في الزاوية، وضوءٌ أبيض
+ * خفيف أعلاه. كان كلّ هيكلٍ يرسم تدرّجاً من الأساسيّ إلى لون الفعل، وهما
+ * اليوم لونٌ واحد في الهوية الافتراضية — فيخرج مستطيلاً مسطّحاً.
+ */
+export const sfBrandGradient =
+  `radial-gradient(70% 90% at 12% 110%, color-mix(in srgb, ${sf.secondary} 45%, transparent), transparent 65%), ` +
+  `radial-gradient(80% 80% at 85% 0%, rgba(255,255,255,0.2), transparent 60%), ` +
+  `linear-gradient(155deg, color-mix(in srgb, ${sf.primary} 88%, #fff), color-mix(in srgb, ${sf.primary} 78%, #000))`;
+
+/** نقشٌ نقطيّ يُرسم فوق `sfBrandGradient` — طبقةٌ منفصلة لأنها تحتاج قناعاً */
+export const sfBrandPattern: Record<string, string | number> = {
+  position: 'absolute',
+  inset: 0,
+  backgroundImage: 'radial-gradient(rgba(255,255,255,0.12) 1.2px, transparent 1.2px)',
+  backgroundSize: '22px 22px',
+  maskImage: 'linear-gradient(200deg, #000 10%, transparent 70%)',
+  WebkitMaskImage: 'linear-gradient(200deg, #000 10%, transparent 70%)',
+  pointerEvents: 'none'
+};
+
