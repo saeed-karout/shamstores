@@ -8,7 +8,7 @@ import http from 'http';
 import helmet from 'helmet';
 import compression from 'compression';
 import hpp from 'hpp';
-import { PrismaClient } from '@prisma/client';
+import sharedPrisma from './services/prisma';
 import { initializeSocket } from './realtime/socket';
 import env, { isProduction } from './config/env';
 import { PLAN_SEEDS } from './config/plans';
@@ -78,10 +78,13 @@ if (env.TRUST_PROXY !== 'false') {
 }
 app.disable('x-powered-by');
 
-// إنشاء Prisma Client
-const prisma = new PrismaClient({
-  log: isProduction ? ['error'] : ['warn', 'error'],
-});
+// عميل Prisma **المشترك** لا عميلٌ ثانٍ.
+//
+// كان هنا `new PrismaClient()` مستقلّ بجانب `services/prisma` — مجمّعا
+// اتصالات بخمسة لكلٍّ منهما، أي عشرة من دينو الويب وحده بعد ساعاتٍ من
+// العمل: كامل سقف JawsDB. فيفشل أمر الإصدار (`prisma db push`) لأنه لا يجد
+// اتصالاً واحداً — وقع على الإصدار v123 مرّتين.
+const prisma = sharedPrisma;
 
 // ==============================================
 // ✅ ترويسات الأمان (Helmet)
