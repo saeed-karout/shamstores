@@ -1,215 +1,153 @@
-// frontend/src/pages/auth/EmailVerification.tsx
+// frontend/src/pages/auth/EmailVerification.tsx — تفعيل البريد برمزٍ من ٦ أرقام
 
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { IoMail, IoArrowBack } from 'react-icons/io5';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { IoMailOutline, IoShieldCheckmarkOutline } from 'react-icons/io5';
 import toast from 'react-hot-toast';
-import Button from '@/components/common/Button';
 import apiClient from '@/services/api/client';
+import useHostBrand from '@/hooks/useHostBrand';
+import AuthShell from '@/components/auth/AuthShell';
+import { AuthAlert, AuthField, OtpInput, SubmitButton } from '@/components/auth/AuthKit';
 
-const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  accent: '#C8E235',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-};
+const RESEND_SECONDS = 60;
 
 const EmailVerification: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const initialEmail = (location.state as any)?.email || '';
-  const accountType = (location.state as any)?.accountType || 'owner';
-  const loginPath = accountType === 'user' ? '/user/login' : accountType === 'delivery' ? '/delivery/login' : '/login';
-  const registerPath = accountType === 'user' ? '/user/register' : accountType === 'delivery' ? '/delivery/login' : '/register';
+  const { brand } = useHostBrand();
+  const initialEmail: string = (location.state as any)?.email || '';
+  const accountType: string = (location.state as any)?.accountType || 'owner';
+  const loginPath = accountType === 'user' ? '/user/login' : '/login';
 
   const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendCountdown, setResendCountdown] = useState(0);
+  const [error, setError] = useState('');
+  const [resending, setResending] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const timer = useRef<number | null>(null);
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => () => {
+    if (timer.current) window.clearInterval(timer.current);
+  }, []);
 
-    if (!email.trim()) {
-      toast.error('يرجى إدخال البريد الإلكتروني');
-      return;
-    }
+  const startCountdown = () => {
+    setCountdown(RESEND_SECONDS);
+    if (timer.current) window.clearInterval(timer.current);
+    timer.current = window.setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1 && timer.current) window.clearInterval(timer.current);
+        return Math.max(0, prev - 1);
+      });
+    }, 1000);
+  };
 
-    if (!code.trim()) {
-      toast.error('يرجى إدخال الكود');
-      return;
-    }
-
+  const handleVerify = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!email.trim()) return setError('أدخل بريدك الإلكتروني');
+    if (code.length !== 6) return setError('أدخل الرمز كاملاً — 6 أرقام');
     setLoading(true);
+    setError('');
     try {
-      console.log('🔎 Verifying email code:', { email });
-      const response = await apiClient.post('/auth/verify-email', { email, code });
-
+      const response = await apiClient.post('/auth/verify-email', { email: email.trim(), code });
       if (response.success) {
-        toast.success('تم تفعيل البريد الإلكتروني بنجاح!');
-        console.log('✅ Email verified, redirecting:', { loginPath });
+        toast.success('تم تفعيل بريدك — سجّل دخولك الآن');
         navigate(loginPath);
       } else {
-        toast.error(response.error || 'فشل التحقق من الكود');
+        setError(response.error || 'الرمز غير صحيح');
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'حدث خطأ في التحقق');
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'الرمز غير صحيح أو انتهت صلاحيته');
     } finally {
       setLoading(false);
     }
   };
 
+  // إرسالٌ تلقائيّ حين تكتمل الخانات — لا حاجة لزرٍّ بعد آخر رقم
+  useEffect(() => {
+    if (code.length === 6 && email.trim() && !loading) handleVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code]);
+
   const handleResend = async () => {
-    if (!email.trim()) {
-      toast.error('يرجى إدخال البريد الإلكتروني');
-      return;
-    }
-
-    setResendLoading(true);
+    if (!email.trim()) return setError('أدخل بريدك الإلكتروني أولاً');
+    setResending(true);
+    setError('');
     try {
-      console.log('🔁 Resend verification code:', { email });
-      const response = await apiClient.post('/auth/resend-verification', { email });
-
+      const response = await apiClient.post('/auth/resend-verification', { email: email.trim() });
       if (response.success) {
-        toast.success('تم إرسال كود جديد إلى بريدك الإلكتروني');
-        setResendCountdown(60);
-        const interval = setInterval(() => {
-          setResendCountdown(prev => {
-            if (prev <= 1) {
-              clearInterval(interval);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+        toast.success('أرسلنا رمزاً جديداً إلى بريدك');
+        startCountdown();
       } else {
-        toast.error(response.error || 'فشل في إعادة الإرسال');
+        setError(response.error || 'تعذّرت إعادة الإرسال');
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || 'حدث خطأ');
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'تعذّرت إعادة الإرسال');
     } finally {
-      setResendLoading(false);
+      setResending(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} dir="rtl">
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: 40, maxWidth: 420, width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: 30 }}>
-          <div style={{ width: 80, height: 80, background: 'rgba(200,226,53,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-            <IoMail size={40} style={{ color: C.accent }} />
-          </div>
-          <h1 style={{ color: C.text, fontSize: 24, fontWeight: 700, marginBottom: 10 }}>تحقق من بريدك الإلكتروني</h1>
-          <p style={{ color: C.muted, fontSize: 14, marginBottom: 12 }}>
-            أدخل بريدك الإلكتروني لإرسال كود التحقق
-          </p>
-          <input
+    <AuthShell
+      brand={brand}
+      title="تحقّق من بريدك"
+      subtitle={
+        initialEmail ? (
+          <>
+            أرسلنا رمزاً من 6 أرقام إلى <bdi dir="ltr" style={{ fontWeight: 800, color: 'var(--ss-ink)' }}>{initialEmail}</bdi>
+          </>
+        ) : (
+          'أدخل بريدك والرمز الذي وصلك.'
+        )
+      }
+      panelHeadline="خطوةٌ أخيرة ويصبح حسابك جاهزاً"
+      backTo={loginPath}
+      backLabel="تسجيل الدخول"
+    >
+      <form className="ss-auth-form" onSubmit={handleVerify}>
+        {!initialEmail && (
+          <AuthField
+            label="البريد الإلكتروني"
             type="email"
-            placeholder="your@email.com"
+            required
+            ltr
+            autoComplete="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value.trim())}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              background: C.prim,
-              border: `1px solid ${C.border}`,
-              borderRadius: 12,
-              color: C.text,
-              fontSize: 14,
-              textAlign: 'left',
-              direction: 'ltr'
-            }}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@example.com"
+            icon={<IoMailOutline size={19} />}
           />
+        )}
+
+        <div className="ss-field">
+          <span className="ss-field-label">رمز التحقّق</span>
+          <OtpInput value={code} onChange={(v) => { setCode(v); setError(''); }} autoFocus={!!initialEmail} />
+          <span className="ss-field-hint" style={{ textAlign: 'center' }}>صالحٌ 15 دقيقة. تحقّق من مجلّد الرسائل غير المرغوبة أيضاً.</span>
         </div>
 
-        <form onSubmit={handleVerify}>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', color: C.text, fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-              كود التحقق
-            </label>
-            <input
-              type="text"
-              placeholder="000000"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              maxLength={6}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                background: C.prim,
-                border: `1px solid ${C.border}`,
-                borderRadius: 12,
-                color: C.text,
-                fontSize: 18,
-                textAlign: 'center',
-                letterSpacing: '0.2em',
-                fontFamily: 'monospace',
-              }}
-            />
-            <p style={{ color: C.muted, fontSize: 12, marginTop: 8, textAlign: 'center' }}>
-              ساري لمدة 15 دقيقة
-            </p>
-          </div>
+        {error && <AuthAlert>{error}</AuthAlert>}
 
-          <Button
-            type="submit"
-            disabled={loading || code.length !== 6}
-            onClick={handleVerify}
-            style={{ width: '100%', marginBottom: 12 }}
-          >
-            {loading ? 'جاري التحقق...' : 'تحقق'}
-          </Button>
-        </form>
+        <SubmitButton loading={loading} loadingText="جارٍ التحقّق…" disabled={code.length !== 6}>
+          <IoShieldCheckmarkOutline size={20} /> تفعيل الحساب
+        </SubmitButton>
+      </form>
 
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ color: C.muted, fontSize: 14, marginBottom: 12 }}>
-            لم تستقبل الكود؟
-          </p>
-          <button
-            onClick={handleResend}
-            disabled={resendLoading || resendCountdown > 0}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: resendCountdown > 0 ? C.muted : C.accent,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: resendCountdown > 0 ? 'not-allowed' : 'pointer',
-              opacity: resendCountdown > 0 ? 0.5 : 1,
-            }}
-          >
-            {resendCountdown > 0
-              ? `إعادة الإرسال بعد ${resendCountdown}s`
-              : initialEmail ? 'إعادة الإرسال' : 'إرسال الكود'}
-          </button>
-        </div>
-
-        <button
-          onClick={() => navigate(registerPath)}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            color: C.muted,
-            fontSize: 14,
-            marginTop: 20,
-            cursor: 'pointer',
-            justifyContent: 'flex-end',
-            width: '100%',
-          }}
-        >
-          <IoArrowBack size={16} />
-          العودة للخلف
+      <p className="ss-auth-foot">
+        لم يصلك الرمز؟{' '}
+        <button type="button" className="ss-auth-link" onClick={handleResend} disabled={resending || countdown > 0}>
+          {countdown > 0 ? `أعد الإرسال بعد ${countdown} ث` : resending ? 'جارٍ الإرسال…' : 'أعد الإرسال'}
         </button>
-      </div>
-    </div>
+      </p>
+      {accountType !== 'user' && (
+        <p className="ss-auth-foot" style={{ marginTop: 8 }}>
+          بريدٌ خاطئ؟{' '}
+          <Link to="/register" className="ss-auth-link">
+            سجّل من جديد
+          </Link>
+        </p>
+      )}
+    </AuthShell>
   );
 };
 

@@ -17,6 +17,8 @@ import api from '../services/api';
  */
 const UserLogin = lazy(() => import('../pages/auth/UserLogin'));
 const UserRegister = lazy(() => import('../pages/auth/UserRegister'));
+const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'));
+const EmailVerification = lazy(() => import('../pages/auth/EmailVerification'));
 const TrackOrder = lazy(() => import('@/pages/TrackOrder'));
 const PublicProduct = lazy(() => import('@/pages/PublicProduct'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
@@ -197,6 +199,10 @@ const PublicRouter: React.FC = () => {
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/user/login" element={<UserLogin />} />
       <Route path="/user/register" element={<UserRegister />} />
+      {/* كانا غائبين هنا: زبونٌ يسجّل على نطاق التاجر يُنقل إلى صفحة الرمز
+          فتعيده قاعدة `*` إلى الرئيسية، ولا يُفعَّل حسابه أبداً */}
+      <Route path="/auth/email-verification" element={<EmailVerification />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/track/:orderId" element={<TrackOrder />} />
       
       {/* مسار صفحة المنتج - مع slug في URL */}

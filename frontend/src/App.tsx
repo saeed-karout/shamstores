@@ -14,6 +14,7 @@ import { isStorefrontHost } from './utils/subdomain';
 
 // frontend/src/pages/auth
 const EmailVerification = lazy(() => import('./pages/auth/EmailVerification'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 // ==================== صفحات المالكين ====================
 const RestaurantDashboard = lazy(() => import('./pages/Owner/RestaurantDashboard'));
 const StoreDashboard = lazy(() => import('./pages/Owner/StoreDashboard'));
@@ -286,6 +287,7 @@ const MainApp: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/auth/email-verification" element={<EmailVerification />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/user/login" element={<UserLogin />} />
         <Route path="/user/register" element={<UserRegister />} />
         <Route path="/terms" element={<TermsPage />} />

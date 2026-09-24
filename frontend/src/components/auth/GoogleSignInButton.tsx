@@ -12,9 +12,11 @@ import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
+import { homeForRole } from './ProtectedRoute';
 
 interface GoogleSignInButtonProps {
-  variant?: 'primary' | 'secondary';
+  /** `light` لصفحات الهوية الجديدة — يأخذ نمط `.ss-auth-secondary` */
+  variant?: 'primary' | 'secondary' | 'light';
   fullWidth?: boolean;
   text?: string;
 }
@@ -48,15 +50,9 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
 
       toast.success('تم تسجيل الدخول بنجاح');
 
-      if (result.user?.role === 'super_admin') {
-        navigate('/admin/dashboard');
-      } else if (result.user?.role === 'owner') {
-        navigate('/dashboard');
-      } else if (result.user?.role === 'delivery_driver') {
-        navigate('/delivery/dashboard');
-      } else {
-        navigate('/');
-      }
+      // بيت كلّ دور من الحارس نفسه — كانت هنا `/admin/dashboard` و
+      // `/delivery/dashboard` ولا مسار لأيٍّ منهما، فينتهي الدخول بصفحة ٤٠٤
+      navigate(homeForRole(result.user));
     } catch (error: any) {
       console.error('Google sign-in error:', error);
       toast.error(error?.message || 'فشل تسجيل الدخول بواسطة Google');
@@ -78,10 +74,20 @@ const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     },
   };
 
+  if (variant === 'light') {
+    return (
+      <button type="button" className="ss-auth-secondary" onClick={handleClick} disabled={loading} aria-busy={loading}>
+        {loading ? <span className="ss-spinner" aria-hidden="true" /> : <FcGoogle size={20} />}
+        {loading ? 'جارٍ الاتصال بـ Google…' : text}
+      </button>
+    );
+  }
+
   const style = colors[variant];
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       disabled={loading}
       style={{
