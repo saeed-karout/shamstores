@@ -99,56 +99,77 @@ const generateUniqueStoreSubdomain = async (baseSubdomain: string, excludeId?: s
 
 export const getPlatformStats = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const now = new Date();
+    // منتصف الليل بتوقيت UTC: مفاتيح الأيام أدناه من `toISOString` (UTC)،
+    // ومنتصف ليلٍ محلّيّ كان يُسقط اليوم الأخير من الأسبوع
+    const weekAgo = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6));
+    const inAWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const notCancelled = { status: { not: 'cancelled' as const } };
+
+    // استعلامات عدٍّ وتجميعٍ خفيفة — لا جلب صفوف إلا لأسبوعٍ واحد من الطلبات
+    // (حقلان فقط) ولآخر خمسة تجّار
     const [
       restaurantsCount,
       storesCount,
       usersCount,
       driversCount,
       ordersCount,
-      totalRevenue,
+      gmv,
       pendingOrders,
       deliveringOrders,
-      completedOrders
+      completedOrders,
+      newRestaurants,
+      newStores,
+      pendingUpgrades,
+      pendingFeatureRequests,
+      newMessages,
+      expiringSubscriptions,
+      weekOrders,
+      latestRestaurants,
+      latestStores
     ] = await Promise.all([
       prisma.restaurant.count(),
       prisma.store.count(),
       prisma.user.count({ where: { role: { not: 'super_admin' } } }),
       prisma.user.count({ where: { role: 'delivery_driver' } }),
-      // ✅ استخدام الاسم الصحيح للجدول (قد يكون Order أو orders)
-      (prisma.order as any)?.count?.() || 0,
-      (prisma.order as any)?.aggregate?.({ where: {}, _sum: { total: true } }) || { _sum: { total: 0 } },
-      (prisma.order as any)?.count?.({ where: { status: 'pending' } }) || 0,
-      (prisma.order as any)?.count?.({ where: { status: 'delivering' } }) || 0,
-      (prisma.order as any)?.count?.({ where: { status: 'delivered' } }) || 0
+      prisma.order.count(),
+      // الملغاة ليست مبيعات — كانت تدخل في «الإيرادات»
+      prisma.order.aggregate({ where: notCancelled, _sum: { total: true } }),
+      prisma.order.count({ where: { status: 'pending' } }),
+      prisma.order.count({ where: { status: 'delivering' } }),
+      prisma.order.count({ where: { status: { in: ['delivered', 'served'] } } }),
+      prisma.restaurant.count({ where: { createdAt: { gte: weekAgo } } }),
+      prisma.store.count({ where: { createdAt: { gte: weekAgo } } }),
+      prisma.upgradeRequest.count({ where: { status: 'pending' } }),
+      prisma.featureRequest.count({ where: { status: 'pending' } }),
+      prisma.contactMessage.count({ where: { status: 'new' } }),
+      prisma.subscription.count({ where: { status: 'active', endDate: { gte: now, lte: inAWeek } } }),
+      prisma.order.findMany({ where: { createdAt: { gte: weekAgo } }, select: { createdAt: true, total: true, status: true } }),
+      prisma.restaurant.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, name: true, logo: true, createdAt: true, isActive: true } }),
+      prisma.store.findMany({ orderBy: { createdAt: 'desc' }, take: 5, select: { id: true, name: true, logo: true, createdAt: true, isActive: true } })
     ]);
 
-    // ✅ تجنب استخدام $queryRaw إذا كان الجدول غير موجود
-    let weeklyOrders: any[] = [];
-    try {
-      const last7Days = new Date();
-      last7Days.setDate(last7Days.getDate() - 7);
-      
-      // استخدام Prisma مباشرة بدلاً من $queryRaw
-      const orders = await (prisma.order as any)?.findMany?.({
-        where: { createdAt: { gte: last7Days } },
-        select: { createdAt: true }
-      }) || [];
-      
-      // تجميع الطلبات حسب اليوم
-      const ordersByDate: Record<string, number> = {};
-      orders.forEach((order: any) => {
-        const date = order.createdAt.toISOString().split('T')[0];
-        ordersByDate[date] = (ordersByDate[date] || 0) + 1;
-      });
-      
-      weeklyOrders = Object.entries(ordersByDate).map(([date, count]) => ({
-        date,
-        count
-      }));
-    } catch (error) {
-      console.log('Orders table not ready yet, skipping weekly stats');
-      weeklyOrders = [];
+    // سبعة أيامٍ كاملة — اليوم بلا طلبات صفرٌ لا فجوة في الرسم
+    const days: Array<{ date: string; count: number; sales: number }> = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekAgo.getTime() + i * 24 * 60 * 60 * 1000);
+      days.push({ date: d.toISOString().slice(0, 10), count: 0, sales: 0 });
     }
+    for (const o of weekOrders) {
+      const day = days.find((d) => d.date === o.createdAt.toISOString().slice(0, 10));
+      if (!day) continue;
+      day.count += 1;
+      if (o.status !== 'cancelled') day.sales += o.total || 0;
+    }
+
+    const latestBusinesses = [
+      ...latestRestaurants.map((b) => ({ ...b, type: 'restaurant' as const })),
+      ...latestStores.map((b) => ({ ...b, type: 'store' as const }))
+    ]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 5);
+
+    const revenue = gmv._sum.total || 0;
 
     res.json({
       success: true,
@@ -159,7 +180,8 @@ export const getPlatformStats = async (req: AuthRequest, res: Response): Promise
           users: usersCount,
           drivers: driversCount,
           orders: ordersCount,
-          revenue: (totalRevenue._sum.total as number) || 0
+          // مجموع مبيعات التجّار عبر المنصّة — لا دخل المنصّة من الاشتراكات
+          revenue
         },
         orders: {
           total: ordersCount,
@@ -167,34 +189,23 @@ export const getPlatformStats = async (req: AuthRequest, res: Response): Promise
           delivering: deliveringOrders,
           completed: completedOrders
         },
-        weeklyOrders,
-        lastUpdated: new Date()
+        growth: { newRestaurants, newStores },
+        attention: {
+          upgradeRequests: pendingUpgrades,
+          featureRequests: pendingFeatureRequests,
+          contactMessages: newMessages,
+          expiringSubscriptions
+        },
+        weekly: days,
+        // الشكل القديم باقٍ لمن يقرؤه
+        weeklyOrders: days.map((d) => ({ date: d.date, count: d.count })),
+        latestBusinesses,
+        lastUpdated: now
       }
     });
   } catch (error) {
     console.error('Error getting platform stats:', error);
-    // ✅ إرجاع إحصائيات جزئية بدلاً من الخطأ
-    res.json({
-      success: true,
-      data: {
-        overview: {
-          restaurants: await prisma.restaurant.count(),
-          stores: await prisma.store.count(),
-          users: await prisma.user.count({ where: { role: { not: 'super_admin' } } }),
-          drivers: await prisma.user.count({ where: { role: 'delivery_driver' } }),
-          orders: 0,
-          revenue: 0
-        },
-        orders: {
-          total: 0,
-          pending: 0,
-          delivering: 0,
-          completed: 0
-        },
-        weeklyOrders: [],
-        lastUpdated: new Date()
-      }
-    });
+    res.status(500).json({ success: false, error: 'تعذّر جلب إحصاءات المنصّة' });
   }
 };
 
