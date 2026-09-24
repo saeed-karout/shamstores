@@ -1,0 +1,49 @@
+/* frontend/src/styles/admin.css — قوائم لوحة المنصّة (صفٌّ على الحاسوب، بطاقةٌ على الجوال) */
+
+.ad-rows { list-style: none; margin: 0; padding: 0; }
+.ad-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(16, 35, 27, 0.07);
+  align-items: center;
+}
+.ad-row:last-child { border-bottom: 0; }
+.ad-row:hover { background: #f8faf8; }
+.ad-row.is-off .ad-row-text b { color: #5f736a; }
+.ad-row.is-off .ad-avatar { filter: grayscale(1); opacity: 0.6; }
+
+.ad-row-main { display: flex; align-items: center; gap: 12px; min-width: 0; color: #10231b; text-decoration: none; }
+.ad-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #eef3ef;
+  color: #084835;
+  position: relative;
+}
+.ad-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ad-row-text { display: grid; min-width: 0; }
+.ad-row-text b { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-row-text small { font-size: 12.5px; color: #5f736a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ad-row-main:hover b { text-decoration: underline; text-underline-offset: 3px; }
+
+.ad-row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ad-date { font-size: 12.5px; color: #5f736a; white-space: nowrap; }
+
+.ad-row-actions { display: flex; align-items: center; gap: 2px; justify-content: flex-end; }
+.ad-row-actions .pc-toggle { margin-inline-end: auto; }
+.ad-row-actions .pc-toggle:disabled { opacity: 0.5; cursor: wait; }
+a.pc-act { text-decoration: none; }
+
+@media (min-width: 900px) {
+  .ad-row { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) auto; gap: 16px; padding: 12px 18px; }
+  .ad-row-actions .pc-toggle { margin-inline-end: 8px; }
+}
+.ad-biz-link { font-size: 12.5px; font-weight: 700; color: #084835; text-decoration: none; }
+.ad-biz-link:hover { text-decoration: underline; }

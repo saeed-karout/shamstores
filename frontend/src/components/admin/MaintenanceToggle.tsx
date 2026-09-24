@@ -81,7 +81,7 @@ const MaintenanceToggle: React.FC = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-emerald-500/20 rounded-2xl p-6">
+    <div className="bg-white border border-emerald-900/10 rounded-2xl p-6 shadow-sm">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className={`p-3 rounded-xl ${maintenanceMode ? 'bg-red-500/20' : 'bg-emerald-500/20'}`}>
@@ -92,8 +92,8 @@ const MaintenanceToggle: React.FC = () => {
             )}
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">وضع الصيانة</h3>
-            <p className="text-slate-400 text-sm">
+            <h3 className="text-lg font-bold text-slate-900">وضع الصيانة</h3>
+            <p className="text-slate-500 text-sm">
               {maintenanceMode 
                 ? 'المنصة حالياً في وضع الصيانة. الزوار يرون رسالة الصيانة.' 
                 : 'المنصة تعمل بشكل طبيعي. يمكنك تفعيل وضع الصيانة عند الحاجة.'}
@@ -118,30 +118,30 @@ const MaintenanceToggle: React.FC = () => {
       </div>
 
       {maintenanceMode && (
-        <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-          <p className="text-yellow-500 text-sm mb-3 flex items-center gap-2">
+        <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-amber-800 text-sm mb-3 flex items-center gap-2">
             <IoWarning className="text-lg" />
             المنصة حالياً في وضع الصيانة. المستخدمون يرون رسالة الصيانة التالية:
           </p>
           
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">رسالة الصيانة (عربي)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">رسالة الصيانة (عربي)</label>
               <textarea
                 value={maintenanceMessage}
                 onChange={(e) => setMaintenanceMessage(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900"
                 rows={2}
                 placeholder="نعمل على تحسين المنصة، نعتذر عن الإزعاج"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Maintenance Message (English)</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Maintenance Message (English)</label>
               <textarea
                 value={maintenanceMessageEn}
                 onChange={(e) => setMaintenanceMessageEn(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-white"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-900"
                 rows={2}
                 placeholder="We are improving the platform, sorry for the inconvenience"
               />
@@ -150,7 +150,7 @@ const MaintenanceToggle: React.FC = () => {
             <button
               onClick={saveMessages}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-[#084835] text-white rounded-lg hover:bg-[#0a5a43] transition"
             >
               {saving ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -166,7 +166,7 @@ const MaintenanceToggle: React.FC = () => {
       <div className="mt-4 text-xs text-slate-500 flex items-center gap-4">
         <button
           onClick={fetchMaintenanceSettings}
-          className="flex items-center gap-1 hover:text-slate-300 transition"
+          className="flex items-center gap-1 hover:text-slate-700 transition"
         >
           <IoRefresh className="text-sm" />
           تحديث

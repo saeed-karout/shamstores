@@ -350,7 +350,7 @@ const AdminBranches: React.FC = () => {
                         padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 600,
                         background: `${C.blue}20`, color: C.blue,
                       }}>
-                        {branch.plan?.name || 'free'} {branch.plan?.price ? `(${branch.plan.price} ر.س)` : ''}
+                        {branch.plan?.name || 'free'} {branch.plan?.price ? `(⁦$${branch.plan.price}⁩)` : ''}
                       </span>
                     </td>
                     <td style={{ ...tdStyle, fontSize: 12 }}>
@@ -472,7 +472,7 @@ const AdminBranches: React.FC = () => {
                     <IoCalendar size={14} /> تاريخ التسجيل: {new Date(selectedBranch.createdAt).toLocaleDateString('ar-SA')}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, fontSize: 13 }}>
-                    <IoColorPalette size={14} /> الخطة: {selectedBranch.plan?.name || 'free'} ({selectedBranch.plan?.price || 0} ر.س/شهر)
+                    <IoColorPalette size={14} /> الخطة: {selectedBranch.plan?.name || 'free'} (⁦${selectedBranch.plan?.price || 0}⁩ شهرياً)
                   </div>
                   {selectedBranch.subdomain && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: C.muted, fontSize: 13 }}>

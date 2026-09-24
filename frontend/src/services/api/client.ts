@@ -101,7 +101,7 @@ class ApiClient {
         // المعرّف = النصّ: طلباتٌ متوازية تفشل للسبب نفسه كانت تكدّس
         // الرسالة ذاتها ثلاث مرّات فوق بعضها
         if (error.response?.data?.error && error.response.status !== 401 && error.response.status !== 404) {
-          toast.error(error.response.data.error, { id: error.response.data.error });
+          toast.error(error.response.data.error, { id: String((error.response.data as any).error) });
         } else if (!this.isSilentError(error)) {
           toast.error('حدث خطأ في الاتصال بالخادم', { id: 'network-error' });
         }

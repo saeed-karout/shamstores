@@ -277,7 +277,7 @@ const AdminBusinessFeatures: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       {feature.price > 0 ? (
-                        <span style={{ color: C.accent, fontWeight: 700 }}>{feature.price} ر.س</span>
+                        <span style={{ color: C.accent, fontWeight: 700 }}>⁦${feature.price}⁩</span>
                       ) : (
                         <span style={{ color: C.accent }}>مجانية</span>
                       )}
@@ -354,7 +354,7 @@ const AdminBusinessFeatures: React.FC = () => {
                   الميزة: <span style={{ fontWeight: 700 }}>{selectedFeature?.name}</span>
                 </p>
                 <p style={{ color: C.muted, fontSize: 13, marginTop: 4, marginBottom: 0 }}>
-                  السعر: <span style={{ fontWeight: 700 }}>{selectedFeature?.price} ر.س</span>
+                  السعر: <span style={{ fontWeight: 700 }}>⁦${selectedFeature?.price}⁩</span>
                   {selectedFeature?.isOneTime ? ' (دفعة واحدة)' : ' / شهرياً'}
                 </p>
               </div>

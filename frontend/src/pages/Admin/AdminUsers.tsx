@@ -1,308 +1,244 @@
-// pages/Admin/AdminUsers.tsx
+// pages/Admin/AdminUsers.tsx — مستخدمو المنصّة
+//
+// تبويبات الأدوار بأعدادها بدل قائمةٍ منسدلة، وبحثٌ يشمل الهاتف، وصفٌّ
+// يصير بطاقةً على الجوال. حسابات مدير المنصّة بلا أزرار إيقافٍ أو حذف:
+// إيقافُ الحساب الوحيد يُغلق المنصّة على صاحبها.
 
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { IoSearch, IoTrash, IoEye, IoPerson } from 'react-icons/io5';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { IoChevronBack, IoRefresh, IoSearch, IoTrashOutline } from 'react-icons/io5';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
-import toast from 'react-hot-toast';
-
-const C = {
-  bg:     '#F4F7F4',
-  card:   '#FFFFFF',
-  prim:   '#E8EFEA',
-  surf:   '#F1F5F2',
-  surfL:  '#E2EBE5',
-  accent: '#084835',
-  acDk:   '#06382A',
-  text:   '#10231B',
-  muted:  '#5F736A',
-  border: 'rgba(8,72,53,0.15)',
-  red:    '#D64545',
-  blue:   '#2563EB',
-  yellow: '#B45309',
-  purple: '#8B45B5',
-};
+import '@/styles/orders.css';
+import '@/styles/catalog.css';
+import '@/styles/admin.css';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone?: string | null;
   role: string;
   isActive: boolean;
   createdAt: string;
   restaurantId?: string | null;
   storeId?: string | null;
-  restaurant?: { name: string };
-  store?: { name: string };
+  restaurant?: { name: string } | null;
+  store?: { name: string } | null;
 }
 
+const ROLES: Array<{ key: string; label: string; tone: string }> = [
+  { key: 'owner', label: 'التجّار', tone: 'green' },
+  { key: 'staff', label: 'الموظّفون', tone: 'blue' },
+  { key: 'delivery_driver', label: 'السائقون', tone: 'amber' },
+  { key: 'user', label: 'الزبائن', tone: 'gray' },
+  { key: 'super_admin', label: 'مدراء المنصّة', tone: 'purple' }
+];
+
+const ROLE_LABEL: Record<string, string> = {
+  super_admin: 'مدير المنصّة',
+  owner: 'تاجر',
+  staff: 'موظّف',
+  delivery_driver: 'سائق',
+  user: 'زبون'
+};
+
 const AdminUsers: React.FC = () => {
-  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterRole, setFilterRole] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState('');
+  const [role, setRole] = useState('all');
+  const [busy, setBusy] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const load = async () => {
     try {
-      const response = await api.get('/admin/users');
-      // ✅ تصحيح استقبال البيانات
-      const usersData = response.data?.users || response.users || response;
-      setUsers(usersData);
-      console.log('✅ Users fetched:', usersData);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('فشل تحميل المستخدمين');
+      const res: any = await api.get('/admin/users');
+      const list = res?.data?.users || res?.users || res;
+      setUsers(Array.isArray(list) ? list : []);
+    } catch {
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateRole = async (id: string, role: string) => {
+  useEffect(() => {
+    load();
+  }, []);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
+
+  const toggle = async (u: User) => {
+    setBusy(u.id);
     try {
-      await api.patch(`/admin/users/${id}/role`, { role });
-      toast.success('تم تحديث دور المستخدم');
-      fetchUsers();
-    } catch (error) {
-      toast.error('فشل تحديث الدور');
+      await api.patch(`/admin/users/${u.id}/toggle`);
+      setUsers((list) => list.map((x) => (x.id === u.id ? { ...x, isActive: !x.isActive } : x)));
+      toast.success(u.isActive ? `أُوقف حساب ${u.name} — لن يستطيع الدخول` : `فُعّل حساب ${u.name}`);
+    } catch {
+      /* رسالة الخادم يعرضها العميل */
+    } finally {
+      setBusy(null);
     }
   };
 
-  const toggleStatus = async (id: string, currentStatus: boolean) => {
+  const remove = async (u: User) => {
+    if (!window.confirm(`حذف حساب «${u.name}» (${u.email}) نهائياً؟ لا يمكن التراجع عن هذا.`)) return;
+    setBusy(u.id);
     try {
-      await api.patch(`/admin/users/${id}/toggle`);
-      toast.success(currentStatus ? 'تم تعطيل المستخدم' : 'تم تفعيل المستخدم');
-      fetchUsers();
-    } catch (error) {
-      toast.error('فشل تغيير حالة المستخدم');
+      await api.delete(`/admin/users/${u.id}`);
+      setUsers((list) => list.filter((x) => x.id !== u.id));
+      toast.success('حُذف الحساب');
+    } catch {
+      /* رسالة الخادم يعرضها العميل */
+    } finally {
+      setBusy(null);
     }
   };
 
-  const deleteUser = async (id: string, name: string) => {
-    if (confirm(`هل أنت متأكد من حذف المستخدم "${name}"؟`)) {
-      try {
-        await api.delete(`/admin/users/${id}`);
-        toast.success('تم حذف المستخدم بنجاح');
-        fetchUsers();
-      } catch (error) {
-        toast.error('فشل حذف المستخدم');
-      }
-    }
-  };
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: users.length };
+    ROLES.forEach((r) => (c[r.key] = users.filter((u) => u.role === r.key).length));
+    return c;
+  }, [users]);
 
-  const handleViewDetails = (id: string) => {
-    navigate(`/admin/users/${id}`);
-  };
-
-  const filteredUsers = users.filter(user => {
-    if (searchTerm && !user.name.toLowerCase().includes(searchTerm.toLowerCase()) && !user.email.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    if (filterRole !== 'all' && user.role !== filterRole) return false;
-    return true;
-  });
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase().replace(/\s+/g, '');
+    return users
+      .filter((u) => (role === 'all' || u.role === role) && (!q || [u.name, u.email, u.phone].some((f) => (f || '').toLowerCase().replace(/\s+/g, '').includes(q))))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [users, query, role]);
 
   if (loading) return <Loader fullScreen />;
 
-  const thStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    textAlign: 'right',
-    color: C.muted,
-    fontSize: 12,
-    fontWeight: 600,
-    background: C.surf,
-    whiteSpace: 'nowrap',
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: '12px 16px',
-    color: C.text,
-    fontSize: 13,
-    borderBottom: `1px solid ${C.border}`,
-    verticalAlign: 'middle',
-  };
-
-  const roleColors: Record<string, { bg: string; color: string }> = {
-    super_admin:      { bg: `${C.purple}20`, color: C.purple },
-    owner:            { bg: `${C.blue}20`,   color: C.blue   },
-    staff:            { bg: `${C.accent}20`, color: C.accent },
-    delivery_driver:  { bg: `${C.yellow}20`, color: C.yellow },
-    user:             { bg: `${C.muted}20`,  color: C.muted  },
-  };
-
-  const roleLabels: Record<string, string> = {
-    super_admin:     'مدير المنصة',
-    owner:           'مالك مطعم/متجر',
-    staff:           'موظف',
-    delivery_driver: 'مندوب توصيل',
-    user:            'مستخدم عادي',
-  };
-
-  // ✅ دالة لتحديد نوع الارتباط (مطعم أو متجر)
-  const getBusinessType = (user: User) => {
-    if (user.restaurantId) return { type: 'مطعم', id: user.restaurantId };
-    if (user.storeId) return { type: 'متجر', id: user.storeId };
-    return null;
-  };
-
   return (
-    <div style={{ padding: 24, background: C.bg, minHeight: '100vh', color: C.text }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: C.text }}>👥 إدارة المستخدمين</h1>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative' }}>
-            <input
-              type="text"
-              placeholder="بحث..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                background: C.surf,
-                border: `1px solid ${C.border}`,
-                borderRadius: 10,
-                color: C.text,
-                padding: '8px 40px 8px 14px',
-                fontSize: 14,
-                outline: 'none',
-                width: 220,
-              }}
-            />
-            <IoSearch style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
+    <div className="ss-page ob-page">
+      <div className="ob-toolbar">
+        <div className="ob-row">
+          <div className="ob-search-wrap">
+            <label className="ob-search">
+              <IoSearch size={18} aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="الاسم، البريد أو الهاتف"
+                aria-label="بحث في المستخدمين"
+              />
+            </label>
+            <button type="button" className="ob-icon" onClick={refresh} aria-label="تحديث" title="تحديث">
+              <IoRefresh size={18} className={refreshing ? 'ob-spin' : ''} />
+            </button>
           </div>
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            style={{
-              background: C.surf,
-              border: `1px solid ${C.border}`,
-              borderRadius: 10,
-              color: C.text,
-              padding: '8px 14px',
-              fontSize: 14,
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">جميع الأدوار</option>
-            <option value="owner">مالك</option>
-            <option value="delivery_driver">مندوب توصيل</option>
-            <option value="staff">موظف</option>
-            <option value="user">مستخدم عادي</option>
-          </select>
+        </div>
+        <div className="ob-tabs" role="tablist" aria-label="الدور">
+          <button type="button" role="tab" aria-selected={role === 'all'} className="ob-tab" onClick={() => setRole('all')}>
+            الكل <span>{counts.all}</span>
+          </button>
+          {ROLES.filter((r) => counts[r.key] > 0).map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              role="tab"
+              aria-selected={role === r.key}
+              className={`ob-tab tone-${r.tone} has`}
+              onClick={() => setRole(r.key)}
+            >
+              {r.label} <span>{counts[r.key]}</span>
+            </button>
+          ))}
         </div>
       </div>
 
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={thStyle}>#</th>
-                <th style={thStyle}>الاسم</th>
-                <th style={thStyle}>البريد الإلكتروني</th>
-                <th style={thStyle}>رقم الهاتف</th>
-                <th style={thStyle}>الدور</th>
-                <th style={thStyle}>مرتبط بـ</th>
-                <th style={thStyle}>الحالة</th>
-                <th style={thStyle}>تاريخ التسجيل</th>
-                <th style={thStyle}>إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user, index) => {
-                const business = getBusinessType(user);
-                return (
-                  <tr
-                    key={user.id}
-                    style={{ transition: 'background 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ ...tdStyle, color: C.muted, width: 50 }}>{index + 1}</td>
-                    <td
-                      style={{ ...tdStyle, color: C.accent, cursor: 'pointer', fontWeight: 600 }}
-                      onClick={() => handleViewDetails(user.id)}
-                    >
-                      {user.name}
-                    </td>
-                    <td style={tdStyle}>{user.email}</td>
-                    <td style={tdStyle}>{user.phone || '-'}</td>
-                    <td style={tdStyle}>
-                      <span
-                        style={{
-                          padding: '4px 10px',
-                          borderRadius: 20,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: roleColors[user.role]?.bg || `${C.muted}20`,
-                          color: roleColors[user.role]?.color || C.muted,
-                        }}
-                      >
-                        {roleLabels[user.role] || user.role}
-                      </span>
-                    </td>
-                    <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
-                      {business ? `${business.type}: ${business.id.slice(0, 8)}...` : '-'}
-                    </td>
-                    <td style={tdStyle}>
-                      <button
-                        onClick={() => toggleStatus(user.id, user.isActive)}
-                        style={{
-                          padding: '3px 12px', borderRadius: 99, fontSize: 11, fontWeight: 600,
-                          border: 'none', cursor: 'pointer',
-                          background: user.isActive ? `${C.accent}20` : `${C.red}20`,
-                          color: user.isActive ? C.accent : C.red,
-                        }}
-                      >
-                        {user.isActive ? '✅ نشط' : '⛔ غير نشط'}
-                      </button>
-                    </td>
-                    <td style={{ ...tdStyle, fontSize: 12, color: C.muted }}>
-                      {new Date(user.createdAt).toLocaleDateString('ar-SA')}
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          onClick={() => handleViewDetails(user.id)}
-                          title="عرض التفاصيل"
-                          style={{
-                            padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
-                            background: `${C.accent}15`, color: C.accent,
-                            display: 'flex', alignItems: 'center',
-                          }}
-                        >
-                          <IoEye size={16} />
-                        </button>
-                        <button
-                          onClick={() => deleteUser(user.id, user.name)}
-                          title="حذف"
-                          style={{
-                            padding: 6, borderRadius: 8, border: 'none', cursor: 'pointer',
-                            background: `${C.red}15`, color: C.red,
-                            display: 'flex', alignItems: 'center',
-                          }}
-                        >
-                          <IoTrash size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <section className="ob-list" aria-label="المستخدمون">
+        <div className="ob-list-head">
+          <span>
+            {visible.length} من {users.length}
+          </span>
+          <span>الأحدث أولاً</span>
         </div>
-      </div>
+        {visible.length === 0 ? (
+          <div className="ob-empty">
+            <b>لا نتائج</b>
+            <p>جرّب كلمةً أخرى أو دوراً آخر.</p>
+          </div>
+        ) : (
+          <ul className="ad-rows">
+            {visible.map((u) => {
+              const tone = ROLES.find((r) => r.key === u.role)?.tone || 'gray';
+              const biz = u.restaurantId
+                ? { label: u.restaurant?.name || 'مطعمه ←', to: `/admin/restaurants/${u.restaurantId}` }
+                : u.storeId
+                  ? { label: u.store?.name || 'متجره ←', to: `/admin/stores/${u.storeId}` }
+                  : null;
+              const protectedAccount = u.role === 'super_admin';
+              return (
+                <li key={u.id} className={`ad-row ${u.isActive ? '' : 'is-off'}`}>
+                  <Link to={`/admin/users/${u.id}`} className="ad-row-main">
+                    <span className="ad-avatar" aria-hidden="true" style={{ fontWeight: 900 }}>
+                      {(u.name || '؟').trim().charAt(0)}
+                    </span>
+                    <span className="ad-row-text">
+                      <b>{u.name}</b>
+                      <small>
+                        <bdi>{u.email}</bdi>
+                        {u.phone && (
+                          <>
+                            {' · '}
+                            <bdi>{u.phone}</bdi>
+                          </>
+                        )}
+                      </small>
+                    </span>
+                  </Link>
 
-      {filteredUsers.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted, fontSize: 14 }}>
-          لا يوجد مستخدمون
-        </div>
-      )}
+                  <span className="ad-row-meta">
+                    <span className={`ob-pill tone-${tone}`}>{ROLE_LABEL[u.role] || u.role}</span>
+                    {biz && (
+                      <Link to={biz.to} className="ad-biz-link">
+                        {biz.label}
+                      </Link>
+                    )}
+                    <span className="ad-date">{new Date(u.createdAt).toLocaleDateString('ar-SY', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  </span>
+
+                  <span className="ad-row-actions">
+                    {protectedAccount ? (
+                      <span className="ad-date" style={{ marginInlineEnd: 'auto' }}>حسابٌ محميّ</span>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={`pc-toggle ${u.isActive ? 'is-on' : ''}`}
+                          role="switch"
+                          aria-checked={u.isActive}
+                          disabled={busy === u.id}
+                          onClick={() => toggle(u)}
+                          title={u.isActive ? 'نشط — اضغط للإيقاف' : 'موقوف — اضغط للتفعيل'}
+                        >
+                          <span className="pc-toggle-track"><span /></span>
+                          <span>{u.isActive ? 'نشط' : 'موقوف'}</span>
+                        </button>
+                        <button type="button" className="pc-act is-danger" onClick={() => remove(u)} disabled={busy === u.id} aria-label={`حذف ${u.name}`} title="حذف">
+                          <IoTrashOutline size={17} />
+                        </button>
+                      </>
+                    )}
+                    <Link to={`/admin/users/${u.id}`} className="pc-act" aria-label={`تفاصيل ${u.name}`}>
+                      <IoChevronBack size={17} />
+                    </Link>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };

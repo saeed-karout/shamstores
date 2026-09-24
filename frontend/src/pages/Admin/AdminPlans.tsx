@@ -402,7 +402,7 @@ const AdminPlans: React.FC = () => {
                     </span>
                   </div>
                   <p style={{ color: C.accent, fontSize: 28, fontWeight: 700, margin: '8px 0 0' }}>
-                    {plan.price} ر.س <span style={{ fontSize: 13, color: C.muted }}>/ شهر</span>
+                    ⁦${plan.price}⁩ <span style={{ fontSize: 13, color: C.muted }}>/ شهر</span>
                   </p>
                 </div>
                 <div style={{ padding: 16 }}>
@@ -629,7 +629,7 @@ const AdminPlans: React.FC = () => {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.muted, marginBottom: 4 }}>السعر (ر.س) *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.muted, marginBottom: 4 }}>السعر (بالدولار) *</label>
               <input
                 type="number"
                 value={formData.price}

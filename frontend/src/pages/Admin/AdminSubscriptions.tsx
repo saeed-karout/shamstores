@@ -244,7 +244,7 @@ const AdminSubscriptions: React.FC = () => {
                       </td>
                       <td style={{ padding: '12px 16px', color: C.accent, fontWeight: 600 }}>{sub.planName}</td>
                       <td style={{ padding: '12px 16px', color: C.text }}>
-                        {sub.totalPaid} ر.س
+                        ⁦${sub.totalPaid}⁩
                         {sub.discount > 0 && (
                           <div style={{ fontSize: 10, color: C.accent }}>خصم {sub.discount}%</div>
                         )}

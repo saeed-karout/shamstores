@@ -1,5 +1,6 @@
 // frontend/src/pages/Admin/AdminOrders.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import '@/styles/orders.css';
 import { useNavigate } from 'react-router-dom';
 import { 
   IoSearch, IoRefresh, IoEye, IoPrint, IoReceipt, 
@@ -66,6 +67,7 @@ const AdminOrders: React.FC = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedOnce = useRef(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -92,7 +94,6 @@ const AdminOrders: React.FC = () => {
       if (searchTerm) params.search = searchTerm;
       
       const response = await api.get('/admin/orders', params);
-      console.log('Orders response:', response);
       
       // استخراج البيانات
       const ordersData = response?.data?.orders || response?.orders || response?.data || [];
@@ -104,6 +105,7 @@ const AdminOrders: React.FC = () => {
       };
       
       setOrders(Array.isArray(ordersData) ? ordersData : []);
+      loadedOnce.current = true;
       setPagination(paginationData);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -202,7 +204,7 @@ const AdminOrders: React.FC = () => {
     fetchOrders();
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading && !loadedOnce.current) return <Loader fullScreen />;
 
   const thStyle: React.CSSProperties = {
     padding: '12px 16px',
@@ -223,76 +225,58 @@ const AdminOrders: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24, background: C.bg, minHeight: '100vh', color: C.text }} dir="rtl">
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>📋 إدارة الطلبات</h1>
-        <p style={{ color: C.muted, fontSize: 13 }}>مراقبة وإدارة جميع طلبات المطاعم والمتاجر</p>
-      </div>
-
-      {/* Filters */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 16, marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
-          <IoSearch size={15} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, pointerEvents: 'none' }} />
-          <input
-            type="text"
-            placeholder="بحث برقم الطلب أو اسم العميل..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            style={{
-              width: '100%',
-              paddingRight: 36,
-              paddingLeft: 12,
-              paddingTop: 10,
-              paddingBottom: 10,
-              background: C.surf,
-              border: `1px solid ${C.border}`,
-              borderRadius: 10,
-              color: C.text,
-              fontSize: 13,
-              outline: 'none',
-              boxSizing: 'border-box',
+    <div className="ss-page ob-page">
+      {/* البحث على الخادم (الطلبات مُصفَّحة)، فيُرسَل بـ Enter أو زرّ التحديث */}
+      <div className="ob-toolbar">
+        <div className="ob-row">
+          <form
+            className="ob-search-wrap"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSearch();
             }}
-          />
+          >
+            <label className="ob-search">
+              <IoSearch size={18} aria-hidden="true" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="رقم الطلب أو اسم الزبون — ثم Enter"
+                aria-label="بحث في الطلبات"
+              />
+            </label>
+            <button type="submit" className="ob-icon" aria-label="بحث وتحديث" title="بحث وتحديث">
+              <IoRefresh size={18} className={loading ? 'ob-spin' : ''} />
+            </button>
+          </form>
         </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          style={{
-            padding: '9px 12px',
-            background: C.surf,
-            border: `1px solid ${C.border}`,
-            borderRadius: 10,
-            color: C.text,
-            fontSize: 13,
-            outline: 'none',
-          }}
-        >
-          <option value="all">جميع الحالات</option>
-          <option value="pending">قيد الانتظار</option>
-          <option value="preparing">قيد التحضير</option>
-          <option value="ready">جاهز</option>
-          <option value="delivering">قيد التوصيل</option>
-          <option value="delivered">تم التوصيل</option>
-          <option value="cancelled">ملغي</option>
-        </select>
-        <button
-          onClick={fetchOrders}
-          style={{
-            padding: '8px 14px',
-            background: `${C.accent}15`,
-            border: `1px solid ${C.accent}`,
-            borderRadius: 10,
-            color: C.accent,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <IoRefresh size={16} /> تحديث
-        </button>
+        <div className="ob-tabs" role="tablist" aria-label="حالة الطلب">
+          {[
+            ['all', 'الكل', 'gray'],
+            ['pending', 'بانتظار التأكيد', 'amber'],
+            ['preparing', 'قيد التحضير', 'blue'],
+            ['ready', 'جاهز', 'purple'],
+            ['delivering', 'قيد التوصيل', 'blue'],
+            ['delivered', 'تم التوصيل', 'green'],
+            ['cancelled', 'ملغى', 'red']
+          ].map(([key, label, tone]) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={filterStatus === key}
+              className={`ob-tab tone-${tone}`}
+              onClick={() => {
+                setPagination((p) => ({ ...p, page: 1 }));
+                setFilterStatus(key);
+              }}
+            >
+              {label}
+              {filterStatus === key && <span>{pagination.total}</span>}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Orders Table */}

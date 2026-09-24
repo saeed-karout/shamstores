@@ -105,7 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
       { path: '/admin/orders', icon: IoReceipt, label: 'الطلبات' },
       { path: '/admin/drivers', icon: IoCar, label: 'السائقين' },
       { path: '/admin/push-notifications', icon: IoNotifications, label: 'بثّ الإشعارات', badge: 'جديد' },
-      { path: '/admin/plans', icon: IoRocket, label: 'الخطط والاشتراكات' },
+      { path: '/admin/plans', icon: IoRocket, label: 'الخطط والترقيات' },
       { path: '/admin/qr-codes', icon: IoQrCode, label: 'رموز QR' },
       { path: '/admin/advertisements', icon: IoMegaphone, label: 'الإعلانات' },
     ];
@@ -360,7 +360,7 @@ const ADMIN_GROUPS: Array<{ title: string; paths: string[] }> = [
   { title: '', paths: ['/admin'] },
   { title: 'الأنشطة', paths: ['/admin/restaurants', '/admin/branches', '/admin/stores', '/admin/orders', '/admin/drivers', '/admin/qr-codes'] },
   { title: 'الحسابات', paths: ['/admin/users', '/admin/staff', '/admin/contact-messages'] },
-  { title: 'الاشتراكات', paths: ['/admin/plans', '/admin/subscriptions', '/admin/features'] },
+  { title: 'الإيرادات', paths: ['/admin/plans', '/admin/subscriptions', '/admin/features'] },
   { title: 'المنصّة', paths: ['/admin/push-notifications', '/admin/advertisements', '/admin/platform-settings'] }
 ];
 

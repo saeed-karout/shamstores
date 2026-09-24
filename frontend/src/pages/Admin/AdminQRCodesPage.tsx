@@ -388,7 +388,7 @@ const AdminQRCodesPage: React.FC = () => {
                 </h2>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   <span style={{ color: C.accent, fontWeight: 700 }}>{data.plan.name}</span>
-                  <span style={{ color: C.muted }}>{data.plan.price} ر.س / شهر</span>
+                  <span style={{ color: C.muted }}>⁦${data.plan.price}⁩ شهرياً</span>
                 </div>
               </div>
             )}

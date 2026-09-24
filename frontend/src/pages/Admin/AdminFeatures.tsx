@@ -454,7 +454,7 @@ const AdminFeatures: React.FC = () => {
                     <td style={{ padding: '12px 16px' }}>
                       {feature.price > 0 ? (
                         <div>
-                          <span style={{ color: C.accent, fontWeight: 700 }}>{feature.price} ر.س</span>
+                          <span style={{ color: C.accent, fontWeight: 700 }}>⁦${feature.price}⁩</span>
                           {feature.isOneTime && <p style={{ color: C.muted, fontSize: 12, margin: 0 }}>لمرة واحدة</p>}
                         </div>
                       ) : (
@@ -534,7 +534,7 @@ const AdminFeatures: React.FC = () => {
             
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <div><label style={{ color: C.muted, fontSize: 12 }}>المجموعة</label><div style={{ background: C.surf, padding: '8px 12px', borderRadius: 8 }}>{getGroupBadge(selectedFeature.group)}</div></div>
-              <div><label style={{ color: C.muted, fontSize: 12 }}>السعر</label><div style={{ background: C.surf, padding: '8px 12px', borderRadius: 8, color: C.accent }}>{selectedFeature.price > 0 ? `${selectedFeature.price} ر.س` : 'مجانية'}{selectedFeature.isOneTime && <span style={{ color: C.muted, fontSize: 11, marginRight: 8 }}>(لمرة واحدة)</span>}</div></div>
+              <div><label style={{ color: C.muted, fontSize: 12 }}>السعر</label><div style={{ background: C.surf, padding: '8px 12px', borderRadius: 8, color: C.accent }}>{selectedFeature.price > 0 ? `⁦$${selectedFeature.price}⁩` : 'مجانية'}{selectedFeature.isOneTime && <span style={{ color: C.muted, fontSize: 11, marginRight: 8 }}>(لمرة واحدة)</span>}</div></div>
               <div><label style={{ color: C.muted, fontSize: 12 }}>الحالة</label><div style={{ background: C.surf, padding: '8px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 6 }}>{selectedFeature.isActive ? <><IoCheckmark style={{ color: C.accent }} /> مفعلة</> : <><IoClose style={{ color: C.red }} /> معطلة</>}{selectedFeature.isCore && <span style={{ background: C.bg, color: C.blue, padding: '2px 8px', borderRadius: 12, fontSize: 11 }}>أساسية</span>}</div></div>
             </div>
 
@@ -593,7 +593,7 @@ const AdminFeatures: React.FC = () => {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>السعر (ر.س)</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>السعر (بالدولار)</label>
               <input type="number" step="0.01" min="0" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} style={{ ...inputStyle, width: '100%' }} placeholder="0.00" />
             </div>
           </div>
