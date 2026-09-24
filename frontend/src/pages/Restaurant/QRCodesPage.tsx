@@ -39,7 +39,7 @@ const QRCodesPage: React.FC = () => {
     }
   };
 
-  if (loading || restaurantLoading) return <Loader fullScreen />;
+  if (loading || restaurantLoading) return <Loader fullScreen variant="grid" />;
   if (!restaurant) return (
     <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       <div style={{ textAlign: 'center' }}>

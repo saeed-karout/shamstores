@@ -71,8 +71,10 @@
   color: #10231b;
   cursor: pointer;
 }
-.ob-spin { animation: ob-spin 0.8s linear infinite; }
-@keyframes ob-spin { to { transform: rotate(360deg); } }
+/* أيقونة «تحديث» أثناء الجلب: تخفت وتعود في مكانها — لا تدوير (قرار المالك: لا دوائر تحميل) */
+.ob-spin { animation: ob-busy 1s ease-in-out infinite; }
+@keyframes ob-busy { 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .ob-spin { animation: none; opacity: 0.6; } }
 
 /* التبويبات: شريطٌ أفقيّ يتمرّر على الجوال بدل أن ينكسر أسطراً */
 .ob-tabs {

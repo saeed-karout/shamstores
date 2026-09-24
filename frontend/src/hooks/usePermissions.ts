@@ -4,6 +4,7 @@ import api from '../services/api';
 import { Plan } from '../services/types';
 import toast from 'react-hot-toast';
 import { useAuth } from './useAuth';
+import { PRO_TIER_PLANS } from '@/utils/planLabels';
 
 export interface StaffPermissions {
   // صلاحيات المنصة
@@ -127,7 +128,7 @@ export const usePermissions = () => {
   
   // تحديد ما إذا كانت الخطة احترافية
   const isPro = (): boolean => {
-    return currentPlan?.name === 'pro' || currentPlan?.name === 'enterprise';
+    return PRO_TIER_PLANS.has(currentPlan?.name || '');
   };
 
   // تحديد ما إذا كانت الخطة مجانية

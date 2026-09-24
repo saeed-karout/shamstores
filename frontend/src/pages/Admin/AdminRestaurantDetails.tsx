@@ -179,7 +179,7 @@ const AdminRestaurantDetails: React.FC = () => {
     checkSlugAvailability(slug);
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="detail" />;
   if (!restaurant) return <div style={{ color: C.text, padding: 24 }}>المطعم غير موجود</div>;
 
   const inputStyle: React.CSSProperties = {

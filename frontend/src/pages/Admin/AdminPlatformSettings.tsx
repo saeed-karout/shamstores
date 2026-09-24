@@ -260,7 +260,7 @@ const AdminPlatformSettings: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="form" />;
 
   const availableGroups = getAvailableGroups();
   const currentGroupSettings = settings[activeGroup] || [];

@@ -133,7 +133,7 @@ const AffiliatesPage: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   if (locked) {
     return (

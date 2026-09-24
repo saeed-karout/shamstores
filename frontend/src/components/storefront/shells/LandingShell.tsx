@@ -109,6 +109,7 @@ const LandingShell: React.FC<ShopLayoutProps> = ({
             {name}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {headerExtra}
             <IconAction icon={<IoSearchOutline size={19} />} label={t('ابحث في المنتجات')} onClick={onSearchOpen} />
             <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
             <IconAction
@@ -178,11 +179,6 @@ const LandingShell: React.FC<ShopLayoutProps> = ({
           <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center' }}>
             <ContactChips phone={phone} whatsapp={whatsapp} tone="onSurface" />
           </div>
-          {headerExtra && (
-            <div style={{ display: 'flex', gap: 7, justifyContent: 'center', marginTop: 14, flexWrap: 'wrap' }}>
-              {headerExtra}
-            </div>
-          )}
         </div>
       </section>
 

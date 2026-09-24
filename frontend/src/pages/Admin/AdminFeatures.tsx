@@ -307,7 +307,7 @@ const AdminFeatures: React.FC = () => {
     );
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   const filteredFeatures = getFilteredFeatures();
 

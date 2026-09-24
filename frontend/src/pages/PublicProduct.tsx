@@ -1,6 +1,7 @@
 // frontend/src/pages/PublicProduct.tsx
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useParams, Link } from 'react-router-dom';
 import {
   IoCart, IoShare, IoHeart, IoHeartOutline, IoCheckmark,
@@ -9,10 +10,11 @@ import {
   IoChevronForward, IoChevronBack
 } from 'react-icons/io5';
 import api from '../services/api';
-import Loader from '../components/common/Loader';
+import { ProductSkeleton } from '@/components/storefront/StorefrontSkeleton';
 import toast from 'react-hot-toast';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
-import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import { formatPrice } from '@/utils/currency';
+import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import ProductReviews from '@/components/storefront/ProductReviews';
 import { useCart } from '@/hooks/useCart';
 import { applyStorefrontTheme, sf } from '@/utils/storefrontTheme';
@@ -21,7 +23,11 @@ import { sd, resolveDesign } from '@/utils/storefrontDesign';
 import { useIsDesktop } from '@/hooks/useMediaQuery';
 import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
 import { makeT } from '@/i18n/storefront';
-import LanguageSwitcher from '@/components/storefront/LanguageSwitcher';
+import LocaleSwitcher from '@/components/storefront/LocaleSwitcher';
+import StorefrontSeo from '@/components/storefront/StorefrontSeo';
+import ItemComments from '@/components/storefront/ItemComments';
+import PlatformBadge from '@/components/storefront/PlatformBadge';
+import { SoldOutTag } from '@/components/storefront/ProductGridCard';
 import ProductOptionsSheet, {
   parseProductOptions,
   hasOptions,
@@ -145,6 +151,39 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   );
   const t = useMemo(() => makeT(language.lang), [language.lang]);
   const design = resolveDesign((store as any)?.storefrontDesign);
+
+  /**
+   * عملة العرض — اختيار الزائر في واجهة المتجر نفسها.
+   *
+   * كانت الصفحة تعرض عملة المتجر المخزّنة حكماً، فمن بدّل إلى الدولار في
+   * الواجهة يفتح منتجاً فيجده بالليرة. والاختيار محفوظٌ بمعرّف المتجر، فينتقل
+   * معه بين الصفحتين.
+   */
+  const {
+    currency: displayCurrency,
+    code: currencyCode,
+    setCode: setCurrencyCode,
+    options: currencyOptions
+  } = useDisplayCurrency((store as any)?.currencySettings, (store as any)?.id, (store as any)?.currency);
+
+  /**
+   * هل زرّ الإضافة الأصليّ ظاهر؟
+   *
+   * الشريط العائم يظهر حين يغادر الزرّ الشاشة فقط. كان زرّاً بعرض الشاشة
+   * ملتصقاً بأسفلها طوال الوقت — فوق الزرّ الأصليّ نفسه وهو ظاهر، يغطّي
+   * آخر سطرٍ في كل تمرير، ويكرّر ما تراه العين مرّتين.
+   */
+  const actionRowRef = useRef<HTMLDivElement | null>(null);
+  const [actionInView, setActionInView] = useState(true);
+  useEffect(() => {
+    const node = actionRowRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setActionInView(entry.isIntersecting), {
+      rootMargin: '0px 0px -40px 0px'
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loading, product]);
 
   /**
    * مشاهدةُ المنتج — أثرٌ واحد لا نداءٌ في كل مسار تحميل.
@@ -323,7 +362,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     if (!product) return;
 
     const productStock = typeof product.stock === 'number' ? product.stock : parseInt(String(product.stock)) || 0;
-    if (productStock === 0) {
+    if ((product as any).soldOut === true || productStock <= 0) {
       toast.error(t('المنتج غير متوفر في المخزون'));
       return;
     }
@@ -447,7 +486,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     return 0;
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <ProductSkeleton />;
 
   if (unavailable) {
     return (
@@ -482,12 +521,15 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     );
   }
 
-  // عملة العرض من إعدادات المتجر — كانت «ر.س» مكتوبة في سبعة مواضع
-  const currency = (store as any)?.currency || DEFAULT_CURRENCY;
+  // عملة العرض: اختيار الزائر إن بدّل، وإلا افتراضيّ التاجر — مع سعر الصرف
+  const currency = displayCurrency;
 
   const finalPrice = getFinalPrice();
   const discountPercent = getDiscountPercent();
   const productStock = typeof product.stock === 'number' ? product.stock : parseInt(String(product.stock)) || 0;
+  // الخادم يحسمها في `soldOut`؛ والرقم احتياطٌ لحمولةٍ من منفذٍ قديم
+  const soldOut: boolean =
+    typeof (product as any).soldOut === 'boolean' ? (product as any).soldOut : productStock <= 0;
   /**
    * كل صور المنتج لا الغلاف وحده.
    *
@@ -525,6 +567,26 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     // نموذج العرض الذي اختاره التاجر — يحدّد هيكل هذه الصفحة نفسها
     <StorefrontDesignProvider value={(store as any)?.storefrontDesign}>
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      {/* عنوان التبويب ووصف المشاركة لهذا المنتج — وأيقونة التبويب شعار
+          المتجر. كانت الصفحة بلا وسمٍ واحد: رابط منتجٍ يُشارك في واتساب
+          يظهر بعنوان المنصّة العامّ وصورتها */}
+      <StorefrontSeo
+        business={store as any}
+        type="store"
+        path={`/product/${product.id}`}
+        product={{
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          image: images[0] || null,
+          price: finalPrice,
+          sku: product.sku,
+          inStock: !soldOut,
+          ratingAvg: (product as any).ratingAvg ?? null,
+          ratingCount: (product as any).ratingCount ?? null
+        }}
+      />
+
       {/* خيارات المنتج — الصورة تتبع اللون المختار */}
       <ProductOptionsSheet
         open={optionsOpen}
@@ -574,10 +636,13 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 عالقاً بلغةٍ لم يخترها، والاختيار يُحفظ لكل متجر فينتقل
                 معه إلى بقيّة الصفحات. */}
             <div style={{ flexShrink: 0 }}>
-              <LanguageSwitcher
-                options={language.options}
+              <LocaleSwitcher
+                languages={language.options}
                 lang={language.lang}
-                onChange={language.setLang}
+                onLangChange={language.setLang}
+                currencies={currencyOptions}
+                currency={currencyCode}
+                onCurrencyChange={setCurrencyCode}
               />
             </div>
           </div>
@@ -629,7 +694,8 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                     height: immersive ? 'min(72vh, 520px)' : 384,
                     objectFit: 'cover',
                     borderRadius: immersive ? 0 : sd.rImage,
-                    display: 'block'
+                    display: 'block',
+                    filter: soldOut ? 'saturate(50%)' : undefined
                   }}
                 />
               ) : (
@@ -644,13 +710,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 </div>
               )}
 
-              {productStock === 0 && (
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ background: C.red, color: '#fff', padding: '8px 16px', borderRadius: 20, fontSize: 17, fontWeight: 700 }}>
-                    {t('نفد من المخزون')}
-                  </span>
-                </div>
-              )}
+              {soldOut && <SoldOutTag placement="center" size="lg" label={t('نفد من المخزون')} />}
             </div>
 
             {/* مصغرات الصور */}
@@ -728,7 +788,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             <div style={{ marginBottom: 24, padding: 16, background: C.surf, borderRadius: 12, border: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ color: C.muted }}>{t('الحالة:')}</span>
-                {productStock > 0 ? (
+                {!soldOut ? (
                   <span style={{ color: C.accent, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <IoCheckmark /> {t('متوفر')}
                   </span>
@@ -738,7 +798,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                   </span>
                 )}
               </div>
-              {productStock > 0 && (
+              {!soldOut && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                   <span style={{ color: C.muted }}>{t('الكمية المتاحة:')}</span>
                   <span style={{ fontWeight: 500, color: C.text }}>{productStock} {t('قطعة')}</span>
@@ -747,7 +807,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             </div>
 
             {/* اختيار الكمية */}
-            {productStock > 0 && (
+            {!soldOut && (
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: C.muted, marginBottom: 8 }}>
                   {t('الكمية:')}
@@ -772,10 +832,10 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             )}
 
             {/* أزرار الإجراء */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+            <div ref={actionRowRef} style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
               <button
                 onClick={handleAddToCart}
-                disabled={productStock === 0}
+                disabled={soldOut}
                 style={{
                   flex: 1,
                   padding: '12px 0',
@@ -785,16 +845,16 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                   justifyContent: 'center',
                   gap: 8,
                   border: 'none',
-                  cursor: productStock === 0 ? 'not-allowed' : 'pointer',
+                  cursor: soldOut ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
                   fontSize: 15,
                   fontFamily: 'Cairo, sans-serif',
-                  background: productStock === 0
+                  background: soldOut
                     ? C.surf
                     : addedToCart
                     ? 'rgba(200,226,53,0.2)'
                     : C.accent,
-                  color: productStock === 0
+                  color: soldOut
                     ? C.muted
                     : addedToCart
                     ? C.accent
@@ -803,7 +863,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 }}
               >
                 {addedToCart ? <IoCheckmark size={20} /> : <IoCart size={20} />}
-                {addedToCart ? t('تمت الإضافة') : t('أضف إلى السلة')}
+                {soldOut ? t('نفدت الكمية') : addedToCart ? t('تمت الإضافة') : t('أضف إلى السلة')}
               </button>
 
               <button
@@ -888,6 +948,9 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             اشتراه يخسر البيعتين */}
         <ProductReviews productId={product.id} />
 
+        {/* التعليقات — أسئلة ونقاش مفتوح لكل زائر، لا تقييم مشترٍ فقط */}
+        <ItemComments kind="product" itemId={product.id} />
+
         {/* منتجات ذات صلة */}
         {relatedProducts.length > 0 && (
           <div style={{ marginTop: 48 }}>
@@ -944,18 +1007,100 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
         )}
       </div>
 
-      {/* Floating Action Button - إضافة إلى السلة سريعاً */}
-      {productStock > 0 && (
-        <div style={{ position: 'fixed', bottom: 24, left: 0, right: 0, padding: '0 16px' }}>
-          <button
-            onClick={handleAddToCart}
-            style={{ width: '100%', padding: '12px 0', background: C.accent, color: C.bg, borderRadius: 12, border: 'none', fontWeight: 600, fontSize: 16, boxShadow: '0 4px 20px rgba(200,226,53,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}
+      {/* ===== شريط الشراء العائم =====
+          كبسولةٌ صغيرة في الوسط لا زرٌّ بعرض الشاشة: تظهر حين يغادر زرّ
+          الإضافة الأصليّ الشاشة وحدها، وتحمل ما يحتاجه القرار — الاسم
+          والسعر والزرّ — بلا أن تغطّي سطراً كاملاً من الصفحة. */}
+      <AnimatePresence>
+        {!soldOut && !actionInView && (
+          <motion.div
+            initial={{ y: 80, opacity: 0, x: '-50%' }}
+            animate={{ y: 0, opacity: 1, x: '-50%' }}
+            exit={{ y: 80, opacity: 0, x: '-50%' }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            style={{
+              position: 'fixed',
+              left: '50%',
+              // فوق شارة المنصّة إن وُجدت — وإلا غطّتها الكبسولة في الزاوية
+              bottom: `calc(${(store as any)?.showPlatformBadge ? 66 : 16}px + env(safe-area-inset-bottom, 0px))`,
+              zIndex: 55,
+              width: 'max-content',
+              maxWidth: 'calc(100vw - 24px)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: 6,
+              paddingInlineStart: 8,
+              borderRadius: 999,
+              background: C.card,
+              border: `1px solid ${C.border}`,
+              boxShadow: '0 14px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)'
+            }}
           >
-            <IoCart size={20} />
-            {t('أضف إلى السلة')} — {formatPrice(finalPrice, currency)}
-          </button>
-        </div>
-      )}
+            {images[0] && (
+              <img
+                src={getImageUrl(sizedImage(images[0], 'sm'))}
+                alt=""
+                width={40}
+                height={40}
+                style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+              />
+            )}
+            <div style={{ display: 'grid', minWidth: 0, lineHeight: 1.3 }}>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: C.muted,
+                  maxWidth: 150,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {language.pick(product, 'name')}
+              </span>
+              <span
+                style={{
+                  fontSize: 14.5,
+                  fontWeight: 900,
+                  color: C.text,
+                  whiteSpace: 'nowrap',
+                  fontVariantNumeric: 'tabular-nums'
+                }}
+              >
+                {formatPrice(finalPrice, currency)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                minHeight: 44,
+                padding: '0 18px',
+                borderRadius: 999,
+                border: 'none',
+                background: addedToCart ? sf.accentSoft : C.accent,
+                color: addedToCart ? C.accent : sf.onAccent,
+                fontWeight: 800,
+                fontSize: 13.5,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
+            >
+              {addedToCart ? <IoCheckmark size={18} /> : <IoCart size={18} />}
+              {addedToCart ? t('تمت الإضافة') : t('أضف إلى السلة')}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* الشارة يحسمها الخادم: خطةٌ مجانية بلا إضافة «إخفاء الشعار» */}
+      <PlatformBadge show={(store as any)?.showPlatformBadge} source={store.slug} />
     </div>
     </StorefrontDesignProvider>
   );

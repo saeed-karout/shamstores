@@ -51,6 +51,8 @@ import ProductOptionsSheet, {
   OptionsResult
 } from '@/components/storefront/ProductOptionsSheet';
 import StorefrontSkeleton from '@/components/storefront/StorefrontSkeleton';
+import SubcategoryRail from '@/components/storefront/SubcategoryRail';
+import useCatalogSearch from '@/hooks/useCatalogSearch';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import { PickedLocation } from '@/components/storefront/LocationPickerMap';
@@ -67,8 +69,7 @@ import { StorefrontDesignProvider } from '@/utils/storefrontDesignContext';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import { captureRef, getRef, clearRef } from '@/utils/referral';
-import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
-import LanguageSwitcher from '@/components/storefront/LanguageSwitcher';
+import LocaleSwitcher from '@/components/storefront/LocaleSwitcher';
 import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
 import { calculateDistance } from '@/utils/distance';
 import { resolveBadges } from '@/utils/catalogBadges';
@@ -332,6 +333,16 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
   // المعرّف اللفظي للروابط — من الكائن إن حُمّل، وإلا من المسار
   const storeSlug = (store as any)?.slug || urlSlug || '';
+
+  /**
+   * البحث العميق على الخادم — الاسم والوصف وSKU والوسوم والمقاسات والقسم.
+   *
+   * التصفية المحلّية أدناه تبقى جسراً حتى يصل الردّ، وبديلاً إن تعذّر.
+   */
+  const catalogSearch = useCatalogSearch<StorefrontProduct>(
+    (store as any)?.slug || currentSlug,
+    searchQuery
+  );
   // الصفحة فوق المزوّد فلا تراه — تبني دالّتها من نفس اللغة
   const t = useMemo(() => makeT(language.lang), [language.lang]);
 
@@ -406,16 +417,24 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     const selected = categories.find((c) => c.id === activeCategory);
     const rowParent = (selected as any)?.parentId || activeCategory;
     const counts = new Map<string, number>();
+    // صورة أوّل منتجٍ في القسم — بديلٌ حين لا يرفع التاجر صورةً للقسم نفسه،
+    // وهو الغالب: بطاقة قسمٍ مصوّرة أوضح من حرفٍ على لون
+    const firstImage = new Map<string, string>();
     products.forEach((p) => {
       const id = (p as any).categoryId;
-      if (id) counts.set(id, (counts.get(id) || 0) + 1);
+      if (!id) return;
+      counts.set(id, (counts.get(id) || 0) + 1);
+      if (!firstImage.has(id)) {
+        const cover = coverOf(p);
+        if (cover) firstImage.set(id, cover);
+      }
     });
     return categories
       .filter((c) => (c as any).parentId === rowParent && (counts.get(c.id) || 0) > 0)
       .map((c) => ({
         id: c.id,
         name: language.pick(c, 'name'),
-        image: c.image,
+        image: c.image || firstImage.get(c.id) || null,
         count: counts.get(c.id) || 0
       }));
   }, [categories, products, activeCategory, isSearching, language]);
@@ -491,11 +510,26 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     let list = localizedProducts;
 
     if (isSearching) {
-      list = list.filter(
-        (p) =>
-          p.name?.toLowerCase().includes(searchTerm) ||
-          p.description?.toLowerCase().includes(searchTerm)
-      );
+      if (catalogSearch.items) {
+        // نتائج الخادم بترتيبها بالصلة، مطابقةً بالمعرّف على المنتجات المحمّلة
+        // (المترجَمة). ومنتجٌ لم يُحمَّل بعد يُعرض كما أرسله الخادم.
+        const byId = new Map(localizedProducts.map((p) => [p.id, p]));
+        list = catalogSearch.items.map((hit: any) =>
+          byId.get(hit.id) ||
+          (language.lang === 'en'
+            ? { ...hit, name: language.pick(hit, 'name'), description: language.pick(hit, 'description') }
+            : hit)
+        );
+      } else {
+        const matches = (value: unknown) => String(value ?? '').toLowerCase().includes(searchTerm);
+        list = list.filter(
+          (p: any) =>
+            matches(p.name) ||
+            matches(p.description) ||
+            matches(p.sku) ||
+            (Array.isArray(p.tags) && p.tags.some(matches))
+        );
+      }
     } else if (activeCategoryIds) {
       // القسم **وفرعيّاته**: اختيار «ملابس» يعرض ما تحت «قمصان» و«بناطيل»
       list = list.filter((p) => activeCategoryIds.has((p as any).categoryId || UNCATEGORIZED));
@@ -513,8 +547,21 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       list = list.filter((p) => resolveBadges(p).hasDiscount);
     }
 
+    // ترتيب الخادم بالصلة يُحترم ما لم يختر الزبون ترتيباً آخر صراحةً
+    if (isSearching && catalogSearch.items && sortBy === 'featured') return list;
     return sortProducts(list);
-  }, [localizedProducts, isSearching, searchTerm, activeCategoryIds, activeTag, onlyDiscounted, sortProducts]);
+  }, [
+    localizedProducts,
+    isSearching,
+    searchTerm,
+    activeCategoryIds,
+    activeTag,
+    onlyDiscounted,
+    sortProducts,
+    catalogSearch.items,
+    sortBy,
+    language
+  ]);
 
   /**
    * الوسم يسقط عند تبديل القسم أو البحث.
@@ -1033,19 +1080,15 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         onFavoritesClick={() => setFavoritesOpen(true)}
         onAccountClick={() => setAccountOpen(true)}
         headerExtra={
-          <>
-            <CurrencySwitcher
-              options={currencyOptions}
-              code={currencyCode}
-              onChange={setCurrencyCode}
-            />
-            {/* اللغة بعد العملة: التبديل بينهما قرارٌ واحد في ذهن الزبون */}
-            <LanguageSwitcher
-              options={language.options}
-              lang={language.lang}
-              onChange={language.setLang}
-            />
-          </>
+          // اللغة والعملة قرارٌ واحد في ذهن الزبون — فزرٌّ واحد لهما
+          <LocaleSwitcher
+            languages={language.options}
+            lang={language.lang}
+            onLangChange={language.setLang}
+            currencies={currencyOptions}
+            currency={currencyCode}
+            onCurrencyChange={setCurrencyCode}
+          />
         }
         accountLabel={isAuthenticated ? user?.name?.split(' ')[0] || 'حسابي' : 'دخول'}
         searchValue={searchQuery}
@@ -1135,54 +1178,21 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
         </div>
 
-        {/* ===== الأقسام الفرعية ===== */}
+        {/* ===== الأقسام الفرعية =====
+            بطاقاتٌ مصوّرة لا شرائح نصّية — أوّلها «الكل» يعيد إلى الأب.
+            ونقرةٌ ثانية على المختار تعود إلى الأب أيضاً: وإلا كانت البطاقة
+            المفعّلة زرّاً لا يفعل شيئاً. */}
         {subCategories.length > 0 && (
-          <nav
-            className="no-scrollbar"
-            aria-label={t('الأقسام الفرعية')}
-            style={{ display: 'flex', gap: 7, overflowX: 'auto', marginTop: 10, paddingBottom: 2 }}
-          >
-            {subCategories.map((sub) => {
-              const picked = activeCategory === sub.id;
-              return (
-                <button
-                  key={sub.id}
-                  type="button"
-                  aria-pressed={picked}
-                  // نقرةٌ ثانية على المختار تعود إلى الأب — وإلا كانت
-                  // الشريحة المفعّلة زرّاً لا يفعل شيئاً
-                  onClick={() => setActiveCategory(picked ? navActiveCategory : sub.id)}
-                  style={{
-                    flex: '0 0 auto',
-                    minHeight: 32,
-                    padding: '0 13px',
-                    borderRadius: sd.rChip,
-                    border: `${sd.borderW} solid ${picked ? sf.primary : sf.border}`,
-                    background: picked ? sf.primary : sf.surface,
-                    color: picked ? sf.onPrimary : sf.text,
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {sub.name}
-                  <span
-                    style={{
-                      color: picked ? sf.onPrimary : sf.muted,
-                      opacity: picked ? 0.75 : 1,
-                      fontWeight: 500,
-                      marginInlineStart: 5,
-                      fontSize: 11
-                    }}
-                  >
-                    {sub.count}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
+          <SubcategoryRail
+            parent={{
+              id: navActiveCategory,
+              name: navCategories.find((c) => c.id === navActiveCategory)?.name || '',
+              count: navCategories.find((c) => c.id === navActiveCategory)?.count || 0
+            }}
+            items={subCategories}
+            activeId={activeCategory}
+            onSelect={(id) => setActiveCategory(id === activeCategory && id !== navActiveCategory ? navActiveCategory : id)}
+          />
         )}
 
         {/* ===== تصفية بالوسوم =====
@@ -1242,7 +1252,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
                   ? t('كل المنتجات')
                   : navCategories.find((c) => c.id === activeCategory)?.name || 'المنتجات'}
             <span style={{ color: sf.muted, fontWeight: 600, fontSize: 12.5 }}>
-              {visibleProducts.length} منتج
+              {isSearching && catalogSearch.items ? catalogSearch.total : visibleProducts.length} {t('منتج')}
             </span>
           </h2>
 
@@ -1292,6 +1302,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         currency={currency}
         onOpen={() => setCartOpen(true)}
         hidden={cartOpen || sortSheetOpen || searchOpen}
+        aboveBadge={!!store?.showPlatformBadge}
       />
 
       {/* ==================== لوح البحث ==================== */}
@@ -1339,12 +1350,42 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
               </button>
             </div>
 
-            <div style={{ marginTop: 14, overflowY: 'auto', maxHeight: 'calc(100vh - 90px)' }}>
+            <div style={{ marginTop: 14, overflowY: 'auto', maxHeight: 'calc(100vh - 90px)', paddingBottom: 24 }}>
+              {isSearching && (
+                <SearchStatus
+                  loading={catalogSearch.loading}
+                  total={catalogSearch.items ? catalogSearch.total : visibleProducts.length}
+                  t={t}
+                />
+              )}
               <div className="shop-grid">
                 {visibleProducts.map(renderProductCard)}
               </div>
-              {isSearching && visibleProducts.length === 0 && (
-                <EmptyState text="لا توجد منتجات تطابق بحثك" />
+              {isSearching && !catalogSearch.loading && visibleProducts.length === 0 && (
+                <EmptyState text={t('لا توجد منتجات تطابق بحثك — جرّب كلمةً أقصر أو رمز المنتج (SKU)')} />
+              )}
+              {isSearching && catalogSearch.hasMore && (
+                <button
+                  type="button"
+                  onClick={catalogSearch.loadMore}
+                  disabled={catalogSearch.loading}
+                  style={{
+                    display: 'block',
+                    margin: '18px auto 0',
+                    minHeight: 44,
+                    padding: '0 22px',
+                    borderRadius: 999,
+                    border: `1px solid ${sf.border}`,
+                    background: sf.card,
+                    color: sf.text,
+                    fontWeight: 800,
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {t('عرض المزيد')}
+                </button>
               )}
             </div>
           </motion.div>
@@ -1565,7 +1606,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       />
 
       {/* الشارة يحسمها الخادم: قد تكون الميزة مشتراة مفردةً على خطة مجانية */}
-      <PlatformBadge show={store?.showPlatformBadge} />
+      <PlatformBadge show={store?.showPlatformBadge} source={(store as any)?.slug} />
     </StorefrontI18nProvider>
     </StorefrontDesignProvider>
   );
@@ -1585,7 +1626,7 @@ const coverOf = (product: StorefrontProduct): string | undefined => {
       return images;
     }
   }
-  return image || undefined;
+  return image || (product as { imageUrl?: string | null }).imageUrl || undefined;
 };
 
 /** ترتيب «المقترح»: المخفَّض أولاً ثم الرائج ثم الجديد */
@@ -1597,6 +1638,50 @@ const score = (product: StorefrontProduct): number => {
     (badges.isNew ? 100 : 0)
   );
 };
+
+/**
+ * سطر حالة البحث — كم نتيجة، أو أن البحث جارٍ.
+ *
+ * نقاطٌ نابضة لا دائرة دوّارة: الدائرة تقول «انتظر»، والنقاط بجانب رقمٍ
+ * موجود تقول «يُحدَّث» — والنتائج المحلّية ظاهرةٌ تحتها فعلاً.
+ */
+const SearchStatus: React.FC<{ loading: boolean; total: number; t: (s: string) => string }> = ({ loading, total, t }) => (
+  <div
+    aria-live="polite"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 8,
+      margin: '0 2px 12px',
+      color: sf.muted,
+      fontSize: 12.5,
+      fontWeight: 700
+    }}
+  >
+    {loading ? (
+      <>
+        <span className="sf-dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
+        {t('جارٍ البحث في الأسماء والرموز والأوصاف…')}
+      </>
+    ) : (
+      <>
+        {total} {t('نتيجة')} · <span style={{ opacity: 0.8 }}>{t('بحثٌ في الاسم والوصف وSKU والمقاسات')}</span>
+      </>
+    )}
+    <style>{`
+      .sf-dots { display: inline-flex; gap: 3px; }
+      .sf-dots i { width: 5px; height: 5px; border-radius: 99px; background: currentColor; opacity: .35; animation: sf-dot 1s ease-in-out infinite; }
+      .sf-dots i:nth-child(2) { animation-delay: .15s; }
+      .sf-dots i:nth-child(3) { animation-delay: .3s; }
+      @keyframes sf-dot { 50% { opacity: 1; transform: translateY(-2px); } }
+      @media (prefers-reduced-motion: reduce) { .sf-dots i { animation: none; opacity: .7; } }
+    `}</style>
+  </div>
+);
 
 const EmptyState: React.FC<{ text: string }> = ({ text }) => (
   <div

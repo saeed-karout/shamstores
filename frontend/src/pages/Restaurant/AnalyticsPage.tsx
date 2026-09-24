@@ -96,7 +96,7 @@ const AnalyticsPage: React.FC = () => {
     fontSize: 13,
   };
 
-  if (loading || !stats) return <Loader fullScreen />;
+  if (loading || !stats) return <Loader fullScreen variant="dashboard" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>

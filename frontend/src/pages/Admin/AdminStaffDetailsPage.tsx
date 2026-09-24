@@ -242,7 +242,7 @@ const AdminStaffDetailsPage: React.FC = () => {
     { key: 'updateInventory', label: '📦 إدارة المخزون' },
   ];
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="detail" />;
   if (!staff) return (
     <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontFamily: 'Cairo, sans-serif' }}>
       الموظف غير موجود

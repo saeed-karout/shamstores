@@ -531,7 +531,7 @@ const StoreProductsPage: React.FC = () => {
     color: dynamicColors.muted,
   };
 
-  if (loading || storeLoading) return <Loader fullScreen />;
+  if (loading || storeLoading) return <Loader fullScreen variant="grid" />;
 
   return (
     <div className="ss-page pc-page">
@@ -1002,13 +1002,7 @@ const StoreProductsPage: React.FC = () => {
           </button>
         </div>
       </Modal>
-      
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+
     </div>
   );
 };

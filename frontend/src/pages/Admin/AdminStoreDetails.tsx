@@ -297,7 +297,7 @@ const fetchStore = async () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="detail" />;
   if (!store) return <div style={{ color: C.text, padding: 24, textAlign: 'center' }}>المتجر غير موجود</div>;
 
   const inputStyle: React.CSSProperties = {

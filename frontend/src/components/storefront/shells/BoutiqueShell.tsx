@@ -35,6 +35,7 @@ const BoutiqueShell: React.FC<ShopLayoutProps> = ({
   name,
   description,
   logo,
+  coverImage,
   phone,
   whatsapp,
   address,
@@ -63,9 +64,51 @@ const BoutiqueShell: React.FC<ShopLayoutProps> = ({
 
   return (
     <div style={{ background: sf.bg, minHeight: '100vh', fontFamily: sf.font, color: sf.text }} dir="rtl">
+      {/* ===== الغلاف =====
+          كان القالب لا يستقبل صورة الغلاف أصلاً: يرفعها التاجر من إعداداته
+          فتظهر في كل القوالب إلا هذا. هنا تتصدّر الصفحة بإطارٍ مستدير،
+          ويجلس الشعار على حافّتها السفلى — هويةٌ فوق صورة لا بدلها. */}
+      {coverImage && (
+        <div className="shop-shell" style={{ paddingTop: 12 }}>
+          <div
+            style={{
+              position: 'relative',
+              height: 'clamp(160px, 30vw, 320px)',
+              borderRadius: sd.rCard,
+              overflow: 'hidden',
+              background: sf.surface,
+              boxShadow: sd.shadowCard
+            }}
+          >
+            <img
+              src={getImageUrl(coverImage)}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(to top, rgba(0,0,0,0.28), transparent 55%)'
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ===== الهوية — في الوسط، بلا شريط ===== */}
-      <header style={{ padding: '26px 16px 4px' }}>
-        <div style={{ maxWidth: 620, margin: '0 auto', textAlign: 'center' }}>
+      <header style={{ padding: coverImage ? '0 16px 4px' : '26px 16px 4px' }}>
+        <div
+          style={{
+            maxWidth: 620,
+            margin: '0 auto',
+            textAlign: 'center',
+            // الشعار يعلو حافّة الغلاف بنصفه
+            marginTop: coverImage ? -52 : 0,
+            position: 'relative'
+          }}
+        >
           {logo ? (
             <img
               src={getImageUrl(sizedImage(logo, 'sm'))}
@@ -79,7 +122,8 @@ const BoutiqueShell: React.FC<ShopLayoutProps> = ({
                 // الشعار دائرةٌ هنا مهما كان القالب: كتلة هويةٍ في الوسط
                 // بشعارٍ مربّع تقرأ كبطاقةٍ لا كعلامة
                 borderRadius: '50%',
-                border: `3px solid ${sf.accent}`,
+                border: `3px solid ${coverImage ? sf.bg : sf.accent}`,
+                boxShadow: coverImage ? `0 0 0 2px ${sf.accent}, 0 8px 24px rgba(0,0,0,0.18)` : undefined,
                 background: sf.surface,
                 display: 'block',
                 margin: '0 auto'
@@ -97,7 +141,8 @@ const BoutiqueShell: React.FC<ShopLayoutProps> = ({
                 display: 'grid',
                 placeItems: 'center',
                 fontSize: 38,
-                fontWeight: 900
+                fontWeight: 900,
+                border: coverImage ? `4px solid ${sf.bg}` : undefined
               }}
             >
               {name?.[0] || 'م'}
@@ -138,20 +183,6 @@ const BoutiqueShell: React.FC<ShopLayoutProps> = ({
             <p style={{ margin: '12px 0 0', fontSize: 12, color: sf.muted, opacity: 0.85 }}>{address}</p>
           )}
 
-          {/* مبدّلا العملة واللغة — أسفل الهوية لا في شريطٍ غير موجود */}
-          {headerExtra && (
-            <div
-              style={{
-                display: 'flex',
-                gap: 7,
-                justifyContent: 'center',
-                marginTop: 16,
-                flexWrap: 'wrap'
-              }}
-            >
-              {headerExtra}
-            </div>
-          )}
         </div>
       </header>
 
@@ -224,6 +255,9 @@ const BoutiqueShell: React.FC<ShopLayoutProps> = ({
                 flexShrink: 0
               }}
             >
+              {/* اللغة والعملة مع أيقونات الصفّ الملتصق — كانتا تحت الهوية
+                  فتغيبان عن الشاشة بعد أوّل تمرير */}
+              {headerExtra}
               <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
               <IconAction
                 icon={<IoHeartOutline size={19} />}

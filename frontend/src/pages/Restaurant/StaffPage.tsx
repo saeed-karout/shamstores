@@ -198,7 +198,7 @@ const StaffPage: React.FC = () => {
     </label>
   );
 
-  if (planLoading || loading) return <Loader fullScreen />;
+  if (planLoading || loading) return <Loader fullScreen variant="list" />;
 
   if (isFree) {
     return (

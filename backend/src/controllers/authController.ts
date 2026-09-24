@@ -3,7 +3,48 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/user.service';
 import { generateToken } from '../config/auth';
-import slugify from '../utils/slugify';
+import { normalizeHandle, validateHandle, isHandleTaken } from '../services/storefrontIdentity.service';
+
+/**
+ * اسم النشاط عند التسجيل — **بالإنجليزية إلزاماً**، ومنه يُبنى الرابط.
+ *
+ * كان الاسم العربي يمرّ بـ `slugify` الذي يُبقي الحروف العربية، فيصير
+ * النطاق الفرعي «مطعم-الشام.shamstores.com» — عنواناً لا يصلح في DNS ولا
+ * يُكتب في شريط المتصفّح ولا يُشارَك. والتاجر لا يكتشف ذلك إلا حين يرسل
+ * رابطه لأوّل زبون.
+ *
+ * والاسم العربيّ لا يضيع: يُرسَل اختيارياً (`businessNameAr`) فيصير الاسم
+ * الظاهر للزبائن، والإنجليزيّ يُحفظ في `nameEn` ويُبنى منه الرابط وحده.
+ */
+const ENGLISH_NAME = /^[A-Za-z0-9][A-Za-z0-9 &'’.,\-]{1,59}$/;
+
+const resolveBusinessNames = async (
+  englishRaw: unknown,
+  arabicRaw: unknown
+): Promise<{ name: string; nameEn: string; handle: string } | { error: string }> => {
+  const english = sanitizeText(englishRaw, 60).replace(/\s+/g, ' ').trim();
+  const arabic = sanitizeText(arabicRaw, 100).replace(/\s+/g, ' ').trim();
+
+  if (!english) return { error: 'اكتب اسم نشاطك بالإنجليزية — منه يُبنى رابط متجرك' };
+  if (!ENGLISH_NAME.test(english) || (english.match(/[A-Za-z]/g) || []).length < 2) {
+    return {
+      error: 'اسم النشاط يُكتب بأحرف إنجليزية وأرقام فقط (مثل: Sham Restaurant). الاسم العربي تضيفه في الحقل الاختياري.'
+    };
+  }
+
+  const base = normalizeHandle(english).slice(0, 40).replace(/-+$/, '');
+  const validation = validateHandle(base.length >= 3 ? base : `${base}-shop`);
+  if (!validation.ok) return { error: validation.error || 'اسمٌ غير صالح للرابط' };
+
+  let handle = base.length >= 3 ? base : `${base}-shop`;
+  let counter = 2;
+  while (await isHandleTaken(handle)) {
+    handle = `${base}-${counter++}`;
+    if (counter > 50) return { error: 'هذا الاسم مستخدم كثيراً — أضف كلمةً تميّزه (مثل مدينتك)' };
+  }
+
+  return { name: arabic || english, nameEn: english, handle };
+};
 import { LoginRequest, RegisterRequest, ApiResponse, AuthRequest } from '../types';
 import bcrypt from 'bcrypt';
 import settingsService from '../services/settingsService';
@@ -77,6 +118,17 @@ export const register = async (
     const phone = req.body.phone ? sanitizeText(req.body.phone, 20) : null;
     const restaurantName = sanitizeText(req.body.restaurantName, 100);
 
+    // الاسم يُفحص قبل البريد: خطأٌ في الاسم يصحّحه التاجر في الحقل نفسه
+    let restaurantNames: { name: string; nameEn: string; handle: string } | null = null;
+    if (restaurantName && restaurantName.trim() !== '') {
+      const resolved = await resolveBusinessNames(restaurantName, (req.body as any).businessNameAr);
+      if ('error' in resolved) {
+        res.status(400).json({ success: false, error: resolved.error });
+        return;
+      }
+      restaurantNames = resolved;
+    }
+
     const existingUser = await UserService.findByEmail(email);
     if (existingUser) {
       res.status(400).json({ 
@@ -91,18 +143,10 @@ export const register = async (
     let user;
     let token: string | null = null;
 
-    if (restaurantName && restaurantName.trim() !== '') {
+    if (restaurantNames) {
       // ملاحظة: كان المطعم يُنشأ قبل المستخدم ويشير إلى user.id غير الموجود بعد
       // ما كان يُسقط تسجيل كل مطعم جديد. الترتيب الصحيح: المستخدم أولاً.
-      const baseSlug = slugify(restaurantName);
-      let uniqueSlug = baseSlug;
-      let counter = 1;
-      while (
-        (await prisma.restaurant.findUnique({ where: { slug: uniqueSlug } })) ||
-        (await prisma.store.findUnique({ where: { slug: uniqueSlug } }))
-      ) {
-        uniqueSlug = `${baseSlug}-${counter++}`;
-      }
+      const uniqueSlug = restaurantNames.handle;
 
       user = await UserService.create({
         name,
@@ -114,7 +158,8 @@ export const register = async (
 
       const restaurant = await prisma.restaurant.create({
         data: {
-          name: restaurantName,
+          name: restaurantNames.name,
+          nameEn: restaurantNames.nameEn,
           slug: uniqueSlug,
           subdomain: uniqueSlug,
           email: email,
@@ -239,13 +284,14 @@ export const registerStore = async (
       return;
     }
 
-    const slug = slugify(storeName);
-    let uniqueSlug = slug;
-    let counter = 1;
-    
-    while (await prisma.store.findUnique({ where: { slug: uniqueSlug } })) {
-      uniqueSlug = `${slug}-${counter++}`;
+    // كان التفرّد يُفحص في جدول المتاجر وعمود slug وحدهما — فمتجرٌ باسم
+    // مطعمٍ قائم يأخذ نطاقه الفرعي نفسه ويسقط التسجيل بخطأ Prisma غامض
+    const storeNames = await resolveBusinessNames(storeName, (req.body as any).businessNameAr);
+    if ('error' in storeNames) {
+      res.status(400).json({ success: false, error: storeNames.error });
+      return;
     }
+    const uniqueSlug = storeNames.handle;
 
     const { requireEmailVerification, smtpConfigured, shouldRequireEmailVerification } = await getEmailVerificationRequirement();
 
@@ -261,7 +307,8 @@ export const registerStore = async (
     // إنشاء المتجر
     const store = await prisma.store.create({
       data: {
-        name: storeName,
+        name: storeNames.name,
+        nameEn: storeNames.nameEn,
         slug: uniqueSlug,
         subdomain: uniqueSlug,
         email: email,

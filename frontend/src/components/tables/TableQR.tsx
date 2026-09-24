@@ -5,6 +5,7 @@ import Button from '../common/Button';
 import QRCode from 'qrcode.react';
 import { IoDownload, IoPrint } from 'react-icons/io5';
 import api from '../../services/api';
+import { SkeletonScope, SkeletonBlock } from '../common/Skeleton';
 
 interface TableQRProps {
   table: Table;
@@ -96,9 +97,10 @@ const TableQR: React.FC<TableQRProps> = ({ table, isOpen, onClose }) => {
         {/* رمز QR */}
         <div className="mb-4">
           {loading ? (
-            <div className="w-48 h-48 mx-auto flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
+            // ظلّ الرمز بمقاسه نفسه (١٩٢×١٩٢) حتى لا تقفز البطاقة
+            <SkeletonScope className="w-48 h-48 mx-auto">
+              <SkeletonBlock w="100%" h="100%" r={12} />
+            </SkeletonScope>
           ) : table.qrSvg ? (
             <div dangerouslySetInnerHTML={{ __html: table.qrSvg }} className="w-48 h-48 mx-auto" />
           ) : table.qrCode ? (

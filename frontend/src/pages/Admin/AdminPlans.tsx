@@ -257,7 +257,7 @@ const AdminPlans: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="grid" />;
 
   const inputStyle: React.CSSProperties = {
     width: '100%',

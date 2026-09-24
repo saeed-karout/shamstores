@@ -1,0 +1,129 @@
+/* frontend/src/styles/skeleton.css — ظلال التحميل ومؤشّر الانشغال
+ *
+ * قرار المالك: لا دائرة تحميلٍ دوّارة في أيّ مكان. ما يراه المستخدم أثناء
+ * الانتظار «ظلُّ» الصفحة نفسها — عناوين وبطاقاتٌ وصفوفٌ رماديّة يمرّ عليها
+ * بريقٌ هادئ — فيعرف شكل ما سيأتي ولا يقفز التخطيط حين تصل البيانات.
+ * وداخل الأزرار ثلاث نقاطٍ تنبض بدل الحلقة.
+ *
+ * الألوان متغيّراتٌ يضبطها غلاف <SkeletonScope> من سياق الثيم؛ ولكلٍّ منها
+ * قيمةٌ احتياطيّة بهويّة شام الفاتحة كي يعمل أيّ عنصرٍ ولو وُضع وحده.
+ */
+
+.ss-sk {
+  display: block;
+  /* رماديّ مخضرّ أغمق قليلاً من سطح البطاقة: ظاهرٌ على الأبيض دون أن يصرخ */
+  --sk-base-c: var(--sk-base, #e7eee9);
+  --sk-hi-c: var(--sk-hi, #f6f9f6);
+  background: linear-gradient(
+    90deg,
+    var(--sk-base-c) 25%,
+    var(--sk-hi-c) 50%,
+    var(--sk-base-c) 75%
+  );
+  background-size: 200% 100%;
+  animation: ss-sk-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.ss-sk-circle { border-radius: 50%; }
+
+@keyframes ss-sk-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* بطاقة الظلّ: نفس هيئة .ss-card في اللوحة حتى لا يتغيّر الإطار لحظة الوصول */
+.ss-sk-card {
+  background: var(--sk-card, #ffffff);
+  border: 1px solid var(--sk-line, rgba(16, 35, 27, 0.07));
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(16, 35, 27, 0.04), 0 8px 24px rgba(16, 35, 27, 0.05);
+}
+
+.ss-sk-page {
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+@media (min-width: 1024px) { .ss-sk-page { padding: 28px 28px 48px; gap: 20px; } }
+
+.ss-sk-row { display: flex; align-items: center; gap: 12px; }
+.ss-sk-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+
+.ss-sk-kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (min-width: 900px) { .ss-sk-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; } }
+
+.ss-sk-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+@media (min-width: 1024px) { .ss-sk-split { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); } }
+
+.ss-sk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+@media (max-width: 559.98px) { .ss-sk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+
+.ss-sk-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px 16px;
+}
+@media (min-width: 768px) { .ss-sk-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* على الجوال تختفي الأعمدة الثانويّة في الصفوف كما تختفي في الجداول الحقيقيّة */
+@media (max-width: 639.98px) { .ss-sk-wide-only { display: none !important; } }
+
+/* نصٌّ لقارئ الشاشة فقط: الظلال صامتةٌ بطبيعتها */
+.ss-sk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ===== مؤشّر الانشغال داخل الأزرار: ثلاث نقاط تنبض بلون النصّ =====
+ * عنصرٌ واحد بثلاث تدرّجاتٍ دائريّة، يرث currentColor فيصلح على الزرّ
+ * الأخضر والأبيض معاً بلا خصائص إضافيّة. */
+.ss-busy-dots {
+  --_d: no-repeat radial-gradient(circle closest-side, currentColor 90%, transparent);
+  display: inline-block;
+  flex-shrink: 0;
+  width: 22px;
+  aspect-ratio: 4;
+  vertical-align: middle;
+  background: var(--_d) 0% 50%, var(--_d) 50% 50%, var(--_d) 100% 50%;
+  background-size: calc(100% / 3) 100%;
+  animation: ss-busy-dots 1s infinite linear;
+}
+@keyframes ss-busy-dots {
+  20% { background-size: calc(100% / 3) 0%, calc(100% / 3) 100%, calc(100% / 3) 100%; }
+  40% { background-size: calc(100% / 3) 100%, calc(100% / 3) 0%, calc(100% / 3) 100%; }
+  60% { background-size: calc(100% / 3) 100%, calc(100% / 3) 100%, calc(100% / 3) 0%; }
+  80% { background-size: calc(100% / 3) 100%, calc(100% / 3) 100%, calc(100% / 3) 100%; }
+}
+
+/* أيقونةٌ تبقى في مكانها وتخفت وتعود — بديل تدوير أيقونة «تحديث» */
+.ss-busy-pulse { animation: ss-busy-pulse 1s ease-in-out infinite; }
+@keyframes ss-busy-pulse { 50% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-sk { animation: none; }
+  .ss-busy-dots { animation: none; opacity: 0.8; }
+  .ss-busy-pulse { animation: none; opacity: 0.6; }
+}

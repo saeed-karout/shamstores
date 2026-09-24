@@ -82,11 +82,16 @@ export const useDisplayCurrency = (
 
   // الإعدادات تصل بعد أوّل بناء (النداء غير متزامن) — والاختيار يُعاد ضبطه
   // عندها، وإلا عُرضت العملة الافتراضية للمنصّة لا للمتجر
+  //
+  // **والمخزَّن يسبق الحالي:** صفحة المنتج تُبنى قبل وصول المتجر، فيُقرأ
+  // مفتاحٌ عامّ بلا معرّف ويُختار الافتراضيّ. كان الشرط يُبقي ذلك الاختيار ما
+  // دام مفعّلاً — فمن اختار الدولار في واجهة المتجر يفتح منتجاً فيراه بالليرة.
+  // و`setCode` يكتب في التخزين نفسه، فالمخزَّن هو اختيار الزائر دائماً.
   useEffect(() => {
     setCodeState((current) => {
-      if (enabled.includes(current)) return current;
       const stored = readStored(businessKey);
       if (stored && enabled.includes(stored)) return stored;
+      if (enabled.includes(current)) return current;
       return enabled.includes(serverDefault) ? serverDefault : enabled[0];
     });
   }, [enabled, serverDefault, businessKey]);

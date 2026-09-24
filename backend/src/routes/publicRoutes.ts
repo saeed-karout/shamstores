@@ -15,12 +15,27 @@ import { getProductReviews } from '../controllers/productReviewController';
 import { getStoreManifest, getStoreIcon, getPwaStatus, getSeoSummary } from '../controllers/pwaController';
 import rateLimit from 'express-rate-limit';
 import { ingestEvents } from '../controllers/storefrontEventController';
+import { searchCatalog } from '../controllers/searchController';
 
 const router = express.Router();
 
 // ==================== المسارات العامة (بدون مصادقة) ====================
 
-router.post('/contact-messages', createContactMessage);
+/**
+ * رسائل التواصل وطلبات الانضمام — كتابةٌ بلا مصادقة، فلها حدّ.
+ *
+ * خمس رسائل في عشر دقائق تكفي إنساناً أخطأ وأعاد، وتوقف من يملأ صندوق
+ * الأدمن آلياً — وكل رسالة صارت تُطلق إشعاراً للأدمن.
+ */
+const contactLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 5,
+  standardHeaders: false,
+  legacyHeaders: false,
+  message: { success: false, error: 'أرسلت رسائل كثيرة — حاول بعد دقائق' }
+});
+
+router.post('/contact-messages', contactLimiter, createContactMessage);
 
 /**
  * مدخل أحداث الإحصاء — **المسار الوحيد الذي يكتب بلا مصادقة.**
@@ -55,6 +70,22 @@ router.get('/:slug/manifest.webmanifest', getStoreManifest);
 router.get('/:slug/pwa-icon/:file', getStoreIcon);
 router.get('/:slug/pwa-status', getPwaStatus);
 router.get('/:slug/seo', getSeoSummary);
+
+/**
+ * البحث العميق — الاسم والوصف وSKU والوسوم والخيارات والقسم.
+ *
+ * حدٌّ لكل عنوان: الواجهة تبحث أثناء الكتابة (بعد توقّفٍ قصير)، وستّون
+ * طلباً في الدقيقة تتّسع لأسرع كاتب. ما فوقها سكربتٌ يمسح الكتالوج.
+ */
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: false,
+  legacyHeaders: false,
+  message: { success: false, error: 'بحثٌ كثير في وقتٍ قصير — انتظر لحظة' }
+});
+
+router.get('/:identifier/search', searchLimiter, searchCatalog);
 
 router.get('/:identifier', getBusinessBySlug);
 

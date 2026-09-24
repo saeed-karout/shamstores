@@ -17,6 +17,7 @@ import {
   IoShareSocial,
   IoBookmark
 } from 'react-icons/io5';
+import { SkeletonScope, SkeletonLine, SkeletonBlock } from '../common/Skeleton';
 
 export interface MarketingSection {
   id: string;
@@ -135,14 +136,19 @@ const PublicMarketingSections: React.FC<PublicMarketingSectionsProps> = ({
 
   if (loading) {
     return (
-      <div className={`flex justify-center items-center py-16 ${className}`}>
-        <div className="relative">
-          <div className="w-12 h-12 border-3 border-gray-200 border-t-accent rounded-full animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-6 h-6 bg-accent rounded-full animate-pulse" />
-          </div>
+      // ظلّ قسمٍ تسويقيّ: عنوانه وصفٌّ أفقيّ من البطاقات
+      <SkeletonScope className={className} style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <SkeletonLine w={160} h={18} />
+        <div style={{ display: 'flex', gap: 12, overflow: 'hidden' }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} style={{ flex: '0 0 min(44%, 200px)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <SkeletonBlock h={0} r={14} style={{ height: 'auto', aspectRatio: '1 / 1' }} />
+              <SkeletonLine w="75%" h={12} />
+              <SkeletonLine w="40%" h={12} />
+            </div>
+          ))}
         </div>
-      </div>
+      </SkeletonScope>
     );
   }
 

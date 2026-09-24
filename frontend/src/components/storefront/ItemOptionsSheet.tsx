@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { IoCheckmark, IoBagAddOutline } from 'react-icons/io5';
 import BottomSheet from './BottomSheet';
+import ItemComments from './ItemComments';
 import QuantityStepper from './QuantityStepper';
 import { sf } from '@/utils/storefrontTheme';
 import { sd } from '@/utils/storefrontDesign';
@@ -273,6 +274,10 @@ const ItemOptionsSheet: React.FC<ItemOptionsSheetProps> = ({
         />
         <div style={{ textAlign: 'end', fontSize: 11, color: sf.muted, marginTop: 4 }}>{notes.length}/300</div>
       </section>
+
+      {/* تعليقات الزبائن على الوجبة — «هل هي حارّة؟» يسألها كثيرون، وجوابها
+          هنا يوفّر على المطعم اتصالاً وعلى الزبون تردّداً */}
+      <ItemComments kind="menuItem" itemId={item.id} />
     </BottomSheet>
   );
 };

@@ -1,0 +1,125 @@
+/* frontend/src/styles/comments.css — شاشة إشراف التعليقات (`CommentsPage`)
+ *
+ * تبني فوق `.ob-*` (الشريط والتبويبات والقائمة) و`.pc-*` (الأزرار والمفتاح)
+ * ولا تكرّرهما. الصفّ هنا أطول من صفّ المستخدمين: فيه نصٌّ يُقرأ وخيطُ ردود،
+ * فهو بطاقةٌ عموديّة على كلّ المقاسات، تتّسع أعمدتها على الحاسوب لا غير.
+ */
+
+.cm-rows { list-style: none; margin: 0; padding: 0; }
+.cm-row {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(16, 35, 27, 0.07);
+}
+.cm-row:last-child { border-bottom: 0; }
+.cm-row.is-hidden { background: #fafbfa; }
+.cm-row.is-hidden .cm-body { color: #8a9b93; }
+
+/* رأس الصفّ: صورة الصنف واسمه يساراً، والتاريخ في الطرف */
+.cm-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cm-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #eef3ef;
+  color: #084835;
+  display: grid;
+  place-items: center;
+}
+.cm-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cm-head-text { display: grid; min-width: 0; flex: 1; }
+.cm-head-text b { font-size: 14px; font-weight: 800; color: #10231b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cm-head-text small { font-size: 12.5px; color: #5f736a; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cm-date { font-size: 12px; color: #5f736a; white-space: nowrap; flex-shrink: 0; }
+
+.cm-body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #10231b;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* خيط الردود: خطٌّ أخضر جانبيّ — «هذا ما قاله متجرك» بنظرة */
+.cm-replies { display: grid; gap: 8px; }
+.cm-reply {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #f1f6f2;
+  border-inline-start: 3px solid #084835;
+}
+.cm-reply-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; color: #5f736a; }
+.cm-reply-head b { color: #084835; font-size: 12.5px; }
+.cm-reply p { margin: 0; font-size: 13.5px; line-height: 1.75; color: #10231b; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.cm-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cm-actions .pc-toggle { margin-inline-end: auto; }
+.cm-actions .pc-toggle:disabled { opacity: 0.5; cursor: wait; }
+.cm-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(16, 35, 27, 0.12);
+  background: #fff;
+  color: #084835;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cm-reply-btn:hover { background: #f1f6f2; }
+
+/* محرّر الردّ داخل الصفّ — لا نافذة: الردّ يُكتب والسؤال أمام العين */
+.cm-composer { display: grid; gap: 8px; }
+.cm-composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 84px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 35, 27, 0.14);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #10231b;
+  background: #fff;
+}
+.cm-composer textarea:focus { outline: 0; border-color: #084835; box-shadow: 0 0 0 3px rgba(8, 72, 53, 0.12); }
+.cm-composer-foot { display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.cm-composer-foot small { margin-inline-end: auto; font-size: 12px; color: #5f736a; }
+.cm-composer-foot .ss-btn { min-height: 38px; font-size: 13.5px; }
+.cm-composer-foot .ss-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.cm-more { display: flex; justify-content: center; padding: 12px 16px 16px; border-top: 1px solid rgba(16, 35, 27, 0.07); }
+
+/* ===== ظلّ التحميل — بهيئة الصفّ نفسه، لا دائرةٌ تدور ===== */
+.cm-sk {
+  display: block;
+  background: linear-gradient(90deg, #e7eee9 25%, #f6f9f6 50%, #e7eee9 75%);
+  background-size: 200% 100%;
+  animation: cm-sk-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes cm-sk-shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .cm-sk { animation: none; } }
+
+@media (min-width: 900px) {
+  .cm-row { padding: 16px 20px; grid-template-columns: minmax(0, 1fr) auto; column-gap: 20px; }
+  .cm-row > .cm-head,
+  .cm-row > .cm-body,
+  .cm-row > .cm-replies,
+  .cm-row > .cm-composer { grid-column: 1; }
+  .cm-row > .cm-actions { grid-column: 2; grid-row: 1 / span 3; align-self: start; flex-direction: column; align-items: stretch; }
+  .cm-row > .cm-actions .pc-toggle { margin-inline-end: 0; }
+  .cm-row > .cm-actions .pc-act { align-self: center; }
+}

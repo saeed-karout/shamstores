@@ -53,7 +53,7 @@ const AdminSettings: React.FC = () => {
 
   const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 14, outline: 'none', boxSizing: 'border-box' };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="form" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">

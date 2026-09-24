@@ -272,7 +272,9 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
 
           {/* الحساب · المفضلة · السلة */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
-            <span className="shop-only-wide" style={{ alignItems: 'center', gap: 7 }}>{headerExtra}</span>
+            {/* اللغة والعملة زرٌّ واحد في مجموعة الأيقونات — في كل مقاس وكل
+                قالب، فيجده الزبون حيث يجد السلّة */}
+            {headerExtra}
             <IconAction icon={<IoPersonOutline size={19} />} label={accountLabel} onClick={onAccountClick} />
             <IconAction
               icon={<IoHeartOutline size={19} />}
@@ -291,10 +293,8 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
         </div>
 
         {/* ===== صفٌّ ثانٍ — جوال فقط =====
-            سبعة عناصر لا تدخل في ٣٧٥ بكسل: الشعار وحقل البحث ومبدّلا
-            العملة واللغة وثلاثة أزرار. وكانت المجموعة تفيض فعلاً فتنزلق
-            الصفحة أفقياً — وهو أسوأ ما يحدث لواجهةٍ على الجوال.
-            الصفّ الثاني يُعطي البحث عرضاً حقيقياً بدل ست وعشرين بكسل. */}
+            حقل البحث لا يدخل الصفّ الأوّل على ٣٧٥ بكسل مع الشعار والأزرار،
+            فيأخذ صفّاً كاملاً بعرضٍ حقيقيّ بدل ست وعشرين بكسل. */}
         <div
           className="shop-shell shop-header-row2"
           style={{ alignItems: 'center', gap: 8, paddingBottom: 9 }}
@@ -326,8 +326,6 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
             <IoSearchOutline size={16} style={{ flexShrink: 0 }} />
             {searchValue || t('ابحث في المنتجات…')}
           </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>{headerExtra}</div>
         </div>
 
         {/* شريط الأقسام النصّي — لابتوب فقط */}

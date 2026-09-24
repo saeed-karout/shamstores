@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { IoLocation, IoNavigate, IoClose, IoWarning } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+import { BusyDots } from './common/Skeleton';
 
 interface LocationPickerProps {
   onLocationSelect: (location: { lat: number; lng: number; address: string }) => void;
@@ -144,7 +145,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({ onLocationSelect, initi
         className="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50"
       >
         {loading ? (
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <BusyDots />
         ) : (
           <IoNavigate size={20} />
         )}

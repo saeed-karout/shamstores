@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoStorefront, IoRestaurant, IoSearch, IoArrowBack, IoAlertCircle } from 'react-icons/io5';
 import { adminService } from '../../services/api/index';
+import { BusyDots } from '../../components/common/Skeleton';
 
 const C = {
   bg:     '#F4F7F4',
@@ -85,7 +86,7 @@ const AdminMarketingIndex: React.FC = () => {
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} onKeyPress={handleKeyPress} placeholder={`ابحث عن ${businessType === 'restaurant' ? 'مطعم' : 'متجر'}...`} style={inputStyle} />
             <button onClick={searchBusinesses} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '11px 20px', background: C.accent, color: C.bg, border: 'none', borderRadius: 10, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-              {loading ? <><div style={{ width: 16, height: 16, border: `2px solid ${C.bg}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />جاري البحث...</> : <><IoSearch size={16} />بحث</>}
+              {loading ? <><BusyDots />جاري البحث...</> : <><IoSearch size={16} />بحث</>}
             </button>
           </div>
 
@@ -137,7 +138,6 @@ const AdminMarketingIndex: React.FC = () => {
           </button>
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };

@@ -382,7 +382,7 @@ const getFilteredStaff = () => {
     ]},
   ];
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
   const filteredStaff = getFilteredStaff();
 
   return (

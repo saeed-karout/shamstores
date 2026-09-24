@@ -55,6 +55,8 @@ const pageTitles: Record<string, string> = {
   '/store/marketing':         'التسويق',
   '/store/customers':         'الزبائن',
   '/restaurant/customers':    'الزبائن',
+  '/store/comments':          'التعليقات',
+  '/restaurant/comments':     'التعليقات',
   '/store/campaigns':         'حملات الزبائن',
   '/restaurant/campaigns':    'حملات الزبائن',
   '/store/automations':       'رسائل تلقائية',

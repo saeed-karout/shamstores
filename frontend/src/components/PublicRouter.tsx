@@ -129,7 +129,7 @@ const BusinessLoader: React.FC<{ children: (data: any) => React.ReactNode }> = (
   }, [directIdentifier]);
 
   if (loading) {
-    return <Loader fullScreen />;
+    return <Loader fullScreen variant="storefront" />;
   }
 
   if (error || !businessData) {
@@ -182,7 +182,7 @@ const PublicRouter: React.FC = () => {
   const hasOwnHost = !!getCurrentSubdomain() || isCustomDomain();
 
   return (
-    <Suspense fallback={<Loader />}>
+    <Suspense fallback={<Loader fullScreen variant="storefront" />}>
     <Routes>
       <Route path="/terms" element={<Navigate to="/" replace />} />
       <Route path="/privacy" element={<Navigate to="/" replace />} />

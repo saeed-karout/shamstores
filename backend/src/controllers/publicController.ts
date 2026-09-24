@@ -10,11 +10,25 @@ import { resolveLanguageSettings } from '../services/language.service';
 import { getCurrencyContext, resolveCurrencySettings } from '../services/currency.service';
 import { shouldShowPlatformBadge } from '../services/branding.service';
 import { parseOptions } from '../services/productOptions.service';
+import { resolveBusinessSeo } from '../services/seo.service';
+import { notifyAdmins } from '../services/notification.service';
+import { toPublicProduct } from '../services/publicProduct.service';
 import {
   normalizeDomain,
   resolveBusinessByCustomDomain,
   extractSubdomainFromHost
 } from '../services/domain.service';
+
+/**
+ * «نفد» محسوبٌ على الخادم لا في كل واجهة.
+ *
+ * الصنف المتتبَّع مخزونه وصل صفراً — والقاعدة (`null` = لا يُتتبَّع) سهلة
+ * الخطأ: واجهةٌ تقرأ `stock === 0` وحده تُظهر كل وجبةٍ غير متتبَّعة نافدة.
+ */
+const withSoldOut = <T extends { trackStock?: boolean | null; stock?: number | null }>(item: T) => ({
+  ...item,
+  soldOut: item.trackStock === true && (item.stock ?? 0) <= 0
+});
 
 // ==================== جلب بيانات المطعم/المتجر (باستخدام slug) ====================
 
@@ -70,19 +84,15 @@ export const getBusinessBySlug = async (
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
         }),
         prisma.menuItem.findMany({
-          // **المتتبَّع النافد يُستبعَد كما المخفيّ.**
+          // **المتتبَّع النافد يُعرض «نفد» ولا يُخفى.**
           //
-          // `isAvailable` قرارُ التاجر، والمخزون واقعُ الرفّ. وعرضُ صنفٍ
-          // نفد يعني زبوناً يطلبه فيُرفض عند التحضير — أو أسوأ: يُقبل
-          // ويُخصَم رصيدٌ إلى ما دون الصفر.
+          // كان يُستبعَد كالمخفيّ، فيبحث الزبون عن طبقه المعتاد ولا يجده —
+          // ويظنّ المطعم أزاله. عرضُه باهتاً بشارة «Sold out» يقول الحقيقة:
+          // موجود وسيعود. والطلب يُرفض على الخادم (`orderController`)، فلا
+          // يُخصم رصيدٌ إلى ما دون الصفر.
           //
-          // ولا يُطفأ `isAvailable` تلقائياً: إطفاؤه قرارٌ يحتاج إعادةَ
-          // تشغيلٍ يدوية عند التوريد، والاستبعادُ بالقراءة يعود وحده.
-          where: {
-            restaurantId: restaurant.id,
-            isAvailable: true,
-            OR: [{ trackStock: false }, { stock: { gt: 0 } }]
-          },
+          // `isAvailable` يبقى قرار التاجر: ما أطفأه بيده يختفي كما كان.
+          where: { restaurantId: restaurant.id, isAvailable: true },
           orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
         })
       ]);
@@ -144,11 +154,13 @@ export const getBusinessBySlug = async (
           plan: restaurant.plan,
           // الشارة يحسمها الخادم: الواجهة لا ترى الميزات المشتراة مفردةً
           showPlatformBadge: await shouldShowPlatformBadge(restaurant.id, 'restaurant'),
+          // العنوان والوصف وأيقونة التبويب لهذا المطعم — لا لشام ستورز
+          seo: resolveBusinessSeo(restaurant, 'restaurant'),
           branchLabel: buildBranchSummary(restaurant).linkLabel,
           branchLinkType: buildBranchSummary(restaurant).linkType,
           linkedBranches,
           categories,
-          menuItems
+          menuItems: menuItems.map(withSoldOut)
         }
       });
       return;
@@ -236,11 +248,12 @@ export const getBusinessBySlug = async (
           updatedAt: store.updatedAt,
           plan: store.plan,
           showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store'),
+          seo: resolveBusinessSeo(store, 'store'),
           branchLabel: buildBranchSummary(store).linkLabel,
           branchLinkType: buildBranchSummary(store).linkType,
           linkedBranches,
           categories,
-          products
+          products: products.map(toPublicProduct)
         }
       });
       return;
@@ -268,21 +281,39 @@ export const createContactMessage = async (
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني غير صالح' });
+      return;
+    }
+
     const contactMessage = await prisma.contactMessage.create({
       data: {
-        name,
-        email,
-        phone: phone || null,
-        subject: subject || 'رسالة تواصل جديدة',
-        message,
+        name: name.slice(0, 120),
+        email: email.slice(0, 160),
+        phone: phone ? phone.slice(0, 30) : null,
+        subject: (subject || 'رسالة تواصل جديدة').slice(0, 200),
+        message: message.slice(0, 4000),
         status: 'new'
       }
     });
 
+    // **الأدمن يُنبَّه فوراً.** كانت الرسالة تُحفظ في صندوقٍ لا يفتحه أحد
+    // ما لم يتذكّره — وطلب الانضمام من شارة المنصّة تاجرٌ محتمل يبرد مع كل
+    // ساعة انتظار. والفشل هنا لا يُسقط الإرسال: الرسالة محفوظة على أي حال.
+    notifyAdmins({
+      type: 'contact_message',
+      event: 'contact_message.created',
+      title: subject.includes('انضمام') ? 'طلب انضمام جديد' : 'رسالة تواصل جديدة',
+      message: `${name}${phone ? ` · ${phone}` : ''} — ${subject || message.slice(0, 80)}`,
+      link: '/admin/contact-messages',
+      entityId: contactMessage.id
+    }).catch(() => undefined);
+
+    // لا يُعاد السجلّ كاملاً: معرّفه وحده يكفي من أرسل
     res.status(201).json({
       success: true,
       message: 'تم إرسال رسالتك بنجاح',
-      data: contactMessage
+      data: { id: contactMessage.id }
     });
   } catch (error) {
     console.error('Error creating contact message:', error);
@@ -323,11 +354,8 @@ export const getTableById = async (
     });
     
     const menuItems = await prisma.menuItem.findMany({
-      where: {
-        restaurantId: restaurant.id,
-        isAvailable: true,
-        OR: [{ trackStock: false }, { stock: { gt: 0 } }]
-      },
+      // النافد يُعرض «نفد» — انظر التعليق في getBusinessBySlug
+      where: { restaurantId: restaurant.id, isAvailable: true },
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
     });
     
@@ -362,7 +390,7 @@ export const getTableById = async (
           qrCode: table.qrCode
         },
         categories,
-        menuItems
+        menuItems: menuItems.map(withSoldOut)
       }
     });
   } catch (error) {
@@ -632,7 +660,7 @@ export const getProductsBySlug = async (
     
     res.json({
       success: true,
-      data: products
+      data: products.map(toPublicProduct)
     });
   } catch (error) {
     console.error('Error getting products:', error);

@@ -8,6 +8,7 @@ import { useCurrentPlan } from '@/hooks/stores/useCurrentPlan';
 import { useTheme } from '@/context/ThemeContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import Loader from '@/components/common/Loader';
+import { InlineGridSkeleton, BusyDots } from '@/components/common/Skeleton';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker';
@@ -46,7 +47,10 @@ import {
   IoCopy,
   IoCheckmarkCircle,
   IoCloseCircle,
+  IoSearch,
 } from 'react-icons/io5';
+import SeoSettingsPanel, { SeoSettingsValue } from '@/components/settings/SeoSettingsPanel';
+import { publicStorefrontUrl } from '@/utils/storefrontUrl';
 import { getImageUrl } from '@/utils/imageHelpers';
 import DomainManager from '@/components/settings/DomainManager';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
@@ -385,6 +389,24 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
+  // إعدادات البحث لهذا المتجر وحده — الخادم ينقّيها ويحسم المشتقّ منها
+  const [savingSeo, setSavingSeo] = useState(false);
+  const handleSaveSeo = async (value: SeoSettingsValue) => {
+    if (!canUpdateSettings) {
+      toast.error('ليس لديك صلاحية لتحديث إعدادات المتجر');
+      return;
+    }
+    setSavingSeo(true);
+    try {
+      await updateStore({ seoSettings: value } as any);
+      toast.success('حُفظت إعدادات محرّكات البحث');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'تعذّر حفظ إعدادات البحث');
+    } finally {
+      setSavingSeo(false);
+    }
+  };
+
   const handleSaveDeliverySettings = async () => {
     if (!canUpdateSettings) {
       toast.error('ليس لديك صلاحية لتحديث إعدادات التوصيل');
@@ -542,11 +564,12 @@ const StoreSettingsPage: React.FC = () => {
     { id: 'images', label: 'الصور', icon: IoImage },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
     { id: 'payment', label: 'الدفع', icon: IoWalletOutline },
+    { id: 'seo', label: 'محرّكات البحث', icon: IoSearch },
     { id: 'domain', label: 'الدومين', icon: IoGlobe },
     { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
 
-  if (loading || planLoading) return <Loader fullScreen />;
+  if (loading || planLoading) return <Loader fullScreen variant="form" />;
 
   const previewColors = {
     bg: designForm.backgroundColor,
@@ -1145,7 +1168,7 @@ const StoreSettingsPage: React.FC = () => {
             </div>
             {uploading && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, color: C.accent }}>
-                <div style={{ width: 16, height: 16, border: `2px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <BusyDots />
                 <span style={{ fontSize: 13 }}>جاري رفع الصورة...</span>
               </div>
             )}
@@ -1238,6 +1261,26 @@ const StoreSettingsPage: React.FC = () => {
           value={paymentSettings}
           onSave={handleSavePayment}
           saving={savingPayment}
+          canEdit={canUpdateSettings}
+          colors={C}
+        />
+      )}
+
+      {/* ==================== تبويب محرّكات البحث ==================== */}
+      {activeTab === 'seo' && (
+        <SeoSettingsPanel
+          value={(store as any)?.seoSettings}
+          business={{
+            type: 'store',
+            id: store?.id,
+            name: store?.name || '',
+            description: store?.description,
+            logo: store?.logo,
+            coverImage: store?.coverImage,
+            url: publicStorefrontUrl(store)
+          }}
+          onSave={handleSaveSeo}
+          saving={savingSeo}
           canEdit={canUpdateSettings}
           colors={C}
         />
@@ -1352,7 +1395,7 @@ const StoreSettingsPage: React.FC = () => {
               disabled={creatingBranch || !canEdit}
               style={{ ...saveBtn, width: '100%', justifyContent: 'center', opacity: creatingBranch || !canEdit ? 0.7 : 1, cursor: creatingBranch || !canEdit ? 'not-allowed' : 'pointer' }}
             >
-              {creatingBranch ? <><div className="animate-spin" style={{ width: 16, height: 16, border: `2px solid ${C.bg}`, borderTopColor: 'transparent', borderRadius: '50%' }} /> جاري إنشاء الفرع...</> : <><IoAdd size={18} /> إنشاء فرع جديد</>}
+              {creatingBranch ? <><BusyDots /> جاري إنشاء الفرع...</> : <><IoAdd size={18} /> إنشاء فرع جديد</>}
             </button>
           </div>
 
@@ -1403,7 +1446,7 @@ const StoreSettingsPage: React.FC = () => {
               <button onClick={() => setShowAllProductsModal(false)} style={{ background: 'none', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 24 }}>×</button>
             </div>
             <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
-              {loadingProducts ? <Loader /> : (
+              {loadingProducts ? <InlineGridSkeleton cards={6} /> : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
                   {showAllProducts.map((product, idx) => (
                     <div key={idx} style={{ background: C.surf, borderRadius: 10, padding: 12 }}>
@@ -1425,7 +1468,6 @@ const StoreSettingsPage: React.FC = () => {
         <p style={{ color: C.muted, fontSize: 12 }}>آخر تحديث: {store?.updatedAt ? new Date(store.updatedAt).toLocaleDateString('ar-SA') : 'غير معروف'}</p>
       </div>
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } } .animate-spin { animation: spin 1s linear infinite; }`}</style>
     </div>
   );
 };

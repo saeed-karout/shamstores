@@ -19,6 +19,7 @@ import { MarketingSection, MarketingSectionType } from '../../types/marketing';
 import { uploadService } from '../../services/api/upload.service';
 import { useTheme } from '@/context/ThemeContext';
 import toast from 'react-hot-toast';
+import { BusyDots } from '@/components/common/Skeleton';
 
 interface Props {
   isOpen: boolean;
@@ -409,14 +410,7 @@ const MarketingSectionForm: React.FC<Props> = ({
     fontSize: '0.75rem'
   };
 
-  const loadingSpinnerStyle: React.CSSProperties = {
-    width: '1rem',
-    height: '1rem',
-    border: `2px solid ${colors.accent}`,
-    borderTopColor: 'transparent',
-    borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite'
-  };
+
 
   const cancelBtnStyle: React.CSSProperties = {
     padding: '0.5rem 1rem',
@@ -522,7 +516,7 @@ const MarketingSectionForm: React.FC<Props> = ({
                   
                   {uploadingImage && (
                     <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: colors.accent }}>
-                      <div style={loadingSpinnerStyle} />
+                      <BusyDots style={{ color: colors.accent }} />
                       <span style={{ fontSize: '0.75rem' }}>جاري رفع الصورة...</span>
                     </div>
                   )}
@@ -667,7 +661,7 @@ const MarketingSectionForm: React.FC<Props> = ({
               >
                 {uploadingImage ? (
                   <>
-                    <div style={loadingSpinnerStyle} />
+                    <BusyDots style={{ color: colors.accent }} />
                     جاري رفع الصورة...
                   </>
                 ) : (

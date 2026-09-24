@@ -42,8 +42,8 @@ import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import { captureRef, getRef, clearRef } from '@/utils/referral';
-import CurrencySwitcher from '@/components/storefront/CurrencySwitcher';
-import LanguageSwitcher from '@/components/storefront/LanguageSwitcher';
+import LocaleSwitcher from '@/components/storefront/LocaleSwitcher';
+import useCatalogSearch from '@/hooks/useCatalogSearch';
 import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
 import type { CartItem } from '@/services/types';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
@@ -331,15 +331,28 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
   const isSearching = searchQuery.trim().length > 0;
 
+  /**
+   * البحث العميق على الخادم — الاسم والوصف ورمز SKU والإضافات والقسم.
+   *
+   * النتائج تُطابَق بالمعرّف على الأصناف المحمّلة (المترجَمة والمطبَّعة)
+   * بترتيب الخادم بالصلة. والتصفية المحلّية جسرٌ حتى يصل الردّ وبديلٌ إن تعذّر.
+   */
+  const catalogSearch = useCatalogSearch<{ id: string }>((restaurant as any)?.slug || currentSlug, searchQuery);
+
   const searchResults = useMemo(() => {
     if (!isSearching) return [];
+    if (catalogSearch.items) {
+      const byId = new Map(allItems.map((item) => [item.id, item]));
+      return catalogSearch.items
+        .map((hit) => byId.get(hit.id))
+        .filter((item): item is StorefrontMenuItem => !!item);
+    }
     const query = searchQuery.trim().toLowerCase();
+    const matches = (value: unknown) => String(value ?? '').toLowerCase().includes(query);
     return allItems.filter(
-      (item) =>
-        item.name?.toLowerCase().includes(query) ||
-        item.description?.toLowerCase().includes(query)
+      (item: any) => matches(item.name) || matches(item.description) || matches(item.sku)
     );
-  }, [allItems, searchQuery, isSearching]);
+  }, [allItems, searchQuery, isSearching, catalogSearch.items]);
 
   const sortItems = useCallback(
     (items: StorefrontMenuItem[]): StorefrontMenuItem[] => {
@@ -580,18 +593,15 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   // ---------- إجراءات الرأس المصغّر ----------
   const headerActions = (
     <>
-      {/* العملة أوّلاً: قرارٌ يسبق البحث والترتيب — الزبون يريد أن يقرأ
-          السعر بعملته قبل أن يبحث فيه */}
-      <CurrencySwitcher
-        options={currencyOptions}
-        code={currencyCode}
-        onChange={setCurrencyCode}
-      />
-      {/* اللغة بعد العملة: التبديل بينهما قرارٌ واحد في ذهن الزبون */}
-      <LanguageSwitcher
-        options={language.options}
+      {/* اللغة والعملة زرٌّ واحد أوّل الأزرار: قرارٌ يسبق البحث والترتيب —
+          الزبون يريد أن يقرأ القائمة بلغته وسعرها بعملته قبل أن يبحث */}
+      <LocaleSwitcher
+        languages={language.options}
         lang={language.lang}
-        onChange={language.setLang}
+        onLangChange={language.setLang}
+        currencies={currencyOptions}
+        currency={currencyCode}
+        onCurrencyChange={setCurrencyCode}
       />
       <button
         type="button"
@@ -879,6 +889,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         currency={currency}
         onOpen={() => setCartOpen(true)}
         hidden={cartOpen || optionsOpen || sortSheetOpen || searchOpen}
+        aboveBadge={!!restaurant?.showPlatformBadge}
       />
 
       {/* ==================== لوح البحث ==================== */}
@@ -1080,7 +1091,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         theme={storePwa.theme}
       />
 
-      <PlatformBadge show={restaurant?.showPlatformBadge} />
+      <PlatformBadge show={restaurant?.showPlatformBadge} source={(restaurant as any)?.slug} />
     </StorefrontI18nProvider>
     </StorefrontDesignProvider>
   );

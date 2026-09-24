@@ -65,7 +65,7 @@ const AdminDashboard: React.FC = () => {
     })();
   }, []);
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="dashboard" />;
 
   const o = stats?.overview;
   const a = stats?.attention;

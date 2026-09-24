@@ -174,7 +174,7 @@ const AdminBranches: React.FC = () => {
     return true;
   });
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   const inputStyle: React.CSSProperties = {
     background: C.surf,

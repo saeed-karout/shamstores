@@ -25,6 +25,7 @@ import { MarketingSection, MarketingSectionType } from '../../types/marketing';
 import MarketingSectionCard from '../../components/marketing/MarketingSectionCard';
 import MarketingSectionForm from '../../components/marketing/MarketingSectionForm';
 import api from '../../services/api';
+import Loader from '../../components/common/Loader';
 
 // الأقسام المسموح للمالكين بإضافتها
 const ALLOWED_SECTIONS = [
@@ -239,16 +240,7 @@ const fetchMarketingData = async () => {
 
   if (authLoading || fetchingBusiness) {
     return (
-      <div style={{ minHeight: '100vh', background: dynamicColors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 64, height: 64, border: `4px solid ${dynamicColors.accent}`,
-            borderTopColor: 'transparent', borderRadius: '50%',
-            animation: 'spin 1s linear infinite', margin: '0 auto 16px'
-          }} />
-          <p style={{ color: dynamicColors.muted }}>جاري التحميل...</p>
-        </div>
-      </div>
+      <Loader fullScreen variant="list" label="جاري التحميل..." />
     );
   }
 
@@ -272,16 +264,7 @@ const fetchMarketingData = async () => {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: dynamicColors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 64, height: 64, border: `4px solid ${dynamicColors.accent}`,
-            borderTopColor: 'transparent', borderRadius: '50%',
-            animation: 'spin 1s linear infinite', margin: '0 auto 16px'
-          }} />
-          <p style={{ color: dynamicColors.muted }}>جاري تحميل بيانات التسويق...</p>
-        </div>
-      </div>
+      <Loader fullScreen variant="list" label="جاري تحميل بيانات التسويق..." />
     );
   }
 
@@ -450,12 +433,6 @@ const fetchMarketingData = async () => {
         allowedSectionType={selectedType}
       />
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

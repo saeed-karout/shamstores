@@ -7,26 +7,28 @@
 // الأرقام داخل شاشات الأجهزة أمثلة عرضٍ لواجهةٍ حقيقية، والأسعار تُقرأ حيّةً
 // من الخادم بسعر الصرف الموحّد — لا نسخة مكتوبة هنا تتقادم.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-  IoMenu, IoClose, IoArrowBack, IoCheckmarkCircle, IoQrCode, IoStatsChart, IoShieldCheckmark,
-  IoRestaurant, IoStorefront, IoArrowUp, IoWallet, IoChatbubbles, IoFlash, IoGlobeOutline,
-  IoCubeOutline, IoPeopleOutline, IoPricetagOutline, IoMegaphoneOutline, IoBicycleOutline,
-  IoCardOutline, IoTrendingUpOutline, IoNotificationsOutline, IoColorPaletteOutline,
-  IoPhonePortraitOutline, IoLanguageOutline, IoAdd, IoGrid, IoLogOut, IoReceiptOutline,
-  IoRocketOutline, IoSparkles, IoMapOutline
+  IoMenu, IoClose, IoArrowBack, IoCheckmarkCircle, IoShieldCheckmark,
+  IoRestaurant, IoStorefront, IoArrowUp, IoWallet, IoChatbubbles, IoFlash,
+  IoNotificationsOutline, IoColorPaletteOutline, IoPhonePortraitOutline, IoAdd, IoGrid, IoLogOut,
+  IoRocketOutline, IoSparkles
 } from 'react-icons/io5';
 import type { IconType } from 'react-icons';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/services/api';
 import '@/styles/brand.css';
 import { BrandLogo, BrandMark } from '@/components/marketing/Brand';
-import { PhoneFrame, LaptopFrame, Scaled, useElementWidth } from '@/components/marketing/Devices';
+import { PhoneFrame, LaptopFrame, useElementWidth } from '@/components/marketing/Devices';
 import {
   RestaurantScreen, StoreScreen, DashboardScreen, TrackingScreen, StoreDesktopScreen, THEMES, StoreLayout
 } from '@/components/marketing/MockScreens';
+import PlatformShowcase from '@/components/marketing/PlatformShowcase';
+import FeatureBento from '@/components/marketing/FeatureBento';
+// أسماء الخطط من `utils/planLabels` (عبر PricingSection) — الاسم نفسه في لوحة التاجر
+import PricingSection, { type PublicPlan } from '@/components/marketing/PricingSection';
 
 // ===== ظهورٌ تدريجيّ عند التمرير =====
 const useReveal = () => {
@@ -69,21 +71,6 @@ const TRUST: Array<{ icon: IconType; title: string; desc: string }> = [
   { icon: IoShieldCheckmark, title: 'بياناتك ملكك', desc: 'صدّرها متى شئت، بلا احتجاز' }
 ];
 
-const FEATURES: Array<{ icon: IconType; title: string; desc: string; tag?: string; purple?: boolean }> = [
-  { icon: IoQrCode, title: 'قائمة رقمية ورموز QR', desc: 'رمز لكل طاولة، والطلب يصل مطبخك برقمها. تعديل الأسعار فوريّ بلا إعادة طباعة.' },
-  { icon: IoReceiptOutline, title: 'طلبات حيّة', desc: 'كلّ طلب يصل لحظياً مع تنبيه صوتيّ وإشعار متصفّح ورسالة تيليغرام.' },
-  { icon: IoCubeOutline, title: 'منتجات ومخزون', desc: 'تصنيفات فرعية، وسوم، خيارات مقاس ولون، صور متعددة، وتنبيه عند نفاد الكمية.' },
-  { icon: IoBicycleOutline, title: 'توصيل وشحن', desc: 'سائقوك بتتبّعٍ مباشر، وأجرة شحن لكل محافظة من المحافظات الأربع عشرة.' },
-  { icon: IoPeopleOutline, title: 'زبائنك في مكان واحد', desc: 'من يعود ومن انقطع، وسجلّ طلبات كلّ زبون، وتصدير بملفّ CSV.' },
-  { icon: IoPricetagOutline, title: 'كوبونات وعروض', desc: 'خصم بنسبة أو مبلغ، بحدّ أدنى وتاريخ انتهاء وعدد استخدامات.' },
-  { icon: IoMegaphoneOutline, title: 'حملات ورسائل تلقائية', desc: 'تذكير بالسلّة المتروكة، ورسالة لمن انقطع — لمن وافق فقط.', purple: true },
-  { icon: IoCardOutline, title: 'كاشير POS', desc: 'بيع من المحلّ بقارئ الباركود، وإيصال قابل للطباعة، وملخّص الوردية.', tag: 'إضافة', purple: true },
-  { icon: IoTrendingUpOutline, title: 'مسوّقون بالعمولة', desc: 'رابط لكل مسوّق، وعمولة تُحسب تلقائياً على ما يبيعه.', tag: 'إضافة', purple: true },
-  { icon: IoStatsChart, title: 'تحليلات ومالية', desc: 'رحلة الزائر حتى الطلب، ومصادر الزيارات، والربح الفعليّ لكل طلب.' },
-  { icon: IoGlobeOutline, title: 'نطاقك الخاص', desc: 'رابط فرعيّ مجانيّ فوراً، أو اربط نطاقك مع شهادة SSL تلقائية.' },
-  { icon: IoLanguageOutline, title: 'عربي وإنجليزي، ليرة ودولار', desc: 'واجهة بلغتين، والأسعار بالدولار بسعر صرف موحّد على المنصّة.' }
-];
-
 const RESTAURANT_THEMES: Array<{ key: keyof typeof THEMES; label: string }> = [
   { key: 'forest', label: 'كلاسيكي' },
   { key: 'noir', label: 'داكن' },
@@ -114,41 +101,10 @@ const FAQS = [
   { q: 'كيف يدفع الزبون؟', a: 'نقداً عند الاستلام، أو تحويلاً عبر شام كاش إلى محفظتك أنت — تُفعّلها وتضع رقمها من إعداداتك، فيظهر للزبون عند الدفع. التحويل يصلك مباشرة ولا نقتطع منه.' },
   { q: 'هل الأسعار بالليرة السورية؟', a: 'نعم، الليرة هي الأساس. ويمكنك عرض متجرك بالدولار أيضاً بسعر صرف موحّد على المنصّة.' },
   { q: 'ماذا لو أردت المغادرة؟', a: 'بياناتك ملكك: قوائمك وطلباتك وزبائنك. تصدّرها بملفّات CSV وتغادر متى شئت، بلا رسوم خروج.' },
-  { q: 'هل أحصل على نطاق باسمي؟', a: 'نعم. رابط فرعيّ مجانيّ فوراً مثل name.shamstores.com، وفي خطة المؤسسات تربط نطاقك الخاص مع شهادة أمان تلقائية.' }
+  { q: 'هل أحصل على نطاق باسمي؟', a: 'نعم. رابط فرعيّ مجانيّ فوراً مثل name.shamstores.com، وتربط نطاقك الخاص مع شهادة أمان تلقائية في الخطط التي تشمله، أو كإضافة منفردة على أي خطة — جدول المقارنة يبيّن أين.' }
 ];
 
 // ===== الأسعار الحيّة =====
-
-interface PublicPlan {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  isPopular?: boolean;
-  maxMenuItems?: number;
-  maxProducts?: number;
-  maxOrders?: number;
-  maxUsers?: number;
-  hasTableQr?: boolean;
-  hasOnlineOrders?: boolean;
-  hasCoupons?: boolean;
-  hasAnalytics?: boolean;
-  hasBrandingRemoval?: boolean;
-  hasCustomDomain?: boolean;
-  hasMultiLanguage?: boolean;
-  pricing?: { amountUsd: number; amountSyp: number | null; isFree: boolean };
-}
-
-const PLAN_LABEL: Record<string, string> = {
-  free: 'المجانية',
-  basic: 'الأساسية',
-  pro: 'الاحترافية',
-  enterprise: 'المؤسسات'
-};
-
-const UNLIMITED = 99999;
-// أرقامٌ لاتينية كأسعار المتاجر نفسها — لا خليط من ١٠٠ و100 في البطاقة الواحدة
-const limit = (n?: number) => (!n ? '—' : n >= UNLIMITED ? 'غير محدود' : n.toLocaleString('en-US'));
 
 const usePlans = () => {
   const [plans, setPlans] = useState<PublicPlan[] | null>(null);
@@ -180,7 +136,6 @@ const HomePage: React.FC = () => {
   const [storeTheme, setStoreTheme] = useState<keyof typeof THEMES>('forest');
   const { plans, failed: plansFailed } = usePlans();
   const [stageRef, stageW] = useElementWidth<HTMLDivElement>(520);
-  const [panelRef, panelW] = useElementWidth<HTMLDivElement>(360);
   const [laptopRef, laptopW] = useElementWidth<HTMLDivElement>(700);
 
   useReveal();
@@ -209,11 +164,6 @@ const HomePage: React.FC = () => {
   // مقاسات الأجهزة تتبع الحاوية — الجوال يرى المشهد كاملاً لا مقصوصاً
   const heroPhone = Math.round(Math.min(260, Math.max(170, stageW * 0.5)));
   const heroPhoneB = Math.round(heroPhone * 0.86);
-
-  const sortedPlans = useMemo(
-    () => (plans || []).slice().sort((a, b) => (a.price || 0) - (b.price || 0)),
-    [plans]
-  );
 
   return (
     <div className="ss" dir="rtl">
@@ -369,75 +319,8 @@ const HomePage: React.FC = () => {
           </div>
         </header>
 
-        {/* ===== اللوحات الثلاث ===== */}
-        <section className="ss-section ss-dark" style={{ paddingTop: 24, background: 'var(--ss-forest-950)' }}>
-          <div className="ss-container">
-            <div className="ss-triptych">
-              <article className="ss-panel ss-reveal">
-                <BrandMark className="ss-panel-mark" color="#ffffff" size={36} />
-                <h2 className="ss-panel-title">منصة مصمّمة<br />لتسهّل إدارة متجرك</h2>
-                <p className="ss-panel-sub">طلباتك ومنتجاتك وزبائنك ومبيعاتك — على لوحة واحدة، من الجوال أو الحاسوب.</p>
-                <div ref={panelRef} className="ss-panel-art" style={{ marginInline: -28, paddingInlineStart: 28 }}>
-                  {/* اللوحة مكبّرةً ومقصوصة: الشريط الجانبيّ والمؤشّرات تُقرأ،
-                      بدل لوحةٍ كاملة مصغّرة إلى خطوطٍ لا تُرى */}
-                  <div
-                    style={{
-                      position: 'relative',
-                      width: '100%',
-                      height: 250,
-                      overflow: 'hidden',
-                      borderStartStartRadius: 18,
-                      boxShadow: '0 -10px 40px rgba(0,0,0,0.35)',
-                      border: '1px solid rgba(255,255,255,0.14)',
-                      borderInlineEnd: 'none',
-                      borderBottom: 'none'
-                    }}
-                  >
-                    <div style={{ position: 'absolute', top: 0, right: 0 }}>
-                      <Scaled baseW={1280} baseH={800} width={Math.max(420, panelW * 1.55)}>
-                        <DashboardScreen />
-                      </Scaled>
-                    </div>
-                  </div>
-                </div>
-              </article>
-
-              <article className="ss-warehouse ss-reveal" aria-label="شام ستورز — مستودعك الرقمي">
-                <div className="ss-warehouse-top" />
-                <div className="ss-warehouse-hall">
-                  <div className="ss-warehouse-shelves" />
-                  <div className="ss-warehouse-lights">
-                    {[64, 52, 42, 34, 27, 21, 16, 12].map((w) => <i key={w} style={{ width: w }} />)}
-                  </div>
-                  <div className="ss-warehouse-floor" />
-                </div>
-                <div className="ss-warehouse-brand">
-                  <BrandMark color="#ffffff" size={30} />
-                  <b>SHAM STORES</b>
-                </div>
-              </article>
-
-              <article className="ss-panel ss-reveal">
-                <BrandMark className="ss-panel-mark" color="#ffffff" size={36} />
-                <h2 className="ss-panel-title">أنت ركّز على تجارتك</h2>
-                <p className="ss-panel-sub" style={{ fontSize: 17, color: '#fff', fontWeight: 700 }}>وشام ستورز يرتّب لك التجربة الرقمية</p>
-                <div className="ss-panel-art" style={{ minHeight: 300 }}>
-                  <div style={{ position: 'relative' }}>
-                    <PhoneFrame width={Math.min(230, Math.max(180, panelW * 0.62))} style={{ transform: 'rotate(-4deg) translateY(40px)' }}>
-                      <StoreScreen layout="classic" name="Online Store" />
-                    </PhoneFrame>
-                    <span className="ss-float" style={{ top: 30, insetInlineEnd: -58, padding: '8px 12px', transform: 'rotate(8deg)' }}>
-                      <IoPricetagOutline /> <span className="latin">-30%</span>
-                    </span>
-                    <span className="ss-float" style={{ top: 270, insetInlineStart: -48, padding: '8px 12px', animationDelay: '-2s' }}>
-                      <IoAdd /> أضيف إلى السلّة
-                    </span>
-                  </div>
-                </div>
-              </article>
-            </div>
-          </div>
-        </section>
+        {/* ===== لوحة التاجر: منصة مصمّمة لتسهّل إدارة متجرك ===== */}
+        <PlatformShowcase />
 
         {/* ===== الحلول ===== */}
         <section id="solutions" className="ss-section">
@@ -559,27 +442,7 @@ const HomePage: React.FC = () => {
         </section>
 
         {/* ===== المميزات ===== */}
-        <section id="features" className="ss-section">
-          <div className="ss-container">
-            <div className="ss-section-head ss-reveal">
-              <span className="ss-eyebrow">كل ما تحتاجه</span>
-              <h2 className="ss-h2">أدوات تاجرٍ محترف، بلا تعقيد</h2>
-              <p className="ss-lead">كلّ ميزة هنا موجودة في لوحتك اليوم — ما هو إضافة مدفوعة مُعلَّمٌ بوضوح.</p>
-            </div>
-            <div className="ss-features">
-              {FEATURES.map((f, i) => (
-                <article key={f.title} className="ss-card ss-card-hover ss-feature ss-reveal" style={{ transitionDelay: `${(i % 4) * 60}ms` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <span className={`ss-icon-tile ${f.purple ? 'is-purple' : ''}`}><f.icon size={24} /></span>
-                    {f.tag && <span className="ss-badge">{f.tag}</span>}
-                  </div>
-                  <h3 className="ss-h3" style={{ fontSize: 18 }}>{f.title}</h3>
-                  <p>{f.desc}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+        <FeatureBento />
 
         {/* ===== لوحة التحكم ===== */}
         <section className="ss-section ss-dark" style={{ background: 'linear-gradient(180deg, var(--ss-forest-800), var(--ss-forest-950))', overflow: 'hidden' }}>
@@ -622,87 +485,8 @@ const HomePage: React.FC = () => {
           </div>
         </section>
 
-        {/* ===== الأسعار ===== */}
-        <section id="pricing" className="ss-section" style={{ background: 'var(--ss-paper-2)' }}>
-          <div className="ss-container">
-            <div className="ss-section-head ss-reveal">
-              <span className="ss-eyebrow"><IoWallet /> أسعار واضحة بالليرة</span>
-              <h2 className="ss-h2">ابدأ مجاناً، وادفع حين تكبر</h2>
-              <p className="ss-lead">
-                {sortedPlans.some((p) => p.pricing?.amountSyp)
-                  ? 'الأسعار شهرية بالليرة السورية وفق سعر الصرف الموحّد على المنصّة. تدفع عبر شام كاش أو بالتواصل معنا.'
-                  : 'الأسعار شهرية. تدفع عبر شام كاش أو بالتواصل معنا، ولا تحتاج بطاقة ائتمان للبدء.'}
-              </p>
-            </div>
-
-            {plansFailed ? (
-              <p style={{ textAlign: 'center', color: 'var(--ss-muted)' }}>
-                تعذّر تحميل الخطط الآن — <Link to="/contact" style={{ color: 'var(--ss-forest-700)', fontWeight: 800 }}>تواصل معنا</Link> لمعرفة الأسعار.
-              </p>
-            ) : !plans ? (
-              <div className="ss-pricing" aria-busy="true">
-                {[0, 1, 2, 3].map((i) => (
-                  <div key={i} className="ss-card" style={{ height: 420, background: 'linear-gradient(90deg, #fff, #f1f5f1, #fff)' }} />
-                ))}
-              </div>
-            ) : (
-              <div className="ss-pricing">
-                {sortedPlans.map((p) => {
-                  const items = Math.max(p.maxMenuItems || 0, p.maxProducts || 0);
-                  const syp = p.pricing?.amountSyp;
-                  const isFree = p.pricing?.isFree ?? p.price <= 0;
-                  const rows: Array<[string, boolean]> = [
-                    [`حتى ${limit(items)} صنف أو منتج`, true],
-                    [`${limit(p.maxOrders)} طلب شهرياً`, true],
-                    ['رموز QR وطلبات أونلاين', !!(p.hasTableQr || p.hasOnlineOrders)],
-                    ['كوبونات وعروض', !!p.hasCoupons],
-                    ['تحليلات متقدّمة', !!p.hasAnalytics],
-                    ['إزالة شارة المنصّة', !!p.hasBrandingRemoval],
-                    ['نطاق خاص وتعدّد اللغات', !!(p.hasCustomDomain || p.hasMultiLanguage)]
-                  ];
-                  return (
-                    <article key={p.id} className={`ss-card ss-plan ss-reveal ${p.isPopular ? 'is-popular' : ''}`}>
-                      {p.isPopular && <span className="ss-plan-tag">الأكثر اختياراً</span>}
-                      <div>
-                        <h3 className="ss-h3">{PLAN_LABEL[p.name] || p.name}</h3>
-                        <p className="ss-plan-desc">{p.description}</p>
-                      </div>
-                      <div className="ss-plan-price">
-                        {isFree ? (
-                          <b>مجاناً</b>
-                        ) : syp ? (
-                          <>
-                            <b>{syp.toLocaleString('en-US')}</b>
-                            <span>ل.س / شهرياً</span>
-                          </>
-                        ) : (
-                          <>
-                            <b className="latin">${p.price}</b>
-                            <span>شهرياً</span>
-                          </>
-                        )}
-                      </div>
-                      <ul>
-                        {rows.map(([label, on]) => (
-                          <li key={label} className={on ? '' : 'is-off'}>
-                            <IoCheckmarkCircle size={18} style={{ color: p.isPopular ? 'var(--ss-lime)' : 'var(--ss-forest-500)', flexShrink: 0 }} />
-                            {label}
-                          </li>
-                        ))}
-                      </ul>
-                      <Link to="/register" className={`ss-btn ${p.isPopular ? 'ss-btn-primary' : 'ss-btn-forest'}`}>
-                        {isFree ? 'ابدأ مجاناً' : 'اختر الخطة'}
-                      </Link>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-            <p className="ss-reveal" style={{ textAlign: 'center', marginTop: 28, color: 'var(--ss-muted)', fontSize: 14 }}>
-              <IoMapOutline style={{ verticalAlign: 'middle' }} /> إضافات منفردة متاحة من لوحتك: الكاشير، المسوّقون، تطبيق باسم متجرك، والنطاق الخاص.
-            </p>
-          </div>
-        </section>
+        {/* ===== الأسعار: البطاقات، أقسام المنتج، وجدول المقارنة ===== */}
+        <PricingSection plans={plans} failed={plansFailed} />
 
         {/* ===== الأسئلة ===== */}
         <section id="faq" className="ss-section">

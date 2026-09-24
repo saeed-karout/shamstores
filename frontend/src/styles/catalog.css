@@ -212,14 +212,23 @@
 .pc-toggle.is-on .pc-toggle-track { background: #084835; }
 .pc-toggle.is-on .pc-toggle-track span { inset-inline-start: 16px; }
 
+/* انشغال زرّ الحذف: ثلاث نقاطٍ تنبض بلون الأيقونة بدل الحلقة الدوّارة */
 .pc-spin {
-  width: 15px;
-  height: 15px;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: ob-spin 0.8s linear infinite;
+  --_d: no-repeat radial-gradient(circle closest-side, currentColor 90%, transparent);
+  display: inline-block;
+  width: 18px;
+  aspect-ratio: 4;
+  background: var(--_d) 0% 50%, var(--_d) 50% 50%, var(--_d) 100% 50%;
+  background-size: calc(100% / 3) 100%;
+  animation: pc-busy 1s infinite linear;
 }
+@keyframes pc-busy {
+  20% { background-size: calc(100% / 3) 0%, calc(100% / 3) 100%, calc(100% / 3) 100%; }
+  40% { background-size: calc(100% / 3) 100%, calc(100% / 3) 0%, calc(100% / 3) 100%; }
+  60% { background-size: calc(100% / 3) 100%, calc(100% / 3) 100%, calc(100% / 3) 0%; }
+  80% { background-size: calc(100% / 3) 100%, calc(100% / 3) 100%, calc(100% / 3) 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .pc-spin { animation: none; opacity: 0.8; } }
 .pc-extras { font-size: 12px; color: #5f736a; font-weight: 700; }
 .pc-meta { font-size: 11.5px; color: #8a9a92; }
 /* بطاقتان في السطر على الجوال: المفتاح وحده يكفي، والنصّ يزاحم الأزرار */

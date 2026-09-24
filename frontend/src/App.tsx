@@ -66,6 +66,7 @@ const AdminBusinessFeatures = lazy(() => import('./pages/Admin/AdminBusinessFeat
 const AdminPlatformSettings = lazy(() => import('./pages/Admin/AdminPlatformSettings'));
 const AdminPushNotifications = lazy(() => import('./pages/Admin/AdminPushNotifications'));
 const CustomersPage = lazy(() => import('./pages/Store/CustomersPage'));
+const CommentsPage = lazy(() => import('./pages/Owner/CommentsPage'));
 const CampaignsPage = lazy(() => import('./pages/Store/CampaignsPage'));
 const AutomationsPage = lazy(() => import('./pages/Store/AutomationsPage'));
 const ShippingZonesPage = lazy(() => import('./pages/Store/ShippingZonesPage'));
@@ -103,6 +104,7 @@ import PlanRoute from './components/auth/PlanRoute';
 import Layout from './components/layout/Layout';
 import { useAuth } from './hooks/useAuth';
 import PublicRouter from './components/PublicRouter';
+import Loader from './components/common/Loader';
 const BusinessMarketing = lazy(() => import('./pages/Owner/BusinessMarketing'));
 import SEOHead from './components/dashboard/SEO';
 const StaffDashboard = lazy(() => import('./pages/Staff/StaffDashboard'));
@@ -112,33 +114,8 @@ const UserLogin = lazy(() => import('./pages/auth/UserLogin'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const Login = lazy(() => import('./pages/auth/Login'));
 // ==================== شاشة انتظار تحميل الصفحات المؤجّلة ====================
-const RouteFallback: React.FC = () => (
-  <div
-    style={{
-      minHeight: '60vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 14,
-      color: '#9DC4AC',
-      fontFamily: 'Cairo, sans-serif'
-    }}
-  >
-    <div
-      style={{
-        width: 40,
-        height: 40,
-        border: '3px solid rgba(157,196,172,0.25)',
-        borderTopColor: '#C8E235',
-        borderRadius: '50%',
-        animation: 'app-route-spin .8s linear infinite'
-      }}
-    />
-    <span style={{ fontSize: 13 }}>جاري التحميل...</span>
-    <style>{'@keyframes app-route-spin{to{transform:rotate(360deg)}}'}</style>
-  </div>
-);
+// هيكلٌ بشكل الصفحة لا دائرة: الانتقال بين صفحتين يبدو استبدالاً لا انتظاراً
+const RouteFallback: React.FC = () => <Loader fullScreen variant="page" />;
 
 // ==================== إعدادات React Query ====================
 const queryClient = new QueryClient({
@@ -157,14 +134,7 @@ const DashboardRouter: React.FC = () => {
   const { user, isRestaurantOwner, isStoreOwner, loading: isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">جاري التحميل...</p>
-        </div>
-      </div>
-    );
+    return <Loader fullScreen variant="dashboard" />;
   }
   
   if (isRestaurantOwner && user?.restaurantId) {
@@ -255,14 +225,7 @@ const MainApp: React.FC = () => {
   const { loading: isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">جاري تحميل التطبيق...</p>
-        </div>
-      </div>
-    );
+    return <Loader fullScreen variant="page" />;
   }
 
   return (
@@ -346,6 +309,9 @@ const MainApp: React.FC = () => {
             {/* صفحة واحدة للمتجر والمطعم: النشاط يُشتقّ من الرمز لا من المسار */}
             <Route path="/store/customers" element={<CustomersPage />} />
             <Route path="/restaurant/customers" element={<CustomersPage />} />
+            {/* تعليقات الزبائن على المنتجات والوجبات — شاشةٌ واحدة كالزبائن */}
+            <Route path="/store/comments" element={<CommentsPage />} />
+            <Route path="/restaurant/comments" element={<CommentsPage />} />
             <Route path="/store/campaigns" element={<CampaignsPage />} />
             <Route path="/restaurant/campaigns" element={<CampaignsPage />} />
             <Route path="/store/automations" element={<AutomationsPage />} />

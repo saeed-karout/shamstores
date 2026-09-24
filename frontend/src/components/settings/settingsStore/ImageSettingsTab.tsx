@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { IoImage, IoCloudUpload, IoTrash, IoRefresh } from 'react-icons/io5';
 import { getImageUrl } from '@/utils/imageHelpers';
+import { BusyDots } from '../../common/Skeleton';
 // import Button from '@/components/common/Button';
 
 interface ImageSettingsTabProps {
@@ -187,7 +188,7 @@ const ImageSettingsTab: React.FC<ImageSettingsTabProps> = ({
 
       {uploading && (
         <div className="flex items-center gap-2 text-green-600">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent"></div>
+          <BusyDots />
           <span>جاري رفع الصورة...</span>
         </div>
       )}

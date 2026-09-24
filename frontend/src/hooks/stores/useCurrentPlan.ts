@@ -6,7 +6,7 @@ import api, { getCurrentSubdomain } from '@/services/api';
 
 export interface Plan {
   id: string;
-  name: 'free' | 'basic' | 'pro' | 'enterprise';
+  name: 'free' | 'basic' | 'pos' | 'pro' | 'business' | 'enterprise' | (string & {});
   price: number;
   // Restaurant fields
   maxItems: number;

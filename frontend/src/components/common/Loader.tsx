@@ -1,58 +1,75 @@
 // components/common/Loader.tsx
+//
+// مؤشّر التحميل العامّ — بلا دائرةٍ دوّارة. قرار المالك: الانتظار يُعرض
+// «ظلّاً» للصفحة القادمة (عناوين وبطاقات وصفوف يمرّ عليها بريق)، كما في
+// واجهة المتجر. الواجهة العامّة (`size` و`fullScreen`) باقيةٌ كما هي لأنّ
+// عشرات الشاشات تستعملها، وأُضيف `variant` لتختار كلّ شاشةٍ ظلّاً بهيئتها.
 
 import React from 'react';
-import { useTheme } from '@/context/ThemeContext';
+import { PageSkeleton, SkeletonLine, SkeletonScope, SkeletonPreset, type SkeletonVariant } from './Skeleton';
 
 interface LoaderProps {
   size?: 'sm' | 'md' | 'lg';
   fullScreen?: boolean;
+  /** هيئة الظلّ: رئيسيّة، قائمة، نموذج، شبكة، تفاصيل، واجهة متجر — أو «page» العامّة */
+  variant?: SkeletonVariant;
+  /** ما يسمعه قارئ الشاشة */
+  label?: string;
 }
 
-const sizes = { sm: 24, md: 40, lg: 60 };
+/* الظلّ المضمَّن حسب الحجم: أسطرٌ متفاوتة الطول تشبه فقرةً أو بطاقةً صغيرة */
+const inlineLines: Record<NonNullable<LoaderProps['size']>, { w: string; h: number }[]> = {
+  sm: [
+    { w: '70%', h: 10 },
+    { w: '45%', h: 10 }
+  ],
+  md: [
+    { w: '55%', h: 14 },
+    { w: '90%', h: 11 },
+    { w: '75%', h: 11 },
+    { w: '40%', h: 11 }
+  ],
+  lg: [
+    { w: '40%', h: 18 },
+    { w: '95%', h: 12 },
+    { w: '85%', h: 12 },
+    { w: '90%', h: 12 },
+    { w: '60%', h: 12 }
+  ]
+};
 
-const Loader: React.FC<LoaderProps> = ({ size = 'md', fullScreen = false }) => {
-  const s = sizes[size];
-  const theme = useTheme();
-  
-  const primaryColor = theme.accentColor || theme.primaryColor || '#084835';
-  const bgColor = theme.backgroundColor || '#F4F7F4';
-  const mutedColor = theme.mutedColor || '#5F736A';
+const Loader: React.FC<LoaderProps> = ({ size = 'md', fullScreen = false, variant, label }) => {
+  // الصفحة كلّها: ظلٌّ في مكانها لا طبقةٌ تحجب التطبيق
+  if (fullScreen) return <PageSkeleton variant={variant} label={label} />;
 
-  const spinner = (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-      <div
-        style={{
-          width: s, height: s,
-          border: `3px solid ${primaryColor}33`, // 33 = 20% opacity
-          borderTopColor: primaryColor,
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }}
-      />
-      {fullScreen && (
-        <p style={{ color: mutedColor, fontFamily: 'Cairo, sans-serif', fontSize: 13 }}>جاري التحميل...</p>
-      )}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-
-  if (fullScreen) {
+  // قسمٌ داخل صفحة وطُلب شكلٌ بعينه: القالب بلا حشوة الصفحة
+  if (variant) {
     return (
-      <div
-        style={{
-          position: 'fixed', inset: 0,
-          background: `${bgColor}D9`, // D9 = 85% opacity
-          backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999,
-        }}
-      >
-        {spinner}
-      </div>
+      <SkeletonScope label={label} style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%' }}>
+        <SkeletonPreset variant={variant} />
+      </SkeletonScope>
     );
   }
 
-  return spinner;
+  const lines = inlineLines[size];
+  return (
+    <SkeletonScope
+      label={label}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: size === 'sm' ? 6 : 10,
+        width: '100%',
+        maxWidth: size === 'sm' ? 160 : size === 'md' ? 420 : 640,
+        marginInline: 'auto',
+        padding: size === 'sm' ? 4 : 12
+      }}
+    >
+      {lines.map((l, i) => (
+        <SkeletonLine key={i} w={l.w} h={l.h} />
+      ))}
+    </SkeletonScope>
+  );
 };
 
 export default Loader;

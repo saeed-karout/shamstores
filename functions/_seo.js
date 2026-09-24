@@ -44,13 +44,58 @@ const cachedJson = async (url, waitUntil, timeoutMs = 2500) => {
   return response.json();
 };
 
-export const fetchSeo = async (slug, waitUntil, env) => {
+export const fetchSeo = async (slug, waitUntil, env, productId) => {
   const base = (env && env.API_ORIGIN) || API_ORIGIN;
+  // صفحة منتج: عنوانها وصورتها وسعرها من المنتج نفسه لا من المتجر
+  const query = productId ? `?product=${encodeURIComponent(productId)}` : '';
   const body = await cachedJson(
-    `${base}/api/public/${encodeURIComponent(slug)}/seo`,
+    `${base}/api/public/${encodeURIComponent(slug)}/seo${query}`,
     waitUntil
   );
   return body?.data?.found ? body.data : null;
+};
+
+/** صورة بمسارٍ مطلق — الرابط النسبيّ لا يُحلّ حين تُشارَك الصفحة خارج الموقع */
+const absolute = (url, origin) => {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${origin}/${String(url).replace(/^\/+/, '')}`;
+};
+
+/** بيانات المنتج المنظَّمة — السعر والتوفّر والتقييم الحقيقيّ إن وُجد */
+export const buildProductJsonLd = (data, pageUrl) => {
+  const product = data.product;
+  const currency = data.currency === 'USD' ? 'USD' : 'SYP';
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    url: pageUrl,
+    ...(product.description ? { description: clamp(product.description, 300) } : {}),
+    ...(product.image ? { image: product.image } : {}),
+    ...(product.sku ? { sku: product.sku } : {}),
+    brand: { '@type': 'Brand', name: data.name },
+    ...(product.price > 0
+      ? {
+          offers: {
+            '@type': 'Offer',
+            url: pageUrl,
+            price: product.price,
+            priceCurrency: currency,
+            availability: product.inStock === false ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'
+          }
+        }
+      : {}),
+    ...(product.ratingAvg && product.ratingCount
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: Number(Number(product.ratingAvg).toFixed(1)),
+            reviewCount: product.ratingCount
+          }
+        }
+      : {})
+  };
 };
 
 /** يحوّل مضيفاً مخصّصاً إلى معرّف نشاط — يستعمل منفذ المنصّة نفسه */
@@ -186,35 +231,80 @@ class SetText {
  * التاجر من الفهرس ويَنسب صفحته إلينا.
  */
 export const injectSeo = (response, data, pageUrl, originForFallbackIcon) => {
-  const title = `${data.name} — ${
-    data.type === 'restaurant' ? 'قائمة الطعام والطلب أونلاين' : 'تسوّق أونلاين'
-  }`;
+  // ما ضبطه التاجر من «الإعدادات ← محرّكات البحث»، يحسمه الخادم في `seo`.
+  // الحقول القديمة (`name`، `description`) احتياطٌ لخادمٍ لم يُحدَّث بعد.
+  const seo = data.seo || {};
+  const product = data.product || null;
 
-  const description = data.description
-    ? clamp(data.description, 155)
-    : clamp(
-        `اطلب من ${data.name} أونلاين${
-          data.products?.length ? `: ${data.products.slice(0, 4).map((p) => p.name).join('، ')}` : ''
-        }`,
-        155
-      );
+  const businessTitle =
+    seo.title ||
+    `${data.name} — ${data.type === 'restaurant' ? 'قائمة الطعام والطلب أونلاين' : 'تسوّق أونلاين'}`;
+  const title = product ? `${product.name} | ${data.name}` : businessTitle;
 
-  const image = data.cover || data.logo || `${originForFallbackIcon}/icons/icon-512.png`;
+  const businessDescription =
+    seo.description ||
+    (data.description
+      ? clamp(data.description, 155)
+      : clamp(
+          `اطلب من ${data.name} أونلاين${
+            data.products?.length ? `: ${data.products.slice(0, 4).map((p) => p.name).join('، ')}` : ''
+          }`,
+          155
+        ));
+  const description = product
+    ? clamp(product.description || `${product.name} من ${data.name} — اطلبه أونلاين.`, 160)
+    : clamp(businessDescription, 160);
+
+  const image =
+    absolute(product?.image, originForFallbackIcon) ||
+    absolute(seo.image, originForFallbackIcon) ||
+    data.cover ||
+    data.logo ||
+    `${originForFallbackIcon}/icons/icon-512.png`;
+
+  // أيقونة التبويب: ما اختاره التاجر، وإلا شعاره — لا شعار المنصّة
+  const favicon = absolute(seo.favicon || data.logo, originForFallbackIcon);
+  const robots = seo.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1';
+  const keywords = Array.isArray(seo.keywords) && seo.keywords.length ? seo.keywords.join('، ') : null;
 
   // لا ترميز HTML داخل وسم script — يُفسد JSON. والخطر الوحيد وسمُ إغلاقٍ
   // داخل اسم منتج، وترميز «أصغر من» بيونيكود يمنعه
-  const jsonLd = JSON.stringify(buildJsonLd(data, pageUrl)).replace(/</g, '\\u003c');
+  const ld = product ? [buildProductJsonLd(data, pageUrl)] : buildJsonLd(data, pageUrl);
+  const jsonLd = JSON.stringify(ld).replace(/</g, '\\u003c');
 
-  return new HTMLRewriter()
+  let rewriter = new HTMLRewriter()
     .on('title', new SetText(title))
     .on('meta[name="description"]', new SetContent(description))
+    .on('meta[name="robots"]', new SetContent(robots))
     .on('meta[property="og:title"]', new SetContent(title))
     .on('meta[property="og:description"]', new SetContent(description))
     .on('meta[property="og:image"]', new SetContent(image))
-
+    .on('meta[property="og:site_name"]', new SetContent(data.name))
+    .on('meta[property="og:type"]', new SetContent(product ? 'product' : 'website'))
+    .on('meta[name="apple-mobile-web-app-title"]', new SetContent(data.name))
     .on('meta[name="twitter:title"]', new SetContent(title))
     .on('meta[name="twitter:description"]', new SetContent(description))
-    .on('meta[name="twitter:image"]', new SetContent(image))
+    .on('meta[name="twitter:image"]', new SetContent(image));
+
+  // كلمات المنصّة المفتاحية لا تخصّ متجراً — تُستبدل بكلماته أو تُحذف
+  rewriter = rewriter.on('meta[name="keywords"]', {
+    element(element) {
+      if (keywords) element.setAttribute('content', keywords);
+      else element.remove();
+    }
+  });
+
+  if (favicon) {
+    rewriter = rewriter.on('link[rel="icon"]', {
+      element(element) {
+        element.setAttribute('href', favicon);
+        // نوع `image/svg+xml` لشعار المنصّة — وشعار التاجر صورةٌ نقطية
+        element.removeAttribute('type');
+      }
+    });
+  }
+
+  return rewriter
     .on('head', {
       element(element) {
         // **تُضاف ولا تُستبدَل.** الوسمان الثابتان أُزيلا من `index.html`
@@ -226,6 +316,10 @@ export const injectSeo = (response, data, pageUrl, originForFallbackIcon) => {
           `<link rel="canonical" href="${safeUrl}">` +
             `<meta property="og:url" content="${safeUrl}">` +
             `<meta name="twitter:url" content="${safeUrl}">` +
+            (product && product.price > 0
+              ? `<meta property="product:price:amount" content="${escapeHtml(product.price)}">` +
+                `<meta property="product:price:currency" content="${data.currency === 'USD' ? 'USD' : 'SYP'}">`
+              : '') +
             `<script type="application/ld+json">${jsonLd}</script>`,
           { html: true }
         );
@@ -233,10 +327,42 @@ export const injectSeo = (response, data, pageUrl, originForFallbackIcon) => {
     })
     .on('#root', {
       element(element) {
-        element.setInnerContent(buildFallbackHtml(data, pageUrl), { html: true });
+        // صفحة المنتج: نصٌّ عن المنتج لا قائمة المتجر
+        element.setInnerContent(
+          product ? buildProductFallbackHtml(data, pageUrl) : buildFallbackHtml(data, pageUrl),
+          { html: true }
+        );
       }
     })
     .transform(response);
+};
+
+/** نصٌّ مقروء عن منتجٍ واحد — لمن لا ينفّذ الجافاسكربت */
+const buildProductFallbackHtml = (data, pageUrl) => {
+  const theme = data.theme || {};
+  const bg = theme.background || '#082E24';
+  const fg = theme.text || '#E8F5E9';
+  const muted = theme.muted || '#9DC4AC';
+  const accent = theme.accent || '#C8E235';
+  const product = data.product;
+  const currency = data.currency === 'USD' ? '$' : 'ل.س';
+  const price = Number(product.price) || 0;
+  return (
+    `<div style="background:${bg};color:${fg};min-height:100vh;padding:28px 18px;` +
+    `font-family:system-ui,-apple-system,'Segoe UI',sans-serif">` +
+    `<div style="max-width:640px;margin:0 auto">` +
+    `<p style="color:${muted};margin:0 0 6px;font-size:13px">${escapeHtml(data.name)}</p>` +
+    `<h1 style="font-size:22px;margin:0 0 10px">${escapeHtml(product.name)}</h1>` +
+    (price > 0
+      ? `<p style="color:${accent};font-size:18px;font-weight:700;margin:0 0 12px">${price.toLocaleString('en-US')} ${currency}</p>`
+      : '') +
+    (product.description
+      ? `<p style="color:${muted};line-height:1.9;margin:0 0 18px">${escapeHtml(clamp(product.description, 400))}</p>`
+      : '') +
+    `<p style="color:${muted};margin:22px 0 0;font-size:13px">` +
+    `<a href="${escapeHtml(pageUrl)}" style="color:${accent}">${escapeHtml(product.name)}</a> — جارٍ التحميل…</p>` +
+    `</div></div>`
+  );
 };
 
 /** ترويسة تشخيصية — تميّز «لم تُستدعَ» عن «استُدعيت وتخطّت» */

@@ -189,7 +189,7 @@ const StoreOrdersPage: React.FC = () => {
     setRefreshing(false);
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   return (
     <div className="ss-page ob-page">

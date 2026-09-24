@@ -83,7 +83,7 @@ const StoreQRCodesPage: React.FC = () => {
     }
   };
 
-  if (loading || storeLoading) return <Loader fullScreen />;
+  if (loading || storeLoading) return <Loader fullScreen variant="grid" />;
   if (!store) return (
     <div style={{ background: dynamicColors.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       <div style={{ textAlign: 'center' }}>

@@ -133,7 +133,7 @@ const RestaurantDashboard: React.FC = () => {
     { label: 'الإعدادات', icon: IoSettingsOutline, to: '/settings' }
   ];
 
-  if (permissions.loading || loading) return <Loader fullScreen />;
+  if (permissions.loading || loading) return <Loader fullScreen variant="dashboard" />;
 
   return (
     <DashboardHomeView

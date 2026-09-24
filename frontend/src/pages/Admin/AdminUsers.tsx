@@ -114,7 +114,7 @@ const AdminUsers: React.FC = () => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [users, query, role]);
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   return (
     <div className="ss-page ob-page">

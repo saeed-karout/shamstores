@@ -139,6 +139,8 @@ model User {
   notifications     Notification[]
   deviceTokens      DeviceToken[]
   productReviews    ProductReview[]
+  /// تعليقاته على المنتجات والوجبات — `SetNull` عند حذفه: النقاش يبقى باسمه المكتوب
+  itemComments      ItemComment[]
   subscriptions     CustomerSubscription[]
   affiliateProfiles Affiliate[]
 
@@ -550,6 +552,16 @@ model Restaurant {
   /// آلياً — فيظهر «مطعم أبو محم…» على هاتف الزبون. الاختيار للتاجر لأنه
   /// وحده يعرف أي جزءٍ من اسمه يميّزه.
   pwaShortName                 String?
+  /// إعدادات محرّكات البحث والمشاركة لهذا النشاط وحده.
+  ///
+  /// `{ title, description, keywords, ogImage, favicon, noindex }` — كلها
+  /// اختيارية؛ الفارغ يُشتقّ من الاسم والوصف والشعار كما كان. راجع
+  /// services/seo.service.ts — هو المرجع الوحيد لشكلها وحدودها.
+  ///
+  /// **لماذا عمودٌ لكل نشاط لا إعدادٌ للمنصّة:** كل واجهةٍ صفحةٌ مستقلّة في
+  /// نتائج البحث، وعنوانٌ واحد مشترك كان يجعل مئة متجرٍ تتنافس على
+  /// «شام ستورز» بدل أن يظهر كلٌّ باسمه وما يبيعه.
+  seoSettings                  Json?
   subscriptionStart            DateTime?
   subscriptionEnd              DateTime?
   createdAt                    DateTime  @default(now())
@@ -643,6 +655,8 @@ model Store {
   /// آلياً — فيظهر «مطعم أبو محم…» على هاتف الزبون. الاختيار للتاجر لأنه
   /// وحده يعرف أي جزءٍ من اسمه يميّزه.
   pwaShortName                 String?
+  /// إعدادات محرّكات البحث والمشاركة — انظر التعليق نفسه على Restaurant.
+  seoSettings                  Json?
 
   subdomain                    String    @unique
   customDomain                 String?   @unique
@@ -765,6 +779,7 @@ model MenuItem {
   restaurant Restaurant  @relation(fields: [restaurantId], references: [id])
   category   Category?   @relation(fields: [categoryId], references: [id])
   orderItems OrderItem[]
+  comments   ItemComment[]
 
   @@index([restaurantId])
   @@index([categoryId])
@@ -832,6 +847,7 @@ model Product {
   orderItems OrderItem[]
   movements  InventoryMovement[]
   reviews    ProductReview[]
+  comments   ItemComment[]
 
   @@unique([storeId, sku])
 }
@@ -1561,4 +1577,60 @@ model StorefrontEvent {
   /// للحذف الدوريّ بالعمر
   @@index([createdAt])
   @@map("storefront_events")
+}
+
+/// تعليقٌ مفتوح على منتجٍ أو وجبة — نقاشٌ وأسئلة، لا تقييم.
+///
+/// **لماذا جدولٌ مستقلّ عن `ProductReview`:** التقييم إشارةٌ لا تُقبل إلا من
+/// مشترٍ، لأن قيمتها في أنها مُثبَتة. أمّا التعليق فسؤالٌ قبل الشراء غالباً
+/// («هل المقاس يطابق الجدول؟»، «هل فيها بصل؟») — حصرُه بالمشترين يُسكت
+/// بالضبط من يحتاج الجواب. وخلطُهما في جدولٍ واحد كان سيُدخل أسئلةً بلا
+/// نجوم في متوسّط التقييم أو يُلزم كلَّ سؤالٍ بنجمةٍ مصطنعة.
+///
+/// **منتجٌ أو وجبة، لا كلاهما:** `productId` للمتجر و`menuItemId` للمطعم،
+/// ويُشترط في المتحكّم أن يُملأ أحدهما وحده. جدولٌ واحد لا اثنان لأن
+/// شاشة الإشراف واحدة والقواعد (الطول، الروابط، الإخفاء) واحدة.
+///
+/// **`storeId`/`restaurantId` منسوخان عمداً بلا علاقة:** قائمة الإشراف تسأل
+/// «كلّ تعليقات نشاطي» — وبلا النسخ يصير الاستعلام انضماماً عبر المنتج في
+/// كلّ فتح. وتُركا أعمدةً مجرّدة كي لا يمسّ هذا الجدول نموذجَي النشاط.
+///
+/// **ردٌّ من مستوى واحد (`parentId`):** التاجر يجيب السؤال تحته مباشرة.
+/// الشجرة العميقة تحوّل صفحة منتجٍ إلى منتدى، والزبون يريد الجواب لا الجدل.
+model ItemComment {
+  id              String  @id @default(cuid())
+  productId       String? @map("product_id")
+  menuItemId      String? @map("menu_item_id")
+  storeId         String? @map("store_id")
+  restaurantId    String? @map("restaurant_id")
+  /// الزبون المسجَّل إن وُجد — الضيف يعلّق باسمه المكتوب وحده
+  userId          String? @map("user_id")
+  /// الاسم المعروض — منسوخٌ لا مشتقّ: تغيير الاسم لاحقاً أو حذف الحساب لا
+  /// يُعيد كتابة نقاشٍ دار باسمٍ آخر
+  authorName      String  @map("author_name") @db.VarChar(80)
+  body            String  @db.Text
+  /// التعليق الأصل إن كان هذا ردّاً — والأصل تعليقٌ علويّ دائماً
+  parentId        String? @map("parent_id")
+  /// ردّ النشاط نفسه — يُميَّز بشارة كي لا يلتبس بزبونٍ سمّى نفسه باسم المتجر
+  isMerchantReply Boolean @default(false) @map("is_merchant_reply")
+  /// يخفيه التاجر دون حذفه — كالتقييمات: الإخفاء يُبقي الدليل
+  isHidden        Boolean @default(false) @map("is_hidden")
+  likes           Int     @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  product  Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  menuItem MenuItem?     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parent   ItemComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  ItemComment[] @relation("CommentReplies")
+
+  @@index([productId, isHidden, createdAt])
+  @@index([menuItemId, isHidden, createdAt])
+  @@index([storeId, createdAt])
+  @@index([restaurantId, createdAt])
+  @@index([parentId])
+  @@index([userId])
+  @@map("item_comments")
 }

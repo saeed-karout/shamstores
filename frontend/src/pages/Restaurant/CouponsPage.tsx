@@ -299,7 +299,7 @@ const CouponsPage: React.FC = () => {
     );
   }
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>

@@ -131,7 +131,7 @@ const AdminBusinessFeatures: React.FC = () => {
     );
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="form" />;
 
   const filteredFeatures = getFilteredFeatures();
   const enabledCount = features.filter(f => f.isEnabled).length;

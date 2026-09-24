@@ -40,10 +40,12 @@ import {
   IoFlash,
   IoClose,
   IoRefresh,
-  IoGrid
+  IoGrid,
+  IoChatbubblesOutline
 } from 'react-icons/io5';
 import { BrandLogo } from '../marketing/Brand';
 import { useBusinessSummary } from '../../hooks/useBusinessSummary';
+import { planLabel } from '@/utils/planLabels';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -138,6 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
     if (hasStaff) items.push({ path: '/staff', icon: IoPeople, label: 'موظفي المطعم' });
     if (hasAnalytics) items.push({ path: '/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
     items.push({ path: '/restaurant/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
+    items.push({ path: '/restaurant/comments', icon: IoChatbubblesOutline, label: 'التعليقات', badge: 'جديد' });
     items.push({ path: '/restaurant/campaigns', icon: IoMegaphone, label: 'حملات الزبائن', badge: 'جديد' });
     items.push({ path: '/restaurant/automations', icon: IoFlash, label: 'رسائل تلقائية', badge: 'جديد' });
     items.push({ path: '/restaurant/shipping', icon: IoNavigate, label: 'مناطق التوصيل', badge: 'جديد' });
@@ -171,6 +174,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
     if (hasStaff) items.push({ path: '/store/staff', icon: IoPeople, label: 'موظفي المتجر' });
     if (hasAnalytics) items.push({ path: '/store/analytics', icon: IoStatsChart, label: 'الإحصائيات' });
     items.push({ path: '/store/customers', icon: IoPeople, label: 'الزبائن', badge: 'جديد' });
+    items.push({ path: '/store/comments', icon: IoChatbubblesOutline, label: 'التعليقات', badge: 'جديد' });
     items.push({ path: '/store/campaigns', icon: IoMegaphone, label: 'حملات الزبائن', badge: 'جديد' });
     items.push({ path: '/store/automations', icon: IoFlash, label: 'رسائل تلقائية', badge: 'جديد' });
     items.push({ path: '/store/shipping', icon: IoNavigate, label: 'مناطق التوصيل', badge: 'جديد' });
@@ -230,13 +234,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
   const getPlanDisplay = () => {
     if (planLoading) return { name: 'جاري التحميل...', icon: null };
     if (!currentPlan) return { name: 'لا توجد خطة', icon: null };
-    const plans: Record<string, any> = {
-      free: { name: 'المجانية', icon: <IoTime size={12} /> },
-      basic: { name: 'الأساسية', icon: <IoSparkles size={12} /> },
-      pro: { name: 'الاحترافية', icon: <IoDiamond size={12} /> },
-      enterprise: { name: 'المؤسسية', icon: <IoTrendingUp size={12} /> },
+    // الأسماء من مصدرٍ واحد مع صفحة الأسعار — والأيقونة وحدها من هنا
+    const icons: Record<string, React.ReactNode> = {
+      free: <IoTime size={12} />,
+      basic: <IoSparkles size={12} />,
+      pos: <IoSparkles size={12} />,
+      pro: <IoDiamond size={12} />,
+      business: <IoDiamond size={12} />,
+      enterprise: <IoTrendingUp size={12} />,
     };
-    return plans[currentPlan.name] || { name: currentPlan.name, icon: null };
+    return { name: planLabel(currentPlan.name), icon: icons[currentPlan.name] || null };
   };
 
   const planDisplay = getPlanDisplay();
@@ -351,7 +358,7 @@ const OWNER_GROUPS: Array<{ title: string; paths: string[] }> = [
   { title: '', paths: ['/dashboard'] },
   { title: 'البيع', paths: ['/orders', '/store/orders', '/restaurant/pos', '/store/pos', '/tables', '/qr-codes', '/store/qr-codes', '/delivery', '/store/delivery', '/drivers', '/store/drivers'] },
   { title: 'الكتالوج', paths: ['/menu', '/store/products', '/store/inventory'] },
-  { title: 'الزبائن والتسويق', paths: ['/restaurant/customers', '/store/customers', '/coupons', '/store/coupons', '/restaurant/campaigns', '/store/campaigns', '/restaurant/automations', '/store/automations', '/restaurant/affiliates', '/store/affiliates', '/marketing', '/store/marketing'] },
+  { title: 'الزبائن والتسويق', paths: ['/restaurant/customers', '/store/customers', '/restaurant/comments', '/store/comments', '/coupons', '/store/coupons', '/restaurant/campaigns', '/store/campaigns', '/restaurant/automations', '/store/automations', '/restaurant/affiliates', '/store/affiliates', '/marketing', '/store/marketing'] },
   { title: 'التقارير', paths: ['/analytics', '/store/analytics', '/finance'] },
   { title: 'الإعداد', paths: ['/restaurant/shipping', '/store/shipping', '/staff', '/store/staff', '/features', '/plans', '/store/plans', '/settings', '/store/settings', '/profile'] }
 ];

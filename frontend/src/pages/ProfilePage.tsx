@@ -153,7 +153,7 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="form" />;
 
   const initial = (name || profile?.email || 'م')[0];
 

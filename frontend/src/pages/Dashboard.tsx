@@ -57,7 +57,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="dashboard" />;
 
   return (
     <div style={{ padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">

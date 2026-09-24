@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IoStorefront, IoCall, IoLogoWhatsapp, IoLocation, IoMap, IoTime, IoCash, IoLanguage, IoLocate, IoRefresh } from 'react-icons/io5';
 import Button from '@/components/common/Button';
 import toast from 'react-hot-toast';
+import { BusyDots } from '../../common/Skeleton';
 
 interface GeneralSettingsTabProps {
   initialData: any;
@@ -325,7 +326,7 @@ const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ initialData, on
               title="البحث عن الإحداثيات من العنوان"
             >
               {addressLoading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                <BusyDots />
               ) : (
                 <IoRefresh size={18} />
               )}
@@ -358,7 +359,7 @@ const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({ initialData, on
                 className="flex items-center gap-2 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition disabled:opacity-50"
               >
                 {locationLoading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  <BusyDots />
                 ) : (
                   <IoLocate size={14} />
                 )}

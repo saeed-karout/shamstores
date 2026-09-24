@@ -20,6 +20,7 @@ import {
 } from 'react-icons/io5';
 import api from '@/services/api';
 import { useAuth } from '@/hooks/useAuth';
+import { planLabel as planLabelOf } from '@/utils/planLabels';
 
 interface OrderQuota {
   limit: number | null;
@@ -51,12 +52,6 @@ const C = {
   orange: '#C2410C'
 };
 
-const PLAN_LABELS: Record<string, string> = {
-  free: 'المجانية',
-  basic: 'الأساسية',
-  pro: 'الاحترافية',
-  enterprise: 'المتقدمة'
-};
 
 const PlanStatusCard: React.FC = () => {
   // صفحة الخطط للمتجر غير صفحة المطعم — كان الرابط يقود التاجر إلى الثانية دائماً
@@ -80,7 +75,7 @@ const PlanStatusCard: React.FC = () => {
   if (failed || !status?.plan) return null;
 
   const { plan, orders, subscription } = status;
-  const planLabel = PLAN_LABELS[plan.name] || plan.name;
+  const planLabel = planLabelOf(plan);
 
   const unlimited = !orders || orders.limit === null;
   const used = orders?.used ?? 0;

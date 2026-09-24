@@ -165,7 +165,7 @@ const StoreCouponsPage: React.FC = () => {
     return { active: 'نشط', upcoming: 'قادم', expired: 'منتهي', exhausted: 'مستنفذ' }[status] || status;
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24 }} dir="rtl">

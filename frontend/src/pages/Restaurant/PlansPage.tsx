@@ -9,6 +9,7 @@ import { IoCheckmark, IoClose, IoRocket, IoBusiness, IoStar, IoWarning, IoLogoWh
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { planLabel } from '@/utils/planLabels';
 
 const C = {
   bg:     '#F4F7F4',
@@ -147,7 +148,7 @@ const PlansPage: React.FC = () => {
   };
 
   const getPlanIcon = (n: string) => n === 'pro' ? <IoRocket size={32} style={{ color: '#8B45B5' }} /> : n === 'basic' ? <IoBusiness size={32} style={{ color: C.blue }} /> : <IoStar size={32} style={{ color: C.muted }} />;
-  const getPlanTitle = (n: string) => ({ free: 'المجانية', basic: 'الأساسية', pro: 'الاحترافية' })[n] || n;
+  const getPlanTitle = (n: string) => planLabel(n);
   const getCurrentPlanTitle = () => currentPlan ? getPlanTitle(currentPlan.name) : 'مجانية';
 
   const FEATURES: { key: keyof typeof planForm; label: string }[] = [
@@ -158,7 +159,7 @@ const PlansPage: React.FC = () => {
     { key: 'hasBrandingRemoval', label: 'إزالة شعار شام ستورز' },
   ];
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="grid" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">

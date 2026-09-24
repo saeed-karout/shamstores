@@ -13,6 +13,7 @@ import {
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
+import { SkeletonScope, SkeletonLine, SkeletonCircle } from '@/components/common/Skeleton';
 import { getImageUrl } from '@/utils/imageHelpers';
 
 const C = {
@@ -160,16 +161,40 @@ const TrackOrder: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 48, height: 48, border: `2px solid ${C.accent}`,
-            borderTopColor: 'transparent', borderRadius: '50%',
-            animation: 'spin 1s linear infinite', margin: '0 auto'
-          }} />
-          <p style={{ marginTop: 16, color: C.muted, fontFamily: 'Cairo, sans-serif' }}>{t('جاري تحميل معلومات الطلب...')}</p>
+      // ظلّ صفحة التتبّع بألوانها الداكنة: رأس الطلب، خطوات الحالة، بطاقتا التفاصيل
+      <SkeletonScope
+        label={t('جاري تحميل معلومات الطلب...')}
+        style={{
+          minHeight: '100vh',
+          background: C.bg,
+          padding: '32px 16px',
+          ['--sk-base' as any]: C.surf,
+          ['--sk-hi' as any]: C.card,
+          ['--sk-card' as any]: C.card,
+          ['--sk-line' as any]: C.border
+        }}
+      >
+        <div style={{ maxWidth: 720, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <SkeletonLine w="45%" h={22} />
+          <SkeletonLine w="30%" h={12} />
+          <div className="ss-sk-card" style={{ padding: 20, display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, flex: 1 }}>
+                <SkeletonCircle size={40} />
+                <SkeletonLine w="70%" h={10} />
+              </div>
+            ))}
+          </div>
+          {[0, 1].map((i) => (
+            <div key={i} className="ss-sk-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <SkeletonLine w="35%" h={15} />
+              <SkeletonLine w="90%" h={11} />
+              <SkeletonLine w="75%" h={11} />
+              <SkeletonLine w="55%" h={11} />
+            </div>
+          ))}
         </div>
-      </div>
+      </SkeletonScope>
     );
   }
 
@@ -332,7 +357,7 @@ const TrackOrder: React.FC = () => {
               {driverLocation && (
                 <div style={{ marginTop: 12, padding: 12, background: 'rgba(96,165,250,0.1)', borderRadius: 12 }}>
                   <p style={{ fontSize: 14, color: C.blue, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <IoRefresh style={{ animation: 'spin 1s linear infinite' }} size={14} />{t('موقع المندوب يتم تحديثه تلقائياً')}</p>
+                    <IoRefresh className="ss-busy-pulse" size={14} />{t('موقع المندوب يتم تحديثه تلقائياً')}</p>
                 </div>
               )}
             </div>

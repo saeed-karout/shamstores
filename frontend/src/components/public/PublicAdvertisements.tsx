@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { getImageUrl } from '@/utils/imageHelpers';
 import BannerCarousel from '@/components/storefront/BannerCarousel';
 import api from '@/services/api';
+import { PRO_TIER_PLANS } from '@/utils/planLabels';
+import { SkeletonScope, SkeletonBlock } from '../common/Skeleton';
 
 export interface Advertisement {
   id: string;
@@ -52,8 +54,7 @@ const PublicAdvertisements: React.FC<PublicAdvertisementsProps> = ({
   // ✅ التحقق مما إذا كان يجب إخفاء الإعلانات
   const shouldHideAds = () => {
     // إذا كانت الخطة مدفوعة (Pro أو Enterprise)، يمكن إخفاء الإعلانات
-    const isPaidPlan = currentPlan?.name === 'pro' || 
-                       currentPlan?.name === 'enterprise' ||
+    const isPaidPlan = PRO_TIER_PLANS.has(currentPlan?.name || '') ||
                        currentPlan?.hasCustomDomain === true;
     
     console.log('📢 shouldHideAds - isPaidPlan:', isPaidPlan, 'plan:', currentPlan?.name);
@@ -120,9 +121,10 @@ const fetchAdvertisements = async () => {
 
   if (loading) {
     return (
-      <div className={`flex justify-center items-center py-8 ${className}`}>
-        <div className="w-8 h-8 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
-      </div>
+      // ظلّ اللافتة بمقاسها التقريبيّ — لا قفزة حين تظهر الإعلانات
+      <SkeletonScope className={className} style={{ padding: '8px 0' }}>
+        <SkeletonBlock h={0} r={16} style={{ height: 'auto', aspectRatio: '16 / 6' }} />
+      </SkeletonScope>
     );
   }
 

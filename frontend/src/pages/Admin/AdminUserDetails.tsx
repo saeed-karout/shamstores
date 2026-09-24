@@ -260,7 +260,7 @@ const AdminUserDetails: React.FC = () => {
     );
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="detail" />;
   if (!user) return (
     <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, fontFamily: 'Cairo, sans-serif' }}>
       المستخدم غير موجود

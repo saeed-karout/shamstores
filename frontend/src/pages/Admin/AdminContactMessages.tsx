@@ -83,7 +83,7 @@ const AdminContactMessages: React.FC = () => {
     repliedCount: messages.filter(item => item.status === 'replied').length,
   }), [messages]);
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">

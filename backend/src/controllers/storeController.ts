@@ -15,6 +15,10 @@ import { validateCurrencyUpdate, resolveCurrencySettings } from '../services/cur
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
 import slugify from '../utils/slugify';
+import { sanitizeSeoSettings, resolveBusinessSeo } from '../services/seo.service';
+import { toPublicProduct } from '../services/publicProduct.service';
+import { shouldShowPlatformBadge } from '../services/branding.service';
+import { Prisma } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
@@ -521,7 +525,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
       deliverySettings, paymentSettings, notificationSettings, enabledLanguages,
-      enabledCurrencies, pwaShortName, nameEn, descriptionEn, storefrontDesign,
+      enabledCurrencies, pwaShortName, nameEn, descriptionEn, storefrontDesign, seoSettings,
       isActive 
     } = req.body;
     
@@ -562,6 +566,8 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       const trimmed = String(pwaShortName || '').trim().slice(0, 24);
       updateData.pwaShortName = trimmed || null;
     }
+    // إعدادات البحث تمرّ بمنقٍّ: تُحقن في `<head>` كل صفحةٍ من الواجهة
+    if (seoSettings !== undefined) updateData.seoSettings = sanitizeSeoSettings(seoSettings) ?? Prisma.DbNull;
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
     
     if (latitude !== undefined) updateData.latitude = latitude ? parseFloat(latitude) : null;
@@ -2194,15 +2200,21 @@ export const getPublicStore = async (req: Request, res: Response) => {
         // فتُعرض صفحة المنتج بالعربية دائماً وبالقالب الافتراضي دائماً
         // مهما اختار التاجر والزبون
         languageSettings: await resolveLanguageSettings(store, 'store'),
+        // عملات العرض وسعر الصرف — صفحة المنتج تعرض السعر بالعملة التي
+        // اختارها الزبون في واجهة المتجر، لا بالليرة حكماً
+        currencySettings: await resolveCurrencySettings(store),
         storefrontDesign: store.storefrontDesign,
         nameEn: store.nameEn,
         descriptionEn: store.descriptionEn,
         isActive: store.isActive,
         createdAt: store.createdAt,
         updatedAt: store.updatedAt,
-        categories: store.categories,
-        products: store.products,
-        plan: store.plan
+        categories: store.categories.map((c) => ({ ...c, products: c.products.map(toPublicProduct) })),
+        products: store.products.map(toPublicProduct),
+        plan: store.plan,
+        // صفحة المنتج تكتب عنوانها ووصفها وأيقونة تبويبها من هنا
+        seo: resolveBusinessSeo(store, 'store'),
+        showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store')
       }
     });
   } catch (error) {
@@ -2233,7 +2245,7 @@ export const getPublicProduct = async (req: Request, res: Response) => {
       });
     }
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: toPublicProduct(product) });
   } catch (error) {
     console.error('Error getting public product:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب المنتج' });
@@ -2251,7 +2263,7 @@ export const getPublicProducts = async (req: Request, res: Response) => {
       take: 100,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
     });
-    res.json({ success: true, data: products });
+    res.json({ success: true, data: products.map(toPublicProduct) });
   } catch (error) {
     console.error('Error getting public products:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب المنتجات' });
@@ -2268,7 +2280,10 @@ export const getPublicCategories = async (req: Request, res: Response) => {
       include: { products: { where: { isAvailable: true }, take: 10 } },
       orderBy: [{ position: 'asc' }, { createdAt: 'asc' }]
     });
-    res.json({ success: true, data: categories });
+    res.json({
+      success: true,
+      data: categories.map((c) => ({ ...c, products: c.products.map(toPublicProduct) }))
+    });
   } catch (error) {
     console.error('Error getting public categories:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب الفئات' });
@@ -2291,7 +2306,7 @@ export const getPublicRelatedProducts = async (req: Request, res: Response) => {
       take: 4,
       orderBy: { createdAt: 'desc' }
     });
-    res.json({ success: true, data: relatedProducts });
+    res.json({ success: true, data: relatedProducts.map(toPublicProduct) });
   } catch (error) {
     console.error('Error getting related products:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في جلب المنتجات المشابهة' });

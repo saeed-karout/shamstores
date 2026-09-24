@@ -216,7 +216,7 @@ const fetchStaff = async () => {
     marginBottom: 6,
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
   const filteredStaff = getFilteredStaff();
 
   return (

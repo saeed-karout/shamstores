@@ -204,7 +204,7 @@ const AdminOrders: React.FC = () => {
     fetchOrders();
   };
 
-  if (loading && !loadedOnce.current) return <Loader fullScreen />;
+  if (loading && !loadedOnce.current) return <Loader fullScreen variant="list" />;
 
   const thStyle: React.CSSProperties = {
     padding: '12px 16px',

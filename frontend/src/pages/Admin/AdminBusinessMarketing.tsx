@@ -38,6 +38,7 @@ import {
 } from '../../types/marketing';
 import MarketingSectionList from '../../components/marketing/MarketingSectionList';
 import MarketingSectionForm from '../../components/marketing/MarketingSectionForm';
+import Loader from '../../components/common/Loader';
 
 const C = {
   bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
@@ -194,16 +195,7 @@ const AdminBusinessMarketing: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: 64, height: 64, border: `4px solid ${C.accent}`,
-            borderTopColor: 'transparent', borderRadius: '50%',
-            animation: 'spin 1s linear infinite', margin: '0 auto 16px'
-          }} />
-          <p style={{ color: C.muted }}>جاري تحميل بيانات التسويق...</p>
-        </div>
-      </div>
+      <Loader fullScreen variant="list" label="جاري تحميل بيانات التسويق..." />
     );
   }
 

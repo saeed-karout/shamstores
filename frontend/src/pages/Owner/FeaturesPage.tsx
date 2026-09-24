@@ -96,7 +96,7 @@ const FeaturesPage: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="grid" />;
 
   const included = features.filter((f) => f.includedInPlan);
   const owned = features.filter((f) => f.assigned && !f.includedInPlan);

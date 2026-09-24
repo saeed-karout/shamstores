@@ -25,7 +25,7 @@ const PublicMenu: React.FC<PublicMenuProps> = (props) => {
   
   // عرض شاشة تحميل إذا لم تكن البيانات جاهزة
   if (!businessId || !businessName) {
-    return <Loader fullScreen />;
+    return <Loader fullScreen variant="storefront" />;
   }
   
   // اختيار المكون المناسب حسب النوع

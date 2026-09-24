@@ -62,7 +62,7 @@ const PublicTable: React.FC = () => {
     );
   }
 
-  return <Loader fullScreen />;
+  return <Loader fullScreen variant="storefront" />;
 };
 
 export default PublicTable;

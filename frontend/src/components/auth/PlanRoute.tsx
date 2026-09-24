@@ -29,7 +29,7 @@ const PlanRoute: React.FC<PlanRouteProps> = ({ feature, redirectTo, children }) 
   const { user } = useAuth();
   const permissions = usePermissions();
 
-  if (permissions.loading) return <Loader fullScreen />;
+  if (permissions.loading) return <Loader fullScreen variant="dashboard" />;
 
   if (user?.role === 'super_admin') return children;
 

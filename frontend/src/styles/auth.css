@@ -386,19 +386,29 @@
   background: var(--ss-paper);
 }
 
+/* مؤشّر الانشغال في أزرار الدخول: ثلاث نقاطٍ تنبض بلون نصّ الزرّ —
+ * لا حلقة دوّارة (قرار المالك: لا دوائر تحميل في أيّ مكان). الاسم باقٍ
+ * كما هو لأنّ مكوّنات الدخول والتسجيل تستعمله. */
 .ss-spinner {
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  border: 2.5px solid currentColor;
-  border-top-color: transparent;
-  animation: ss-spin 0.7s linear infinite;
+  --_d: no-repeat radial-gradient(circle closest-side, currentColor 90%, transparent);
+  display: inline-block;
+  flex-shrink: 0;
+  width: 26px;
+  aspect-ratio: 4;
+  background: var(--_d) 0% 50%, var(--_d) 50% 50%, var(--_d) 100% 50%;
+  background-size: calc(100% / 3) 100%;
+  animation: ss-busy 1s infinite linear;
 }
 
-@keyframes ss-spin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes ss-busy {
+  20% { background-size: calc(100% / 3) 0%, calc(100% / 3) 100%, calc(100% / 3) 100%; }
+  40% { background-size: calc(100% / 3) 100%, calc(100% / 3) 0%, calc(100% / 3) 100%; }
+  60% { background-size: calc(100% / 3) 100%, calc(100% / 3) 100%, calc(100% / 3) 0%; }
+  80% { background-size: calc(100% / 3) 100%, calc(100% / 3) 100%, calc(100% / 3) 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ss-spinner { animation: none; opacity: 0.8; }
 }
 
 .ss-auth-link {

@@ -186,7 +186,7 @@ const TablesPage: React.FC = () => {
     printWindow.print();
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="grid" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>

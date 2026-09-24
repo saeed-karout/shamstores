@@ -18,6 +18,7 @@ import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import QuantityStepper from './QuantityStepper';
 import { useT } from '@/i18n/storefront';
+import { SoldOutTag } from './ProductGridCard';
 
 export interface StorefrontMenuItem {
   id: string;
@@ -36,6 +37,10 @@ export interface StorefrontMenuItem {
   calories?: number;
   sizes?: Array<{ name: string; price: number }>;
   addons?: Array<{ name: string; price: number }>;
+  /** نفد مخزونه المتتبَّع — يحسبه الخادم */
+  soldOut?: boolean;
+  trackStock?: boolean | null;
+  stock?: number | null;
 }
 
 export interface MenuItemListCardProps {
@@ -75,7 +80,9 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
   onToggleFavorite
 }) => {
   const { t } = useT();
-  const unavailable = item.isAvailable === false;
+  // النافد يُعرض بألوانٍ مطفأة وشارة «Sold out» — لا يُخفى، ولا يُطلب
+  const soldOut = item.soldOut === true || (item.trackStock === true && (item.stock ?? 0) <= 0);
+  const unavailable = item.isAvailable === false || soldOut;
   // المخطط يخزّن السعر الحالي في price والسعر قبل الخصم في originalPrice
   const finalPrice = item.discountedPrice && item.discountedPrice > 0 ? item.discountedPrice : item.price;
   const beforePrice =
@@ -100,7 +107,8 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
         boxShadow: sd.shadowCard,
         padding: 12,
         cursor: unavailable ? 'default' : onOpenDetails ? 'pointer' : 'default',
-        opacity: unavailable ? 0.62 : 1,
+        // الموقوف بيد المطعم يبهت كلّه؛ النافد تبهت صورته وحدها وتبقى قراءته
+        opacity: unavailable && !soldOut ? 0.62 : 1,
         overflow: 'hidden'
       }}
     >
@@ -124,7 +132,13 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
             decoding="async"
             width={112}
             height={112}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              filter: soldOut ? 'saturate(50%)' : undefined
+            }}
           />
         ) : (
           // بلا صورة: لون المطعم الخفيف وأيقونة — لا رمزاً تعبيرياً يختلف شكله بين الأجهزة
@@ -143,7 +157,9 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
           </div>
         )}
 
-        {unavailable && (
+        {soldOut && <SoldOutTag placement="bottom" label={t('نفدت الكمية')} />}
+
+        {unavailable && !soldOut && (
           <div
             style={{
               position: 'absolute',

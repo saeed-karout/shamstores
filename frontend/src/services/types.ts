@@ -299,7 +299,7 @@ export interface AuthResponse {
 
 export interface SubscriptionPlan {
   id: string;
-  name: 'free' | 'basic' | 'pro' | 'enterprise';
+  name: 'free' | 'basic' | 'pos' | 'pro' | 'business' | 'enterprise' | (string & {});
   price: number;
   maxItems: number;
   maxTables: number;

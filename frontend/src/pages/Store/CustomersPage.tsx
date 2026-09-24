@@ -147,7 +147,7 @@ const CustomersPage: React.FC = () => {
     });
   }, [customers, search, filter]);
 
-  if (loading) return <Loader />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: '20px 16px', color: C.text }} dir="rtl">

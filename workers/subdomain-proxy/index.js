@@ -6,6 +6,8 @@
 //
 // النشر:  npx wrangler deploy --cwd workers/subdomain-proxy
 
+import { fetchSeo, resolveHost, injectSeo, tag } from '../../functions/_seo.js';
+
 const APP_DOMAIN = 'shamstores.com';
 const CDN_HOST = `cdn.${APP_DOMAIN}`;
 const API_HOST = 'shamstores-5fa37cec9e6e.herokuapp.com';
@@ -20,8 +22,58 @@ const proxyTo = (request, hostname) => {
   return fetch(new Request(upstream.toString(), request));
 };
 
+/** نطاقات فرعية للمنصّة نفسها — ليست متاجر */
+const PLATFORM_LABELS = new Set(['www', 'api', 'cdn', 'admin', 'app', 'mail', 'static']);
+
+/**
+ * صفحات الواجهة التي تستحقّ وسوم المتجر: الجذر، ومنتجٌ، ووجبة، وطاولة.
+ * المجموعة الأولى أو الثانية معرّف المنتج/الوجبة إن وُجد.
+ */
+const STOREFRONT_PATH = /^\/(?:$|product\/([^/]+)\/?$|item\/([^/]+)\/?$|table\/[^/]+\/?$)/;
+
+/**
+ * يحقن هوية المتجر في HTML نطاقه الفرعي أو المخصّص.
+ *
+ * **لماذا هنا لا في وظائف Pages:** الطلب إلى `store.shamstores.com/` يصل
+ * Pages بمسار `/` ومضيف المنصّة — فلا تعرف الوظيفة أيّ متجرٍ هو، وتخرج
+ * صفحته بعنوان المنصّة وأيقونتها. كان تبويب متجر «ديزني» يحمل اسمه (بعد
+ * التحميل) وأيقونة شام ستورز، ومعاينة رابطه في واتساب عنوان المنصّة.
+ * الـ Worker وحده يرى المضيف الأصلي.
+ *
+ * **والفشل مفتوح:** أي خطأ يُعيد الصفحة كما وصلت. صفحةٌ بلا وسوم أفضل من
+ * صفحةٍ لا تُخدَم.
+ */
+const withStorefrontSeo = async (request, response, hostname, ctx, env) => {
+  try {
+    if (request.method !== 'GET') return response;
+    const url = new URL(request.url);
+    const match = url.pathname.match(STOREFRONT_PATH);
+    if (!match) return response;
+    if (!(response.headers.get('content-type') || '').includes('text/html')) return response;
+
+    const waitUntil = ctx && ctx.waitUntil ? ctx.waitUntil.bind(ctx) : undefined;
+    let identifier = null;
+    if (hostname.endsWith(`.${APP_DOMAIN}`)) {
+      identifier = hostname.slice(0, -(APP_DOMAIN.length + 1));
+    } else {
+      identifier = await resolveHost(hostname, waitUntil, env);
+    }
+    if (!identifier || identifier.includes('.') || PLATFORM_LABELS.has(identifier)) return response;
+
+    const productId = match[1] || match[2] || null;
+    const data = await fetchSeo(identifier, waitUntil, env, productId);
+    if (!data) return tag(response, 'nodata');
+
+    const pageUrl = `${url.origin}${url.pathname}`;
+    return injectSeo(tag(response, productId ? 'hit-product' : 'hit'), data, pageUrl, url.origin);
+  } catch (error) {
+    console.error('Storefront SEO failed:', error);
+    return response;
+  }
+};
+
 export default {
-  async fetch(request) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const { hostname, pathname } = url;
 
@@ -66,6 +118,7 @@ export default {
     //    تتعرّف على المتجر من المضيف عبر getCurrentSubdomain() في
     //    components/PublicRouter.tsx. وهذا يصحّ للنطاقات المخصصة أيضاً، حيث
     //    أول جزء من mystore.com ليس معرّف المتجر.
-    return proxyTo(request, APP_DOMAIN);
+    const response = await proxyTo(request, APP_DOMAIN);
+    return withStorefrontSeo(request, response, hostname, ctx, env);
   }
 };

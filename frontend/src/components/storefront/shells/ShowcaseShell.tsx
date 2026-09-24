@@ -66,6 +66,11 @@ const ShowcaseShell: React.FC<ShopLayoutProps> = ({
 
   const actions = (floating: boolean) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: floating ? 8 : 6, flexShrink: 0 }}>
+      {/* اللغة والعملة في المجموعة نفسها — زجاجيّة فوق الغلاف، وعاديّة في
+          الشريط بعد التمرير */}
+      {React.isValidElement(headerExtra)
+        ? React.cloneElement(headerExtra as React.ReactElement<{ floating?: boolean }>, { floating })
+        : headerExtra}
       <IconAction
         icon={<IoSearchOutline size={19} />}
         label={t('ابحث في المنتجات')}
@@ -185,7 +190,7 @@ const ShowcaseShell: React.FC<ShopLayoutProps> = ({
             gap: 10
           }}
         >
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>{headerExtra}</div>
+          <span aria-hidden="true" />
           {actions(true)}
         </div>
 

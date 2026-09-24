@@ -389,7 +389,7 @@ const MenuPage: React.FC = () => {
     );
   }, [menuItems, catFilter, query]);
 
-  if (loading || restaurantLoading) return <Loader fullScreen />;
+  if (loading || restaurantLoading) return <Loader fullScreen variant="grid" />;
 
   return (
     <div className="ss-page pc-page">

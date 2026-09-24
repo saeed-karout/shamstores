@@ -7,6 +7,7 @@ import Modal from '../common/Modal';
 import { useTheme } from '@/context/ThemeContext';
 import { IoDownload, IoPrint, IoQrCode, IoColorPalette, IoCopy } from 'react-icons/io5';
 import toast from 'react-hot-toast';
+import { BusyDots } from '../common/Skeleton';
 
 interface QRGeneratorProps {
   type: 'restaurant' | 'table' | 'item' | 'store' | 'store-product';
@@ -291,7 +292,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
         }}
       >
         {loading ? (
-          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+          <BusyDots />
         ) : (
           <><IoQrCode className="ml-2" size={18} /> {buttonText}</>
         )}

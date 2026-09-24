@@ -42,7 +42,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, redirectT
   const location = useLocation();
 
   if (loading || !initialized) {
-    return <Loader fullScreen />;
+    return <Loader fullScreen variant="dashboard" />;
   }
 
   if (!user || !isAuthenticated) {

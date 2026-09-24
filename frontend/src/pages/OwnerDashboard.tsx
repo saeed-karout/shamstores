@@ -100,7 +100,7 @@ const OwnerDashboard: React.FC = () => {
     cancelled: { label: 'ملغي', color: C.red, bg: 'rgba(214,69,69,0.12)' },
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="dashboard" />;
 
   return (
     <div style={{ padding: 24, fontFamily: 'Cairo, sans-serif' }} dir="rtl">

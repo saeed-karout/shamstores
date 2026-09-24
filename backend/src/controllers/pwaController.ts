@@ -13,6 +13,7 @@ import { Request, Response } from 'express';
 import sharp from 'sharp';
 import prisma from '../services/prisma';
 import { businessHasEntitlement, BusinessType } from '../services/entitlement.service';
+import { resolveBusinessSeo } from '../services/seo.service';
 
 export const PWA_FEATURE = 'pwa';
 
@@ -353,11 +354,18 @@ export const getSeoSummary = async (req: Request, res: Response): Promise<void> 
       backgroundColor: true,
       textColor: true,
       mutedColor: true,
-      accentColor: true
+      accentColor: true,
+      subdomain: true,
+      customDomain: true,
+      customDomainVerified: true,
+      seoSettings: true
     } as const;
 
-    const restaurant = await prisma.restaurant.findUnique({ where: { slug }, select });
-    const store = restaurant ? null : await prisma.store.findUnique({ where: { slug }, select });
+    // بالمعرّف أو النطاق الفرعي: الحافّة على `name.shamstores.com` لا تعرف
+    // إلا الجزء الأوّل من المضيف، وقد يختلف عن `slug` في حساباتٍ قديمة
+    const where = { OR: [{ slug }, { subdomain: slug }] };
+    const restaurant = await prisma.restaurant.findFirst({ where, select });
+    const store = restaurant ? null : await prisma.store.findFirst({ where, select });
     const business = restaurant || store;
     const type: BusinessType = restaurant ? 'restaurant' : 'store';
 
@@ -385,12 +393,58 @@ export const getSeoSummary = async (req: Request, res: Response): Promise<void> 
           take: 12
         });
 
+    // ما ضبطه التاجر من إعدادات البحث، وإلا المشتقّ — المصدر نفسه الذي
+    // تكتب منه الواجهة وسومها بعد التحميل، فلا يرى جوجل عنواناً وواتساب آخر
+    const seo = resolveBusinessSeo(business as any, type);
+
+    // صفحة منتجٍ بعينه: عنوانها وصورتها وسعرها لا عنوان المتجر
+    const productId = typeof req.query.product === 'string' ? req.query.product.trim() : '';
+    let product: Record<string, unknown> | null = null;
+    if (productId) {
+      if (restaurant) {
+        const row = await prisma.menuItem.findFirst({
+          where: { id: productId, restaurantId: business.id, isAvailable: true },
+          select: { id: true, name: true, description: true, price: true, image: true, trackStock: true, stock: true }
+        });
+        if (row) {
+          product = {
+            id: row.id,
+            name: row.name,
+            description: row.description || null,
+            price: Number(row.price) || 0,
+            image: row.image || null,
+            inStock: !(row.trackStock && (row.stock ?? 0) <= 0)
+          };
+        }
+      } else {
+        const row = await prisma.product.findFirst({
+          where: { id: productId, storeId: business.id, isAvailable: true },
+          select: { id: true, name: true, description: true, price: true, imageUrl: true, stock: true, sku: true, ratingAvg: true, ratingCount: true }
+        });
+        if (row) {
+          product = {
+            id: row.id,
+            name: row.name,
+            description: row.description || null,
+            price: Number(row.price) || 0,
+            image: row.imageUrl || null,
+            sku: row.sku,
+            inStock: row.stock > 0,
+            ratingAvg: row.ratingCount > 0 ? row.ratingAvg : null,
+            ratingCount: row.ratingCount
+          };
+        }
+      }
+    }
+
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.json({
       success: true,
       data: {
         found: true,
         type,
+        seo,
+        product,
         name: business.name,
         description: business.description || null,
         logo: business.logo || null,

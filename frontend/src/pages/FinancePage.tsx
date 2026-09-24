@@ -298,7 +298,7 @@ const FinancePage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="dashboard" />;
 
   const fieldStyle: React.CSSProperties = {
     background: C.surf,
@@ -685,7 +685,7 @@ const FinancePage: React.FC = () => {
         )}
       </Modal>
 
-      <style>{'.fin-spin{animation:fin-rot 0.8s linear infinite}@keyframes fin-rot{to{transform:rotate(360deg)}}'}</style>
+      <style>{'.fin-spin{animation:fin-busy 1s ease-in-out infinite}@keyframes fin-busy{50%{opacity:.35}}@media (prefers-reduced-motion: reduce){.fin-spin{animation:none;opacity:.6}}'}</style>
     </div>
   );
 };

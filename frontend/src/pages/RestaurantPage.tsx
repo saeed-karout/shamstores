@@ -56,7 +56,7 @@ const RestaurantPage: React.FC = () => {
     return items;
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="detail" />;
   if (!data) return (
     <div style={{ minHeight: '100vh', background: '#F4F7F4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5F736A', fontFamily: 'Cairo, sans-serif' }}>
       المطعم غير موجود

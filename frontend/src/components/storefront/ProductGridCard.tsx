@@ -45,6 +45,8 @@ export interface StorefrontProduct {
   ordersCount?: number | null;
   createdAt?: string;
   badges?: any;
+  /** يحسبه الخادم — المتجر يتتبّع مخزونه دائماً، والمطعم لما يختاره */
+  soldOut?: boolean | null;
 }
 
 interface Props {
@@ -91,6 +93,23 @@ const BADGE_TONE: Record<string, { bg: string; color: string }> = {
   new: { bg: 'rgba(255,255,255,0.92)', color: '#0C7A55' }
 };
 
+/**
+ * هل نفد المنتج؟
+ *
+ * النفاد يُعرض ولا يُخفى: منتج يختفي فجأة يجعل الزبون يظنّ الخطأ في عينه.
+ *
+ * الخادم يحسم الجواب في `soldOut`. وحين يغيب (حمولةٌ من منفذٍ قديم) يُشتقّ
+ * بحذر: `trackStock` صريحٌ للمطعم، ومنتج المتجر بلا الحقل متتبَّعٌ دائماً
+ * فرقمُه حجّة. أمّا صنفٌ بلا `trackStock` ولا رقم فمتوفّر — `null` يعني
+ * «لا يُتتبَّع» لا «صفر».
+ */
+export const isSoldOut = (product: StorefrontProduct): boolean => {
+  if (typeof product.soldOut === 'boolean') return product.soldOut;
+  if (product.trackStock === false) return false;
+  if (product.trackStock === true) return (product.stock ?? 0) <= 0;
+  return typeof product.stock === 'number' && product.stock <= 0;
+};
+
 /** أول صورة صالحة: المنتجات الجديدة تحفظ مصفوفة، والقديمة حقلاً مفرداً */
 const coverImage = (product: StorefrontProduct): string | null => {
   const { images, image } = product;
@@ -107,6 +126,53 @@ const coverImage = (product: StorefrontProduct): string | null => {
   return image || (product as { imageUrl?: string | null }).imageUrl || null;
 };
 
+/**
+ * شارة «Sold out» — بالإنجليزية في الواجهتين عمداً.
+ *
+ * كلمةٌ واحدة يعرفها المتسوّق من كل متجرٍ عالميّ، وتُقرأ في لمحة كعلامةٍ لا
+ * كجملة. وتحتها نصٌّ مخفيّ بلغة الواجهة لقارئات الشاشة.
+ */
+export const SoldOutTag: React.FC<{
+  placement?: 'top' | 'bottom' | 'center';
+  label?: string;
+  /** `lg` لصفحة المنتج حيث الصورة بعرض العمود */
+  size?: 'sm' | 'lg';
+}> = ({ placement = 'bottom', label, size = 'sm' }) => (
+  <span
+    lang="en"
+    dir="ltr"
+    style={{
+      position: 'absolute',
+      zIndex: 2,
+      // الوسط بإحداثياتٍ مادّية: `insetInlineStart` مع `translate` ينقلب
+      // اتجاهه بين العربية والإنجليزية فتنزاح الشارة عن الوسط في إحداهما
+      ...(placement === 'center' ? { left: '50%', transform: 'translate(-50%, -50%)' } : { insetInlineStart: 8 }),
+      ...(placement === 'top' ? { top: 8 } : placement === 'bottom' ? { bottom: 8 } : { top: '50%' }),
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      padding: size === 'lg' ? '9px 18px 9px 15px' : '5px 10px 5px 9px',
+      borderRadius: 999,
+      background: 'rgba(17, 20, 18, 0.78)',
+      color: '#fff',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      fontSize: size === 'lg' ? 13.5 : 10.5,
+      fontWeight: 800,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
+      pointerEvents: 'none',
+      whiteSpace: 'nowrap'
+    }}
+  >
+    <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#FF6B6B' }} />
+    Sold out
+    {label && <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{label}</span>}
+  </span>
+);
+
 const ProductGridCard: React.FC<Props> = ({
   product,
   currency = 'SYP',
@@ -120,15 +186,14 @@ const ProductGridCard: React.FC<Props> = ({
 }) => {
   const { t } = useT();
   const { card: variant } = useDesign();
-  const badges = getVisualBadges(product).slice(0, 2);
+  const outOfStock = isSoldOut(product);
+  // شارة الحسم على منتجٍ نافد وعدٌ لا يُصرف — تُترك الشارة الوحيدة المفيدة
+  const badges = outOfStock ? [] : getVisualBadges(product).slice(0, 2);
   const cover = coverImage(product);
   // النسخة الصغيرة تكفي بطاقةً عرضها مئتا بكسل — الكبيرة تُنزَّل بلا أن
   // يظهر منها شيء إضافي
   const src = cover ? getImageUrl(sizedImage(cover, 'sm')) : null;
 
-  // النفاد يُعرض ولا يُخفى: منتج يختفي فجأة يجعل الزبون يظنّ الخطأ في عينه
-  const tracked = product.trackStock === true;
-  const outOfStock = tracked && (product.stock ?? 0) <= 0;
   const hasDiscount = badges.some((b) => b.key === 'discount');
   const original = Number(product.originalPrice || 0);
 
@@ -221,8 +286,7 @@ const ProductGridCard: React.FC<Props> = ({
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
-        opacity: outOfStock ? 0.62 : 1
+        position: 'relative'
       }}
     >
       {/* الصورة */}
@@ -260,7 +324,17 @@ const ProductGridCard: React.FC<Props> = ({
             src={src}
             alt={product.name}
             loading="lazy"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              // النافد بألوانٍ مطفأة لا بحجابٍ أسود: الزبون يرى المنتج
+              // فيعرف ما فاته، ويفهم من الإطفاء أنه غير متاح الآن
+              filter: outOfStock ? 'saturate(50%)' : undefined
+            }}
           />
         ) : (
           // بلا صورة: لون المتجر الخفيف وأيقونة حقيبة — مربّعٌ رماديّ بأيقونة
@@ -345,22 +419,7 @@ const ProductGridCard: React.FC<Props> = ({
           </button>
         )}
 
-        {outOfStock && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'grid',
-              placeItems: 'center',
-              background: 'rgba(0,0,0,0.5)',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: 13
-            }}
-          >
-            {t('نفدت الكمية')}
-          </div>
-        )}
+        {outOfStock && <SoldOutTag placement={isOverlay ? 'top' : 'bottom'} />}
 
         {/* نموذج الغطاء: النصّ داخل الصورة على تدرّج.
             التدرّج ليس زينة — نصٌّ أبيض على صورةٍ فاتحة لا يُقرأ، وهو

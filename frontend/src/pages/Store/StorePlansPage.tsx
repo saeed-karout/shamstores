@@ -8,6 +8,7 @@ import { planService, Plan } from '../../services/api/plan.service';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
+import { planLabel } from '@/utils/planLabels';
 import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 
@@ -123,6 +124,11 @@ const StorePlansPage: React.FC = () => {
     if (plan.hasPromotions) features.push({ icon: IoMegaphone, label: 'عروض ترويجية' });
     if (plan.hasCoupons) features.push({ icon: IoTicket, label: 'كوبونات خصم' });
     if (plan.hasBrandingRemoval) features.push({ icon: IoStorefront, label: 'إزالة شعار شام ستورز' });
+    // إضافاتٌ تشملها الخطة بلا شراءٍ منفصل — تُقرأ من `features` لا من البوابات
+    const codes: string[] = Array.isArray((plan as any).features) ? (plan as any).features : [];
+    if (codes.includes('pos')) features.push({ icon: IoCart, label: 'كاشير POS بالباركود' });
+    if (codes.includes('affiliate')) features.push({ icon: IoMegaphone, label: 'مسوّقون بالعمولة' });
+    if (codes.includes('pwa')) features.push({ icon: IoStorefront, label: 'تطبيق باسمك على الجوال' });
     return features;
   };
 
@@ -131,10 +137,13 @@ const StorePlansPage: React.FC = () => {
       { icon: IoStorefront, label: 'المنتجات', value: plan.maxProducts === 999999 ? 'غير محدود' : plan.maxProducts },
       { icon: IoPeople, label: 'الموظفين', value: plan.maxUsers === 999999 ? 'غير محدود' : plan.maxUsers },
       { icon: IoCart, label: 'الطلبات', value: plan.maxOrders === 999999 ? 'غير محدود' : plan.maxOrders },
+      ...(((plan as any).maxStores || 1) > 1
+        ? [{ icon: IoStorefront, label: 'الفروع', value: (plan as any).maxStores }]
+        : []),
     ];
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="grid" />;
 
   const currentPlanData = currentPlan || plans.find(p => p.name === 'free');
 
@@ -158,7 +167,7 @@ const StorePlansPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
             <div>
               <div style={{ fontSize: 13, color: C.accent, marginBottom: 4 }}>خطتك الحالية</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: C.text }}>{currentPlanData.name}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: C.text }}>{planLabel(currentPlanData.name)}</div>
             </div>
             {currentPlanData.name !== 'enterprise' && (
               <button
@@ -216,7 +225,7 @@ const StorePlansPage: React.FC = () => {
                   padding: '3px 12px',
                   borderRadius: 20,
                 }}>
-                  الأكثر شيوعاً
+                  الأوفر قيمة
                 </div>
               )}
               
@@ -225,7 +234,7 @@ const StorePlansPage: React.FC = () => {
                 background: `linear-gradient(135deg, ${C.accent}10, transparent)`,
                 borderBottom: `1px solid ${C.border}`,
               }}>
-                <h3 style={{ color: C.text, fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{plan.name}</h3>
+                <h3 style={{ color: C.text, fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{planLabel(plan.name)}</h3>
                 <p style={{ color: C.muted, fontSize: 13 }}>{plan.description}</p>
                 <div style={{ marginTop: 12 }}>
                   <span style={{ color: C.accent, fontSize: 32, fontWeight: 800 }}>{planPriceText(plan)}</span>

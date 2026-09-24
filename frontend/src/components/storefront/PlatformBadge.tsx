@@ -12,14 +12,30 @@
 // على زبائنه — وهو ما يجعله يترك المنصة لا يدفع لها.
 
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { APP_DOMAIN, getCurrentHost } from '@/utils/subdomain';
 import { IoClose, IoRocketOutline, IoCheckmarkCircle } from 'react-icons/io5';
 import api from '@/services/api';
 
 interface Props {
   /** يحسمه الخادم — الواجهة لا ترى الميزات المشتراة مفردةً */
   show?: boolean;
+  /** الواجهة التي جاء منها الطلب — يعرف الأدمن أيّ متجرٍ جلب التاجر */
+  source?: string;
 }
+
+/**
+ * رابط التسجيل **على نطاق المنصّة** لا نطاق التاجر.
+ *
+ * الشارة تعيش على `store.shamstores.com` أو نطاق التاجر الخاص، و`/register`
+ * النسبيّ هناك يفتح واجهة التاجر نفسها لا صفحة التسجيل — فمن نقر «أنشئ
+ * حسابك» عاد إلى المتجر الذي كان فيه.
+ */
+const registerUrl = (source?: string) => {
+  const host = getCurrentHost();
+  const query = `?ref=badge${source ? `&from=${encodeURIComponent(source)}` : ''}`;
+  const samePlatform = host === APP_DOMAIN || host === `www.${APP_DOMAIN}` || /localhost|127\.0\.0\.1/.test(host);
+  return samePlatform ? `/register${query}` : `https://${APP_DOMAIN}/register${query}`;
+};
 
 const C = {
   bg: '#082E24',
@@ -39,7 +55,7 @@ const BENEFITS = [
   'طلبات أونلاين وتقارير في الخطط المدفوعة'
 ];
 
-const PlatformBadge: React.FC<Props> = ({ show }) => {
+const PlatformBadge: React.FC<Props> = ({ show, source }) => {
   const [open, setOpen] = useState(false);
   // التسمية تُرى أوّل الزيارة ثم تنطوي — الدائرة وحدها تكفي بعدها
   const [showLabel, setShowLabel] = useState(true);
@@ -49,6 +65,7 @@ const PlatformBadge: React.FC<Props> = ({ show }) => {
   }, []);
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '', businessName: '' });
   const firstFieldRef = useRef<HTMLInputElement>(null);
 
@@ -85,11 +102,20 @@ const PlatformBadge: React.FC<Props> = ({ show }) => {
         email: trimmedEmail,
         phone: form.phone.trim(),
         subject: 'طلب انضمام — شارة المنصة',
-        message: `اسم النشاط: ${form.businessName.trim() || 'غير مذكور'}\nوصل الطلب من شارة «انضم لنا» على واجهة تاجر.`
+        message:
+          `اسم النشاط: ${form.businessName.trim() || 'غير مذكور'}\n` +
+          `وصل الطلب من شارة «انضم لنا» على واجهة: ${source || window.location.hostname}`
       });
+      setFailure(null);
       setSent(true);
-    } catch {
-      // لا نُسقط النموذج على الزائر: الرسالة تحت الزر، والرابط المباشر باقٍ
+    } catch (error: any) {
+      // كان الفشل صامتاً: يضغط الزائر فلا يحدث شيء، فيظنّ أن الطلب أُرسل.
+      // الآن يُقال له ما حدث، ويبقى ما كتبه والرابط المباشر أمامه.
+      setFailure(
+        error?.response?.status === 429
+          ? 'أرسلت طلبات كثيرة — حاول بعد دقائق، أو أنشئ حسابك مباشرةً.'
+          : error?.response?.data?.error || 'تعذّر الإرسال الآن. تحقّق من اتصالك وأعد المحاولة.'
+      );
       setSent(false);
       setSubmitting(false);
       return;
@@ -205,8 +231,8 @@ const PlatformBadge: React.FC<Props> = ({ show }) => {
               >
                 <strong style={{ color: C.text }}>وصلنا طلبك.</strong> سنتواصل معك قريباً.
                 ولو أحببت البدء الآن بلا انتظار:
-                <Link
-                  to="/register"
+                <a
+                  href={registerUrl(source)}
                   style={{
                     display: 'block', marginTop: 10, textAlign: 'center', padding: '11px 0',
                     borderRadius: 11, background: C.accent, color: C.bg, fontWeight: 800,
@@ -214,7 +240,7 @@ const PlatformBadge: React.FC<Props> = ({ show }) => {
                   }}
                 >
                   أنشئ حسابك مجاناً
-                </Link>
+                </a>
               </div>
             ) : (
               <form onSubmit={submit} style={{ display: 'grid', gap: 9 }}>
@@ -268,9 +294,21 @@ const PlatformBadge: React.FC<Props> = ({ show }) => {
                   {submitting ? 'جارٍ الإرسال…' : 'أرسل طلب الانضمام'}
                 </button>
 
+                {failure && (
+                  <div
+                    role="alert"
+                    style={{
+                      background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.35)',
+                      color: '#FFB4B4', borderRadius: 11, padding: '9px 12px', fontSize: 12.5, lineHeight: 1.8
+                    }}
+                  >
+                    {failure}
+                  </div>
+                )}
+
                 {/* الطريق المباشر يبقى مفتوحاً: من يريد الحساب الآن لا ينتظر ردّاً */}
-                <Link
-                  to="/register"
+                <a
+                  href={registerUrl(source)}
                   style={{
                     textAlign: 'center', padding: '10px 0', borderRadius: 12,
                     border: `1px solid ${C.border}`, color: C.accent,
@@ -278,7 +316,7 @@ const PlatformBadge: React.FC<Props> = ({ show }) => {
                   }}
                 >
                   أو أنشئ حسابك مباشرةً
-                </Link>
+                </a>
               </form>
             )}
           </div>

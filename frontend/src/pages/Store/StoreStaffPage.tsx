@@ -181,7 +181,7 @@ const StoreStaffPage: React.FC = () => {
     borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', outline: 'none', boxSizing: 'border-box',
   };
 
-  if (planLoading || loading) return <Loader fullScreen />;
+  if (planLoading || loading) return <Loader fullScreen variant="list" />;
 
   if (isFree) {
     return (

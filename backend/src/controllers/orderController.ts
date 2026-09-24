@@ -409,6 +409,17 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           res.status(400).json({ success: false, error: 'العنصر لا ينتمي لهذا المطعم' });
           return;
         }
+        // الصنف النافد صار يظهر في القائمة بشارة «نفد» بدل أن يُخفى — فالحارس
+        // هنا لا في القراءة. وغير المتتبَّع (`trackStock = false`) يمرّ دائماً.
+        if (menuItem.trackStock && (menuItem.stock ?? 0) < item.quantity) {
+          res.status(400).json({
+            success: false,
+            error: (menuItem.stock ?? 0) <= 0
+              ? `نفدت كمية ${menuItem.name}`
+              : `المتبقّي من ${menuItem.name} ${menuItem.stock} فقط`
+          });
+          return;
+        }
         // ⚠️ السعر يُحسب من قاعدة البيانات فقط. هذا مسار عام بلا مصادقة،
         // وقبول السعر من العميل كان يسمح بشراء أي صنف بأي مبلغ.
         price = Number(menuItem.price) || 0;

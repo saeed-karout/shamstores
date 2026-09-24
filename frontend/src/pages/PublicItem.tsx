@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { MenuItem } from '../services/types';
-import Loader from '../components/common/Loader';
+import { ProductSkeleton } from '@/components/storefront/StorefrontSkeleton';
+import ItemComments from '@/components/storefront/ItemComments';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import { useCart } from '../hooks/useCart';
@@ -229,13 +230,7 @@ const PublicItem: React.FC = () => {
     return price.toFixed(2);
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: C.bg }}>
-        <Loader fullScreen />
-      </div>
-    );
-  }
+  if (loading) return <ProductSkeleton />;
 
   if (!item) {
     return (
@@ -349,11 +344,20 @@ const PublicItem: React.FC = () => {
               <div style={{ position: 'sticky', top: 96 }}>
                 {item.image ? (
                   <div style={{ position: 'relative', borderRadius: 24, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', background: C.card, border: `1px solid ${C.border}` }}>
+                    {/* ظلٌّ لامع مكان الصورة حتى تصل — لا دائرة تحميل */}
                     {!imageLoaded && (
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Loader />
-                      </div>
+                      <div
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: `linear-gradient(90deg, ${C.card} 25%, rgba(255,255,255,0.06) 50%, ${C.card} 75%)`,
+                          backgroundSize: '200% 100%',
+                          animation: 'sf-shimmer 1.4s ease-in-out infinite'
+                        }}
+                      />
                     )}
+                    <style>{`@keyframes sf-shimmer { 0% { background-position: 100% 0 } 100% { background-position: -100% 0 } }`}</style>
                     <img
                       src={getImageUrl(item.image)}
                       alt={item.name}
@@ -633,6 +637,11 @@ const PublicItem: React.FC = () => {
                 )}
               </motion.div>
             </motion.div>
+          </div>
+
+          {/* تعليقات الزبائن على الوجبة */}
+          <div style={{ maxWidth: 880, margin: '0 auto', padding: '0 16px 40px' }}>
+            <ItemComments kind="menuItem" itemId={item.id} />
           </div>
         </div>
 

@@ -99,4 +99,55 @@ const StorefrontSkeleton: React.FC<{ cards?: number }> = ({ cards = 6 }) => (
   </div>
 );
 
+/**
+ * هيكل صفحة المنتج — صورةٌ كبيرة وعمود تفاصيل.
+ *
+ * كانت الصفحة تعرض دائرة تحميل في وسط شاشةٍ فارغة، ثمّ تقفز إلى تخطيطٍ
+ * مختلف تماماً. الهيكل بنفس أبعاد الصفحة يجعل الانتقال استبدالاً لا قفزة.
+ */
+export const ProductSkeleton: React.FC = () => (
+  <div style={{ minHeight: '100vh', background: sf.bg, fontFamily: sf.font }} aria-busy="true">
+    <style>{shimmerCss}</style>
+    <div style={{ borderBottom: `1px solid ${sf.border}` }}>
+      <div style={{ maxWidth: 1152, margin: '0 auto', padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
+        <Line w={80} h={14} />
+        <Line w="30%" h={16} style={{ margin: '0 auto' }} />
+        <Line w={72} h={36} style={{ borderRadius: sd.rButton }} />
+      </div>
+    </div>
+    <div
+      style={{
+        maxWidth: 1152,
+        margin: '0 auto',
+        padding: '28px 16px',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: 28
+      }}
+    >
+      <div>
+        <div className="sf-skel" style={{ width: '100%', aspectRatio: '1 / 1', maxHeight: 460, borderRadius: sd.rCard }} />
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="sf-skel" style={{ width: 64, height: 64, borderRadius: sd.rImage }} />
+          ))}
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 6 }}>
+        <Line w={90} h={11} />
+        <Line w="75%" h={26} />
+        <Line w={140} h={24} />
+        <Line w="100%" h={11} />
+        <Line w="92%" h={11} />
+        <Line w="60%" h={11} />
+        <div className="sf-skel" style={{ width: '100%', height: 70, borderRadius: sd.rCard, marginTop: 8 }} />
+        <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+          <Line w="100%" h={50} style={{ borderRadius: sd.rButton }} />
+          <Line w={54} h={50} style={{ borderRadius: sd.rButton, flexShrink: 0 }} />
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export default StorefrontSkeleton;

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IoConstruct, IoCheckmarkCircle, IoWarning, IoRefresh } from 'react-icons/io5';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { SkeletonScope, SkeletonLine, SkeletonBlock, BusyDots } from '../common/Skeleton';
 
 const MaintenanceToggle: React.FC = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -74,9 +75,20 @@ const MaintenanceToggle: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
+      // ظلّ البطاقة نفسها: عنوانٌ ومفتاح، ثمّ حقلا الرسائل
+      <SkeletonScope className="bg-white border border-emerald-900/10 rounded-2xl p-6 shadow-sm">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+            <SkeletonLine w="40%" h={16} />
+            <SkeletonLine w="65%" h={11} />
+          </div>
+          <SkeletonBlock w={52} h={28} r={999} />
+        </div>
+        <SkeletonLine w={120} h={12} style={{ marginBottom: 10 }} />
+        <SkeletonBlock h={84} r={12} style={{ marginBottom: 16 }} />
+        <SkeletonLine w={120} h={12} style={{ marginBottom: 10 }} />
+        <SkeletonBlock h={84} r={12} />
+      </SkeletonScope>
     );
   }
 
@@ -153,7 +165,7 @@ const MaintenanceToggle: React.FC = () => {
               className="flex items-center gap-2 px-4 py-2 bg-[#084835] text-white rounded-lg hover:bg-[#0a5a43] transition"
             >
               {saving ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <BusyDots />
               ) : (
                 <IoCheckmarkCircle className="text-lg" />
               )}

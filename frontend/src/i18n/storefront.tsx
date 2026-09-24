@@ -417,7 +417,46 @@ const EN: Record<string, string> = {
 
   // ---------- التثبيت ----------
   'تثبيت': 'Install',
-  'إغلاق': 'Close'
+  'إغلاق': 'Close',
+
+  // ---------- التعليقات على المنتج والوجبة ----------
+  'التعليقات': 'Comments',
+  'ردّ المتجر': 'Store reply',
+  'ردّ المطعم': 'Restaurant reply',
+  'اسأل عن المنتج أو شارك رأيك…': 'Ask about this product or share your thoughts…',
+  'اسأل عن الوجبة أو شارك رأيك…': 'Ask about this dish or share your thoughts…',
+  'اكتب تعليقك': 'Write your comment',
+  'تعلّق باسم': 'Commenting as',
+  'يظهر اسمك مع التعليق': 'Your name appears with the comment',
+  'نشر': 'Post',
+  'جارٍ النشر…': 'Posting…',
+  'نُشر تعليقك': 'Your comment was posted',
+  'اكتب اسمك ليظهر مع تعليقك': 'Enter your name to post',
+  'تعذّر نشر التعليق، حاول مجدداً': 'Could not post the comment. Please try again',
+  'لا تعليقات بعد': 'No comments yet',
+  'كن أوّل من يسأل عن هذا المنتج.': 'Be the first to ask about this product.',
+  'كن أوّل من يسأل عن هذه الوجبة.': 'Be the first to ask about this dish.',
+  'عرض المزيد': 'Show more',
+  'تعذّر تحميل المزيد': 'Could not load more',
+
+  // اللغة والعملة في زرٍّ واحد
+  'اللغة والعملة': 'Language & currency',
+  'لغة العرض': 'Display language',
+  'اللغة': 'Language',
+  'عرض الأسعار بـ': 'Show prices in',
+  'ليرة سورية': 'Syrian pound',
+  'دولار أمريكي': 'US dollar',
+
+  // الأقسام الفرعية
+  'تسوّق داخل': 'Shop in',
+  'أقسام': 'sections',
+
+  // البحث العميق
+  'نتيجة': 'results',
+  'جارٍ البحث في الأسماء والرموز والأوصاف…': 'Searching names, SKUs and descriptions…',
+  'بحثٌ في الاسم والوصف وSKU والمقاسات': 'searching name, description, SKU and sizes',
+  'لا توجد منتجات تطابق بحثك — جرّب كلمةً أقصر أو رمز المنتج (SKU)':
+    'No products match — try a shorter word or the product SKU'
 };
 
 export interface StorefrontI18n {

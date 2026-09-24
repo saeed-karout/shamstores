@@ -19,6 +19,7 @@ import {
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
+import { SkeletonScope, SkeletonLine, SkeletonBlock, BusyDots } from '@/components/common/Skeleton';
 import { APP_DOMAIN, isValidSubdomain, isValidCustomDomain, isReservedSubdomain } from '@/utils/subdomain';
 
 // ==================== الثيم ====================
@@ -556,21 +557,14 @@ const DomainManager: React.FC<DomainManagerProps> = ({
 
   if (loading) {
     return (
-      <div style={{ ...sectionCard, textAlign: 'center', color: C.muted, padding: 40 }}>
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            border: `3px solid ${C.borderSoft}`,
-            borderTopColor: C.accent,
-            borderRadius: '50%',
-            margin: '0 auto 12px',
-            animation: 'sf-spin 0.8s linear infinite'
-          }}
-        />
-        <style>{'@keyframes sf-spin{to{transform:rotate(360deg)}}'}</style>
-        جاري تحميل إعدادات الروابط...
-      </div>
+      // ظلّ بطاقة الروابط: عنوان، ثمّ حقل الرابط الفرعيّ وحقل النطاق الخاصّ
+      <SkeletonScope label="جاري تحميل إعدادات الروابط..." style={{ ...sectionCard, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <SkeletonLine w="35%" h={16} />
+        <SkeletonLine w="70%" h={11} />
+        <SkeletonBlock h={46} r={12} style={{ marginTop: 6 }} />
+        <SkeletonLine w="30%" h={12} style={{ marginTop: 10 }} />
+        <SkeletonBlock h={46} r={12} />
+      </SkeletonScope>
     );
   }
 
@@ -846,17 +840,7 @@ const DomainManager: React.FC<DomainManagerProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span
-                    style={{
-                      width: 14,
-                      height: 14,
-                      border: `2px solid ${C.yellow}55`,
-                      borderTopColor: C.yellow,
-                      borderRadius: '50%',
-                      display: 'inline-block',
-                      animation: 'sf-spin 0.9s linear infinite'
-                    }}
-                  />
+                  <BusyDots style={{ color: C.yellow }} />
                   <span style={{ color: C.yellow, fontSize: 13, fontWeight: 800 }}>
                     بانتظار انتشار السجلّ — {status?.customDomain}
                   </span>
@@ -986,7 +970,8 @@ const DomainManager: React.FC<DomainManagerProps> = ({
         )}
       </div>
 
-      <style>{'.spin{animation:sf-spin 0.8s linear infinite}@keyframes sf-spin{to{transform:rotate(360deg)}}'}</style>
+      {/* الأيقونة المشغولة تخفت وتعود في مكانها — لا تدوير */}
+      <style>{'.spin{animation:dm-busy 1s ease-in-out infinite}@keyframes dm-busy{50%{opacity:.35}}@media (prefers-reduced-motion: reduce){.spin{animation:none;opacity:.6}}'}</style>
     </div>
   );
 };

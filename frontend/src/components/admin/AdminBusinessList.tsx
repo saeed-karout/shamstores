@@ -25,6 +25,7 @@ import { buildSubdomainUrl, getBaseUrl } from '@/utils/subdomain';
 import '@/styles/orders.css';
 import '@/styles/catalog.css';
 import '@/styles/admin.css';
+import { planLabel } from '@/utils/planLabels';
 
 type Kind = 'restaurant' | 'store';
 
@@ -49,12 +50,11 @@ const COPY: Record<Kind, { plural: string; one: string; path: string; key: strin
   store: { plural: 'المتاجر', one: 'المتجر', path: 'stores', key: 'stores', icon: IoStorefrontOutline }
 };
 
-const PLAN_LABEL: Record<string, string> = { free: 'المجانية', basic: 'الأساسية', pro: 'الاحترافية', enterprise: 'المؤسسية' };
 
 /** سعر الخطة بالدولار — وحدة الحساب التي يُدخلها الأدمن نفسه في شاشة الخطط */
 const planText = (plan?: Business['plan']) => {
   if (!plan) return 'بلا خطة';
-  const label = PLAN_LABEL[plan.name] || plan.name;
+  const label = planLabel(plan);
   // عزلٌ يساريّ للمبلغ: «$45» وسط نصٍّ عربيّ كانت تنقلب إلى «45$»
   return plan.price > 0 ? `${label} · ⁦$${plan.price}⁩ شهرياً` : label;
 };
@@ -150,7 +150,7 @@ const AdminBusinessList: React.FC<{ kind: Kind }> = ({ kind }) => {
     });
   }, [items, query, status]);
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="list" />;
 
   const Icon = copy.icon;
 

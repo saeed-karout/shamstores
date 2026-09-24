@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
-import Loader from '../../components/common/Loader';
+import { InlineListSkeleton } from '../../components/common/Skeleton';
 import QRGenerator from '../../components/qr/QRGenerator';
 import { 
   IoQrCode, IoSearch, IoRefresh, IoStorefront, IoRestaurant, 
@@ -491,7 +491,7 @@ const AdminQRCodesPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <Loader />
+        <InlineListSkeleton rows={6} />
       ) : filteredData.length === 0 ? (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 60, textAlign: 'center' }}>
           <IoLink size={56} style={{ color: C.border, marginBottom: 16 }} />

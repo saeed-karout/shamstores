@@ -62,6 +62,7 @@ import customDomainRoutes from './routes/customDomainRoutes';
 import { extractSubdomain } from './middleware/subdomain';
 import advertisementRoutes from './routes/advertisementRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
+import itemCommentRoutes from './routes/itemCommentRoutes';
 import { startSchedulers } from './schedulers';
 
 // إسكات السجلات المطوّلة في الإنتاج (كانت تطبع حمولات التوكن)
@@ -343,6 +344,8 @@ app.use('/api/marketing', marketingRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/inventory', inventoryRoutes);
+// التعليقات على المنتجات والوجبات — عامّةٌ للقراءة والنشر، وإشرافٌ للتاجر
+app.use('/api/comments', itemCommentRoutes);
 app.use('/api/custom-domain', customDomainRoutes);
 
 

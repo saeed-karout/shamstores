@@ -14,6 +14,8 @@ import r2ImagesService from '../services/r2ImagesService';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 import { renameStorefront } from '../services/storefrontIdentity.service';
 import { sanitizeDesign } from '../config/storefrontDesign';
+import { sanitizeSeoSettings } from '../services/seo.service';
+import { Prisma } from '@prisma/client';
 
 // دالة مساعدة لإنشاء subdomain فريد
 const generateUniqueSubdomain = async (baseSubdomain: string, excludeId?: string): Promise<string> => {
@@ -296,7 +298,7 @@ export const updateProfile = async (
       textColor, mutedColor, accentColor, fontFamily,
       subdomain, customDomain, isActive, deliverySettings,
       paymentSettings, currency, enabledCurrencies, language, enabledLanguages,
-      pwaShortName, nameEn, descriptionEn, storefrontDesign
+      pwaShortName, nameEn, descriptionEn, storefrontDesign, seoSettings
     } = req.body;
 
     let restaurant = null;
@@ -389,6 +391,8 @@ export const updateProfile = async (
       const trimmed = String(pwaShortName || '').trim().slice(0, 24);
       updateData.pwaShortName = trimmed || null;
     }
+    // إعدادات البحث تمرّ بمنقٍّ: تُحقن في `<head>` كل صفحةٍ من الواجهة
+    if (seoSettings !== undefined) updateData.seoSettings = sanitizeSeoSettings(seoSettings) ?? Prisma.DbNull;
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
     
     if (deliverySettings !== undefined) updateData.deliverySettings = deliverySettings;

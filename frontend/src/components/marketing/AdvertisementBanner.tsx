@@ -91,6 +91,8 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
   if (loading) {
     return (
       <div style={{
+        position: 'relative',
+        overflow: 'hidden',
         width: '100%',
         height,
         background: 'linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%)',
@@ -100,14 +102,18 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
         justifyContent: 'center',
         marginBottom: 20,
       }}>
-        <div style={{
-          width: 40,
-          height: 40,
-          border: '3px solid rgba(200,226,53,0.2)',
-          borderTopColor: '#C8E235',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }} />
+        {/* لمعةٌ تعبر مكان البانر بدل دائرةٍ في وسطه — الشكل نفسه الذي سيظهر */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(90deg, transparent 20%, rgba(200,226,53,0.08) 50%, transparent 80%)',
+            backgroundSize: '200% 100%',
+            animation: 'ad-shimmer 1.4s ease-in-out infinite',
+          }}
+        />
+        <style>{'@keyframes ad-shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}'}</style>
       </div>
     );
   }

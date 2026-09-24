@@ -26,6 +26,37 @@ const TYPES: Array<{ key: AccountType; label: string; hint: string; icon: React.
   { key: 'store', label: 'متجر', hint: 'منتجات ومخزون وشحن', icon: <IoStorefrontOutline size={24} /> }
 ];
 
+/**
+ * اسم النشاط بالإنجليزية — منه يُبنى الرابط `name.shamstores.com`.
+ *
+ * كان الاسم العربيّ يصير نطاقاً فرعياً بحروفٍ عربية لا يصلح في DNS ولا
+ * يُكتب ولا يُشارَك. القاعدة نفسها على الخادم (`authController`)؛ هنا تُفحص
+ * أثناء الكتابة كي لا يملأ التاجر النموذج كلّه ثم يُرفض.
+ */
+const ENGLISH_NAME = /^[A-Za-z0-9][A-Za-z0-9 &'’.,-]{1,59}$/;
+const RESERVED_HANDLES = new Set(['www', 'api', 'admin', 'app', 'mail', 'cdn', 'dashboard', 'static', 'assets']);
+
+const toHandle = (name: string) =>
+  name
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+    .replace(/-+$/, '');
+
+const englishNameError = (value: string): string | null => {
+  const v = value.trim();
+  if (!v) return null;
+  if (/[\u0600-\u06FF]/.test(v)) return 'بالإنجليزية فقط — الاسم العربي في الحقل التالي';
+  if (!ENGLISH_NAME.test(v) || (v.match(/[A-Za-z]/g) || []).length < 2) {
+    return 'أحرف إنجليزية وأرقام ومسافات فقط';
+  }
+  if (RESERVED_HANDLES.has(toHandle(v))) return 'هذا الاسم محجوز للمنصّة — أضف كلمةً تميّزه';
+  return null;
+};
+
 const Register: React.FC = () => {
   const navigate = useNavigate();
   const { register, loading } = useAuth();
@@ -38,7 +69,8 @@ const Register: React.FC = () => {
     password: '',
     confirmPassword: '',
     phone: '',
-    businessName: ''
+    businessName: '',
+    businessNameAr: ''
   });
   const [error, setError] = useState('');
   const [registering, setRegistering] = useState(false);
@@ -70,12 +102,19 @@ const Register: React.FC = () => {
   };
 
   const mismatch = formData.confirmPassword.length > 0 && formData.password !== formData.confirmPassword;
+  const businessNameProblem = englishNameError(formData.businessName);
+  const handlePreview = !businessNameProblem ? toHandle(formData.businessName) : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.businessName.trim()) {
-      setError(`يرجى إدخال اسم ${kindLabel}`);
+      setError(`يرجى إدخال اسم ${kindLabel} بالإنجليزية`);
+      return;
+    }
+    const nameProblem = englishNameError(formData.businessName);
+    if (nameProblem) {
+      setError(`اسم ${kindLabel} بالإنجليزية: ${nameProblem}`);
       return;
     }
     if (!isPasswordValid(formData.password)) {
@@ -97,8 +136,9 @@ const Register: React.FC = () => {
           email: formData.email.trim(),
           password: formData.password,
           phone: formData.phone.trim(),
-          restaurantName: formData.businessName.trim()
-        });
+          restaurantName: formData.businessName.trim(),
+          businessNameAr: formData.businessNameAr.trim() || undefined
+        } as any);
 
         const requiresVerification = response?.requiresEmailVerification ?? requireEmailVerification;
         if (requiresVerification) {
@@ -114,7 +154,8 @@ const Register: React.FC = () => {
           email: formData.email.trim(),
           password: formData.password,
           phone: formData.phone.trim(),
-          storeName: formData.businessName.trim()
+          storeName: formData.businessName.trim(),
+          businessNameAr: formData.businessNameAr.trim() || undefined
         });
 
         if (response.success) {
@@ -173,13 +214,39 @@ const Register: React.FC = () => {
         {error && <AuthAlert>{error}</AuthAlert>}
 
         <AuthField
-          label={`اسم ${kindLabel}`}
+          label={`اسم ${kindLabel} بالإنجليزية`}
           required
+          ltr
+          lang="en"
+          autoCapitalize="words"
+          spellCheck={false}
           value={formData.businessName}
           onChange={set('businessName')}
+          placeholder={isRestaurant ? 'Sham Restaurant' : 'Yasmin Store'}
+          icon={isRestaurant ? <IoRestaurantOutline size={19} /> : <IoStorefrontOutline size={19} />}
+          aria-invalid={!!businessNameProblem}
+          hint={
+            businessNameProblem ? (
+              <span style={{ color: '#B42318', fontWeight: 700 }}>{businessNameProblem}</span>
+            ) : handlePreview ? (
+              <>
+                رابطك:{' '}
+                <bdi dir="ltr" style={{ fontWeight: 800, color: 'var(--ss-forest-700, #084835)' }}>
+                  {handlePreview}.shamstores.com
+                </bdi>
+              </>
+            ) : (
+              'بالإنجليزية لأن منه يُبنى رابط متجرك — ولا يتغيّر الرابط بعدها بسهولة.'
+            )
+          }
+        />
+        <AuthField
+          label={`اسم ${kindLabel} بالعربية (اختياري)`}
+          value={formData.businessNameAr}
+          onChange={set('businessNameAr')}
           placeholder={isRestaurant ? 'مثال: مطعم الشام' : 'مثال: متجر الياسمين'}
           icon={isRestaurant ? <IoRestaurantOutline size={19} /> : <IoStorefrontOutline size={19} />}
-          hint="يظهر لزبائنك، وتستطيع تغييره لاحقاً."
+          hint="إن كتبته، يظهر لزبائنك بدل الإنجليزي. وتغيّره متى شئت."
         />
         <AuthField
           label="اسمك الكامل"

@@ -5,6 +5,7 @@ import { useRestaurant } from '../../hooks/useRestaurant';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
+import { BusyDots } from '../../components/common/Skeleton';
 import toast from 'react-hot-toast';
 import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker';
 import PalettePicker from '@/components/settings/PalettePicker';
@@ -45,6 +46,8 @@ import {
 import { getImageUrl } from '@/utils/imageHelpers';
 import api from '@/services/api';
 import DomainManager from '@/components/settings/DomainManager';
+import SeoSettingsPanel, { SeoSettingsValue } from '@/components/settings/SeoSettingsPanel';
+import { publicStorefrontUrl } from '@/utils/storefrontUrl';
 
 const C = {
   bg:     '#F4F7F4',
@@ -205,12 +208,6 @@ export const SettingsPage: React.FC = () => {
     fontFamily: 'Cairo',
   });
 
-  const [seoForm, setSeoForm] = useState({
-    metaTitle: '',
-    metaDescription: '',
-    subdomain: '',
-    customDomain: '',
-  });
 
   const [openingHours, setOpeningHours] = useState<OpeningHours>(defaultOpeningHours);
   const [deliverySettings, setDeliverySettings] = useState<DeliverySettings>(defaultDeliverySettings);
@@ -269,13 +266,6 @@ export const SettingsPage: React.FC = () => {
 
       setDesignShape(resolveDesign((restaurant as any).storefrontDesign));
 
-      setSeoForm({
-        metaTitle: restaurant.metaTitle || '',
-        metaDescription: restaurant.metaDescription || '',
-        subdomain: restaurant.subdomain || '',
-        customDomain: restaurant.customDomain || '',
-      });
-
       if (restaurant.openingHours) {
         try {
           const parsedHours = typeof restaurant.openingHours === 'string'
@@ -316,11 +306,17 @@ export const SettingsPage: React.FC = () => {
     } catch (error) {}
   };
 
-  const handleSaveSeo = async () => {
+  const [savingSeo, setSavingSeo] = useState(false);
+  const handleSaveSeo = async (value: SeoSettingsValue) => {
+    setSavingSeo(true);
     try {
-      await updateRestaurant(seoForm);
-      toast.success('تم تحديث إعدادات SEO والدومين');
-    } catch (error) {}
+      await updateRestaurant({ seoSettings: value } as any);
+      toast.success('حُفظت إعدادات محرّكات البحث');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'تعذّر حفظ إعدادات البحث');
+    } finally {
+      setSavingSeo(false);
+    }
   };
 
   const handleSaveHours = async () => {
@@ -418,7 +414,7 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="form" />;
 
   const days = [
     { key: 'sunday', name: 'الأحد' },
@@ -469,7 +465,7 @@ export const SettingsPage: React.FC = () => {
     { id: 'hours', label: 'أوقات العمل', icon: IoTimer },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
     { id: 'payment', label: 'الدفع', icon: IoWalletOutline },
-    { id: 'seo', label: 'SEO & الدومين', icon: IoGlobe },
+    { id: 'seo', label: 'محرّكات البحث والدومين', icon: IoGlobe },
      { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
 
@@ -1093,7 +1089,7 @@ export const SettingsPage: React.FC = () => {
             </div>
             {uploading && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, color: C.accent }}>
-                <div style={{ width: 16, height: 16, border: `2px solid ${C.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <BusyDots />
                 <span style={{ fontSize: 13 }}>جاري رفع الصورة...</span>
               </div>
             )}
@@ -1315,41 +1311,25 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {activeTab === 'seo' && (
-        // ... (نفس الكود السابق لـ SEO)
         <div>
-          <div style={sectionCard}>
-            <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <IoGlobe style={{ color: C.accent }} />
-              إعدادات SEO والدومين
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label style={labelStyle}>عنوان الصفحة (Meta Title)</label>
-                <input
-                  type="text"
-                  value={seoForm.metaTitle}
-                  onChange={(e) => setSeoForm({ ...seoForm, metaTitle: e.target.value })}
-                  style={getInput('metaTitle')}
-                  maxLength={60}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{seoForm.metaTitle.length}/60 حرف</p>
-              </div>
-
-              <div>
-                <label style={labelStyle}>وصف الصفحة (Meta Description)</label>
-                <textarea
-                  value={seoForm.metaDescription}
-                  onChange={(e) => setSeoForm({ ...seoForm, metaDescription: e.target.value })}
-                  style={{ ...getInput('metaDesc'), minHeight: 80, resize: 'vertical' }}
-                  rows={3}
-                  maxLength={160}
-                />
-                <p style={{ color: C.muted, fontSize: 11, marginTop: 4 }}>{seoForm.metaDescription.length}/160 حرف</p>
-              </div>
-
-            </div>
-          </div>
+          {/* إعدادات البحث لهذا المطعم وحده — كان التبويب يرسل «metaTitle» و
+              «metaDescription» إلى حقلين لا وجود لهما، فيُحفظ ولا يتغيّر شيء */}
+          <SeoSettingsPanel
+            value={(restaurant as any)?.seoSettings}
+            business={{
+              type: 'restaurant',
+              id: restaurant?.id,
+              name: restaurant?.name || '',
+              description: restaurant?.description,
+              logo: restaurant?.logo,
+              coverImage: restaurant?.coverImage,
+              url: publicStorefrontUrl(restaurant)
+            }}
+            onSave={handleSaveSeo}
+            saving={savingSeo}
+            canEdit={true}
+            colors={C}
+          />
 
           {/* إدارة الروابط والنطاق المخصص — تتحقق فعلياً من DNS */}
           <DomainManager
@@ -1357,25 +1337,6 @@ export const SettingsPage: React.FC = () => {
             canEdit={true}
             onChanged={() => window.location.reload()}
           />
-
-          <div style={sectionCard}>
-            <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>معاينة في محركات البحث</h3>
-            <div style={{ background: '#fff', padding: 16, borderRadius: 10 }}>
-              <div style={{ color: '#1a0dab', fontSize: 18, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {seoForm.metaTitle || restaurant?.name || 'اسم المطعم'}
-              </div>
-              <div style={{ color: '#006621', fontSize: 13 }}>
-                {seoForm.customDomain || `${seoForm.subdomain || restaurant?.slug}.yourdomain.com`}
-              </div>
-              <div style={{ color: '#545454', fontSize: 13, marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                {seoForm.metaDescription || restaurant?.description || 'وصف المطعم'}
-              </div>
-            </div>
-          </div>
-
-          <button style={saveBtn} onClick={handleSaveSeo}>
-            <IoSave size={16} /> حفظ إعدادات SEO والدومين
-          </button>
         </div>
       )}
 
@@ -1463,7 +1424,7 @@ export const SettingsPage: React.FC = () => {
         disabled={creatingBranch}
         style={{ ...saveBtn, width: '100%', justifyContent: 'center', opacity: creatingBranch ? 0.7 : 1, cursor: creatingBranch ? 'not-allowed' : 'pointer' }}
       >
-        {creatingBranch ? <><div className="animate-spin" style={{ width: 16, height: 16, border: `2px solid ${C.bg}`, borderTopColor: 'transparent', borderRadius: '50%' }} /> جاري إنشاء الفرع...</> : <><IoAdd size={18} /> إنشاء فرع جديد</>}
+        {creatingBranch ? <><BusyDots /> جاري إنشاء الفرع...</> : <><IoAdd size={18} /> إنشاء فرع جديد</>}
       </button>
     </div>
 
@@ -1562,12 +1523,6 @@ export const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

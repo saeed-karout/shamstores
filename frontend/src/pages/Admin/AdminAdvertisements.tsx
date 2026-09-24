@@ -266,7 +266,7 @@ const AdminAdvertisements: React.FC = () => {
     display: 'block',
   };
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="grid" />;
 
   // إحصائيات محسنة بناءً على الحالة الفعلية
   const actualActiveCount = ads.filter(ad => {

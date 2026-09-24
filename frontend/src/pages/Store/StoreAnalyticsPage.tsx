@@ -88,7 +88,7 @@ const StoreAnalyticsPage: React.FC = () => {
 
   const getPeriodTitle = () => ({ today: 'اليوم', week: 'آخر 7 أيام', month: 'آخر 30 يوماً' }[period] || '');
 
-  if (loading) return <Loader fullScreen />;
+  if (loading) return <Loader fullScreen variant="dashboard" />;
 
   const periodBtnStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 18px',
