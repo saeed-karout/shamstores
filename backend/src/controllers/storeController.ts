@@ -1,5 +1,6 @@
 // backend/src/controllers/storeController.ts
 
+import { orderStatusLabel } from '../utils/orderStatus';
 import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import { UserService } from '../services/user.service';
@@ -1385,7 +1386,7 @@ export const updateStoreOrderStatus = async (req: AuthRequest, res: Response): P
       emitOrderRealtimeEvent({
         event: 'order.status.updated',
         title: 'تحديث حالة الطلب',
-        message: `الطلب ${updatedOrder.orderNumber}: ${status}`,
+        message: `الطلب ${updatedOrder.orderNumber}: ${orderStatusLabel(status)}`,
         actorId: req.user?.id || null,
         order: {
           id: updatedOrder.id,

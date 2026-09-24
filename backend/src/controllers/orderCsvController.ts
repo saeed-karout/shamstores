@@ -15,17 +15,10 @@ import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { toCsv, sendCsv } from '../services/csv.service';
+import { ORDER_STATUS_LABEL } from '../utils/orderStatus';
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'قيد الانتظار',
-  confirmed: 'مؤكَّد',
-  preparing: 'قيد التجهيز',
-  ready: 'جاهز',
-  delivering: 'في الطريق',
-  delivered: 'تمّ التسليم',
-  served: 'مكتمل',
-  cancelled: 'ملغي'
-};
+// الأسماء من مصدرٍ واحد مع الإشعارات
+const STATUS_LABEL = ORDER_STATUS_LABEL;
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: 'في المكان',

@@ -1,5 +1,6 @@
 // backend/src/controllers/orderController.ts
 
+import { orderStatusLabel } from '../utils/orderStatus';
 import { Response } from 'express';
 import shippingService from '../services/shipping.service';
 import { AuthRequest } from '../types';
@@ -753,7 +754,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
       updated,
       'order.status.updated',
       'تحديث حالة الطلب',
-      `تم تحديث حالة الطلب ${updated.orderNumber} إلى ${updated.status}`,
+      `تم تحديث حالة الطلب ${updated.orderNumber} إلى «${orderStatusLabel(updated.status)}»`,
       req.user?.id
     );
 
@@ -1149,7 +1150,7 @@ export const updateDeliveryOrderStatus = async (req: AuthRequest, res: Response)
       updated,
       'order.delivery.status.updated',
       'تحديث حالة التوصيل',
-      `تم تحديث حالة الطلب ${updated.orderNumber} إلى ${updated.status}`,
+      `تم تحديث حالة الطلب ${updated.orderNumber} إلى «${orderStatusLabel(updated.status)}»`,
       req.user?.id
     );
 
