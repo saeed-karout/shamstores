@@ -103,7 +103,8 @@ const coverImage = (product: StorefrontProduct): string | null => {
       return images;
     }
   }
-  return image || null;
+  // `imageUrl` آخرُ ملجأ: منتجٌ بصورةٍ في هذا الحقل وحده كان يظهر بلا صورة
+  return image || (product as { imageUrl?: string | null }).imageUrl || null;
 };
 
 const ProductGridCard: React.FC<Props> = ({
