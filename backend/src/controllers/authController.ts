@@ -809,7 +809,10 @@ export const resetPassword = async (
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    await UserService.update(user.id, { password: hashedPassword });
+    // مباشرةً لا عبر `UserService.update`: تلك تُجزّئ `password` من جديد،
+    // فكانت كلمة المرور تُخزَّن تجزئةً لتجزئة — «نجحت إعادة التعيين» ثم لا
+    // تقبل القديمة ولا الجديدة، فيُحبس صاحب الحساب خارجه.
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
     await UserService.resetLoginAttempts(user.id);
 
     res.json({
