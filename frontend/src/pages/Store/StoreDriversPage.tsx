@@ -18,9 +18,9 @@ import Loader from '../../components/common/Loader';
 import { motion } from 'framer-motion';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 interface Driver {
@@ -210,7 +210,7 @@ const StoreDriversPage: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 48, height: 48, background: 'rgba(200,226,53,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 48, height: 48, background: 'rgba(8,72,53,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <IoCar style={{ color: C.accent, fontSize: 20 }} />
                   </div>
                   <div>
@@ -218,8 +218,8 @@ const StoreDriversPage: React.FC = () => {
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 20, fontSize: 12,
                       ...(driver.isActive
-                        ? { background: 'rgba(200,226,53,0.12)', color: C.accent }
-                        : { background: 'rgba(255,107,107,0.12)', color: C.red })
+                        ? { background: 'rgba(8,72,53,0.12)', color: C.accent }
+                        : { background: 'rgba(214,69,69,0.12)', color: C.red })
                     }}>
                       {driver.isActive ? <IoCheckmarkCircle /> : <IoCloseCircle />}
                       {driver.isActive ? 'نشط' : 'غير نشط'}
@@ -247,8 +247,8 @@ const StoreDriversPage: React.FC = () => {
                   style={{
                     flex: 1, padding: '8px 0', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: 'Cairo, sans-serif',
                     ...(driver.isActive
-                      ? { background: 'rgba(255,107,107,0.1)', color: C.red }
-                      : { background: 'rgba(200,226,53,0.1)', color: C.accent })
+                      ? { background: 'rgba(214,69,69,0.1)', color: C.red }
+                      : { background: 'rgba(8,72,53,0.1)', color: C.accent })
                   }}
                 >
                   {driver.isActive ? 'تعطيل' : 'تفعيل'}
@@ -256,7 +256,7 @@ const StoreDriversPage: React.FC = () => {
                 <button
                   disabled={deletingId === driver.id}
                   onClick={() => deleteDriver(driver.id)}
-                  style={{ padding: '8px 12px', background: 'rgba(255,107,107,0.1)', color: C.red, border: 'none', borderRadius: 12, cursor: 'pointer', opacity: deletingId === driver.id ? 0.6 : 1 }}
+                  style={{ padding: '8px 12px', background: 'rgba(214,69,69,0.1)', color: C.red, border: 'none', borderRadius: 12, cursor: 'pointer', opacity: deletingId === driver.id ? 0.6 : 1 }}
                 >
                   <IoTrash />
                 </button>

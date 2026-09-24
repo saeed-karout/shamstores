@@ -32,9 +32,9 @@ import { motion } from 'framer-motion';
 // ==================== Color Tokens ====================
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', orange: '#C2410C',
 };
 
 // ==================== Types ====================
@@ -136,13 +136,13 @@ const parseAddons = (addons: any): string[] => {
 
 const getStatusStyle = (status: string): React.CSSProperties => {
   switch (status) {
-    case 'pending': return { background: 'rgba(251,191,36,0.15)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.3)' };
-    case 'preparing': return { background: 'rgba(96,165,250,0.15)', color: C.blue, border: '1px solid rgba(96,165,250,0.3)' };
-    case 'ready': return { background: 'rgba(200,226,53,0.15)', color: C.accent, border: '1px solid rgba(200,226,53,0.3)' };
-    case 'delivering': return { background: 'rgba(167,139,250,0.15)', color: C.purple, border: '1px solid rgba(167,139,250,0.3)' };
-    case 'delivered': return { background: 'rgba(157,196,172,0.15)', color: C.muted, border: '1px solid rgba(157,196,172,0.3)' };
-    case 'cancelled': return { background: 'rgba(255,107,107,0.15)', color: C.red, border: '1px solid rgba(255,107,107,0.3)' };
-    default: return { background: 'rgba(157,196,172,0.15)', color: C.muted, border: '1px solid rgba(157,196,172,0.3)' };
+    case 'pending': return { background: 'rgba(183,121,31,0.15)', color: '#B7791F', border: '1px solid rgba(183,121,31,0.3)' };
+    case 'preparing': return { background: 'rgba(37,99,235,0.15)', color: C.blue, border: '1px solid rgba(37,99,235,0.3)' };
+    case 'ready': return { background: 'rgba(8,72,53,0.15)', color: C.accent, border: '1px solid rgba(8,72,53,0.3)' };
+    case 'delivering': return { background: 'rgba(139,69,181,0.15)', color: C.purple, border: '1px solid rgba(139,69,181,0.3)' };
+    case 'delivered': return { background: 'rgba(95,115,106,0.15)', color: C.muted, border: '1px solid rgba(95,115,106,0.3)' };
+    case 'cancelled': return { background: 'rgba(214,69,69,0.15)', color: C.red, border: '1px solid rgba(214,69,69,0.3)' };
+    default: return { background: 'rgba(95,115,106,0.15)', color: C.muted, border: '1px solid rgba(95,115,106,0.3)' };
   }
 };
 
@@ -315,7 +315,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
     <div style={{ background: C.bg, minHeight: '100vh', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
       {/* Header */}
       <div style={{
-        background: 'linear-gradient(135deg, #082E24, #0A2A1E)',
+        background: 'linear-gradient(135deg, #F4F7F4, #0A2A1E)',
         color: C.text,
         position: 'sticky',
         top: 0,
@@ -326,7 +326,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
             <div>
               <h1 style={{ fontSize: 28, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 12, margin: 0 }}>
-                <div style={{ background: 'rgba(200,226,53,0.15)', padding: 8, borderRadius: 12 }}>
+                <div style={{ background: 'rgba(8,72,53,0.15)', padding: 8, borderRadius: 12 }}>
                   <IoCar style={{ color: C.accent }} size={28} />
                 </div>
                 <span>طلبات التوصيل</span>
@@ -341,7 +341,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
-                    background: 'rgba(200,226,53,0.1)',
+                    background: 'rgba(8,72,53,0.1)',
                     border: `1px solid ${C.border}`,
                     borderRadius: 12,
                     padding: '8px 40px 8px 16px',
@@ -358,7 +358,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
                 onClick={() => { setRefreshing(true); fetchDeliveryOrders(); }}
                 disabled={refreshing}
                 style={{
-                  background: 'rgba(200,226,53,0.1)',
+                  background: 'rgba(8,72,53,0.1)',
                   border: `1px solid ${C.border}`,
                   borderRadius: 12,
                   padding: 8,
@@ -398,7 +398,7 @@ const RestaurantDeliveryDashboard: React.FC = () => {
                   cursor: 'pointer',
                   fontFamily: 'Cairo, sans-serif',
                   transition: 'all 0.2s',
-                  background: activeFilter === filter ? C.accent : 'rgba(200,226,53,0.1)',
+                  background: activeFilter === filter ? C.accent : 'rgba(8,72,53,0.1)',
                   color: activeFilter === filter ? C.bg : C.text
                 }}
               >
@@ -485,16 +485,16 @@ const RestaurantDeliveryDashboard: React.FC = () => {
 
 const StatCard: React.FC<{ title: string; value: number | string; color: string }> = ({ title, value, color }) => {
   const bgMap: Record<string, string> = {
-    blue: 'rgba(96,165,250,0.12)',
-    amber: 'rgba(251,191,36,0.12)',
-    emerald: 'rgba(200,226,53,0.12)',
-    purple: 'rgba(167,139,250,0.12)',
-    gray: 'rgba(157,196,172,0.12)',
-    green: 'rgba(200,226,53,0.12)'
+    blue: 'rgba(37,99,235,0.12)',
+    amber: 'rgba(183,121,31,0.12)',
+    emerald: 'rgba(8,72,53,0.12)',
+    purple: 'rgba(139,69,181,0.12)',
+    gray: 'rgba(95,115,106,0.12)',
+    green: 'rgba(8,72,53,0.12)'
   };
   const textMap: Record<string, string> = {
     blue: C.blue,
-    amber: '#FBBF24',
+    amber: '#B7791F',
     emerald: C.accent,
     purple: C.purple,
     gray: C.muted,
@@ -502,7 +502,7 @@ const StatCard: React.FC<{ title: string; value: number | string; color: string 
   };
 
   return (
-    <div style={{ background: bgMap[color] || 'rgba(200,226,53,0.08)', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+    <div style={{ background: bgMap[color] || 'rgba(8,72,53,0.08)', borderRadius: 12, padding: 12, textAlign: 'center' }}>
       <div style={{ fontSize: 22, fontWeight: 700, color: textMap[color] || C.text }}>{value}</div>
       <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{title}</div>
     </div>
@@ -511,7 +511,7 @@ const StatCard: React.FC<{ title: string; value: number | string; color: string 
 
 const EmptyState: React.FC = () => (
   <div style={{ textAlign: 'center', padding: '64px 24px', background: C.card, borderRadius: 16, border: `1px solid ${C.border}` }}>
-    <div style={{ width: 96, height: 96, background: 'rgba(200,226,53,0.08)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+    <div style={{ width: 96, height: 96, background: 'rgba(8,72,53,0.08)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
       <IoCar style={{ color: C.muted, fontSize: 40 }} />
     </div>
     <p style={{ color: C.muted, fontSize: 17 }}>لا توجد طلبات توصيل حالياً</p>
@@ -542,10 +542,10 @@ const OrderCard: React.FC<{
         borderRadius: 16,
         overflow: 'hidden',
         border: isSelected ? `2px solid ${C.accent}` : `1px solid ${C.border}`,
-        boxShadow: isSelected ? `0 0 0 2px rgba(200,226,53,0.2)` : 'none',
+        boxShadow: isSelected ? `0 0 0 2px rgba(8,72,53,0.2)` : 'none',
         cursor: 'pointer',
         transition: 'all 0.2s',
-        backgroundColor: hovered ? 'rgba(200,226,53,0.04)' : C.card
+        backgroundColor: hovered ? 'rgba(8,72,53,0.04)' : C.card
       }}
       onClick={onSelect}
       onMouseEnter={() => setHovered(true)}
@@ -572,7 +572,7 @@ const OrderCard: React.FC<{
               {getPaymentMethodIcon(order.paymentMethod)}
               <span>{getPaymentMethodText(order.paymentMethod)}</span>
               {!order.isPaid && order.paymentMethod === 'cash' && (
-                <span style={{ color: '#FBBF24', marginRight: 4 }}>(غير مدفوع)</span>
+                <span style={{ color: '#B7791F', marginRight: 4 }}>(غير مدفوع)</span>
               )}
             </div>
             {deliveryFee > 0 && (
@@ -585,7 +585,7 @@ const OrderCard: React.FC<{
       {/* Card Body */}
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 40, height: 40, background: 'rgba(96,165,250,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: 40, height: 40, background: 'rgba(37,99,235,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <IoPerson style={{ color: C.blue }} size={18} />
           </div>
           <div>
@@ -615,23 +615,23 @@ const OrderCard: React.FC<{
         )}
 
         {order.assignedDriver && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: 'rgba(167,139,250,0.1)', padding: 8, borderRadius: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: 'rgba(139,69,181,0.1)', padding: 8, borderRadius: 12 }}>
             <IoCar style={{ color: C.purple }} size={14} />
             <span style={{ color: C.purple }}>السائق: {order.assignedDriver.name}</span>
           </div>
         )}
 
         {hasLocation && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: 'rgba(200,226,53,0.08)', padding: 8, borderRadius: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, background: 'rgba(8,72,53,0.08)', padding: 8, borderRadius: 12 }}>
             <IoMap style={{ color: C.accent }} size={14} />
             <span style={{ color: C.accent }}>موقع متوفر على الخريطة</span>
           </div>
         )}
 
         {order.notes && (
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, background: 'rgba(251,191,36,0.08)', padding: 8, borderRadius: 12 }}>
-            <IoAlertCircle style={{ color: '#FBBF24', flexShrink: 0, marginTop: 2 }} size={14} />
-            <span style={{ color: '#FBBF24' }}>{order.notes}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, background: 'rgba(183,121,31,0.08)', padding: 8, borderRadius: 12 }}>
+            <IoAlertCircle style={{ color: '#B7791F', flexShrink: 0, marginTop: 2 }} size={14} />
+            <span style={{ color: '#B7791F' }}>{order.notes}</span>
           </div>
         )}
       </div>
@@ -846,7 +846,7 @@ const DriverButton: React.FC<{ driver: Driver; onAssign: () => void }> = ({ driv
         border: hovered ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
         borderRadius: 12,
         textAlign: 'right',
-        background: hovered ? 'rgba(200,226,53,0.06)' : C.surf,
+        background: hovered ? 'rgba(8,72,53,0.06)' : C.surf,
         cursor: 'pointer',
         display: 'flex',
         justifyContent: 'space-between',
@@ -928,7 +928,7 @@ const OrderDetailsModal: React.FC<{
         {/* Modal Body */}
         <div style={{ padding: 24, overflowY: 'auto', maxHeight: 'calc(90vh - 80px)', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Customer Info */}
-          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(96,165,250,0.2)` }}>
+          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(37,99,235,0.2)` }}>
             <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.blue, margin: '0 0 12px' }}>
               <IoPerson size={20} />
               معلومات العميل
@@ -955,8 +955,8 @@ const OrderDetailsModal: React.FC<{
           </div>
 
           {/* Order Items */}
-          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(251,191,36,0.2)` }}>
-            <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: '#FBBF24', margin: '0 0 12px' }}>
+          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(183,121,31,0.2)` }}>
+            <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: '#B7791F', margin: '0 0 12px' }}>
               <IoFastFood size={20} />
               تفاصيل الطلب
             </h4>
@@ -964,7 +964,7 @@ const OrderDetailsModal: React.FC<{
               {order.orderItems?.map((item, idx) => {
                 const addonsList = parseAddons(item.addons);
                 return (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8, borderBottom: `1px solid rgba(251,191,36,0.1)` }}>
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 8, borderBottom: `1px solid rgba(183,121,31,0.1)` }}>
                     <div>
                       <span style={{ fontWeight: 500, color: C.text }}>{item.menuItem?.name || 'منتج'}</span>
                       <span style={{ color: C.muted, marginRight: 8 }}>x{item.quantity}</span>
@@ -972,7 +972,7 @@ const OrderDetailsModal: React.FC<{
                       {addonsList.length > 0 && (
                         <span style={{ fontSize: 12, color: C.muted, display: 'block' }}>إضافات: {addonsList.join(', ')}</span>
                       )}
-                      {item.notes && <span style={{ fontSize: 12, color: '#FBBF24', display: 'block' }}>ملاحظة: {item.notes}</span>}
+                      {item.notes && <span style={{ fontSize: 12, color: '#B7791F', display: 'block' }}>ملاحظة: {item.notes}</span>}
                     </div>
                     <span style={{ fontWeight: 700, color: C.text }}>{item.price * item.quantity} ل.س</span>
                   </div>
@@ -982,7 +982,7 @@ const OrderDetailsModal: React.FC<{
           </div>
 
           {/* Payment Details */}
-          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(200,226,53,0.2)` }}>
+          <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(8,72,53,0.2)` }}>
             <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.accent, margin: '0 0 12px' }}>
               <IoWallet size={20} />
               تفاصيل الدفع
@@ -1023,7 +1023,7 @@ const OrderDetailsModal: React.FC<{
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: C.muted }}>حالة الدفع:</span>
-                <span style={{ color: order.isPaid ? C.accent : '#FBBF24' }}>
+                <span style={{ color: order.isPaid ? C.accent : '#B7791F' }}>
                   {order.isPaid ? 'مدفوع' : 'غير مدفوع'}
                 </span>
               </div>
@@ -1032,7 +1032,7 @@ const OrderDetailsModal: React.FC<{
 
           {/* Delivery Info */}
           {(order.estimatedDeliveryTime || order.actualDeliveryTime || order.driverAcceptedAt) && (
-            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(167,139,250,0.2)` }}>
+            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(139,69,181,0.2)` }}>
               <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.purple, margin: '0 0 12px' }}>
                 <IoTime size={20} />
                 معلومات التوصيل
@@ -1062,7 +1062,7 @@ const OrderDetailsModal: React.FC<{
 
           {/* Driver Info */}
           {order.assignedDriver && (
-            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(96,165,250,0.2)` }}>
+            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(37,99,235,0.2)` }}>
               <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: C.blue, margin: '0 0 12px' }}>
                 <IoCar size={20} />
                 معلومات السائق
@@ -1084,8 +1084,8 @@ const OrderDetailsModal: React.FC<{
 
           {/* Notes */}
           {order.notes && (
-            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(251,191,36,0.2)` }}>
-              <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8, color: '#FBBF24', margin: '0 0 8px' }}>
+            <div style={{ background: C.surf, borderRadius: 12, padding: 16, border: `1px solid rgba(183,121,31,0.2)` }}>
+              <h4 style={{ fontWeight: 700, fontSize: 17, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8, color: '#B7791F', margin: '0 0 8px' }}>
                 <IoClipboard size={20} />
                 ملاحظات
               </h4>

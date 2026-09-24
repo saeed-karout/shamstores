@@ -335,7 +335,7 @@ export const CsvTools: React.FC<ToolsProps> = ({
                             padding: '7px 10px'
                           }}
                         >
-                          <span style={{ color: '#FBBF24', fontWeight: 800, flexShrink: 0 }}>
+                          <span style={{ color: '#B7791F', fontWeight: 800, flexShrink: 0 }}>
                             سطر {e.row}
                           </span>
                           <span style={{ flex: 1 }}>
@@ -440,7 +440,7 @@ const Tile: React.FC<{ colors: CsvPalette; n?: number; label: string; warn?: boo
   >
     <div
       style={{
-        color: warn && (n ?? 0) > 0 ? '#FBBF24' : colors.accent,
+        color: warn && (n ?? 0) > 0 ? '#B7791F' : colors.accent,
         fontSize: 24,
         fontWeight: 800,
         fontVariantNumeric: 'tabular-nums',
@@ -466,9 +466,9 @@ const Note: React.FC<{
       alignItems: 'flex-start',
       fontSize: 12.5,
       lineHeight: 1.8,
-      color: warn ? '#FBBF24' : colors.muted,
-      background: warn ? 'rgba(251,146,60,0.09)' : colors.surface,
-      border: `1px solid ${warn ? 'rgba(251,146,60,0.3)' : colors.border}`,
+      color: warn ? '#B7791F' : colors.muted,
+      background: warn ? 'rgba(194,65,12,0.09)' : colors.surface,
+      border: `1px solid ${warn ? 'rgba(194,65,12,0.3)' : colors.border}`,
       borderRadius: 10,
       padding: '9px 11px',
       marginTop: 9

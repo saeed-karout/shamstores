@@ -19,16 +19,16 @@ import toast from 'react-hot-toast';
 import api from '@/services/api';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  warn: '#FB923C',
-  red: '#FF6B6B',
-  green: '#4ADE80'
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  warn: '#C2410C',
+  red: '#D64545',
+  green: '#15803D'
 };
 
 const MAX_TITLE = 70;
@@ -231,7 +231,7 @@ const CampaignsPage: React.FC = () => {
                 style={{
                   width: '100%', marginTop: 16, padding: '13px', borderRadius: 14,
                   background: canSend ? C.accent : C.surf,
-                  color: canSend ? '#0A2018' : C.muted,
+                  color: canSend ? '#FFFFFF' : C.muted,
                   border: 'none', fontWeight: 900, fontSize: 14, fontFamily: 'inherit',
                   cursor: canSend ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
@@ -259,7 +259,7 @@ const CampaignsPage: React.FC = () => {
                     disabled={sending}
                     style={{
                       flex: 1, padding: '11px', borderRadius: 12, background: C.accent,
-                      color: '#0A2018', border: 'none', fontWeight: 900, fontSize: 13.5,
+                      color: '#FFFFFF', border: 'none', fontWeight: 900, fontSize: 13.5,
                       fontFamily: 'inherit', cursor: sending ? 'wait' : 'pointer'
                     }}
                   >

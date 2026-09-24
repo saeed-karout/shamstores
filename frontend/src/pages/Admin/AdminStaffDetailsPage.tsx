@@ -10,9 +10,9 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', gold: '#FBBF24',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', gold: '#B7791F',
 };
 
 interface StaffMember {
@@ -260,9 +260,9 @@ const AdminStaffDetailsPage: React.FC = () => {
           <div style={{ 
             width: 48, 
             height: 48, 
-            background: staffType === 'store' ? 'rgba(167,139,250,0.15)' : 
-                        staffType === 'restaurant' ? 'rgba(96,165,250,0.15)' : 
-                        'rgba(200,226,53,0.15)',
+            background: staffType === 'store' ? 'rgba(139,69,181,0.15)' : 
+                        staffType === 'restaurant' ? 'rgba(37,99,235,0.15)' : 
+                        'rgba(8,72,53,0.15)',
             borderRadius: 14, 
             display: 'flex', 
             alignItems: 'center', 
@@ -285,10 +285,10 @@ const AdminStaffDetailsPage: React.FC = () => {
           <button onClick={handleResetPassword} style={{ padding: '8px 16px', background: `${C.accent}15`, color: C.accent, border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <IoKey size={14} /> إعادة تعيين كلمة المرور
           </button>
-          <button onClick={handleToggleStatus} style={{ padding: '8px 16px', background: staff.isActive ? 'rgba(251,191,36,0.12)' : 'rgba(200,226,53,0.12)', color: staff.isActive ? C.gold : C.accent, border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>
+          <button onClick={handleToggleStatus} style={{ padding: '8px 16px', background: staff.isActive ? 'rgba(183,121,31,0.12)' : 'rgba(8,72,53,0.12)', color: staff.isActive ? C.gold : C.accent, border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>
             {staff.isActive ? 'تعطيل' : 'تفعيل'}
           </button>
-          <button onClick={handleDelete} style={{ padding: '8px 16px', background: 'rgba(255,107,107,0.12)', color: C.red, border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>
+          <button onClick={handleDelete} style={{ padding: '8px 16px', background: 'rgba(214,69,69,0.12)', color: C.red, border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>
             <IoTrash size={14} style={{ marginLeft: 4 }} /> حذف
           </button>
         </div>
@@ -300,7 +300,7 @@ const AdminStaffDetailsPage: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
           <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700 }}>📋 معلومات الموظف</h2>
           {!editing ? (
-            <button onClick={() => setEditing(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(167,139,250,0.12)', color: C.purple, border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>
+            <button onClick={() => setEditing(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: 'rgba(139,69,181,0.12)', color: C.purple, border: 'none', borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>
               <IoPencil size={14} /> تعديل
             </button>
           ) : (
@@ -366,7 +366,7 @@ const AdminStaffDetailsPage: React.FC = () => {
 
           <div>
             <label style={labelStyle}>الحالة</label>
-            <span style={{ background: staff.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)', color: staff.isActive ? C.accent : C.red, padding: '4px 10px', borderRadius: 10, fontSize: 12 }}>
+            <span style={{ background: staff.isActive ? 'rgba(8,72,53,0.12)' : 'rgba(214,69,69,0.12)', color: staff.isActive ? C.accent : C.red, padding: '4px 10px', borderRadius: 10, fontSize: 12 }}>
               {staff.isActive ? '✅ نشط' : '❌ غير نشط'}
             </span>
           </div>
@@ -401,7 +401,7 @@ const AdminStaffDetailsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
             <h3 style={{ color: C.text, fontSize: 15, fontWeight: 700 }}>🔑 صلاحيات الموظف</h3>
             {!editingPermissions ? (
-              <button onClick={() => setEditingPermissions(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(167,139,250,0.12)', color: C.purple, border: 'none', borderRadius: 10, fontSize: 12, cursor: 'pointer' }}>
+              <button onClick={() => setEditingPermissions(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: 'rgba(139,69,181,0.12)', color: C.purple, border: 'none', borderRadius: 10, fontSize: 12, cursor: 'pointer' }}>
                 <IoPencil size={12} /> تعديل الصلاحيات
               </button>
             ) : (

@@ -1,68 +1,54 @@
-// TopBar — sits above the main content area in the new design
+// frontend/src/components/layout/Navbar.tsx — الشريط العلويّ للوحة
+//
+// عنوان الشاشة، ورابط «واجهتي» ليرى التاجر ما يراه زبونه بنقرة، والإشعارات
+// والحساب. زجاجيٌّ لاصق فيبقى العنوان ظاهراً مع التمرير.
+
 import React from 'react';
-import { IoMenu } from 'react-icons/io5';
+import { Link } from 'react-router-dom';
+import { IoMenu, IoOpenOutline } from 'react-icons/io5';
 import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '../../hooks/useAuth';
+import { useBusinessSummary } from '../../hooks/useBusinessSummary';
 
 interface NavbarProps {
   onMenuOpen?: () => void;
   title?: string;
 }
 
+const BELL_COLORS = {
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  bg: '#F4F7F4',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(16,35,27,0.10)'
+};
+
 const Navbar: React.FC<NavbarProps> = ({ onMenuOpen, title }) => {
   const { user } = useAuth();
+  const { data: business } = useBusinessSummary();
 
   return (
-    <header
-      style={{
-        height: 60,
-        background: '#082E24',
-        borderBottom: '1px solid rgba(200,226,53,0.15)',
-        display: 'flex',
-        alignItems: 'center',
-        paddingInline: '20px 24px',
-        gap: 16,
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
-      }}
-    >
-      {/* Mobile menu toggle */}
-      <button
-        aria-label="فتح القائمة"
-        onClick={onMenuOpen}
-        className="lg:hidden"
-        style={{ background: 'none', border: 'none', color: '#9DC4AC', cursor: 'pointer', padding: 6, borderRadius: 8, display: 'flex' }}
-      >
-        <IoMenu size={20} />
+    <header className="ss-top">
+      <button type="button" className="ss-icon-btn ss-top-menu" onClick={onMenuOpen} aria-label="فتح القائمة">
+        <IoMenu size={21} />
       </button>
 
-      {title && (
-        <h1 style={{ flex: 1, fontSize: 17, fontWeight: 700, color: '#E8F5E9', margin: 0 }}>
-          {title}
-        </h1>
+      <h1 className="ss-top-title">{title}</h1>
+
+      {business?.publicUrl && (
+        <a href={business.publicUrl} target="_blank" rel="noreferrer" className="ss-top-store" aria-label="فتح واجهتي في نافذة جديدة">
+          <IoOpenOutline size={18} aria-hidden="true" />
+          <span>{business.type === 'restaurant' ? 'قائمتي' : 'متجري'}</span>
+        </a>
       )}
-      {!title && <div style={{ flex: 1 }} />}
 
-      {/* Status indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 7, height: 7, background: '#C8E235', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-        <span style={{ color: '#9DC4AC', fontSize: 12 }}>متصل</span>
-      </div>
+      <NotificationBell colors={BELL_COLORS} />
 
-      {/* مركز الإشعارات — في الشريط العلوي فيصل كل مستخدم مسجّل الدخول،
-          تاجراً كان أو مشرفاً */}
-      <NotificationBell
-        colors={{
-          card: '#112E23', surf: '#0F3D31', accent: '#C8E235', bg: '#082E24',
-          text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)'
-        }}
-      />
-
-      {/* User avatar */}
-      <div style={{ width: 32, height: 32, background: 'rgba(200,226,53,0.15)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C8E235', fontWeight: 700, fontSize: 14 }}>
-        {(user?.name || 'U')[0]}
-      </div>
+      <Link to="/profile" className="ss-top-user" aria-label="حسابي" title={user?.name || ''}>
+        {(user?.name || 'U').charAt(0).toUpperCase()}
+      </Link>
     </header>
   );
 };

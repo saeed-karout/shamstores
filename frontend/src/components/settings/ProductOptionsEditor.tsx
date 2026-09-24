@@ -190,7 +190,7 @@ const ProductOptionsEditor: React.FC<Props> = ({
                 height: 36,
                 borderRadius: 9,
                 border: 'none',
-                background: 'rgba(255,107,107,0.12)',
+                background: 'rgba(214,69,69,0.12)',
                 color: C.red,
                 cursor: 'pointer',
                 display: 'grid',

@@ -114,7 +114,7 @@ const ExchangeRateCard: React.FC<{ colors: Palette }> = ({ colors: C }) => {
         <div
           style={{
             display: 'flex', gap: 9, alignItems: 'flex-start',
-            background: 'rgba(251,146,60,0.1)', border: `1px solid ${C.orange}40`,
+            background: 'rgba(194,65,12,0.1)', border: `1px solid ${C.orange}40`,
             borderRadius: 11, padding: '12px 14px', marginBottom: 16
           }}
         >

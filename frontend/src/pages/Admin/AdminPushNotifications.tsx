@@ -19,17 +19,17 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  blue: '#60A5FA',
-  yellow: '#F59E0B',
-  green: '#4ADE80',
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  blue: '#2563EB',
+  yellow: '#B45309',
+  green: '#15803D',
 };
 
 const MAX_TITLE = 65;
@@ -346,7 +346,7 @@ const AdminPushNotifications: React.FC = () => {
                 style={{
                   width: '100%', marginTop: 18, padding: '13px', borderRadius: 14,
                   background: canSend ? C.accent : C.surf,
-                  color: canSend ? '#0A2018' : C.muted,
+                  color: canSend ? '#FFFFFF' : C.muted,
                   border: 'none', fontWeight: 900, fontSize: 14,
                   cursor: canSend ? 'pointer' : 'not-allowed',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -370,7 +370,7 @@ const AdminPushNotifications: React.FC = () => {
                     disabled={sending}
                     style={{
                       flex: 1, padding: '11px', borderRadius: 12, background: C.accent,
-                      color: '#0A2018', border: 'none', fontWeight: 900, fontSize: 13.5,
+                      color: '#FFFFFF', border: 'none', fontWeight: 900, fontSize: 13.5,
                       cursor: sending ? 'wait' : 'pointer',
                     }}
                   >
@@ -408,7 +408,7 @@ const AdminPushNotifications: React.FC = () => {
                   width: 30, height: 30, borderRadius: 8, background: C.accent,
                   display: 'grid', placeItems: 'center', flexShrink: 0,
                 }}>
-                  <IoNotifications size={15} color="#0A2018" />
+                  <IoNotifications size={15} color="#FFFFFF" />
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 11, color: '#8E8E93', marginBottom: 2 }}>شام ستورز • الآن</div>
@@ -522,7 +522,7 @@ const AdminPushNotifications: React.FC = () => {
 
 const Stat: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-    <span style={{ fontSize: 12.5, color: '#9DC4AC' }}>{label}</span>
+    <span style={{ fontSize: 12.5, color: '#5F736A' }}>{label}</span>
     <span style={{ fontSize: 19, fontWeight: 900, color }}>{value}</span>
   </div>
 );

@@ -112,7 +112,7 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
       />
 
       {value ? (
-        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(200,226,53,0.2)' }}>
+        <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(8,72,53,0.2)' }}>
           <img
             src={getImageUrl(value)}
             alt="معاينة الصورة المرفوعة"
@@ -162,20 +162,20 @@ const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
             gap: 8,
             padding: '30px 16px',
             borderRadius: 12,
-            border: `2px dashed ${dragging ? '#C8E235' : 'rgba(200,226,53,0.3)'}`,
-            background: dragging ? 'rgba(200,226,53,0.08)' : 'transparent',
+            border: `2px dashed ${dragging ? '#084835' : 'rgba(8,72,53,0.3)'}`,
+            background: dragging ? 'rgba(8,72,53,0.08)' : 'transparent',
             cursor: uploading ? 'wait' : 'pointer',
             transition: 'all 0.15s ease'
           }}
         >
           {uploading ? (
             <>
-              <IoImageOutline size={26} style={{ color: '#C8E235' }} />
+              <IoImageOutline size={26} style={{ color: '#084835' }} />
               <div style={{ fontSize: 13, fontWeight: 600 }}>جارٍ الرفع…</div>
             </>
           ) : (
             <>
-              <IoCloudUploadOutline size={26} style={{ color: '#C8E235' }} />
+              <IoCloudUploadOutline size={26} style={{ color: '#084835' }} />
               <div style={{ fontSize: 13.5, fontWeight: 700 }}>اسحب الصورة هنا أو اضغط للاختيار</div>
               <div style={{ fontSize: 11.5, opacity: 0.7 }}>
                 {hint || 'JPG أو PNG أو WEBP — حتى 8 ميغابايت'}

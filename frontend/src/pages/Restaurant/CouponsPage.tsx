@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatPrice } from '@/utils/currency';
 import api from '../../services/api';
 import { Coupon } from '../../services/types';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -25,20 +26,20 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
-  yellow: '#F59E0B',
-  purple: '#A78BFA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
+  yellow: '#B45309',
+  purple: '#8B45B5',
 };
 
 const inputStyle: React.CSSProperties = {
@@ -246,11 +247,11 @@ const CouponsPage: React.FC = () => {
 
   const getStatusStyle = (status: string): React.CSSProperties => {
     switch (status) {
-      case 'active':    return { background: 'rgba(200,226,53,0.15)', color: C.accent };
-      case 'upcoming':  return { background: 'rgba(96,165,250,0.15)', color: C.blue };
-      case 'expired':   return { background: 'rgba(255,107,107,0.15)', color: C.red };
-      case 'exhausted': return { background: 'rgba(157,196,172,0.15)', color: C.muted };
-      default:          return { background: 'rgba(157,196,172,0.15)', color: C.muted };
+      case 'active':    return { background: 'rgba(8,72,53,0.15)', color: C.accent };
+      case 'upcoming':  return { background: 'rgba(37,99,235,0.15)', color: C.blue };
+      case 'expired':   return { background: 'rgba(214,69,69,0.15)', color: C.red };
+      case 'exhausted': return { background: 'rgba(95,115,106,0.15)', color: C.muted };
+      default:          return { background: 'rgba(95,115,106,0.15)', color: C.muted };
     }
   };
 
@@ -307,7 +308,7 @@ const CouponsPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>إدارة الكوبونات</h1>
           {isSuperAdmin && (
-            <span style={{ background: 'rgba(167,139,250,0.15)', color: C.purple, fontSize: 12, padding: '4px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ background: 'rgba(139,69,181,0.15)', color: C.purple, fontSize: 12, padding: '4px 10px', borderRadius: 20, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <IoShield size={14} />
               صلاحية كاملة
             </span>
@@ -409,7 +410,7 @@ const CouponsPage: React.FC = () => {
                   <tr
                     key={coupon.id}
                     style={{ borderTop: `1px solid ${C.border}` }}
-                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(200,226,53,0.04)'}
+                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(8,72,53,0.04)'}
                     onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
                   >
                     <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
@@ -428,12 +429,12 @@ const CouponsPage: React.FC = () => {
                     </td>
                     <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                       {coupon.isRestaurantOnly ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'rgba(96,165,250,0.15)', color: C.blue, borderRadius: 20, fontSize: 12 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'rgba(37,99,235,0.15)', color: C.blue, borderRadius: 20, fontSize: 12 }}>
                           <IoRestaurant size={13} />
                           داخل المطعم
                         </span>
                       ) : (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'rgba(200,226,53,0.15)', color: C.accent, borderRadius: 20, fontSize: 12 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: 'rgba(8,72,53,0.15)', color: C.accent, borderRadius: 20, fontSize: 12 }}>
                           <IoGlobe size={13} />
                           عام
                         </span>
@@ -446,10 +447,10 @@ const CouponsPage: React.FC = () => {
                       {coupon.discountType === 'percentage' ? (
                         <span style={{ fontWeight: 700, color: C.accent }}>{coupon.discountValue}%</span>
                       ) : (
-                        <span style={{ fontWeight: 700, color: C.accent }}>{coupon.discountValue} ر.س</span>
+                        <span style={{ fontWeight: 700, color: C.accent }}>{formatPrice(coupon.discountValue)}</span>
                       )}
                       {coupon.minOrder > 0 && (
-                        <p style={{ fontSize: 12, color: C.muted, margin: '2px 0 0' }}>الحد الأدنى: {coupon.minOrder} ر.س</p>
+                        <p style={{ fontSize: 12, color: C.muted, margin: '2px 0 0' }}>الحد الأدنى: {formatPrice(coupon.minOrder)}</p>
                       )}
                     </td>
                     <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontSize: 13, color: C.muted }}>

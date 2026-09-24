@@ -11,9 +11,9 @@ import toast from 'react-hot-toast';
 import { useCurrentPlan } from '../../hooks/stores/useCurrentPlan';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 interface StaffMember {
@@ -246,7 +246,7 @@ const StoreStaffPage: React.FC = () => {
                 {staff.map(member => (
                   <tr
                     key={member.id}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     style={{ borderBottom: '1px solid ' + C.border }}
                   >
@@ -265,8 +265,8 @@ const StoreStaffPage: React.FC = () => {
                         style={{
                           padding: '4px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 600,
                           ...(member.isActive
-                            ? { background: 'rgba(200,226,53,0.12)', color: C.accent }
-                            : { background: 'rgba(255,107,107,0.12)', color: C.red })
+                            ? { background: 'rgba(8,72,53,0.12)', color: C.accent }
+                            : { background: 'rgba(214,69,69,0.12)', color: C.red })
                         }}
                       >
                         {member.isActive ? 'نشط' : 'غير نشط'}
@@ -428,7 +428,7 @@ const StoreStaffPage: React.FC = () => {
 
           <div>
             <h3 style={{ color: C.text, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ width: 8, height: 8, background: '#FBB91F', borderRadius: '50%', display: 'inline-block' }}></span>
+              <span style={{ width: 8, height: 8, background: '#B7791F', borderRadius: '50%', display: 'inline-block' }}></span>
               المخزون
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 16 }}>

@@ -20,15 +20,15 @@ import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { CustomerCsvTools } from '@/components/common/CsvTools';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  warn: '#FB923C',
-  blue: '#60A5FA'
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  warn: '#C2410C',
+  blue: '#2563EB'
 };
 /** لوحة أدوات CSV — نفس ألوان الشاشة باسمٍ يفهمه المكوّن المشترك */
 const csvColors = {
@@ -209,7 +209,7 @@ const CustomersPage: React.FC = () => {
                 padding: '8px 14px', borderRadius: 20, fontSize: 12.5, fontWeight: 700,
                 cursor: 'pointer', fontFamily: 'inherit',
                 background: filter === option.key ? C.accent : 'transparent',
-                color: filter === option.key ? '#0A2018' : C.muted,
+                color: filter === option.key ? '#FFFFFF' : C.muted,
                 border: `1px solid ${filter === option.key ? C.accent : C.border}`
               }}
             >

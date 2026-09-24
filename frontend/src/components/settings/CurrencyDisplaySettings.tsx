@@ -133,7 +133,7 @@ const CurrencyDisplaySettings: React.FC<Props> = ({
                   padding: 0,
                 }}
               >
-                {enabled && <IoCheckmark size={14} color="#0A2018" />}
+                {enabled && <IoCheckmark size={14} color="#FFFFFF" />}
               </button>
 
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -174,11 +174,11 @@ const CurrencyDisplaySettings: React.FC<Props> = ({
       <div style={{
         display: 'flex', gap: 9, alignItems: 'flex-start',
         marginTop: 14, padding: '11px 13px', borderRadius: 12,
-        background: rateMissing ? `${C.warn || '#F59E0B'}14` : `${C.accent}10`,
-        border: `1px solid ${rateMissing ? `${C.warn || '#F59E0B'}44` : C.border}`,
+        background: rateMissing ? `${C.warn || '#B45309'}14` : `${C.accent}10`,
+        border: `1px solid ${rateMissing ? `${C.warn || '#B45309'}44` : C.border}`,
       }}>
         {rateMissing
-          ? <IoWarningOutline size={16} color={C.warn || '#F59E0B'} style={{ flexShrink: 0, marginTop: 2 }} />
+          ? <IoWarningOutline size={16} color={C.warn || '#B45309'} style={{ flexShrink: 0, marginTop: 2 }} />
           : <IoInformationCircle size={16} color={C.accent} style={{ flexShrink: 0, marginTop: 2 }} />}
         <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.75 }}>
           {rateMissing ? (

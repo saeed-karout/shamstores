@@ -155,7 +155,9 @@ class ApiService {
 
         if (error.response?.status === 403) {
           const errorMessage = error.response?.data?.error || 'لا تملك صلاحية الوصول';
-          toast.error(errorMessage);
+          // المعرّف = النصّ: طلباتٌ متوازية تُرفض للسبب نفسه كانت تكدّس
+          // الرسالة ذاتها مرّاتٍ فوق بعضها (شاشة الكاشير: ثلاث)
+          toast.error(errorMessage, { id: errorMessage });
           
           if (originalRequest?.url?.includes('/store/') && !localStorage.getItem('user')?.includes('storeId')) {
             window.location.href = '/dashboard';
@@ -237,9 +239,9 @@ class ApiService {
           error.response.status !== 401 &&
           error.response.status !== 404
         ) {
-          toast.error(error.response.data.error);
+          toast.error(error.response.data.error, { id: error.response.data.error });
         } else if (!handledByPage && error.response?.status !== 401 && !isSilentPath && !isPublicPath && error.response?.status !== 403 && error.response?.status !== 404) {
-          toast.error('حدث خطأ في الاتصال بالخادم');
+          toast.error('حدث خطأ في الاتصال بالخادم', { id: 'network-error' });
         }
         
         return Promise.reject(error);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatPrice } from '@/utils/currency';
 import { useAuth } from '../hooks/useAuth';
 import { useRestaurant } from '../hooks/useRestaurant';
 import api from '../services/api';
@@ -8,9 +9,9 @@ import Loader from '../components/common/Loader';
 import { IoRestaurant, IoFastFood, IoReceipt, IoPeople } from 'react-icons/io5';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  blue: '#60A5FA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  blue: '#2563EB',
 };
 
 interface DashboardStats {
@@ -72,11 +73,11 @@ const Dashboard: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20, marginBottom: 32 }}>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24 }}>
           <h3 style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>إجمالي المبيعات اليوم</h3>
-          <p style={{ color: C.accent, fontSize: 26, fontWeight: 800 }}>{stats?.totalSales?.toFixed(2)} ر.س</p>
+          <p style={{ color: C.accent, fontSize: 26, fontWeight: 800 }}>{formatPrice(stats?.totalSales)}</p>
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24 }}>
           <h3 style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>متوسط قيمة الطلب</h3>
-          <p style={{ color: C.blue, fontSize: 26, fontWeight: 800 }}>{stats?.averageOrder?.toFixed(2)} ر.س</p>
+          <p style={{ color: C.blue, fontSize: 26, fontWeight: 800 }}>{formatPrice(stats?.averageOrder)}</p>
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 24 }}>
           <h3 style={{ color: C.muted, fontSize: 13, marginBottom: 8 }}>حالات الطلبات</h3>

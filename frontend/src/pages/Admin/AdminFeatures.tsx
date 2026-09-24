@@ -16,9 +16,9 @@ import toast from 'react-hot-toast';
 import FeatureRequestsPanel from '@/components/admin/FeatureRequestsPanel';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', orange: '#C2410C',
 };
 
 // ✅ تعريف أنواع FeatureGroup و FeatureCategory
@@ -281,10 +281,10 @@ const AdminFeatures: React.FC = () => {
     const colors: Record<FeatureGroup, { bg: string; color: string }> = {
       basic: { bg: 'rgba(156,163,175,0.12)', color: '#9CA3AF' },
       marketing: { bg: 'rgba(244,114,182,0.12)', color: '#F472B6' },
-      advanced: { bg: 'rgba(167,139,250,0.12)', color: '#A78BFA' },
-      payment: { bg: 'rgba(200,226,53,0.12)', color: '#C8E235' },
-      delivery: { bg: 'rgba(251,146,60,0.12)', color: '#FB923C' },
-      analytics: { bg: 'rgba(96,165,250,0.12)', color: '#60A5FA' },
+      advanced: { bg: 'rgba(139,69,181,0.12)', color: '#8B45B5' },
+      payment: { bg: 'rgba(8,72,53,0.12)', color: '#084835' },
+      delivery: { bg: 'rgba(194,65,12,0.12)', color: '#C2410C' },
+      analytics: { bg: 'rgba(37,99,235,0.12)', color: '#2563EB' },
       integration: { bg: 'rgba(99,102,241,0.12)', color: '#6366F1' },
     };
 
@@ -431,7 +431,7 @@ const AdminFeatures: React.FC = () => {
                 {filteredFeatures.map((feature) => (
                   <tr
                     key={feature.id}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     style={{ borderBottom: '1px solid ' + C.border }}
                   >
@@ -478,7 +478,7 @@ const AdminFeatures: React.FC = () => {
                       <button
                         onClick={() => handleToggleStatus(feature)}
                         style={{
-                          background: feature.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)',
+                          background: feature.isActive ? 'rgba(8,72,53,0.12)' : 'rgba(214,69,69,0.12)',
                           border: 'none',
                           borderRadius: 6,
                           padding: '4px 8px',

@@ -28,14 +28,14 @@ import { useAuth } from '@/hooks/useAuth';
 import Loader from '@/components/common/Loader';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B'
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545'
 };
 
 // النصّ عربيٌّ هنا لأنه **مفتاح** القاموس لا نصَّ عرض: الخريطة خارج
@@ -199,7 +199,7 @@ const ProfilePage: React.FC = () => {
                   width: 82,
                   height: 82,
                   borderRadius: '50%',
-                  background: 'rgba(200,226,53,0.16)',
+                  background: 'rgba(8,72,53,0.16)',
                   color: C.accent,
                   display: 'grid',
                   placeItems: 'center',

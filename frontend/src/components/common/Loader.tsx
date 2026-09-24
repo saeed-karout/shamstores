@@ -14,9 +14,9 @@ const Loader: React.FC<LoaderProps> = ({ size = 'md', fullScreen = false }) => {
   const s = sizes[size];
   const theme = useTheme();
   
-  const primaryColor = theme.accentColor || theme.primaryColor || '#C8E235';
-  const bgColor = theme.backgroundColor || '#082E24';
-  const mutedColor = theme.mutedColor || '#9DC4AC';
+  const primaryColor = theme.accentColor || theme.primaryColor || '#084835';
+  const bgColor = theme.backgroundColor || '#F4F7F4';
+  const mutedColor = theme.mutedColor || '#5F736A';
 
   const spinner = (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>

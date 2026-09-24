@@ -1,5 +1,6 @@
 // pages/Store/StoreAnalyticsPage.tsx
 
+import { formatPrice } from '@/utils/currency';
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Loader from '../../components/common/Loader';
@@ -14,20 +15,20 @@ import toast from 'react-hot-toast';
 import VisitsPanel from '../../components/store/VisitsPanel';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
-  yellow: '#F59E0B',
-  purple: '#A78BFA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
+  yellow: '#B45309',
+  purple: '#8B45B5',
 };
 
 interface DailyStat { date: string; orders: number; sales: number; }
@@ -132,8 +133,8 @@ const StoreAnalyticsPage: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
         {[
           { label: 'إجمالي الطلبات', value: stats.totalOrders, sub: `خلال ${getPeriodTitle()}`, color: C.blue, Icon: IoCart },
-          { label: 'إجمالي المبيعات', value: `${(stats.totalSales || 0).toFixed(2)} ر.س`, sub: `خلال ${getPeriodTitle()}`, color: C.accent, Icon: IoCash },
-          { label: 'متوسط قيمة الطلب', value: `${(stats.averageOrder || 0).toFixed(2)} ر.س`, sub: 'لكل طلب', color: C.purple, Icon: IoTrendingUp },
+          { label: 'إجمالي المبيعات', value: `${formatPrice((stats.totalSales || 0))}`, sub: `خلال ${getPeriodTitle()}`, color: C.accent, Icon: IoCash },
+          { label: 'متوسط قيمة الطلب', value: `${formatPrice((stats.averageOrder || 0))}`, sub: 'لكل طلب', color: C.purple, Icon: IoTrendingUp },
           { label: 'إجمالي المنتجات', value: stats.totalProducts, sub: 'في المتجر', color: C.muted, Icon: IoCube },
           { label: 'منتجات منخفضة', value: stats.lowStock || 0, sub: 'تحتاج إعادة تخزين', color: (stats.lowStock || 0) > 0 ? C.red : C.accent, Icon: IoWarning },
         ].map((stat, i) => (
@@ -164,7 +165,7 @@ const StoreAnalyticsPage: React.FC = () => {
                 <Tooltip contentStyle={tooltipStyle} labelFormatter={(date) => date ? format(new Date(date), 'dd/MM/yyyy') : ''} />
                 <Legend wrapperStyle={{ color: C.muted }} />
                 <Line yAxisId="left" type="monotone" dataKey="orders" stroke={C.blue} name="عدد الطلبات" strokeWidth={2} dot={false} />
-                <Line yAxisId="right" type="monotone" dataKey="sales" stroke={C.accent} name="المبيعات (ر.س)" strokeWidth={2} dot={false} />
+                <Line yAxisId="right" type="monotone" dataKey="sales" stroke={C.accent} name="المبيعات (ل.س)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -245,9 +246,9 @@ const StoreAnalyticsPage: React.FC = () => {
                       </td>
                       <td style={{ padding: '14px 20px', color: C.text, fontWeight: 500 }}>{item.name || 'غير معروف'}</td>
                       <td style={{ padding: '14px 20px' }}>
-                        <span style={{ background: `rgba(96,165,250,0.15)`, color: C.blue, padding: '3px 10px', borderRadius: 12, fontSize: 13 }}>{item.count || 0}</span>
+                        <span style={{ background: `rgba(37,99,235,0.15)`, color: C.blue, padding: '3px 10px', borderRadius: 12, fontSize: 13 }}>{item.count || 0}</span>
                       </td>
-                      <td style={{ padding: '14px 20px', color: C.accent, fontWeight: 600 }}>{(item.total || 0).toFixed(2)} ر.س</td>
+                      <td style={{ padding: '14px 20px', color: C.accent, fontWeight: 600 }}>{formatPrice((item.total || 0))}</td>
                       <td style={{ padding: '14px 20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{ flex: 1, background: C.surf, borderRadius: 4, height: 6 }}>
@@ -271,7 +272,7 @@ const StoreAnalyticsPage: React.FC = () => {
 
       {/* تنبيه المخزون المنخفض */}
       {(stats.lowStock || 0) > 0 && (
-        <div style={{ marginTop: 24, background: `rgba(245,158,11,0.1)`, border: `1px solid rgba(245,158,11,0.3)`, borderRadius: 16, padding: 16, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ marginTop: 24, background: `rgba(180,83,9,0.1)`, border: `1px solid rgba(180,83,9,0.3)`, borderRadius: 16, padding: 16, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <IoWarning style={{ color: C.yellow, fontSize: 20, flexShrink: 0, marginTop: 2 }} />
           <div>
             <p style={{ color: C.yellow, fontWeight: 600, margin: 0 }}>تنبيه: منتجات منخفضة المخزون</p>

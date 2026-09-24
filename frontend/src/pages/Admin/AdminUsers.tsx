@@ -8,20 +8,20 @@ import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
-  yellow: '#F59E0B',
-  purple: '#A78BFA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
+  yellow: '#B45309',
+  purple: '#8B45B5',
 };
 
 interface User {
@@ -219,7 +219,7 @@ const AdminUsers: React.FC = () => {
                   <tr
                     key={user.id}
                     style={{ transition: 'background 0.15s' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
                     <td style={{ ...tdStyle, color: C.muted, width: 50 }}>{index + 1}</td>

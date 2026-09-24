@@ -1,5 +1,6 @@
 // pages/Store/StoreQRCodesPage.tsx
 
+import { formatPrice } from '@/utils/currency';
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useStore } from '../../hooks/useStore';
@@ -10,9 +11,9 @@ import { IoQrCode, IoDownload, IoPrint, IoStorefront, IoCube, IoCart, IoGlobe } 
 
 // ✅ الألوان الثابتة فقط للعناصر التي لا تتغير
 const staticColors = {
-  red: '#FF6B6B',
-  blue: '#60A5FA',
-  purple: '#A78BFA',
+  red: '#D64545',
+  blue: '#2563EB',
+  purple: '#8B45B5',
 };
 
 interface Product {
@@ -34,15 +35,15 @@ const StoreQRCodesPage: React.FC = () => {
 
   // ✅ استخدام ألوان المتجر الديناميكية
   const dynamicColors = {
-    bg: theme.backgroundColor || '#082E24',
-    card: theme.cardBgColor || '#112E23',
-    surf: theme.surfaceColor || '#0F3D31',
-    accent: theme.primaryColor || '#C8E235',
-    text: theme.textColor || '#E8F5E9',
-    muted: theme.mutedColor || '#9DC4AC',
-    border: `rgba(200,226,53,0.15)`,
-    blue: '#60A5FA',
-    purple: '#A78BFA',
+    bg: theme.backgroundColor || '#F4F7F4',
+    card: theme.cardBgColor || '#FFFFFF',
+    surf: theme.surfaceColor || '#F1F5F2',
+    accent: theme.primaryColor || '#084835',
+    text: theme.textColor || '#10231B',
+    muted: theme.mutedColor || '#5F736A',
+    border: `rgba(8,72,53,0.15)`,
+    blue: '#2563EB',
+    purple: '#8B45B5',
   };
 
   // ✅ دالة للحصول على الرابط الصحيح مع subdomain (بدون process.env)
@@ -169,11 +170,11 @@ const StoreQRCodesPage: React.FC = () => {
                         )}
                         <div style={{ marginTop: 8 }}>
                           <span style={{ color: dynamicColors.accent, fontWeight: 700, fontSize: 17 }}>
-                            {product.discountedPrice || product.price} ر.س
+                            {formatPrice(product.discountedPrice || product.price)}
                           </span>
                           {product.discountedPrice && (
                             <span style={{ color: dynamicColors.muted, fontSize: 13, textDecoration: 'line-through', marginRight: 8 }}>
-                              {product.price} ر.س
+                              {formatPrice(product.price)}
                             </span>
                           )}
                         </div>
@@ -225,7 +226,7 @@ const StoreQRCodesPage: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, marginBottom: 32 }}>
           <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 40, height: 40, background: 'rgba(96,165,250,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 40, height: 40, background: 'rgba(37,99,235,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <IoStorefront style={{ color: staticColors.blue, fontSize: 20 }} />
               </div>
               <div style={{ flex: 1 }}>
@@ -249,7 +250,7 @@ const StoreQRCodesPage: React.FC = () => {
           </div>
           <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 40, height: 40, background: 'rgba(167,139,250,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 40, height: 40, background: 'rgba(139,69,181,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <IoCart style={{ color: staticColors.purple, fontSize: 20 }} />
               </div>
               <div>
@@ -261,7 +262,7 @@ const StoreQRCodesPage: React.FC = () => {
         </div>
 
         {/* نصائح */}
-        <div style={{ padding: 16, background: 'rgba(96,165,250,0.08)', borderRadius: 12, border: '1px solid rgba(96,165,250,0.2)' }}>
+        <div style={{ padding: 16, background: 'rgba(37,99,235,0.08)', borderRadius: 12, border: '1px solid rgba(37,99,235,0.2)' }}>
           <h3 style={{ color: staticColors.blue, fontWeight: 600, marginBottom: 8 }}>💡 نصائح لاستخدام QR في متجرك:</h3>
           <ul style={{ color: dynamicColors.muted, fontSize: 13, lineHeight: 2 }}>
             <li>• ضع QR المتجر في مكان واضح ليزوره العملاء مباشرة</li>

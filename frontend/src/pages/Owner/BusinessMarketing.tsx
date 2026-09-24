@@ -33,14 +33,14 @@ const ALLOWED_SECTIONS = [
     title: 'البانرات',
     icon: <IoImage size={20} />,
     description: 'بانرات ترويجية تظهر في أعلى الصفحة لجذب انتباه العملاء',
-    color: '#60A5FA'
+    color: '#2563EB'
   },
   {
     type: 'offer' as MarketingSectionType,
     title: 'العروض الخاصة',
     icon: <IoPricetag size={20} />,
     description: 'عروض وخصومات خاصة لجذب العملاء وزيادة المبيعات',
-    color: '#C8E235'
+    color: '#084835'
   }
 ];
 
@@ -50,14 +50,14 @@ const BusinessMarketing: React.FC = () => {
   const navigate = useNavigate();
 
   const dynamicColors = {
-    bg: theme.backgroundColor || '#082E24',
-    card: theme.cardBgColor || '#112E23',
-    surf: theme.surfaceColor || '#0F3D31',
-    accent: theme.primaryColor || '#C8E235',
-    text: theme.textColor || '#E8F5E9',
-    muted: theme.mutedColor || '#9DC4AC',
-    border: `rgba(200,226,53,0.15)`,
-    blue: '#60A5FA',
+    bg: theme.backgroundColor || '#F4F7F4',
+    card: theme.cardBgColor || '#FFFFFF',
+    surf: theme.surfaceColor || '#F1F5F2',
+    accent: theme.primaryColor || '#084835',
+    text: theme.textColor || '#10231B',
+    muted: theme.mutedColor || '#5F736A',
+    border: `rgba(8,72,53,0.15)`,
+    blue: '#2563EB',
   };
 
   const [loading, setLoading] = useState(true);
@@ -256,7 +256,7 @@ const fetchMarketingData = async () => {
     return (
       <div style={{ minHeight: '100vh', background: dynamicColors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cairo, sans-serif' }}>
         <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 20, padding: 32, maxWidth: 420, textAlign: 'center' }}>
-          <IoWarning size={64} style={{ color: '#FBBF24', margin: '0 auto 16px' }} />
+          <IoWarning size={64} style={{ color: '#B7791F', margin: '0 auto 16px' }} />
           <h2 style={{ color: dynamicColors.text, fontSize: 20, fontWeight: 700, marginBottom: 8 }}>لم يتم العثور على نشاط تجاري</h2>
           <p style={{ color: dynamicColors.muted, marginBottom: 24 }}>يبدو أنه لا يوجد لديك متجر أو مطعم. يرجى إنشاء نشاط تجاري أولاً.</p>
           <button

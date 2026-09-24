@@ -10,17 +10,17 @@ import ImageUploadField from '@/components/common/ImageUploadField';
 import { formatPrice } from '@/utils/currency';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  blue: '#60A5FA',
-  purple: '#A78BFA',
-  yellow: '#FBBF24',
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  blue: '#2563EB',
+  purple: '#8B45B5',
+  yellow: '#B7791F',
 };
 
 interface Advertisement {

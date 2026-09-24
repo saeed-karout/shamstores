@@ -1,5 +1,6 @@
 // frontend/src/pages/Store/StorePlansPage.tsx
 
+import { planPriceText } from '@/utils/planPrice';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IoLogoWhatsapp, IoGlobe, IoStatsChart, IoQrCode, IoLanguage, IoMegaphone, IoTicket, IoPeople, IoStorefront, IoCart, IoAlertCircle, IoSend } from 'react-icons/io5';
@@ -11,17 +12,17 @@ import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  blue: '#60A5FA',
-  purple: '#A78BFA',
-  yellow: '#FBBF24',
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  blue: '#2563EB',
+  purple: '#8B45B5',
+  yellow: '#B7791F',
 };
 
 const monthsOptions = [
@@ -227,8 +228,8 @@ const StorePlansPage: React.FC = () => {
                 <h3 style={{ color: C.text, fontSize: 20, fontWeight: 700, marginBottom: 4 }}>{plan.name}</h3>
                 <p style={{ color: C.muted, fontSize: 13 }}>{plan.description}</p>
                 <div style={{ marginTop: 12 }}>
-                  <span style={{ color: C.accent, fontSize: 32, fontWeight: 800 }}>{plan.price}</span>
-                  <span style={{ color: C.muted, fontSize: 14 }}> ر.س / شهر</span>
+                  <span style={{ color: C.accent, fontSize: 32, fontWeight: 800 }}>{planPriceText(plan)}</span>
+                  <span style={{ color: C.muted, fontSize: 14 }}>{plan.price > 0 ? ' / شهر' : ''}</span>
                 </div>
               </div>
 
@@ -286,7 +287,7 @@ const StorePlansPage: React.FC = () => {
                 >
                   {isCurrentPlan ? 'الخطة الحالية' : (canUpgrade ? 'ترقية' : 'غير متاح')}
                 </button>
-              <div style={{ position: 'absolute', top: 12, right: 12, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(8,46,36,0.7)', border: `1px solid ${C.border}`, borderRadius: 999, padding: '4px 10px' }}>
+              <div style={{ position: 'absolute', top: 12, right: 12, display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(244,247,244,0.7)', border: `1px solid ${C.border}`, borderRadius: 999, padding: '4px 10px' }}>
                 <span style={{ width: 18, height: 18, borderRadius: 5, background: C.accent, color: C.bg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>ش</span>
                 <span style={{ color: C.text, fontSize: 11, fontWeight: 700 }}>شام ستورز</span>
               </div>
@@ -329,7 +330,7 @@ const StorePlansPage: React.FC = () => {
             <div style={{ background: C.surf, padding: 16, borderRadius: 10, marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ color: C.muted }}>السعر الشهري</span>
-                <span style={{ color: C.text }}>{selectedPlan.price} ر.س</span>
+                <span style={{ color: C.text }}>{planPriceText(selectedPlan)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ color: C.muted }}>عدد الأشهر</span>
@@ -337,7 +338,7 @@ const StorePlansPage: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <span style={{ color: C.muted }}>السعر الكلي</span>
-                <span style={{ color: C.text }}>{selectedPlan.price * selectedMonths} ر.س</span>
+                <span style={{ color: C.text }}>{planPriceText(selectedPlan, selectedPlan.price * selectedMonths)}</span>
               </div>
               {selectedMonths > 1 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -348,12 +349,12 @@ const StorePlansPage: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
                 <span style={{ color: C.text, fontWeight: 700 }}>الإجمالي</span>
                 <span style={{ color: C.accent, fontWeight: 700, fontSize: 18 }}>
-                  {calculatePrice(selectedPlan.price, selectedMonths).toFixed(2)} ر.س
+                  {planPriceText(selectedPlan, calculatePrice(selectedPlan.price, selectedMonths))}
                 </span>
               </div>
             </div>
 
-            <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 12, padding: 12, marginBottom: 20 }}>
+            <div style={{ background: 'rgba(183,121,31,0.08)', border: '1px solid rgba(183,121,31,0.2)', borderRadius: 12, padding: 12, marginBottom: 20 }}>
               <p style={{ color: C.muted, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <IoAlertCircle size={18} style={{ color: C.yellow }} />
                 سيتم إرسال طلب الترقية إلى الإدارة للمراجعة. سيتم تفعيل الخطة بعد الموافقة عليها.

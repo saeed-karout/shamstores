@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import '@/styles/orders.css';
+import '@/styles/catalog.css';
+import { formatPrice } from '@/utils/currency';
 import { useMenu } from '../../hooks/useMenu';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,26 +10,26 @@ import { Category, MenuItem } from '../../services/types';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
-import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose } from 'react-icons/io5';
+import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoSearch, IoLayersOutline, IoImage } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
-  yellow: '#F59E0B',
-  purple: '#A78BFA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
+  yellow: '#B45309',
+  purple: '#8B45B5',
 };
 
 interface Size {
@@ -373,191 +376,220 @@ const MenuPage: React.FC = () => {
     return restaurant.linkedBranches?.find((branch) => branch.id === restaurantId)?.linkLabel || '';
   };
 
+  const [query, setQuery] = useState('');
+  const [catFilter, setCatFilter] = useState<string>('all');
+  const [showCats, setShowCats] = useState(false);
+
+  const visibleItems = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return (menuItems || []).filter(
+      (i) =>
+        (catFilter === 'all' || i.categoryId === catFilter) &&
+        (!q || [i.name, i.nameEn].some((f) => (f || '').toLowerCase().includes(q)))
+    );
+  }, [menuItems, catFilter, query]);
+
   if (loading || restaurantLoading) return <Loader fullScreen />;
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: 24, direction: 'rtl', color: C.text }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: C.text, margin: 0 }}>إدارة القائمة</h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {branchOptions.length > 0 && (
-            <select
-              value={selectedRestaurantId}
-              onChange={(e) => setSelectedRestaurantId(e.target.value)}
-              style={{ background: C.card, color: C.text, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 12px', minWidth: 220 }}
+    <div className="ss-page pc-page">
+      {/* ===== الأدوات ===== */}
+      <div className="pc-toolbar">
+        <label className="ob-search pc-search">
+          <IoSearch size={18} aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="ابحث باسم الطبق"
+            aria-label="بحث في القائمة"
+          />
+        </label>
+        {branchOptions.length > 1 && (
+          <select
+            className="pc-select"
+            value={selectedRestaurantId}
+            onChange={(e) => setSelectedRestaurantId(e.target.value)}
+            aria-label="الفرع"
+          >
+            <option value={restaurant?.id || ''}>الفرع الحالي: {restaurant?.name || ''}</option>
+            <option value="all">كل الفروع</option>
+            {restaurant?.linkedBranches?.map((branch) => (
+              <option key={branch.id} value={branch.id}>{branch.name}</option>
+            ))}
+          </select>
+        )}
+        {(isSuperAdmin || isOwner) && (
+          <div className="pc-toolbar-actions">
+            <button
+              type="button"
+              className="ss-btn ss-btn-ghost"
+              onClick={() => selectedRestaurantId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة فئة') : handleOpenCategoryModal()}
+              disabled={selectedRestaurantId === 'all'}
             >
-              <option value={restaurant?.id || ''}>الفرع الحالي: {restaurant?.name || ''}</option>
-              <option value="all">كل الفروع</option>
-              {restaurant?.linkedBranches?.map((branch) => (
-                <option key={branch.id} value={branch.id}>{branch.name}</option>
-              ))}
-            </select>
-          )}
-          {(isSuperAdmin || isOwner) && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => selectedRestaurantId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة فئة') : handleOpenCategoryModal()}
-                disabled={selectedRestaurantId === 'all'}
-                style={{ background: C.surf, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: 10, cursor: selectedRestaurantId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, opacity: selectedRestaurantId === 'all' ? 0.6 : 1 }}
-              >
-                <IoAdd /> إضافة فئة
-              </button>
-              <button
-                onClick={() => selectedRestaurantId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة عنصر') : handleOpenItemModal()}
-                disabled={selectedRestaurantId === 'all'}
-                style={{ background: C.accent, color: C.bg, padding: '8px 16px', borderRadius: 10, cursor: selectedRestaurantId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none', opacity: selectedRestaurantId === 'all' ? 0.7 : 1 }}
-              >
-                <IoAdd /> إضافة عنصر
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Categories */}
-      <div style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 16 }}>الفئات</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
-          {categories.map(cat => (
-            <div key={cat.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h3 style={{ fontWeight: 600, color: C.text, margin: 0 }}>{cat.name}</h3>
-                  {cat.nameEn && <p style={{ fontSize: 13, color: C.muted, margin: '4px 0 0' }}>{cat.nameEn}</p>}
-                  {getBranchLabel(cat.restaurantId) && <p style={{ fontSize: 12, color: C.accent, margin: '4px 0 0' }}>{getBranchLabel(cat.restaurantId)}</p>}
-                </div>
-                {(isSuperAdmin || isOwner) && (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => handleOpenCategoryModal(cat)} style={{ background: 'none', border: 'none', color: C.accent, cursor: 'pointer', padding: 4 }}>
-                      <IoPencil size={18} />
-                    </button>
-                    <button onClick={() => handleDeleteCategory(cat.id)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', padding: 4 }}>
-                      <IoTrash size={18} />
-                    </button>
-                  </div>
-                )}
-              </div>
-              {cat.image && (
-                <img src={getImageUrl(cat.image)} alt={cat.name} style={{ width: '100%', height: 120, objectFit: 'cover', marginTop: 12, borderRadius: 8 }} />
-              )}
-              <p style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>{cat.description}</p>
-              <p style={{ fontSize: 12, color: C.muted, marginTop: 4, opacity: 0.7 }}>
-                {menuItems.filter(i => i.categoryId === cat.id).length} عنصر
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Menu Items */}
-      <div>
-        <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 16 }}>عناصر القائمة</h2>
-        {loading ? (
-          <Loader />
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            {menuItems && menuItems.length > 0 ? (
-              menuItems.map((item) => {
-                const basePrice = item.discountedPrice ? Number(item.discountedPrice) : Number(item.price);
-                return (
-                  <div key={item.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 20 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div>
-                        <h3 style={{ fontWeight: 600, color: C.text, margin: 0 }}>{item.name}</h3>
-                        {item.nameEn && <p style={{ fontSize: 13, color: C.muted, margin: '4px 0 0' }}>{item.nameEn}</p>}
-                        {getBranchLabel(item.restaurantId) && <p style={{ fontSize: 12, color: C.accent, margin: '4px 0 0' }}>{getBranchLabel(item.restaurantId)}</p>}
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button
-                          onClick={() => toggleAvailability(item.id, item.restaurantId)}
-                          style={{ background: 'none', border: 'none', color: item.isAvailable ? C.accent : C.muted, cursor: 'pointer', padding: 4 }}
-                          title={item.isAvailable ? 'إخفاء' : 'إظهار'}
-                        >
-                          {item.isAvailable ? <IoEye size={18} /> : <IoEyeOff size={18} />}
-                        </button>
-                        {(isSuperAdmin || isOwner) && (
-                          <>
-                            <button onClick={() => handleOpenItemModal(item)} style={{ background: 'none', border: 'none', color: C.accent, cursor: 'pointer', padding: 4 }}>
-                              <IoPencil size={18} />
-                            </button>
-                            <button onClick={() => handleDeleteItem(item.id)} style={{ background: 'none', border: 'none', color: C.red, cursor: 'pointer', padding: 4 }}>
-                              <IoTrash size={18} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {item.image && (
-                      <img src={getImageUrl(item.image)} alt={item.name} style={{ width: '100%', height: 120, objectFit: 'cover', marginTop: 12, borderRadius: 8 }} />
-                    )}
-
-                    <p style={{ fontSize: 13, color: C.muted, marginTop: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {item.description}
-                    </p>
-
-                    {item.hasSizes && item.sizes && (
-                      <div style={{ marginTop: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: C.muted }}>المقاسات:</span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                          {Object.entries(typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes).map(([size, price]) => {
-                            const priceNum = Number(price);
-                            const priceColor = priceNum < basePrice ? C.accent : priceNum > basePrice ? C.blue : C.muted;
-                            return (
-                              <span key={size} style={{ background: C.surfL, padding: '2px 8px', borderRadius: 6, fontSize: 12, color: C.text }}>
-                                {size}: <span style={{ fontWeight: 700, color: priceColor }}>{priceNum.toFixed(2)} ل.س</span>
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {item.hasAddons && item.addons && (
-                      <div style={{ marginTop: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: C.muted }}>الإضافات:</span>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                          {Object.entries(typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons).map(([id, addon]: [string, any]) => (
-                            <span key={id} style={{ background: C.prim, padding: '2px 8px', borderRadius: 6, fontSize: 12, color: C.text }}>
-                              {addon.name}: <span style={{ fontWeight: 700 }}>{Number(addon.price).toFixed(2)} ل.س</span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-                      <span style={{ fontSize: 13, color: C.muted }}>
-                        {categories.find(c => c.id === item.categoryId)?.name || 'بدون فئة'}
-                      </span>
-                      <div>
-                        {item.discountedPrice && Number(item.discountedPrice) > 0 ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontWeight: 700, color: C.accent }}>{Number(item.discountedPrice).toFixed(2)} ل.س</span>
-                            <span style={{ fontSize: 12, color: C.muted, textDecoration: 'line-through' }}>{Number(item.price).toFixed(2)} ل.س</span>
-                          </div>
-                        ) : (
-                          <span style={{ fontWeight: 700, color: C.text }}>{Number(item.price).toFixed(2)} ل.س</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: C.muted, marginTop: 6, opacity: 0.7 }}>
-                      <span>مشاهدات: {item.viewsCount || 0}</span>
-                      <span>طلبات: {item.ordersCount || 0}</span>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '32px 0', color: C.muted }}>
-                لا توجد عناصر في القائمة. أضف عنصراً جديداً!
-              </div>
-            )}
+              <IoAdd size={18} /> فئة
+            </button>
+            <button
+              type="button"
+              className="ss-btn ss-btn-primary"
+              onClick={() => selectedRestaurantId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة طبق') : handleOpenItemModal()}
+              disabled={selectedRestaurantId === 'all'}
+            >
+              <IoAdd size={18} /> إضافة طبق
+            </button>
           </div>
         )}
       </div>
+
+      {/* ===== الفئات: شريط تصفية، وإدارتها عند الطلب ===== */}
+      <div className="pc-cats">
+        <div className="ob-tabs" role="tablist" aria-label="تصفية حسب الفئة">
+          <button type="button" role="tab" className="ob-tab" aria-selected={catFilter === 'all'} onClick={() => setCatFilter('all')}>
+            الكل <span>{menuItems.length}</span>
+          </button>
+          {categories.map((cat) => (
+            <button key={cat.id} type="button" role="tab" className="ob-tab" aria-selected={catFilter === cat.id} onClick={() => setCatFilter(cat.id)}>
+              {cat.name} <span>{menuItems.filter((i) => i.categoryId === cat.id).length}</span>
+            </button>
+          ))}
+        </div>
+        {(isSuperAdmin || isOwner) && categories.length > 0 && (
+          <button type="button" className="pc-link" onClick={() => setShowCats((v) => !v)} aria-expanded={showCats}>
+            <IoLayersOutline size={16} /> {showCats ? 'إخفاء إدارة الفئات' : 'إدارة الفئات'}
+          </button>
+        )}
+      </div>
+
+      {(showCats || categories.length === 0) && (
+        <section className="ss-card pc-panel" aria-labelledby="cats-title">
+          <header className="pc-panel-head">
+            <div>
+              <h2 id="cats-title">الفئات</h2>
+              <p>{categories.length ? `${categories.length} فئة في قائمتك` : 'الفئات أقسام قائمتك: مقبلات، مشاوي، حلويات…'}</p>
+            </div>
+          </header>
+          {categories.length === 0 ? (
+            <div className="ob-empty">
+              <b>لا فئات بعد</b>
+              <p>أنشئ فئتك الأولى ثم أضف أطباقك إليها.</p>
+              {(isSuperAdmin || isOwner) && (
+                <button type="button" onClick={() => handleOpenCategoryModal()}>إضافة فئة</button>
+              )}
+            </div>
+          ) : (
+            <ul className="pc-cat-list">
+              {categories.map((cat) => (
+                <li key={cat.id}>
+                  <span className="pc-cat-thumb">
+                    {cat.image ? <img src={getImageUrl(cat.image)} alt="" loading="lazy" /> : <IoLayersOutline size={18} />}
+                  </span>
+                  <span className="pc-cat-main">
+                    <b>{cat.name}</b>
+                    <small>
+                      {menuItems.filter((i) => i.categoryId === cat.id).length} طبق
+                      {getBranchLabel(cat.restaurantId) ? ` · ${getBranchLabel(cat.restaurantId)}` : ''}
+                    </small>
+                  </span>
+                  {(isSuperAdmin || isOwner) && (
+                    <span className="pc-actions">
+                      <button type="button" className="pc-act" onClick={() => handleOpenCategoryModal(cat)} aria-label={`تعديل ${cat.name}`}>
+                        <IoPencil size={16} />
+                      </button>
+                      <button type="button" className="pc-act is-danger" onClick={() => handleDeleteCategory(cat.id)} aria-label={`حذف ${cat.name}`}>
+                        <IoTrash size={16} />
+                      </button>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* ===== الأطباق ===== */}
+      <section aria-labelledby="items-title">
+        <div className="pc-section-head">
+          <h2 id="items-title">
+            {catFilter === 'all' ? 'كلّ الأطباق' : categories.find((c) => c.id === catFilter)?.name || 'الأطباق'}
+            <span>{visibleItems.length}</span>
+          </h2>
+        </div>
+
+        {visibleItems.length === 0 ? (
+          <div className="ss-card">
+            <div className="ob-empty">
+              <b>{menuItems.length === 0 ? 'قائمتك فارغة' : 'لا أطباق تطابق البحث'}</b>
+              <p>{menuItems.length === 0 ? 'أضف طبقك الأوّل بصورةٍ شهيّة وسعر — ويظهر لزبائنك فوراً.' : 'جرّب كلمةً أخرى أو فئةً أخرى.'}</p>
+              {menuItems.length === 0 && (isSuperAdmin || isOwner) && categories.length > 0 && (
+                <button type="button" onClick={() => handleOpenItemModal()}>إضافة طبق</button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="pc-grid">
+            {visibleItems.map((item) => {
+              const sale = item.discountedPrice && Number(item.discountedPrice) > 0 ? Number(item.discountedPrice) : null;
+              const sizesCount = item.hasSizes && item.sizes ? Object.keys(typeof item.sizes === 'string' ? JSON.parse(item.sizes) : item.sizes).length : 0;
+              const addonsCount = item.hasAddons && item.addons ? Object.keys(typeof item.addons === 'string' ? JSON.parse(item.addons) : item.addons).length : 0;
+              const extras = [sizesCount ? `${sizesCount} أحجام` : '', addonsCount ? `${addonsCount} إضافات` : ''].filter(Boolean).join(' · ');
+              return (
+                <article key={item.id} className={`pc-card ${item.isAvailable ? '' : 'is-hidden'}`}>
+                  <div className="pc-media">
+                    {item.image ? (
+                      <img src={getImageUrl(item.image)} alt={item.name} loading="lazy" />
+                    ) : (
+                      <span className="pc-noimg"><IoImage size={30} /> بلا صورة</span>
+                    )}
+                    <span className="pc-badges">
+                      {sale !== null && <span className="pc-badge is-sale">عرض</span>}
+                      {!item.isAvailable && <span className="pc-badge is-dark">مخفيّ</span>}
+                    </span>
+                  </div>
+
+                  <div className="pc-body">
+                    <span className="pc-cat">{categories.find((c) => c.id === item.categoryId)?.name || 'بدون فئة'}</span>
+                    <h3>{item.name}</h3>
+                    {getBranchLabel(item.restaurantId) && selectedRestaurantId === 'all' && <small className="pc-branch">{getBranchLabel(item.restaurantId)}</small>}
+                    <div className="pc-price">
+                      <strong>{formatPrice(sale ?? Number(item.price))}</strong>
+                      {sale !== null && <s>{formatPrice(Number(item.price))}</s>}
+                    </div>
+                    {extras && <small className="pc-extras">{extras}</small>}
+                    <small className="pc-meta">
+                      {item.ordersCount || 0} طلب · {item.viewsCount || 0} مشاهدة
+                    </small>
+                  </div>
+
+                  <footer className="pc-foot">
+                    <button
+                      type="button"
+                      className={`pc-toggle ${item.isAvailable ? 'is-on' : ''}`}
+                      role="switch"
+                      aria-checked={item.isAvailable}
+                      onClick={() => toggleAvailability(item.id, item.restaurantId)}
+                      title={item.isAvailable ? 'متوفّر — اضغط لإخفائه' : 'مخفيّ — اضغط لإظهاره'}
+                    >
+                      <span className="pc-toggle-track"><span /></span>
+                      <span className="pc-toggle-text">{item.isAvailable ? 'متوفّر' : 'مخفيّ'}</span>
+                    </button>
+                    {(isSuperAdmin || isOwner) && (
+                      <span className="pc-actions">
+                        <button type="button" className="pc-act" onClick={() => handleOpenItemModal(item)} aria-label={`تعديل ${item.name}`}>
+                          <IoPencil size={16} />
+                        </button>
+                        <button type="button" className="pc-act is-danger" onClick={() => handleDeleteItem(item.id)} aria-label={`حذف ${item.name}`}>
+                          <IoTrash size={16} />
+                        </button>
+                      </span>
+                    )}
+                  </footer>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Category Modal */}
       <Modal
@@ -729,7 +761,7 @@ const MenuPage: React.FC = () => {
               <div style={{ background: C.surf, borderRadius: 12, padding: 16, marginTop: 12 }}>
                 <h4 style={{ fontWeight: 500, color: C.text, marginBottom: 8 }}>تحديد المقاسات والأسعار</h4>
                 <p style={{ fontSize: 12, color: C.accent, marginBottom: 8 }}>
-                  * اترك السعر 0 لاستخدام السعر الأساسي ({Number(itemForm.price || 0).toFixed(2)} ل.س)
+                  * اترك السعر 0 لاستخدام السعر الأساسي ({formatPrice(Number(itemForm.price || 0))})
                 </p>
                 {sizes.map((size, index) => (
                   <div key={index} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>

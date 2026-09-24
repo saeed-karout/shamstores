@@ -16,9 +16,9 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 interface Feature {
@@ -112,7 +112,7 @@ const AdminBusinessFeatures: React.FC = () => {
     if (feature.isEnabled) {
       return (
         <span style={{
-          padding: '2px 10px', background: 'rgba(200,226,53,0.12)', color: C.accent,
+          padding: '2px 10px', background: 'rgba(8,72,53,0.12)', color: C.accent,
           borderRadius: 999, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4
         }}>
           <IoCheckmark size={12} />
@@ -122,7 +122,7 @@ const AdminBusinessFeatures: React.FC = () => {
     }
     return (
       <span style={{
-        padding: '2px 10px', background: 'rgba(255,107,107,0.12)', color: C.red,
+        padding: '2px 10px', background: 'rgba(214,69,69,0.12)', color: C.red,
         borderRadius: 999, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4
       }}>
         <IoClose size={12} />
@@ -170,7 +170,7 @@ const AdminBusinessFeatures: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 12,
-            background: type === 'restaurant' ? 'rgba(96,165,250,0.12)' : 'rgba(200,226,53,0.12)',
+            background: type === 'restaurant' ? 'rgba(37,99,235,0.12)' : 'rgba(8,72,53,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center'
           }}>
             {type === 'restaurant'
@@ -253,7 +253,7 @@ const AdminBusinessFeatures: React.FC = () => {
                 {filteredFeatures.map((feature) => (
                   <tr
                     key={feature.code}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     style={{ borderBottom: '1px solid ' + C.border }}
                   >
@@ -343,8 +343,8 @@ const AdminBusinessFeatures: React.FC = () => {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{
-            background: 'rgba(200,226,53,0.06)',
-            border: '1px solid rgba(200,226,53,0.2)',
+            background: 'rgba(8,72,53,0.06)',
+            border: '1px solid rgba(8,72,53,0.2)',
             borderRadius: 10, padding: 16
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>

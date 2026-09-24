@@ -55,15 +55,15 @@ const MarketingSectionForm: React.FC<Props> = ({
   
   // ✅ ألوان المودال باستخدام ThemeContext
   const colors = {
-    bg: theme.backgroundColor || '#082E24',
-    card: theme.cardBgColor || '#112E23',
-    surf: theme.surfaceColor || '#0F3D31',
+    bg: theme.backgroundColor || '#F4F7F4',
+    card: theme.cardBgColor || '#FFFFFF',
+    surf: theme.surfaceColor || '#F1F5F2',
     accent: theme.primaryColor || '#3B82F6',
-    text: theme.textColor || '#E8F5E9',
-    muted: theme.mutedColor || '#9DC4AC',
-    border: `rgba(200,226,53,0.15)`,
-    red: '#FF6B6B',
-    blue: '#60A5FA',
+    text: theme.textColor || '#10231B',
+    muted: theme.mutedColor || '#5F736A',
+    border: `rgba(8,72,53,0.15)`,
+    red: '#D64545',
+    blue: '#2563EB',
   };
   
   const [formData, setFormData] = useState({

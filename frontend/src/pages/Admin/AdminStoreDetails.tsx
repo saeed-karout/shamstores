@@ -15,9 +15,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { getImageUrl } from '@/utils/imageHelpers';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 interface StoreOwner {
@@ -337,7 +337,7 @@ const fetchStore = async () => {
           ) : (
             <div style={{
               width: 48, height: 48,
-              background: 'linear-gradient(135deg, #A78BFA, #7C3AED)',
+              background: 'linear-gradient(135deg, #8B45B5, #7C3AED)',
               borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <IoStorefront style={{ color: '#fff', fontSize: 20 }} />
@@ -350,7 +350,7 @@ const fetchStore = async () => {
         </div>
         <span style={{
           padding: '2px 12px', borderRadius: 999, fontSize: 12,
-          background: store.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)',
+          background: store.isActive ? 'rgba(8,72,53,0.12)' : 'rgba(214,69,69,0.12)',
           color: store.isActive ? C.accent : C.red,
         }}>
           {store.isActive ? 'نشط' : 'غير نشط'}
@@ -360,7 +360,7 @@ const fetchStore = async () => {
           <button
             onClick={() => navigate(`/admin/business/store/${id}/marketing`)}
             style={{
-              background: 'rgba(96,165,250,0.12)', color: C.blue,
+              background: 'rgba(37,99,235,0.12)', color: C.blue,
               padding: '6px 14px', borderRadius: 10, fontSize: 13,
               border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
               fontFamily: 'Cairo, sans-serif'
@@ -374,7 +374,7 @@ const fetchStore = async () => {
             style={{
               padding: '6px 14px', borderRadius: 10, fontSize: 13, border: 'none', cursor: 'pointer',
               fontFamily: 'Cairo, sans-serif',
-              background: store.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(200,226,53,0.12)',
+              background: store.isActive ? 'rgba(8,72,53,0.12)' : 'rgba(8,72,53,0.12)',
               color: store.isActive ? C.muted : C.accent,
             }}
           >
@@ -508,7 +508,7 @@ const fetchStore = async () => {
                         style={{
                           ...inputStyle, flex: 1,
                           border: `1px solid ${!slugAvailable && formData.slug !== store.slug ? C.red : C.border}`,
-                          background: !slugAvailable && formData.slug !== store.slug ? 'rgba(255,107,107,0.08)' : C.surf,
+                          background: !slugAvailable && formData.slug !== store.slug ? 'rgba(214,69,69,0.08)' : C.surf,
                         }}
                         placeholder="my-store"
                         dir="ltr"
@@ -741,7 +741,7 @@ const fetchStore = async () => {
           </div>
 
           {/* معلومات المالك */}
-          <div style={{ marginTop: 24, padding: 16, background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: 12 }}>
+          <div style={{ marginTop: 24, padding: 16, background: 'rgba(139,69,181,0.06)', border: '1px solid rgba(139,69,181,0.15)', borderRadius: 12 }}>
             <h3 style={{ color: C.text, fontWeight: 700, marginBottom: 12, marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoKey size={18} style={{ color: C.purple }} />
               معلومات المالك
@@ -754,7 +754,7 @@ const fetchStore = async () => {
           </div>
 
           {/* إعادة تعيين كلمة المرور */}
-          <div style={{ marginTop: 24, padding: 16, background: 'rgba(200,226,53,0.06)', border: '1px solid ' + C.border, borderRadius: 12 }}>
+          <div style={{ marginTop: 24, padding: 16, background: 'rgba(8,72,53,0.06)', border: '1px solid ' + C.border, borderRadius: 12 }}>
             <h3 style={{ color: C.text, fontWeight: 700, marginBottom: 12, marginTop: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoKey size={18} style={{ color: C.accent }} />
               إعادة تعيين كلمة المرور

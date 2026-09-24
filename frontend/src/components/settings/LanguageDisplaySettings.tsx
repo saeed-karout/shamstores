@@ -152,7 +152,7 @@ const LanguageDisplaySettings: React.FC<Props> = ({
                   padding: 0
                 }}
               >
-                {on && <IoCheckmark size={14} color="#0A2018" />}
+                {on && <IoCheckmark size={14} color="#FFFFFF" />}
               </button>
 
               <div style={{ flex: 1, minWidth: 0 }}>

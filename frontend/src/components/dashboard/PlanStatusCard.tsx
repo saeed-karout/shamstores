@@ -19,6 +19,7 @@ import {
   IoTrendingUpOutline
 } from 'react-icons/io5';
 import api from '@/services/api';
+import { useAuth } from '@/hooks/useAuth';
 
 interface OrderQuota {
   limit: number | null;
@@ -40,14 +41,14 @@ interface PlanStatus {
 }
 
 const C = {
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  orange: '#FB923C'
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  orange: '#C2410C'
 };
 
 const PLAN_LABELS: Record<string, string> = {
@@ -58,6 +59,8 @@ const PLAN_LABELS: Record<string, string> = {
 };
 
 const PlanStatusCard: React.FC = () => {
+  // صفحة الخطط للمتجر غير صفحة المطعم — كان الرابط يقود التاجر إلى الثانية دائماً
+  const { isStoreOwner } = useAuth();
   const [status, setStatus] = useState<PlanStatus | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -97,16 +100,16 @@ const PlanStatusCard: React.FC = () => {
       style={{
         background: C.card,
         border: `1px solid ${orders?.exceeded ? `${C.red}55` : C.border}`,
-        borderRadius: 14,
+        borderRadius: 16,
         padding: 20,
-        marginBottom: 24
+        boxShadow: '0 1px 2px rgba(16,35,27,0.04), 0 8px 24px rgba(16,35,27,0.06)'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         <span style={{ color: C.muted, fontSize: 13 }}>خطتك الحالية</span>
         <span
           style={{
-            background: 'rgba(200,226,53,0.14)',
+            background: 'rgba(8,72,53,0.14)',
             color: C.accent,
             borderRadius: 999,
             padding: '3px 12px',
@@ -136,7 +139,7 @@ const PlanStatusCard: React.FC = () => {
         )}
 
         <Link
-          to="/plans"
+          to={isStoreOwner ? '/store/plans' : '/plans'}
           style={{
             marginInlineStart: 'auto',
             display: 'flex',

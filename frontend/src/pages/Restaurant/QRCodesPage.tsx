@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatPrice } from '@/utils/currency';
 import api from '../../services/api';
 import { Table, MenuItem } from '../../services/types';
 import Loader from '../../components/common/Loader';
@@ -7,9 +8,9 @@ import { IoQrCode, IoDownload, IoPrint } from 'react-icons/io5';
 import { useRestaurant } from '../../hooks/useRestaurant';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 const QRCodesPage: React.FC = () => {
@@ -172,10 +173,10 @@ const QRCodesPage: React.FC = () => {
                       <div style={{ flex: 1 }}>
                         <h3 style={{ color: C.text, fontWeight: 600, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{item.name}</h3>
                         <p style={{ color: C.accent, fontWeight: 600, marginTop: 4, fontSize: 14 }}>
-                          {item.discountedPrice || item.price} ر.س
+                          {formatPrice(item.discountedPrice || item.price)}
                           {item.discountedPrice && (
                             <span style={{ color: C.muted, fontSize: 12, textDecoration: 'line-through', marginRight: 4 }}>
-                              {item.price} ر.س
+                              {formatPrice(item.price)}
                             </span>
                           )}
                         </p>
@@ -218,7 +219,7 @@ const QRCodesPage: React.FC = () => {
         </div>
 
         {/* ملاحظات */}
-        <div style={{ marginTop: 32, padding: 16, background: 'rgba(96,165,250,0.08)', borderRadius: 12, border: '1px solid rgba(96,165,250,0.2)' }}>
+        <div style={{ marginTop: 32, padding: 16, background: 'rgba(37,99,235,0.08)', borderRadius: 12, border: '1px solid rgba(37,99,235,0.2)' }}>
           <h3 style={{ color: C.blue, fontWeight: 600, marginBottom: 8 }}>💡 نصائح:</h3>
           <ul style={{ color: C.muted, fontSize: 13, lineHeight: 2 }}>
             <li>• يمكنك تخصيص ألوان وتصميم QR Code من خلال زر "تخصيص التصميم"</li>

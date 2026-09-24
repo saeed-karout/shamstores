@@ -14,9 +14,9 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', yellow: '#FBBF24',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', yellow: '#B7791F',
 };
 
 // ✅ تحديث الـ Interface ليتوافق مع البيانات الفعلية من API
@@ -233,21 +233,21 @@ const AdminPlans: React.FC = () => {
     switch (status) {
       case 'pending':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', background: 'rgba(251,191,36,0.12)', color: C.yellow, borderRadius: 999, fontSize: 12 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', background: 'rgba(183,121,31,0.12)', color: C.yellow, borderRadius: 999, fontSize: 12 }}>
             <IoTime size={12} />
             قيد الانتظار
           </span>
         );
       case 'approved':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', background: 'rgba(200,226,53,0.12)', color: C.accent, borderRadius: 999, fontSize: 12 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', background: 'rgba(8,72,53,0.12)', color: C.accent, borderRadius: 999, fontSize: 12 }}>
             <IoCheckmarkCircle size={12} />
             تمت الموافقة
           </span>
         );
       case 'rejected':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', background: 'rgba(255,107,107,0.12)', color: C.red, borderRadius: 999, fontSize: 12 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 10px', background: 'rgba(214,69,69,0.12)', color: C.red, borderRadius: 999, fontSize: 12 }}>
             <IoCloseCircle size={12} />
             مرفوض
           </span>
@@ -396,7 +396,7 @@ const AdminPlans: React.FC = () => {
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                     <h3 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>{plan.name}</h3>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(200,226,53,0.12)', color: C.accent, borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(8,72,53,0.12)', color: C.accent, borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700 }}>
                       <span style={{ width: 18, height: 18, borderRadius: 5, background: C.accent, color: C.bg, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10 }}>ش</span>
                       شام ستورز
                     </span>
@@ -525,7 +525,7 @@ const AdminPlans: React.FC = () => {
                   {upgradeRequests.map((req) => (
                     <tr
                       key={req.id}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       style={{ borderBottom: '1px solid ' + C.border }}
                     >
@@ -766,7 +766,7 @@ const AdminPlans: React.FC = () => {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
           <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, maxWidth: 420, width: '100%', padding: 24 }}>
             <div style={{ textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ width: 64, height: 64, background: 'rgba(255,107,107,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <div style={{ width: 64, height: 64, background: 'rgba(214,69,69,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                 <IoCloseCircle size={32} style={{ color: C.red }} />
               </div>
               <h3 style={{ color: C.text, fontWeight: 700, fontSize: 18, margin: 0 }}>رفض طلب الترقية</h3>

@@ -19,23 +19,23 @@ interface ContactMessage {
 }
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  blue: '#60A5FA',
-  yellow: '#FBBF24',
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  blue: '#2563EB',
+  yellow: '#B7791F',
 };
 
 const statusMeta: Record<MessageStatus, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  new: { label: 'جديدة', color: C.yellow, bg: 'rgba(251,191,36,0.12)', icon: IoMailUnread },
-  read: { label: 'مقروءة', color: C.blue, bg: 'rgba(96,165,250,0.12)', icon: IoMailOpen },
-  replied: { label: 'تم الرد', color: C.accent, bg: 'rgba(200,226,53,0.12)', icon: IoCheckmarkCircle },
-  archived: { label: 'مؤرشفة', color: C.muted, bg: 'rgba(157,196,172,0.12)', icon: IoArchive },
+  new: { label: 'جديدة', color: C.yellow, bg: 'rgba(183,121,31,0.12)', icon: IoMailUnread },
+  read: { label: 'مقروءة', color: C.blue, bg: 'rgba(37,99,235,0.12)', icon: IoMailOpen },
+  replied: { label: 'تم الرد', color: C.accent, bg: 'rgba(8,72,53,0.12)', icon: IoCheckmarkCircle },
+  archived: { label: 'مؤرشفة', color: C.muted, bg: 'rgba(95,115,106,0.12)', icon: IoArchive },
 };
 
 const AdminContactMessages: React.FC = () => {

@@ -21,9 +21,9 @@ import Loader from '@/components/common/Loader';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  warn: '#FB923C', green: '#4ADE80', red: '#FF6B6B'
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  warn: '#C2410C', green: '#15803D', red: '#D64545'
 };
 
 interface Stats {
@@ -150,7 +150,7 @@ const AffiliatesPage: React.FC = () => {
           <Link to="/features" style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             minHeight: 46, padding: '0 22px', borderRadius: 13, background: C.accent,
-            color: '#0A2018', textDecoration: 'none', fontWeight: 900, fontSize: 14
+            color: '#FFFFFF', textDecoration: 'none', fontWeight: 900, fontSize: 14
           }}>
             <IoSparkles size={16} /> اطلب تفعيلها من الميزات
           </Link>
@@ -174,7 +174,7 @@ const AffiliatesPage: React.FC = () => {
             onClick={() => setAdding(true)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 42,
-              padding: '0 16px', borderRadius: 12, background: C.accent, color: '#0A2018',
+              padding: '0 16px', borderRadius: 12, background: C.accent, color: '#FFFFFF',
               border: 'none', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit'
             }}
           >
@@ -242,7 +242,7 @@ const AffiliatesPage: React.FC = () => {
                           onClick={() => pay(affiliate)}
                           style={{
                             minHeight: 34, padding: '0 12px', borderRadius: 10, cursor: 'pointer',
-                            background: C.accent, color: '#0A2018', border: 'none',
+                            background: C.accent, color: '#FFFFFF', border: 'none',
                             fontSize: 12, fontWeight: 800, fontFamily: 'inherit', whiteSpace: 'nowrap'
                           }}
                         >
@@ -331,7 +331,7 @@ const AffiliatesPage: React.FC = () => {
               style={{
                 width: '100%', marginTop: 14, minHeight: 46, borderRadius: 12, border: 'none',
                 background: form.name.trim() ? C.accent : C.surf,
-                color: form.name.trim() ? '#0A2018' : C.muted,
+                color: form.name.trim() ? '#FFFFFF' : C.muted,
                 fontWeight: 900, fontSize: 14, fontFamily: 'inherit',
                 cursor: form.name.trim() ? 'pointer' : 'not-allowed'
               }}

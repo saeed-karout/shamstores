@@ -143,7 +143,7 @@ const AutomationsPage: React.FC = () => {
           ذلك يجعل التاجر يظنّ الميزة معطّلة */}
       <div style={{ ...s.card, ...(noAudience ? s.warn : {}) }}>
         <div style={s.row}>
-          <IoPeopleOutline size={19} color={noAudience ? '#FB923C' : '#4ADE80'} />
+          <IoPeopleOutline size={19} color={noAudience ? '#C2410C' : '#15803D'} />
           <div style={{ flex: 1 }}>
             <div style={s.cardTitle}>
               {noAudience ? 'لا أحد مشترك بعد' : `${stats?.reachable} زبوناً يمكن الوصول إليه`}
@@ -165,7 +165,7 @@ const AutomationsPage: React.FC = () => {
         return (
           <div key={rule} style={s.card}>
             <div style={s.row}>
-              <span style={{ color: config.enabled ? '#C8E235' : '#9DC4AC' }}>{meta.icon}</span>
+              <span style={{ color: config.enabled ? '#084835' : '#5F736A' }}>{meta.icon}</span>
               <div style={{ flex: 1 }}>
                 <div style={s.cardTitle}>{meta.label}</div>
                 <div style={s.cardSub}>{meta.why}</div>
@@ -263,44 +263,44 @@ const AutomationsPage: React.FC = () => {
 
 const s: Record<string, React.CSSProperties> = {
   page: { padding: 16, maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 },
-  center: { padding: 48, textAlign: 'center', color: '#9DC4AC' },
+  center: { padding: 48, textAlign: 'center', color: '#5F736A' },
   header: { marginBottom: 4 },
-  h1: { fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text, #E8F5E9)' },
-  lede: { fontSize: 13.5, color: '#9DC4AC', margin: '6px 0 0', lineHeight: 1.7 },
+  h1: { fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text, #10231B)' },
+  lede: { fontSize: 13.5, color: '#5F736A', margin: '6px 0 0', lineHeight: 1.7 },
   card: {
-    background: 'var(--card, #112E23)',
-    border: '1px solid rgba(200,226,53,0.16)',
+    background: 'var(--card, #FFFFFF)',
+    border: '1px solid rgba(8,72,53,0.16)',
     borderRadius: 16,
     padding: 14
   },
-  warn: { borderColor: 'rgba(251,146,60,0.4)', background: 'rgba(251,146,60,0.08)' },
+  warn: { borderColor: 'rgba(194,65,12,0.4)', background: 'rgba(194,65,12,0.08)' },
   row: { display: 'flex', alignItems: 'flex-start', gap: 11 },
-  cardTitle: { fontSize: 14.5, fontWeight: 700, color: 'var(--text, #E8F5E9)' },
-  cardSub: { fontSize: 12.5, color: '#9DC4AC', marginTop: 4, lineHeight: 1.7 },
+  cardTitle: { fontSize: 14.5, fontWeight: 700, color: 'var(--text, #10231B)' },
+  cardSub: { fontSize: 12.5, color: '#5F736A', marginTop: 4, lineHeight: 1.7 },
   switch: { position: 'relative', display: 'inline-flex', flexShrink: 0 },
-  checkbox: { width: 42, height: 24, accentColor: '#C8E235', cursor: 'pointer' },
-  body: { marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(200,226,53,0.12)', display: 'flex', flexDirection: 'column', gap: 13 },
+  checkbox: { width: 42, height: 24, accentColor: '#084835', cursor: 'pointer' },
+  body: { marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(8,72,53,0.12)', display: 'flex', flexDirection: 'column', gap: 13 },
   field: { display: 'flex', flexDirection: 'column', gap: 6 },
-  label: { fontSize: 12.5, color: '#9DC4AC' },
+  label: { fontSize: 12.5, color: '#5F736A' },
   inline: { display: 'flex', alignItems: 'center', gap: 8 },
-  unit: { fontSize: 13, color: '#9DC4AC' },
+  unit: { fontSize: 13, color: '#5F736A' },
   input: {
-    background: 'var(--surface, #0F3D31)',
-    border: '1px solid rgba(200,226,53,0.16)',
+    background: 'var(--surface, #F1F5F2)',
+    border: '1px solid rgba(8,72,53,0.16)',
     borderRadius: 11,
     padding: '11px 13px',
-    color: 'var(--text, #E8F5E9)',
+    color: 'var(--text, #10231B)',
     fontSize: 14,
     fontFamily: 'inherit',
     width: '100%'
   },
-  hint: { fontSize: 12, color: '#9DC4AC', opacity: 0.85 },
+  hint: { fontSize: 12, color: '#5F736A', opacity: 0.85 },
   footer: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
-  sentCount: { fontSize: 12, color: '#9DC4AC' },
+  sentCount: { fontSize: 12, color: '#5F736A' },
   ghostBtn: {
     background: 'transparent',
-    border: '1px solid rgba(200,226,53,0.35)',
-    color: '#C8E235',
+    border: '1px solid rgba(8,72,53,0.35)',
+    color: '#084835',
     borderRadius: 10,
     padding: '8px 13px',
     fontSize: 12.5,
@@ -311,16 +311,16 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: 9,
     fontSize: 12.5,
-    color: '#9DC4AC',
+    color: '#5F736A',
     lineHeight: 1.8,
     padding: '12px 14px',
-    background: 'rgba(96,165,250,0.08)',
-    border: '1px solid rgba(96,165,250,0.22)',
+    background: 'rgba(37,99,235,0.08)',
+    border: '1px solid rgba(37,99,235,0.22)',
     borderRadius: 14
   },
   saveBtn: {
-    background: '#C8E235',
-    color: '#0A2018',
+    background: '#084835',
+    color: '#FFFFFF',
     border: 'none',
     borderRadius: 13,
     padding: '14px 20px',

@@ -15,11 +15,11 @@ const maxWidths = { sm: 440, md: 560, lg: 720, xl: 960 };
 
 // ✅ الألوان الثابتة للمودال
 const colors = {
-  background: '#112E23',
-  border: 'rgba(200,226,53,0.15)',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  accent: '#C8E235',
+  background: '#FFFFFF',
+  border: 'rgba(8,72,53,0.15)',
+  text: '#10231B',
+  muted: '#5F736A',
+  accent: '#084835',
 };
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {

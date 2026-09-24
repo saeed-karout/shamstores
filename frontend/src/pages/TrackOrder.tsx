@@ -1,5 +1,6 @@
 // src/pages/TrackOrder.tsx
 
+import { formatPrice } from '@/utils/currency';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { makeT } from '@/i18n/storefront';
@@ -357,14 +358,14 @@ const TrackOrder: React.FC = () => {
                     <p style={{ color: C.text, fontWeight: 500 }}>{product?.name || t('منتج')}</p>
                     <p style={{ color: C.muted, fontSize: 14 }}>الكمية: {item.quantity}</p>
                   </div>
-                  <p style={{ color: C.accent, fontWeight: 700 }}>{item.price * item.quantity} ر.س</p>
+                  <p style={{ color: C.accent, fontWeight: 700 }}>{formatPrice(item.price * item.quantity)}</p>
                 </div>
               );
             })}
           </div>
           <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between' }}>
             <span style={{ color: C.text, fontWeight: 700 }}>{t('الإجمالي')}</span>
-            <span style={{ color: C.accent, fontWeight: 700, fontSize: 18 }}>{order.total} ر.س</span>
+            <span style={{ color: C.accent, fontWeight: 700, fontSize: 18 }}>{formatPrice(order.total)}</span>
           </div>
         </div>
 

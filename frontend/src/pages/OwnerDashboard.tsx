@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatPrice } from '@/utils/currency';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useRestaurant } from '../hooks/useRestaurant';
@@ -13,9 +14,9 @@ import { format, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', orange: '#C2410C',
 };
 
 interface DashboardStats {
@@ -86,17 +87,17 @@ const OwnerDashboard: React.FC = () => {
 
   const statCards = [
     { title: 'طلبات اليوم', value: stats?.todayOrders || 0, icon: IoReceipt, color: C.blue, path: '/orders' },
-    { title: 'مبيعات اليوم', value: `${stats?.todaySales?.toFixed(2) || 0} ر.س`, icon: IoPricetag, color: C.accent, path: '/analytics' },
+    { title: 'مبيعات اليوم', value: `${formatPrice(stats?.todaySales || 0)}`, icon: IoPricetag, color: C.accent, path: '/analytics' },
     { title: 'عناصر القائمة', value: stats?.totalMenuItems || 0, icon: IoFastFood, color: C.purple, path: '/menu' },
     { title: 'الطاولات', value: stats?.totalTables || 0, icon: IoRestaurant, color: C.orange, path: '/tables' },
   ];
 
   const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-    pending: { label: 'قيد الانتظار', color: '#FBBF24', bg: 'rgba(251,191,36,0.12)' },
-    preparing: { label: 'قيد التحضير', color: C.blue, bg: 'rgba(96,165,250,0.12)' },
-    ready: { label: 'جاهز', color: C.accent, bg: 'rgba(200,226,53,0.12)' },
-    served: { label: 'مكتمل', color: C.muted, bg: 'rgba(157,196,172,0.12)' },
-    cancelled: { label: 'ملغي', color: C.red, bg: 'rgba(255,107,107,0.12)' },
+    pending: { label: 'قيد الانتظار', color: '#B7791F', bg: 'rgba(183,121,31,0.12)' },
+    preparing: { label: 'قيد التحضير', color: C.blue, bg: 'rgba(37,99,235,0.12)' },
+    ready: { label: 'جاهز', color: C.accent, bg: 'rgba(8,72,53,0.12)' },
+    served: { label: 'مكتمل', color: C.muted, bg: 'rgba(95,115,106,0.12)' },
+    cancelled: { label: 'ملغي', color: C.red, bg: 'rgba(214,69,69,0.12)' },
   };
 
   if (loading) return <Loader fullScreen />;
@@ -114,7 +115,7 @@ const OwnerDashboard: React.FC = () => {
         {statCards.map((card, index) => (
           <Link key={index} to={card.path} style={{ textDecoration: 'none' }}>
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: 20, transition: 'all 0.2s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(200,226,53,0.4)'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(8,72,53,0.4)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border; }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
@@ -155,7 +156,7 @@ const OwnerDashboard: React.FC = () => {
           <div style={{ height: 240 }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats?.salesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(200,226,53,0.1)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(8,72,53,0.1)" />
                 <XAxis dataKey="date" stroke={C.muted} tick={{ fill: C.muted, fontSize: 11 }} />
                 <YAxis stroke={C.muted} tick={{ fill: C.muted, fontSize: 11 }} />
                 <Tooltip contentStyle={{ background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif' }} />
@@ -169,8 +170,8 @@ const OwnerDashboard: React.FC = () => {
           <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 16 }}>تنبيهات</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {(stats?.pendingOrders || 0) > 0 && (
-              <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8 }}>
-                <IoWarning size={16} style={{ color: '#FBBF24', marginTop: 2, flexShrink: 0 }} />
+              <div style={{ background: 'rgba(183,121,31,0.08)', border: '1px solid rgba(183,121,31,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8 }}>
+                <IoWarning size={16} style={{ color: '#B7791F', marginTop: 2, flexShrink: 0 }} />
                 <div>
                   <p style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>طلبات معلقة</p>
                   <p style={{ color: C.muted, fontSize: 12 }}>لديك {stats?.pendingOrders} طلب في انتظار المراجعة</p>
@@ -178,7 +179,7 @@ const OwnerDashboard: React.FC = () => {
               </div>
             )}
             {stats?.totalMenuItems === 0 && (
-              <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8 }}>
+              <div style={{ background: 'rgba(214,69,69,0.08)', border: '1px solid rgba(214,69,69,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8 }}>
                 <IoWarning size={16} style={{ color: C.red, marginTop: 2, flexShrink: 0 }} />
                 <div>
                   <p style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>القائمة فارغة</p>
@@ -187,7 +188,7 @@ const OwnerDashboard: React.FC = () => {
               </div>
             )}
             {(!restaurant?.logo || !(restaurant as any)?.coverImage) && (
-              <div style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8 }}>
+              <div style={{ background: 'rgba(37,99,235,0.08)', border: '1px solid rgba(37,99,235,0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 8 }}>
                 <IoWarning size={16} style={{ color: C.blue, marginTop: 2, flexShrink: 0 }} />
                 <div>
                   <p style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>إكمال الملف الشخصي</p>
@@ -218,14 +219,14 @@ const OwnerDashboard: React.FC = () => {
                 const s = statusConfig[order.status] || statusConfig.pending;
                 return (
                   <tr key={order.id} style={{ borderBottom: `1px solid ${C.border}` }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(200,226,53,0.04)'; }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(8,72,53,0.04)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}>
                     <td style={{ padding: '12px 16px', color: C.text, fontSize: 13 }}>{order.orderNumber}</td>
                     <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>{order.table?.name || '-'}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ background: s.bg, color: s.color, padding: '3px 10px', borderRadius: 10, fontSize: 12 }}>{s.label}</span>
                     </td>
-                    <td style={{ padding: '12px 16px', color: C.accent, fontSize: 13, fontWeight: 700 }}>{order.total} ر.س</td>
+                    <td style={{ padding: '12px 16px', color: C.accent, fontSize: 13, fontWeight: 700 }}>{formatPrice(order.total)}</td>
                     <td style={{ padding: '12px 16px', color: C.muted, fontSize: 12 }}>{format(new Date(order.createdAt), 'hh:mm a')}</td>
                   </tr>
                 );

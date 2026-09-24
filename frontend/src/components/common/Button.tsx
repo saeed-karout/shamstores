@@ -25,17 +25,17 @@ const Button: React.FC<ButtonProps> = ({
   ...props
 }) => {
   const theme = useTheme(); // ✅ استخدم useTheme مباشرة
-  const primaryColor = theme.primaryColor || '#C8E235';
+  const primaryColor = theme.primaryColor || '#084835';
   const secondaryColor = theme.secondaryColor || '#10B981';
-  const bgColor = theme.backgroundColor || '#082E24';
-  const textColor = theme.textColor || '#E8F5E9';
-  const mutedColor = theme.mutedColor || '#9DC4AC';
-  const surfaceColor = theme.surfaceColor || '#0F3D31';
+  const bgColor = theme.backgroundColor || '#F4F7F4';
+  const textColor = theme.textColor || '#10231B';
+  const mutedColor = theme.mutedColor || '#5F736A';
+  const surfaceColor = theme.surfaceColor || '#F1F5F2';
 
   const variantStyles: Record<string, React.CSSProperties> = {
     primary:   { background: primaryColor, color: bgColor, border: 'none' },
     secondary: { background: surfaceColor, color: mutedColor, border: `1px solid ${primaryColor}20` },
-    danger:    { background: 'rgba(255,107,107,0.15)', color: '#FF6B6B', border: '1px solid rgba(255,107,107,0.3)' },
+    danger:    { background: 'rgba(214,69,69,0.15)', color: '#D64545', border: '1px solid rgba(214,69,69,0.3)' },
     success:   { background: 'rgba(76,175,125,0.15)', color: '#4CAF7D', border: '1px solid rgba(76,175,125,0.3)' },
     outline:   { background: 'transparent', color: primaryColor, border: `1.5px solid ${primaryColor}` },
   };

@@ -11,17 +11,17 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  accent: '#C8E235',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  yellow: '#FBBF24',
-  blue:   '#60A5FA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  accent: '#084835',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  yellow: '#B7791F',
+  blue:   '#2563EB',
 };
 
 const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', background: C.surf, border: `1px solid ${C.border}`, borderRadius: 10, color: C.text, fontFamily: 'Cairo, sans-serif', fontSize: 14, outline: 'none', boxSizing: 'border-box' };
@@ -138,15 +138,15 @@ const PlansPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const cfg: Record<string, { label: string; color: string; bg: string; Icon: any }> = {
-      pending:  { label: 'قيد الانتظار', color: C.yellow, bg: 'rgba(251,191,36,0.15)', Icon: IoTime },
-      approved: { label: 'تمت الموافقة', color: C.accent, bg: 'rgba(200,226,53,0.15)', Icon: IoCheckmarkCircle },
-      rejected: { label: 'مرفوض',        color: C.red,    bg: 'rgba(255,107,107,0.15)', Icon: IoCloseCircle },
+      pending:  { label: 'قيد الانتظار', color: C.yellow, bg: 'rgba(183,121,31,0.15)', Icon: IoTime },
+      approved: { label: 'تمت الموافقة', color: C.accent, bg: 'rgba(8,72,53,0.15)', Icon: IoCheckmarkCircle },
+      rejected: { label: 'مرفوض',        color: C.red,    bg: 'rgba(214,69,69,0.15)', Icon: IoCloseCircle },
     };
     const s = cfg[status]; if (!s) return null;
     return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: s.bg, color: s.color }}><s.Icon size={12} />{s.label}</span>;
   };
 
-  const getPlanIcon = (n: string) => n === 'pro' ? <IoRocket size={32} style={{ color: '#A78BFA' }} /> : n === 'basic' ? <IoBusiness size={32} style={{ color: C.blue }} /> : <IoStar size={32} style={{ color: C.muted }} />;
+  const getPlanIcon = (n: string) => n === 'pro' ? <IoRocket size={32} style={{ color: '#8B45B5' }} /> : n === 'basic' ? <IoBusiness size={32} style={{ color: C.blue }} /> : <IoStar size={32} style={{ color: C.muted }} />;
   const getPlanTitle = (n: string) => ({ free: 'المجانية', basic: 'الأساسية', pro: 'الاحترافية' })[n] || n;
   const getCurrentPlanTitle = () => currentPlan ? getPlanTitle(currentPlan.name) : 'مجانية';
 
@@ -170,8 +170,8 @@ const PlansPage: React.FC = () => {
 
       {/* Admin toolbar */}
       {isSuperAdminUser && (
-        <div style={{ background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.25)', borderRadius: 14, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#A78BFA', fontWeight: 700 }}>
+        <div style={{ background: 'rgba(139,69,181,0.12)', border: '1px solid rgba(139,69,181,0.25)', borderRadius: 14, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#8B45B5', fontWeight: 700 }}>
             <IoSettings size={20} /> لوحة تحكم المسؤول - إدارة الخطط
           </div>
           <Button variant="primary" size="sm" onClick={() => handleOpenPlanModal()}>
@@ -182,7 +182,7 @@ const PlansPage: React.FC = () => {
 
       {/* Current plan banner */}
       {currentPlan && !isSuperAdminUser && (
-        <div style={{ background: 'rgba(200,226,53,0.08)', border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ background: 'rgba(8,72,53,0.08)', border: `1px solid ${C.border}`, borderRadius: 14, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <span style={{ color: C.muted, fontSize: 13 }}>خطتك الحالية: </span>
             <span style={{ color: C.accent, fontWeight: 700, fontSize: 16 }}>{getCurrentPlanTitle()}</span>
@@ -204,12 +204,12 @@ const PlansPage: React.FC = () => {
           const isCurrent = currentPlan?.id === plan.id && !isSuperAdminUser;
           const isPro = plan.name === 'pro';
           return (
-            <div key={plan.id} style={{ background: C.card, border: `${isCurrent || isPro ? '2px' : '1px'} solid ${isCurrent ? C.accent : isPro ? 'rgba(167,139,250,0.4)' : C.border}`, borderRadius: 20, overflow: 'hidden', position: 'relative' }}>
+            <div key={plan.id} style={{ background: C.card, border: `${isCurrent || isPro ? '2px' : '1px'} solid ${isCurrent ? C.accent : isPro ? 'rgba(139,69,181,0.4)' : C.border}`, borderRadius: 20, overflow: 'hidden', position: 'relative' }}>
               {isPro && <div style={{ position: 'absolute', top: 12, right: 12, background: C.accent, color: C.bg, fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>الأكثر شعبية</div>}
               {isSuperAdminUser && (
                 <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 4 }}>
-                  <button onClick={() => handleOpenPlanModal(plan)} style={{ background: 'rgba(96,165,250,0.2)', border: 'none', borderRadius: 6, color: C.blue, cursor: 'pointer', padding: 6, display: 'flex' }}><IoPencil size={14} /></button>
-                  <button onClick={() => handleDeletePlan(plan.id)} style={{ background: 'rgba(255,107,107,0.2)', border: 'none', borderRadius: 6, color: C.red, cursor: 'pointer', padding: 6, display: 'flex' }}><IoTrash size={14} /></button>
+                  <button onClick={() => handleOpenPlanModal(plan)} style={{ background: 'rgba(37,99,235,0.2)', border: 'none', borderRadius: 6, color: C.blue, cursor: 'pointer', padding: 6, display: 'flex' }}><IoPencil size={14} /></button>
+                  <button onClick={() => handleDeletePlan(plan.id)} style={{ background: 'rgba(214,69,69,0.2)', border: 'none', borderRadius: 6, color: C.red, cursor: 'pointer', padding: 6, display: 'flex' }}><IoTrash size={14} /></button>
                 </div>
               )}
               <div style={{ background: C.surf, padding: '28px 24px 20px', textAlign: 'center', borderBottom: `1px solid ${C.border}` }}>
@@ -363,7 +363,7 @@ const PlansPage: React.FC = () => {
                   {getStatusBadge(req.status)}
                 </div>
                 <div style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>المبلغ: {req.price} ر.س</div>
-                {req.status === 'rejected' && req.reason && <div style={{ background: 'rgba(255,107,107,0.1)', borderRadius: 8, padding: 10, marginTop: 8, color: C.red, fontSize: 13 }}>سبب الرفض: {req.reason}</div>}
+                {req.status === 'rejected' && req.reason && <div style={{ background: 'rgba(214,69,69,0.1)', borderRadius: 8, padding: 10, marginTop: 8, color: C.red, fontSize: 13 }}>سبب الرفض: {req.reason}</div>}
               </div>
             ))
           )}
@@ -374,7 +374,7 @@ const PlansPage: React.FC = () => {
       <Modal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} title="طلب ترقية الخطة">
         {selectedPlan && (
           <div>
-            <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', gap: 12 }}>
+            <div style={{ background: 'rgba(183,121,31,0.08)', border: '1px solid rgba(183,121,31,0.2)', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', gap: 12 }}>
               <IoWarning size={22} style={{ color: C.yellow, flexShrink: 0 }} />
               <p style={{ color: C.muted, fontSize: 13 }}>سيتم إرسال طلب ترقية إلى المسؤول. بعد الدفع، سيقوم المسؤول بتفعيل خطتك الجديدة.</p>
             </div>
@@ -395,7 +395,7 @@ const PlansPage: React.FC = () => {
       <Modal isOpen={showRejectModal} onClose={() => setShowRejectModal(false)} title="رفض طلب الترقية">
         {selectedRequest && (
           <div>
-            <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', gap: 12 }}>
+            <div style={{ background: 'rgba(214,69,69,0.08)', border: '1px solid rgba(214,69,69,0.2)', borderRadius: 12, padding: 16, marginBottom: 16, display: 'flex', gap: 12 }}>
               <IoWarning size={22} style={{ color: C.red, flexShrink: 0 }} />
               <p style={{ color: C.muted, fontSize: 13 }}>سيتم رفض طلب الترقية للعميل {selectedRequest.userName} إلى خطة {selectedRequest.planName}</p>
             </div>

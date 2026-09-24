@@ -47,18 +47,18 @@ import api from '@/services/api';
 import DomainManager from '@/components/settings/DomainManager';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
 };
 
 interface DayHours {
@@ -828,7 +828,7 @@ export const SettingsPage: React.FC = () => {
                     value={designForm.backgroundColor}
                     onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#082E24"
+                    placeholder="#F4F7F4"
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الصفحة الرئيسية للمطعم</p>
@@ -851,7 +851,7 @@ export const SettingsPage: React.FC = () => {
                     value={designForm.cardColor}
                     onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#112E23"
+                    placeholder="#FFFFFF"
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية البطاقات والقوائم الجانبية</p>
@@ -874,7 +874,7 @@ export const SettingsPage: React.FC = () => {
                     value={designForm.surfaceColor}
                     onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#0F3D31"
+                    placeholder="#F1F5F2"
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون خلفية الحقول والنماذج</p>
@@ -897,7 +897,7 @@ export const SettingsPage: React.FC = () => {
                     value={designForm.textColor}
                     onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#E8F5E9"
+                    placeholder="#10231B"
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الرئيسية والعناوين</p>
@@ -920,7 +920,7 @@ export const SettingsPage: React.FC = () => {
                     value={designForm.mutedColor}
                     onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#9DC4AC"
+                    placeholder="#5F736A"
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون النصوص الثانوية والوصف</p>
@@ -943,7 +943,7 @@ export const SettingsPage: React.FC = () => {
                     value={designForm.accentColor}
                     onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#C8E235"
+                    placeholder="#084835"
                   />
                 </div>
                 <p style={{ color: C.muted, fontSize: 11, marginTop: 6 }}>لون الإشعارات والتنبيهات والعناصر البارزة</p>
@@ -1178,7 +1178,7 @@ export const SettingsPage: React.FC = () => {
       {activeTab === 'delivery' && (
         // ... (نفس الكود السابق للتوصيل)
         <div>
-          <div style={{ ...sectionCard, background: `rgba(200,226,53,0.07)`, border: `1px solid rgba(200,226,53,0.25)`, marginBottom: 16 }}>
+          <div style={{ ...sectionCard, background: `rgba(8,72,53,0.07)`, border: `1px solid rgba(8,72,53,0.25)`, marginBottom: 16 }}>
             <p style={{ color: C.text, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <IoWarning style={{ color: C.accent, flexShrink: 0, marginTop: 1 }} />
               قم بتعيين أسعار التوصيل حسب المسافة. سيتم حساب سعر التوصيل تلقائياً بناءً على موقع العميل.

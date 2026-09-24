@@ -109,7 +109,7 @@ const ShippingZonesPage: React.FC = () => {
                 type="checkbox"
                 checked={zone.isActive}
                 onChange={(e) => patch(zone.governorate, { isActive: e.target.checked })}
-                style={{ width: 18, height: 18, accentColor: '#C8E235', cursor: 'pointer' }}
+                style={{ width: 18, height: 18, accentColor: '#084835', cursor: 'pointer' }}
               />
               <span style={s.name}>{zone.name}</span>
               {zone.isActive && (
@@ -218,21 +218,21 @@ const Field: React.FC<{ label: string; hint?: string; children: React.ReactNode 
 
 const s: Record<string, React.CSSProperties> = {
   page: { padding: 16, maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 },
-  center: { padding: 48, textAlign: 'center', color: '#9DC4AC' },
-  h1: { fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text, #E8F5E9)' },
-  lede: { fontSize: 13.5, color: '#9DC4AC', margin: '6px 0 0', lineHeight: 1.7 },
+  center: { padding: 48, textAlign: 'center', color: '#5F736A' },
+  h1: { fontSize: 20, fontWeight: 800, margin: 0, color: 'var(--text, #10231B)' },
+  lede: { fontSize: 13.5, color: '#5F736A', margin: '6px 0 0', lineHeight: 1.7 },
   list: { display: 'flex', flexDirection: 'column', gap: 9 },
   row: {
-    background: 'var(--card, #112E23)',
-    border: '1px solid rgba(200,226,53,0.16)',
+    background: 'var(--card, #FFFFFF)',
+    border: '1px solid rgba(8,72,53,0.16)',
     borderRadius: 14,
     padding: 13
   },
   head: { display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' },
-  name: { color: 'var(--text, #E8F5E9)', fontSize: 14.5, fontWeight: 700, flex: 1 },
+  name: { color: 'var(--text, #10231B)', fontSize: 14.5, fontWeight: 700, flex: 1 },
   badge: {
     display: 'inline-flex', alignItems: 'center', gap: 4,
-    background: 'rgba(200,226,53,0.14)', color: '#C8E235',
+    background: 'rgba(8,72,53,0.14)', color: '#084835',
     borderRadius: 999, padding: '4px 10px', fontSize: 11.5, fontWeight: 700
   },
   fields: {
@@ -241,28 +241,28 @@ const s: Record<string, React.CSSProperties> = {
     gap: 11,
     marginTop: 13,
     paddingTop: 13,
-    borderTop: '1px solid rgba(200,226,53,0.12)'
+    borderTop: '1px solid rgba(8,72,53,0.12)'
   },
-  label: { fontSize: 12, color: '#9DC4AC' },
-  hint: { fontSize: 11, color: '#9DC4AC', opacity: 0.8 },
+  label: { fontSize: 12, color: '#5F736A' },
+  hint: { fontSize: 11, color: '#5F736A', opacity: 0.8 },
   input: {
-    background: 'var(--surface, #0F3D31)',
-    border: '1px solid rgba(200,226,53,0.16)',
+    background: 'var(--surface, #F1F5F2)',
+    border: '1px solid rgba(8,72,53,0.16)',
     borderRadius: 10,
     padding: '10px 12px',
-    color: 'var(--text, #E8F5E9)',
+    color: 'var(--text, #10231B)',
     fontSize: 14,
     fontFamily: 'inherit',
     width: '100%'
   },
   note: {
-    display: 'flex', gap: 9, fontSize: 12.5, color: '#9DC4AC', lineHeight: 1.9,
-    padding: '12px 14px', background: 'rgba(96,165,250,0.08)',
-    border: '1px solid rgba(96,165,250,0.22)', borderRadius: 14
+    display: 'flex', gap: 9, fontSize: 12.5, color: '#5F736A', lineHeight: 1.9,
+    padding: '12px 14px', background: 'rgba(37,99,235,0.08)',
+    border: '1px solid rgba(37,99,235,0.22)', borderRadius: 14
   },
-  warn: { background: 'rgba(251,146,60,0.1)', borderColor: 'rgba(251,146,60,0.35)', color: '#FB923C' },
+  warn: { background: 'rgba(194,65,12,0.1)', borderColor: 'rgba(194,65,12,0.35)', color: '#C2410C' },
   saveBtn: {
-    background: '#C8E235', color: '#0A2018', border: 'none', borderRadius: 13,
+    background: '#084835', color: '#FFFFFF', border: 'none', borderRadius: 13,
     padding: '14px 20px', fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit'
   }
 };

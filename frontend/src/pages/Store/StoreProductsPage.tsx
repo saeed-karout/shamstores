@@ -1,15 +1,16 @@
 // pages/Store/StoreProductsPage.tsx
 
+import '@/styles/orders.css';
+import '@/styles/catalog.css';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../../hooks/useStore';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '@/context/ThemeContext';
 import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoCube, IoWarning, IoImage, IoCloudUpload,
-  IoReorderThreeOutline
+  IoReorderThreeOutline, IoSearch, IoLayersOutline
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -24,10 +25,10 @@ import { formatPrice } from '@/utils/currency';
 
 // ✅ الألوان الثابتة فقط للعناصر التي لا تتغير (الأحمر، الأزرق، إلخ)
 const staticColors = {
-  red: '#FF6B6B',
-  blue: '#60A5FA',
-  yellow: '#F59E0B',
-  purple: '#A78BFA',
+  red: '#D64545',
+  blue: '#2563EB',
+  yellow: '#B45309',
+  purple: '#8B45B5',
 };
 
 interface Product {
@@ -112,21 +113,26 @@ const StoreProductsPage: React.FC = () => {
   const { store, loading: storeLoading } = useStore();
   const permissions = usePermissions();
   const { isSuperAdmin, isStoreOwner, isStaff } = useAuth();
-  const theme = useTheme();
 
-  // ✅ استخدام ألوان المتجر الديناميكية
+  // ألوان اللوحة لا ألوان واجهة المتجر: كانت تُقرأ من `useTheme` فتتبدّل
+  // الشاشة بثيم كلّ تاجر وتخرج عن بقيّة اللوحة
   const dynamicColors = {
-    bg: theme.backgroundColor || '#082E24',
-    card: theme.cardBgColor || '#112E23',
-    prim: '#0D4A3A',
-    surf: theme.surfaceColor || '#0F3D31',
-    surfL: '#164D3E',
-    accent: theme.primaryColor || '#C8E235',
-    acDk: '#A8C220',
-    text: theme.textColor || '#E8F5E9',
-    muted: theme.mutedColor || '#9DC4AC',
-    border: `rgba(200,226,53,0.15)`,
+    bg: '#F4F7F4',
+    card: '#FFFFFF',
+    prim: '#E8EFEA',
+    surf: '#F1F5F2',
+    surfL: '#E2EBE5',
+    accent: '#084835',
+    acDk: '#06382A',
+    text: '#10231B',
+    muted: '#5F736A',
+    border: 'rgba(16,35,27,0.12)',
   };
+
+  const [query, setQuery] = useState('');
+  const [catFilter, setCatFilter] = useState<string>('all');
+  const [showCats, setShowCats] = useState(false);
+
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -497,6 +503,15 @@ const StoreProductsPage: React.FC = () => {
     return category.branchLabel ? `${category.name} • ${category.branchLabel}` : category.name;
   };
 
+  const visibleProducts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return products.filter(
+      (p) =>
+        (catFilter === 'all' || p.categoryId === catFilter) &&
+        (!q || [p.name, p.nameEn, p.sku].some((f) => (f || '').toLowerCase().includes(q)))
+    );
+  }, [products, catFilter, query]);
+
   // ✅ ستايل الحقول مع الألوان الديناميكية
   const dynamicInputStyle: React.CSSProperties = {
     width: '100%',
@@ -519,160 +534,175 @@ const StoreProductsPage: React.FC = () => {
   if (loading || storeLoading) return <Loader fullScreen />;
 
   return (
-    <div style={{ background: dynamicColors.bg, minHeight: '100vh', padding: 24, fontFamily: theme.fontFamily || 'Cairo, sans-serif' }} dir="rtl">
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 8 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: dynamicColors.text, margin: 0 }}>🛍️ إدارة منتجات المتجر</h1>
-          <p style={{ fontSize: 13, color: dynamicColors.muted, marginTop: 4 }}>إدارة الفئات والمنتجات في متجرك</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          {(store && (store.linkedBranches?.length || 0) > 0) && (
-            <select
-              value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
-              style={{ background: dynamicColors.card, color: dynamicColors.text, border: `1px solid ${dynamicColors.border}`, borderRadius: 10, padding: '8px 12px', minWidth: 220 }}
-            >
-              <option value={store.id}>الفرع الحالي: {store.name}</option>
-              <option value="all">كل الفروع</option>
-              {(store.linkedBranches || []).map((branch) => (
-                <option key={branch.id} value={branch.id}>{branch.name}</option>
-              ))}
-            </select>
-          )}
-          {(isSuperAdmin || isStoreOwner) && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => selectedBranchId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة فئة') : handleOpenCategoryModal()}
-                disabled={selectedBranchId === 'all'}
-                style={{ background: dynamicColors.surf, border: `1px solid ${dynamicColors.border}`, color: dynamicColors.accent, padding: '8px 16px', borderRadius: 10, cursor: selectedBranchId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, opacity: selectedBranchId === 'all' ? 0.6 : 1 }}
-              >
-                <IoAdd size={18} /> إضافة فئة
-              </button>
-              <button
-                onClick={() => selectedBranchId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة منتج') : handleOpenProductModal()}
-                disabled={selectedBranchId === 'all'}
-                style={{ background: dynamicColors.accent, color: dynamicColors.bg, padding: '8px 16px', borderRadius: 10, cursor: selectedBranchId === 'all' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, border: 'none', opacity: selectedBranchId === 'all' ? 0.7 : 1 }}
-              >
-                <IoAdd size={18} /> إضافة منتج
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* إحصائيات سريعة */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
-        {[
-          { label: 'إجمالي الفئات', value: categories.length, color: staticColors.blue },
-          { label: 'إجمالي المنتجات', value: products.length, color: dynamicColors.accent },
-          { label: 'غير متوفرة', value: products.filter(p => !p.isAvailable).length, color: staticColors.yellow },
-          { label: 'نفد من المخزون', value: products.filter(p => p.stock === 0).length, color: staticColors.red },
-        ].map((stat, i) => (
-          <div key={i} style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: 16 }}>
-            <p style={{ color: dynamicColors.muted, fontSize: 13, margin: 0 }}>{stat.label}</p>
-            <p style={{ color: stat.color, fontSize: 28, fontWeight: 700, margin: '4px 0 0' }}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* الفئات */}
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: dynamicColors.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 4, height: 22, background: dynamicColors.accent, borderRadius: 4, display: 'inline-block' }}></span>
-            الفئات
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{categories.length} فئة</span>
-            {(isSuperAdmin || isStoreOwner) && categories.length > 1 && (
-              <ReorderToggle
-                active={reordering === 'categories'}
-                onClick={() =>
-                  setReordering((prev) => (prev === 'categories' ? 'none' : 'categories'))
-                }
-                colors={dynamicColors}
-              />
-            )}
-          </div>
-        </div>
-
-        {reordering === 'categories' ? (
-          <ReorderList
-            items={categories.map(
-              (cat): ReorderItem => ({
-                id: cat.id,
-                name: cat.name,
-                image: cat.image,
-                meta: `${products.filter((p) => p.categoryId === cat.id).length} منتج`
-              })
-            )}
-            onSave={(ids) => saveOrder('categories', ids)}
-            onCancel={() => setReordering('none')}
-            colors={reorderColors}
-            saving={savingOrder}
+    <div className="ss-page pc-page">
+      {/* ===== الأدوات ===== */}
+      <div className="pc-toolbar">
+        <label className="ob-search pc-search">
+          <IoSearch size={18} aria-hidden="true" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="ابحث باسم المنتج أو رمزه"
+            aria-label="بحث في المنتجات"
           />
-        ) : categories.length === 0 ? (
-          <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
-            <IoCube style={{ color: dynamicColors.muted, fontSize: 48, marginBottom: 12 }} />
-            <p style={{ color: dynamicColors.muted, margin: 0 }}>لا توجد فئات. أضف فئة جديدة!</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
-            {categories.map(cat => (
-              <div key={cat.id} style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: 16, transition: 'border-color 0.2s' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = dynamicColors.accent)}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = dynamicColors.border)}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontWeight: 600, color: dynamicColors.text, margin: 0, fontSize: 14 }}>{cat.name}</h3>
-                    {cat.nameEn && <p style={{ color: dynamicColors.muted, fontSize: 11, margin: '2px 0 0' }}>{cat.nameEn}</p>}
-                    {cat.branchLabel && <p style={{ color: dynamicColors.accent, fontSize: 11, margin: '4px 0 0' }}>{cat.branchLabel}</p>}
-                  </div>
-                  {(isSuperAdmin || isStoreOwner) && (
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <button onClick={() => handleOpenCategoryModal(cat)} style={{ padding: 6, background: 'transparent', border: 'none', color: dynamicColors.accent, cursor: 'pointer', borderRadius: 8 }}>
-                        <IoPencil size={15} />
-                      </button>
-                      <button onClick={() => handleDeleteCategory(cat.id, cat.storeId)} style={{ padding: 6, background: 'transparent', border: 'none', color: staticColors.red, cursor: 'pointer', borderRadius: 8 }}>
-                        <IoTrash size={15} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {cat.image && (
-                  <img src={getImageUrl(cat.image)} alt={cat.name} style={{ width: '100%', height: 96, objectFit: 'cover', borderRadius: 10, marginTop: 10 }} />
-                )}
-                {cat.description && <p style={{ color: dynamicColors.muted, fontSize: 12, marginTop: 8 }}>{cat.description}</p>}
-                <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${dynamicColors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: dynamicColors.muted, fontSize: 12 }}>{products.filter(p => p.categoryId === cat.id).length} منتج</span>
-                  <span style={{ color: dynamicColors.accent, fontSize: 12 }}>نشط</span>
-                </div>
-              </div>
+        </label>
+        {(store && (store.linkedBranches?.length || 0) > 0) && (
+          <select
+            className="pc-select"
+            value={selectedBranchId}
+            onChange={(e) => setSelectedBranchId(e.target.value)}
+            aria-label="الفرع"
+          >
+            <option value={store.id}>الفرع الحالي: {store.name}</option>
+            <option value="all">كل الفروع</option>
+            {(store.linkedBranches || []).map((branch) => (
+              <option key={branch.id} value={branch.id}>{branch.name}</option>
             ))}
+          </select>
+        )}
+        {(isSuperAdmin || isStoreOwner) && (
+          <div className="pc-toolbar-actions">
+            <button
+              type="button"
+              className="ss-btn ss-btn-ghost"
+              onClick={() => selectedBranchId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة فئة') : handleOpenCategoryModal()}
+              disabled={selectedBranchId === 'all'}
+            >
+              <IoAdd size={18} /> فئة
+            </button>
+            <button
+              type="button"
+              className="ss-btn ss-btn-primary"
+              onClick={() => selectedBranchId === 'all' ? toast.error('اختر فرعاً محدداً لإضافة منتج') : handleOpenProductModal()}
+              disabled={selectedBranchId === 'all'}
+            >
+              <IoAdd size={18} /> إضافة منتج
+            </button>
           </div>
         )}
       </div>
 
-      {/* المنتجات */}
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: dynamicColors.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 4, height: 22, background: dynamicColors.accent, borderRadius: 4, display: 'inline-block' }}></span>
-            المنتجات
-          </h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ color: dynamicColors.muted, fontSize: 13 }}>{products.length} منتج</span>
-            {(isSuperAdmin || isStoreOwner) && (
-              <ProductCsvTools colors={reorderColors} onDone={fetchData} />
+      {/* ===== أرقام ===== */}
+      <div className="pc-stats">
+        {[
+          { label: 'المنتجات', value: products.length, tone: 'green' },
+          { label: 'الفئات', value: categories.length, tone: 'blue' },
+          { label: 'مخفيّة عن الزبائن', value: products.filter(p => !p.isAvailable).length, tone: 'amber' },
+          { label: 'نفد مخزونها', value: products.filter(p => p.stock === 0).length, tone: 'red' },
+        ].map((stat) => (
+          <div key={stat.label} className={`pc-stat tone-${stat.tone}`}>
+            <span>{stat.label}</span>
+            <strong>{stat.value}</strong>
+          </div>
+        ))}
+      </div>
+
+      {/* ===== الفئات: شريط تصفية، وإدارتها عند الطلب ===== */}
+      <div className="pc-cats">
+        <div className="ob-tabs" role="tablist" aria-label="تصفية حسب الفئة">
+          <button type="button" role="tab" className="ob-tab" aria-selected={catFilter === 'all'} onClick={() => setCatFilter('all')}>
+            الكل <span>{products.length}</span>
+          </button>
+          {categories.map((cat) => {
+            const count = products.filter((p) => p.categoryId === cat.id).length;
+            return (
+              <button key={cat.id} type="button" role="tab" className="ob-tab" aria-selected={catFilter === cat.id} onClick={() => setCatFilter(cat.id)}>
+                {cat.name} <span>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+        {(isSuperAdmin || isStoreOwner) && categories.length > 0 && (
+          <button type="button" className="pc-link" onClick={() => setShowCats((v) => !v)} aria-expanded={showCats}>
+            <IoLayersOutline size={16} /> {showCats ? 'إخفاء إدارة الفئات' : 'إدارة الفئات'}
+          </button>
+        )}
+      </div>
+
+      {(showCats || categories.length === 0) && (
+        <section className="ss-card pc-panel" aria-labelledby="cats-title">
+          <header className="pc-panel-head">
+            <div>
+              <h2 id="cats-title">الفئات</h2>
+              <p>{categories.length ? `${categories.length} فئة — الترتيب هنا هو ترتيبها في متجرك` : 'الفئات ترتّب متجرك: ملابس، أحذية، إكسسوارات…'}</p>
+            </div>
+            {(isSuperAdmin || isStoreOwner) && categories.length > 1 && (
+              <ReorderToggle
+                active={reordering === 'categories'}
+                onClick={() => setReordering((prev) => (prev === 'categories' ? 'none' : 'categories'))}
+                colors={dynamicColors}
+              />
             )}
+          </header>
+
+          {reordering === 'categories' ? (
+            <ReorderList
+              items={categories.map(
+                (cat): ReorderItem => ({
+                  id: cat.id,
+                  name: cat.name,
+                  image: cat.image,
+                  meta: `${products.filter((p) => p.categoryId === cat.id).length} منتج`
+                })
+              )}
+              onSave={(ids) => saveOrder('categories', ids)}
+              onCancel={() => setReordering('none')}
+              colors={reorderColors}
+              saving={savingOrder}
+            />
+          ) : categories.length === 0 ? (
+            <div className="ob-empty">
+              <b>لا فئات بعد</b>
+              <p>أنشئ فئتك الأولى ثم أضف منتجاتك إليها.</p>
+              {(isSuperAdmin || isStoreOwner) && (
+                <button type="button" onClick={() => handleOpenCategoryModal()}>إضافة فئة</button>
+              )}
+            </div>
+          ) : (
+            <ul className="pc-cat-list">
+              {categories.map((cat) => (
+                <li key={cat.id}>
+                  <span className="pc-cat-thumb">
+                    {cat.image ? <img src={getImageUrl(cat.image)} alt="" loading="lazy" /> : <IoLayersOutline size={18} />}
+                  </span>
+                  <span className="pc-cat-main">
+                    <b>{cat.name}</b>
+                    <small>
+                      {products.filter((p) => p.categoryId === cat.id).length} منتج
+                      {cat.branchLabel ? ` · ${cat.branchLabel}` : ''}
+                    </small>
+                  </span>
+                  {(isSuperAdmin || isStoreOwner) && (
+                    <span className="pc-actions">
+                      <button type="button" className="pc-act" onClick={() => handleOpenCategoryModal(cat)} aria-label={`تعديل ${cat.name}`}>
+                        <IoPencil size={16} />
+                      </button>
+                      <button type="button" className="pc-act is-danger" onClick={() => handleDeleteCategory(cat.id, cat.storeId)} aria-label={`حذف ${cat.name}`}>
+                        <IoTrash size={16} />
+                      </button>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* ===== المنتجات ===== */}
+      <section aria-labelledby="products-title">
+        <div className="pc-section-head">
+          <h2 id="products-title">
+            {catFilter === 'all' ? 'كلّ المنتجات' : getCategoryName(catFilter)}
+            <span>{visibleProducts.length}</span>
+          </h2>
+          <div className="pc-section-tools">
+            {(isSuperAdmin || isStoreOwner) && <ProductCsvTools colors={reorderColors} onDone={fetchData} />}
             {(isSuperAdmin || isStoreOwner) && products.length > 1 && (
               <ReorderToggle
                 active={reordering === 'products'}
-                onClick={() =>
-                  setReordering((prev) => (prev === 'products' ? 'none' : 'products'))
-                }
+                onClick={() => setReordering((prev) => (prev === 'products' ? 'none' : 'products'))}
                 colors={dynamicColors}
               />
             )}
@@ -686,8 +716,7 @@ const StoreProductsPage: React.FC = () => {
                 id: product.id,
                 name: product.name,
                 image: (product as any).imageUrl || (product as any).image,
-                meta:
-                  categories.find((c) => c.id === product.categoryId)?.name || 'بدون فئة'
+                meta: categories.find((c) => c.id === product.categoryId)?.name || 'بدون فئة'
               })
             )}
             onSave={(ids) => saveOrder('products', ids)}
@@ -695,96 +724,89 @@ const StoreProductsPage: React.FC = () => {
             colors={reorderColors}
             saving={savingOrder}
           />
-        ) : products.length === 0 ? (
-          <div style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center' }}>
-            <IoCube style={{ color: dynamicColors.muted, fontSize: 48, marginBottom: 12 }} />
-            <p style={{ color: dynamicColors.muted, margin: 0 }}>لا توجد منتجات. أضف منتجاً جديداً!</p>
+        ) : visibleProducts.length === 0 ? (
+          <div className="ss-card">
+            <div className="ob-empty">
+              <b>{products.length === 0 ? 'لا منتجات بعد' : 'لا منتجات تطابق البحث'}</b>
+              <p>{products.length === 0 ? 'أضف منتجك الأوّل بصورةٍ واضحة وسعرٍ — ويظهر في متجرك فوراً.' : 'جرّب كلمةً أخرى أو فئةً أخرى.'}</p>
+              {products.length === 0 && (isSuperAdmin || isStoreOwner) && categories.length > 0 && (
+                <button type="button" onClick={() => handleOpenProductModal()}>إضافة منتج</button>
+              )}
+            </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 20 }}>
-            {products.map((product) => {
+          <div className="pc-grid">
+            {visibleProducts.map((product) => {
               const stockStatus = getStockStatus(product.stock);
               // price هو ما يُحصَّل دائماً، وoriginalPrice سعر ما قبل الخصم.
               // النسبة تُشتق من نفس قواعد الخادم بدل حسابها هنا بمعيار ثانٍ.
               const discountPercent = getDiscountPercent(product.price, (product as any).originalPrice);
               const hasDiscount = discountPercent !== null;
-              const finalPrice = product.price;
-              
               return (
-                <div key={product.id} style={{ background: dynamicColors.card, border: `1px solid ${dynamicColors.border}`, borderRadius: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = dynamicColors.accent)}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = dynamicColors.border)}
-                >
-                  {/* صورة المنتج */}
-                  <div style={{ position: 'relative', height: 140, background: dynamicColors.surf, overflow: 'hidden' }}>
+                <article key={product.id} className={`pc-card ${product.isAvailable ? '' : 'is-hidden'}`}>
+                  <div className="pc-media">
                     {product.imageUrl ? (
-                      <img src={getImageUrl(product.imageUrl)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getImageUrl(product.imageUrl)} alt={product.name} loading="lazy" />
                     ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <IoImage style={{ color: dynamicColors.muted, fontSize: 36 }} />
-                        <span style={{ color: dynamicColors.muted, fontSize: 12, marginTop: 4 }}>لا توجد صورة</span>
-                      </div>
+                      <span className="pc-noimg"><IoImage size={30} /> بلا صورة</span>
                     )}
-                    <button
-                      onClick={() => handleToggleAvailability(product.id, product.isAvailable, product.storeId)}
-                      style={{ position: 'absolute', top: 8, right: 8, padding: 6, borderRadius: '50%', border: 'none', cursor: 'pointer', background: product.isAvailable ? dynamicColors.accent : dynamicColors.muted, color: dynamicColors.bg }}
-                    >
-                      {product.isAvailable ? <IoEye size={13} /> : <IoEyeOff size={13} />}
-                    </button>
-                    <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 4 }}>
-                      {hasDiscount && <span style={{ background: staticColors.red, color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12, fontWeight: 700 }}>-{discountPercent}%</span>}
-                      {product.stock === 0 && <span style={{ background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>نفد</span>}
-                    </div>
-                    {(isSuperAdmin || isStoreOwner) && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: 0, transition: 'opacity 0.2s' }}
-                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                        onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
-                      >
-                        <button onClick={() => handleOpenProductModal(product)} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: dynamicColors.prim, cursor: 'pointer' }}>
-                          <IoPencil size={15} />
-                        </button>
-                        <button onClick={() => handleDeleteProduct(product.id, product.storeId)} disabled={deleting === product.id} style={{ padding: 8, background: '#fff', borderRadius: '50%', border: 'none', color: staticColors.red, cursor: 'pointer' }}>
-                          {deleting === product.id ? <div style={{ width: 15, height: 15, border: `2px solid ${staticColors.red}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <IoTrash size={15} />}
-                        </button>
-                      </div>
-                    )}
+                    <span className="pc-badges">
+                      {hasDiscount && <span className="pc-badge is-sale">-{discountPercent}%</span>}
+                      {product.stock === 0 && <span className="pc-badge is-dark">نفد</span>}
+                      {!product.isAvailable && <span className="pc-badge is-dark">مخفيّ</span>}
+                    </span>
                   </div>
 
-                  {/* معلومات المنتج */}
-                  <div style={{ padding: 12 }}>
-                    <h3 style={{ fontWeight: 600, color: dynamicColors.text, margin: 0, fontSize: 13 }}>{product.name}</h3>
-                    {product.nameEn && <p style={{ color: dynamicColors.muted, fontSize: 11, margin: '2px 0 0' }}>{product.nameEn}</p>}
-                    {product.branchLabel && <p style={{ color: dynamicColors.accent, fontSize: 11, margin: '4px 0 0' }}>{product.branchLabel}</p>}
-                    <div style={{ marginTop: 6 }}>
-                      <span style={{ background: dynamicColors.surf, color: dynamicColors.muted, fontSize: 11, padding: '2px 8px', borderRadius: 12 }}>
-                        {getCategoryName(product.categoryId || '')}
-                      </span>
+                  <div className="pc-body">
+                    <span className="pc-cat">{getCategoryName(product.categoryId || '')}</span>
+                    <h3>{product.name}</h3>
+                    {product.branchLabel && <small className="pc-branch">{product.branchLabel}</small>}
+                    <div className="pc-price">
+                      <strong>{formatPrice(product.price)}</strong>
+                      {hasDiscount && <s>{formatPrice((product as any).originalPrice)}</s>}
                     </div>
-                    <p style={{ color: dynamicColors.muted, fontSize: 12, marginTop: 8, minHeight: 32 }}>{product.description || 'لا يوجد وصف'}</p>
-                    <div style={{ marginTop: 8 }}>
-                      {hasDiscount ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{formatPrice(finalPrice)}</span>
-                          <span style={{ color: dynamicColors.muted, fontSize: 11, textDecoration: 'line-through' }}>{formatPrice((product as any).originalPrice)}</span>
-                          <span style={{ background: `${dynamicColors.accent}20`, color: dynamicColors.accent, fontSize: 11, padding: '1px 6px', borderRadius: 10 }}>
-                            -{discountPercent}%
-                          </span>
-                        </div>
-                      ) : (
-                        <span style={{ color: dynamicColors.accent, fontSize: 16, fontWeight: 700 }}>{formatPrice(product.price)}</span>
-                      )}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 8, borderTop: `1px solid ${dynamicColors.border}` }}>
-                      <span style={{ background: stockStatus.bg, color: stockStatus.color, fontSize: 11, padding: '3px 8px', borderRadius: 12 }}>{stockStatus.text}</span>
-                      {product.sku && <span style={{ color: dynamicColors.muted, fontSize: 11, fontFamily: 'monospace' }}>{product.sku.length > 8 ? product.sku.substring(0, 8) + '…' : product.sku}</span>}
-                    </div>
+                    <span className="pc-stock" style={{ background: stockStatus.bg, color: stockStatus.color }}>
+                      {stockStatus.text}
+                      {product.stock > 0 ? ` · ${product.stock}` : ''}
+                    </span>
                   </div>
-                </div>
+
+                  {/* الأزرار ظاهرةٌ دائماً — كانت تظهر عند المرور بالمؤشّر فقط، فلا يصلها تاجرٌ على هاتفه */}
+                  <footer className="pc-foot">
+                    <button
+                      type="button"
+                      className={`pc-toggle ${product.isAvailable ? 'is-on' : ''}`}
+                      role="switch"
+                      aria-checked={product.isAvailable}
+                      onClick={() => handleToggleAvailability(product.id, product.isAvailable, product.storeId)}
+                      title={product.isAvailable ? 'ظاهر للزبائن — اضغط لإخفائه' : 'مخفيّ — اضغط لإظهاره'}
+                    >
+                      <span className="pc-toggle-track"><span /></span>
+                      <span className="pc-toggle-text">{product.isAvailable ? 'ظاهر' : 'مخفيّ'}</span>
+                    </button>
+                    {(isSuperAdmin || isStoreOwner) && (
+                      <span className="pc-actions">
+                        <button type="button" className="pc-act" onClick={() => handleOpenProductModal(product)} aria-label={`تعديل ${product.name}`}>
+                          <IoPencil size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className="pc-act is-danger"
+                          onClick={() => handleDeleteProduct(product.id, product.storeId)}
+                          disabled={deleting === product.id}
+                          aria-label={`حذف ${product.name}`}
+                        >
+                          {deleting === product.id ? <span className="pc-spin" /> : <IoTrash size={16} />}
+                        </button>
+                      </span>
+                    )}
+                  </footer>
+                </article>
               );
             })}
           </div>
         )}
-      </div>
+      </section>
 
       {/* مودال الفئة */}
       <Modal isOpen={showCategoryModal} onClose={() => { setShowCategoryModal(false); resetCategoryForm(); }} title={selectedCategory ? 'تعديل فئة' : 'إضافة فئة جديدة'}>

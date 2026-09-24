@@ -53,13 +53,13 @@ interface Props {
 
 /** ألوان لوحة التاجر — ثابتة، فهذه شاشة إدارة لا واجهة متجر */
 const C = {
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  card: '#112E23',
-  surf: '#0F3D31',
-  border: 'rgba(200,226,53,0.16)',
-  accent: '#C8E235',
-  bg: '#0A2018'
+  text: '#10231B',
+  muted: '#5F736A',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  border: 'rgba(8,72,53,0.16)',
+  accent: '#084835',
+  bg: '#FFFFFF'
 };
 
 const Section: React.FC<{
@@ -177,7 +177,7 @@ const StorefrontDesignPicker: React.FC<Props> = ({ value, onChange, colors, kind
                   padding: 10,
                   borderRadius: 14,
                   border: `1.5px solid ${active ? C.accent : C.border}`,
-                  background: active ? 'rgba(200,226,53,0.09)' : C.surf,
+                  background: active ? 'rgba(8,72,53,0.09)' : C.surf,
                   cursor: disabled ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',
                   textAlign: 'start',

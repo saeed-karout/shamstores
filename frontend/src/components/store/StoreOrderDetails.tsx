@@ -12,6 +12,7 @@
 // يتوقّعه من قرأ فاتورة.
 
 import React, { useState } from 'react';
+import { NextStepButton, nextStep } from '@/components/orders/OrdersBoard';
 import {
   IoLocation,
   IoCall,
@@ -34,17 +35,17 @@ import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  yellow: '#F59E0B',
-  blue: '#60A5FA',
-  purple: '#A78BFA'
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  yellow: '#B45309',
+  blue: '#2563EB',
+  purple: '#8B45B5'
 };
 
 interface StoreOrder {
@@ -118,6 +119,7 @@ const toNumber = (value: number | string | undefined): number => {
 };
 
 const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateStatus, onUpdatePayment }) => {
+  const next = nextStep(order.status, 'store', undefined);
   // تحديد «مدفوع» كان متاحاً لصاحب المطعم دون صاحب المتجر، والمسار نفسه
   // يخدم الاثنين — فبقي التاجر بلا طريقة لتسجيل قبض ثمن الطلب.
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -175,8 +177,9 @@ const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateSt
       </div>
 
       <div style={{ padding: 18 }}>
-        {/* تغيير الحالة */}
-        <SectionTitle>تحديث حالة الطلب</SectionTitle>
+        {/* تغيير الحالة — الخطوة التالية أوّلاً، والشبكة للاستثناءات */}
+        {next && <NextStepButton label={next.label} onClick={() => onUpdateStatus(next.status)} />}
+        <SectionTitle>{next ? 'أو اختر حالةً أخرى' : 'تحديث حالة الطلب'}</SectionTitle>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
           {STATUS_FLOW.map((status) => {
             const active = order.status === status;

@@ -1,5 +1,6 @@
 // pages/Store/StoreCouponsPage.tsx
 
+import { formatPrice } from '@/utils/currency';
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,20 +17,20 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
-  yellow: '#F59E0B',
-  purple: '#A78BFA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
+  yellow: '#B45309',
+  purple: '#8B45B5',
 };
 
 interface Coupon {
@@ -151,10 +152,10 @@ const StoreCouponsPage: React.FC = () => {
 
   const getStatusStyle = (status: string): React.CSSProperties => {
     const map: Record<string, { bg: string; color: string }> = {
-      active:    { bg: `rgba(200,226,53,0.15)`,  color: C.accent },
-      upcoming:  { bg: `rgba(96,165,250,0.15)`,   color: C.blue },
-      expired:   { bg: `rgba(255,107,107,0.15)`,  color: C.red },
-      exhausted: { bg: `rgba(157,196,172,0.15)`,  color: C.muted },
+      active:    { bg: `rgba(8,72,53,0.15)`,  color: C.accent },
+      upcoming:  { bg: `rgba(37,99,235,0.15)`,   color: C.blue },
+      expired:   { bg: `rgba(214,69,69,0.15)`,  color: C.red },
+      exhausted: { bg: `rgba(95,115,106,0.15)`,  color: C.muted },
     };
     const s = map[status] || map.exhausted;
     return { background: s.bg, color: s.color, padding: '3px 10px', borderRadius: 12, fontSize: 12 };
@@ -244,11 +245,11 @@ const StoreCouponsPage: React.FC = () => {
                       </td>
                       <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                         {coupon.isStoreOnly ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `rgba(200,226,53,0.12)`, color: C.accent, padding: '3px 8px', borderRadius: 12, fontSize: 12 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `rgba(8,72,53,0.12)`, color: C.accent, padding: '3px 8px', borderRadius: 12, fontSize: 12 }}>
                             <IoStorefront size={12} /> خاص بالمتجر
                           </span>
                         ) : (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `rgba(157,196,172,0.12)`, color: C.muted, padding: '3px 8px', borderRadius: 12, fontSize: 12 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: `rgba(95,115,106,0.12)`, color: C.muted, padding: '3px 8px', borderRadius: 12, fontSize: 12 }}>
                             <IoGlobe size={12} /> عام
                           </span>
                         )}
@@ -258,9 +259,9 @@ const StoreCouponsPage: React.FC = () => {
                       </td>
                       <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                         <span style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>
-                          {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `${coupon.discountValue} ر.س`}
+                          {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `${formatPrice(coupon.discountValue)}`}
                         </span>
-                        {coupon.minOrder > 0 && <p style={{ color: C.muted, fontSize: 11, margin: '2px 0 0' }}>الحد الأدنى: {coupon.minOrder} ر.س</p>}
+                        {coupon.minOrder > 0 && <p style={{ color: C.muted, fontSize: 11, margin: '2px 0 0' }}>الحد الأدنى: {formatPrice(coupon.minOrder)}</p>}
                       </td>
                       <td style={{ padding: '14px 16px', whiteSpace: 'nowrap', fontSize: 13, color: C.text }}>
                         <div>{format(new Date(coupon.startDate), 'dd/MM/yyyy')}</div>
@@ -321,11 +322,11 @@ const StoreCouponsPage: React.FC = () => {
               <label style={labelStyle}>نوع الخصم</label>
               <select value={formData.discountType} onChange={(e) => setFormData({ ...formData, discountType: e.target.value as any })} style={inputStyle}>
                 <option value="percentage">نسبة مئوية (%)</option>
-                <option value="fixed">قيمة ثابتة (ر.س)</option>
+                <option value="fixed">قيمة ثابتة (ل.س)</option>
               </select>
             </div>
             <div>
-              <label style={labelStyle}>{formData.discountType === 'percentage' ? 'نسبة الخصم (%)' : 'قيمة الخصم (ر.س)'}</label>
+              <label style={labelStyle}>{formData.discountType === 'percentage' ? 'نسبة الخصم (%)' : 'قيمة الخصم (ل.س)'}</label>
               <input type="number" step={formData.discountType === 'percentage' ? '1' : '0.01'} min="0" max={formData.discountType === 'percentage' ? '100' : undefined} value={formData.discountValue} onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })} style={inputStyle} />
             </div>
           </div>
@@ -356,7 +357,7 @@ const StoreCouponsPage: React.FC = () => {
               <input type="checkbox" checked={formData.isStoreOnly} onChange={(e) => setFormData({ ...formData, isStoreOnly: e.target.checked })} style={{ width: 16, height: 16, accentColor: C.accent }} />
               <span style={{ color: C.text, fontSize: 14, fontWeight: 500 }}>كوبون خاص بالمتجر فقط</span>
             </label>
-            <div style={{ background: formData.isStoreOnly ? `rgba(200,226,53,0.08)` : C.surf, border: `1px solid ${formData.isStoreOnly ? `rgba(200,226,53,0.3)` : C.border}`, borderRadius: 10, padding: 12, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <div style={{ background: formData.isStoreOnly ? `rgba(8,72,53,0.08)` : C.surf, border: `1px solid ${formData.isStoreOnly ? `rgba(8,72,53,0.3)` : C.border}`, borderRadius: 10, padding: 12, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               {formData.isStoreOnly ? <IoStorefront style={{ color: C.accent, marginTop: 2 }} size={17} /> : <IoGlobe style={{ color: C.muted, marginTop: 2 }} size={17} />}
               <div>
                 <p style={{ color: C.text, fontSize: 13, fontWeight: 500, margin: 0 }}>{formData.isStoreOnly ? 'يعمل فقط عند الطلب من المتجر' : 'يعمل في أي مكان'}</p>

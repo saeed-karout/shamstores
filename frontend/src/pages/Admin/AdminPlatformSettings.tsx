@@ -16,9 +16,9 @@ import toast from 'react-hot-toast';
 import ExchangeRateCard from '@/components/admin/ExchangeRateCard';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', orange: '#C2410C',
 };
 
 interface Setting {
@@ -179,7 +179,7 @@ const AdminPlatformSettings: React.FC = () => {
               fontSize: 14,
               border: 'none',
               cursor: 'pointer',
-              background: currentValue ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)',
+              background: currentValue ? 'rgba(8,72,53,0.12)' : 'rgba(214,69,69,0.12)',
               color: currentValue ? C.accent : C.red,
             }}
           >
@@ -324,7 +324,7 @@ const AdminPlatformSettings: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 12,
-                    background: isActive ? 'rgba(200,226,53,0.06)' : 'transparent',
+                    background: isActive ? 'rgba(8,72,53,0.06)' : 'transparent',
                     border: 'none',
                     borderRight: isActive ? `4px solid ${C.accent}` : '4px solid transparent',
                     cursor: 'pointer',

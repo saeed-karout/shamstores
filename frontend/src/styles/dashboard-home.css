@@ -1,0 +1,284 @@
+/* frontend/src/styles/dashboard-home.css — الشاشة الرئيسية للوحة التاجر
+ * (تُستورد من `DashboardHomeView`؛ الرموز من `dashboard.css`) */
+
+.ss-home { display: grid; gap: 16px; }
+@media (min-width: 1024px) { .ss-home { gap: 20px; } }
+
+/* ===== الترحيب ===== */
+
+.ss-hello {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 20px;
+  border-radius: 22px;
+  color: #fff;
+  background:
+    radial-gradient(80% 120% at 0% 0%, rgba(192, 124, 223, 0.35), transparent 60%),
+    radial-gradient(70% 90% at 100% 100%, rgba(205, 239, 124, 0.22), transparent 60%),
+    linear-gradient(135deg, #0a5540, #084835 55%, #052e22);
+  box-shadow: 0 18px 40px -18px rgba(5, 46, 34, 0.55);
+}
+.ss-hello::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -40px;
+  top: -60px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 36px solid rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+.ss-hello-copy { position: relative; z-index: 1; min-width: 0; flex: 1 1 320px; }
+.ss-hello-date { margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.7); font-weight: 600; }
+.ss-hello h2 { margin: 4px 0 2px; font-size: 26px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.25; color: #fff; }
+.ss-hello-sub { margin: 0; color: rgba(255, 255, 255, 0.8); font-size: 14.5px; }
+.ss-hello-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.ss-hello-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: background 0.15s ease;
+}
+.ss-hello-btn:hover { background: rgba(255, 255, 255, 0.2); }
+.ss-hello-btn.is-primary { background: var(--d-lime); color: var(--d-green); border-color: transparent; }
+.ss-hello-btn.is-primary:hover { background: #d9f59a; }
+.ss-hello-figure {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 2px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  min-width: 190px;
+}
+.ss-hello-figure span { font-size: 12.5px; color: rgba(255, 255, 255, 0.75); font-weight: 600; }
+.ss-hello-figure strong { font-size: 28px; font-weight: 900; color: var(--d-lime); letter-spacing: -0.02em; line-height: 1.2; }
+.ss-hello-figure small { font-size: 12.5px; color: rgba(255, 255, 255, 0.75); }
+@media (min-width: 1024px) {
+  .ss-hello { padding: 28px 32px; }
+  .ss-hello h2 { font-size: 32px; }
+  .ss-hello-figure strong { font-size: 34px; }
+}
+@media (max-width: 520px) { .ss-hello-figure { flex: 1 1 100%; } }
+
+/* ===== يحتاج انتباهك ===== */
+
+.ss-attn { display: grid; gap: 10px; }
+@media (min-width: 768px) { .ss-attn { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); } }
+.ss-attn-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: var(--d-ink);
+  background: var(--d-card);
+  border: 1px solid var(--d-line);
+  border-inline-start: 4px solid var(--t);
+  box-shadow: var(--d-shadow);
+}
+.ss-attn-item:hover { border-color: var(--d-line-strong); border-inline-start-color: var(--t); }
+.ss-attn-ico { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--t-bg); color: var(--t); flex-shrink: 0; }
+.ss-attn-text { flex: 1; min-width: 0; display: grid; }
+.ss-attn-text b { font-size: 14.5px; font-weight: 800; }
+.ss-attn-text small { font-size: 12.5px; color: var(--d-muted); }
+.ss-attn-go { color: var(--d-muted); flex-shrink: 0; }
+
+/* ===== الأرقام ===== */
+
+.ss-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 1024px) { .ss-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; } }
+.ss-kpi {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "label ico" "value value" "hint hint";
+  align-items: center;
+  gap: 4px 8px;
+  padding: 14px 16px;
+  border-radius: var(--d-radius);
+  background: var(--d-card);
+  border: 1px solid var(--d-line);
+  box-shadow: var(--d-shadow);
+  color: var(--d-ink);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
+}
+.ss-kpi:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(16, 35, 27, 0.04), 0 14px 30px rgba(16, 35, 27, 0.09); }
+.ss-kpi-ico { grid-area: ico; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--t-bg); color: var(--t); }
+.ss-kpi-label { grid-area: label; font-size: 13px; color: var(--d-muted); font-weight: 700; min-width: 0; }
+.ss-kpi-value { grid-area: value; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-kpi-hint { grid-area: hint; font-size: 12px; color: var(--d-muted); }
+@media (min-width: 1024px) { .ss-kpi { padding: 18px 20px; } .ss-kpi-value { font-size: 28px; } }
+
+/* ===== الألواح ===== */
+
+.ss-home-grid { display: grid; gap: 16px; }
+@media (min-width: 1024px) { .ss-home-grid { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 20px; } }
+
+.ss-panel { padding: 18px; min-width: 0; }
+@media (min-width: 1024px) { .ss-panel { padding: 22px 24px; } }
+.ss-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.ss-panel-head h3 { margin: 0; font-size: 16.5px; font-weight: 800; color: var(--d-ink); }
+.ss-panel-head p { margin: 2px 0 0; font-size: 13px; color: var(--d-muted); }
+.ss-panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--d-green);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ss-panel-link:hover { text-decoration: underline; }
+.ss-chart-box { height: 240px; margin-inline: -6px; }
+@media (min-width: 1024px) { .ss-chart-box { height: 280px; } }
+
+/* ===== دليل الإعداد ===== */
+
+.ss-ring {
+  --p: 0%;
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(var(--d-green) var(--p), #e5ece7 0);
+}
+.ss-ring span {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--d-green);
+}
+.ss-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ss-steps a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--d-surface);
+  color: var(--d-ink);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+.ss-steps a:hover { background: #e8efea; }
+.ss-step-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 2px dashed rgba(8, 72, 53, 0.35);
+}
+.ss-step-label { flex: 1; }
+.ss-steps .is-done a { background: transparent; color: var(--d-muted); font-weight: 600; }
+.ss-steps .is-done .ss-step-label { text-decoration: line-through; text-decoration-color: rgba(95, 115, 106, 0.5); }
+.ss-steps .is-done .ss-step-dot { border: 0; background: var(--d-green); color: #fff; }
+
+.ss-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ss-shortcut {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--d-surface);
+  color: var(--d-ink);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  min-width: 0;
+}
+.ss-shortcut span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #fff; color: var(--d-green); box-shadow: 0 1px 2px rgba(16, 35, 27, 0.06); }
+.ss-shortcut:hover { background: #e8efea; }
+
+/* ===== آخر الطلبات ===== */
+
+.ss-orders { list-style: none; margin: 0 -8px; padding: 0; }
+.ss-orders li + li { border-top: 1px solid var(--d-line); }
+.ss-orders a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "av main total" "av main status";
+  align-items: center;
+  gap: 2px 12px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  color: var(--d-ink);
+  text-decoration: none;
+}
+.ss-orders a:hover { background: var(--d-surface); }
+.ss-order-avatar { grid-area: av; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: #eef2ef; color: var(--d-green); font-weight: 900; }
+.ss-order-main { grid-area: main; display: grid; min-width: 0; }
+.ss-order-main b { font-size: 14.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-order-main small { font-size: 12.5px; color: var(--d-muted); }
+.ss-order-total { grid-area: total; font-weight: 900; font-size: 14.5px; white-space: nowrap; justify-self: end; }
+.ss-orders .ss-status { grid-area: status; justify-self: end; }
+@media (min-width: 768px) {
+  .ss-orders a { grid-template-columns: auto minmax(0, 1fr) 150px 130px; grid-template-areas: "av main status total"; }
+  .ss-orders .ss-status { justify-self: start; }
+}
+
+.ss-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--t-bg);
+  color: var(--t);
+  white-space: nowrap;
+}
+.ss-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.ss-empty { display: grid; justify-items: center; text-align: center; gap: 6px; padding: 28px 12px; }
+.ss-empty > span { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 18px; background: #eef2ef; color: var(--d-green); margin-bottom: 4px; }
+.ss-empty b { font-size: 15.5px; }
+.ss-empty p { margin: 0; max-width: 360px; font-size: 13.5px; color: var(--d-muted); line-height: 1.7; }
+
+.ss-home-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--d-muted);
+  text-align: center;
+}
+.ss-home-tip svg { color: var(--d-purple); flex-shrink: 0; }
+
+/* على الجوال زرّ «متجري» في الشريط العلويّ أصلاً — لا نكرّره */
+@media (max-width: 1023.98px) { .ss-hello-btn.is-store { display: none; } }

@@ -1,5 +1,6 @@
 // pages/Store/StoreInventoryPage.tsx
 
+import { formatPrice } from '@/utils/currency';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   IoCube, IoWarning, IoCheckmarkCircle, IoRefresh,
@@ -12,9 +13,9 @@ import Loader from '../../components/common/Loader';
 import { motion } from 'framer-motion';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 interface Product {
@@ -191,9 +192,9 @@ const StoreInventoryPage: React.FC = () => {
   };
 
   const getStockStatus = (stock: number, threshold: number) => {
-    if (stock === 0) return { label: 'نفد المخزون', color: C.red, bg: 'rgba(255,107,107,0.12)', icon: IoAlertCircle };
-    if (stock <= threshold) return { label: 'مخزون منخفض', color: '#FBB91F', bg: 'rgba(251,191,36,0.12)', icon: IoWarning };
-    return { label: 'متوفر', color: C.accent, bg: 'rgba(200,226,53,0.12)', icon: IoCheckmarkCircle };
+    if (stock === 0) return { label: 'نفد المخزون', color: C.red, bg: 'rgba(214,69,69,0.12)', icon: IoAlertCircle };
+    if (stock <= threshold) return { label: 'مخزون منخفض', color: '#B7791F', bg: 'rgba(183,121,31,0.12)', icon: IoWarning };
+    return { label: 'متوفر', color: C.accent, bg: 'rgba(8,72,53,0.12)', icon: IoCheckmarkCircle };
   };
 
   const threshold = stats?.lowStockThreshold || 10;
@@ -244,7 +245,7 @@ const StoreInventoryPage: React.FC = () => {
           </div>
           <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
             <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>مخزون منخفض</p>
-            <p style={{ color: '#FBB91F', fontSize: 24, fontWeight: 700 }}>{stats.lowStock}</p>
+            <p style={{ color: '#B7791F', fontSize: 24, fontWeight: 700 }}>{stats.lowStock}</p>
           </div>
           <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
             <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>نفد المخزون</p>
@@ -252,14 +253,14 @@ const StoreInventoryPage: React.FC = () => {
           </div>
           <div style={{ background: C.card, border: '1px solid ' + C.border, borderRadius: 16, padding: 16 }}>
             <p style={{ color: C.muted, fontSize: 12, marginBottom: 4 }}>قيمة المخزون</p>
-            <p style={{ color: C.accent, fontSize: 17, fontWeight: 700 }}>{stats.totalValue.toLocaleString()} ر.س</p>
+            <p style={{ color: C.accent, fontSize: 17, fontWeight: 700 }}>{formatPrice(stats.totalValue)}</p>
           </div>
         </div>
       )}
 
       {/* Alerts */}
       {stats && stats.outOfStock > 0 && (
-        <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 16, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ background: 'rgba(214,69,69,0.08)', border: '1px solid rgba(214,69,69,0.2)', borderRadius: 16, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
           <IoAlertCircle style={{ color: C.red, fontSize: 20, flexShrink: 0 }} />
           <span style={{ color: C.red, fontSize: 13 }}>
             تحذير: {stats.outOfStock} منتج{stats.outOfStock > 1 ? 'ات' : ''} نفد مخزونها. يرجى إعادة التخزين.
@@ -267,9 +268,9 @@ const StoreInventoryPage: React.FC = () => {
         </div>
       )}
       {stats && stats.lowStock > 0 && (
-        <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', borderRadius: 16, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <IoWarning style={{ color: '#FBB91F', fontSize: 20, flexShrink: 0 }} />
-          <span style={{ color: '#FBB91F', fontSize: 13 }}>
+        <div style={{ background: 'rgba(183,121,31,0.08)', border: '1px solid rgba(183,121,31,0.2)', borderRadius: 16, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <IoWarning style={{ color: '#B7791F', fontSize: 20, flexShrink: 0 }} />
+          <span style={{ color: '#B7791F', fontSize: 13 }}>
             تنبيه: {stats.lowStock} منتج{stats.lowStock > 1 ? 'ات' : ''} بمخزون منخفض (أقل من {threshold} وحدات).
           </span>
         </div>
@@ -338,7 +339,7 @@ const StoreInventoryPage: React.FC = () => {
                     <motion.tr
                       key={product.id}
                       layout
-                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       style={{ borderBottom: '1px solid ' + C.border }}
                     >
@@ -367,11 +368,11 @@ const StoreInventoryPage: React.FC = () => {
                       <td style={{ padding: '12px 16px' }}>
                         <div>
                           <span style={{ color: C.accent, fontWeight: 600 }}>
-                            {product.price.toLocaleString()} ر.س
+                            {formatPrice(product.price)}
                           </span>
                           {product.discountedPrice && product.discountedPrice < product.price && (
                             <span style={{ color: C.muted, fontSize: 11, display: 'block', textDecoration: 'line-through' }}>
-                              {product.discountedPrice.toLocaleString()} ر.س
+                              {formatPrice(product.discountedPrice)}
                             </span>
                           )}
                         </div>
@@ -427,7 +428,7 @@ const StoreInventoryPage: React.FC = () => {
                         ) : (
                           <button
                             onClick={() => setEditState({ productId: product.id, quantity: product.stock, type: 'set' })}
-                            style={{ padding: 8, background: 'rgba(96,165,250,0.1)', color: C.blue, border: 'none', borderRadius: 8, cursor: 'pointer' }}
+                            style={{ padding: 8, background: 'rgba(37,99,235,0.1)', color: C.blue, border: 'none', borderRadius: 8, cursor: 'pointer' }}
                           >
                             <IoPencil />
                           </button>

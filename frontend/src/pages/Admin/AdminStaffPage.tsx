@@ -11,9 +11,9 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', yellow: '#FBBF24',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', yellow: '#B7791F',
 };
 
 interface StaffMember {
@@ -396,7 +396,7 @@ const getFilteredStaff = () => {
           <IoArrowBack size={18} /> العودة
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 44, height: 44, background: businessType === 'restaurant' ? 'rgba(96,165,250,0.15)' : 'rgba(167,139,250,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 44, height: 44, background: businessType === 'restaurant' ? 'rgba(37,99,235,0.15)' : 'rgba(139,69,181,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {businessType === 'restaurant' ? <IoRestaurant size={22} style={{ color: C.blue }} /> : <IoStorefront size={22} style={{ color: C.purple }} />}
           </div>
           <div>
@@ -458,12 +458,12 @@ const getFilteredStaff = () => {
               </thead>
               <tbody>
                 {filteredStaff.map(member => (
-                  <tr key={member.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <tr key={member.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                     <td style={{ padding: '12px 16px', color: C.text, fontWeight: 600, fontSize: 13 }}>{member.name}</td>
                     <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>{member.email}</td>
                     <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>{member.phone || '-'}</td>
                     <td style={{ padding: '12px 16px' }}>
-                      <button onClick={() => handleToggleActive(member)} style={{ background: member.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)', color: member.isActive ? C.accent : C.red, border: 'none', borderRadius: 10, padding: '4px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}>
+                      <button onClick={() => handleToggleActive(member)} style={{ background: member.isActive ? 'rgba(8,72,53,0.12)' : 'rgba(214,69,69,0.12)', color: member.isActive ? C.accent : C.red, border: 'none', borderRadius: 10, padding: '4px 10px', fontSize: 12, cursor: 'pointer', fontFamily: 'Cairo, sans-serif' }}>
                         {member.isActive ? 'نشط' : 'غير نشط'}
                       </button>
                     </td>

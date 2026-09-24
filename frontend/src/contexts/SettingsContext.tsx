@@ -28,14 +28,14 @@ interface ThemeContextType {
 }
 
 const defaultColors: ThemeColors = {
-  primaryColor: '#3B82F6',
-  secondaryColor: '#10B981',
-  backgroundColor: '#082E24',
-  cardBgColor: '#112E23',
-  surfaceColor: '#0F3D31',
-  textColor: '#E8F5E9',
-  mutedColor: '#9DC4AC',
-  accentColor: '#C8E235',
+  primaryColor: '#084835',
+  secondaryColor: '#C07CDF',
+  backgroundColor: '#F4F7F4',
+  cardBgColor: '#FFFFFF',
+  surfaceColor: '#F1F5F2',
+  textColor: '#10231B',
+  mutedColor: '#5F736A',
+  accentColor: '#084835',
   fontFamily: 'Cairo, sans-serif',
 };
 

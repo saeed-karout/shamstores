@@ -23,19 +23,19 @@ import { APP_DOMAIN, isValidSubdomain, isValidCustomDomain, isReservedSubdomain 
 
 // ==================== الثيم ====================
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
   surfHi: '#134838',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.16)',
-  borderSoft: 'rgba(232,245,233,0.08)',
-  red: '#FF6B6B',
-  green: '#4ADE80',
-  yellow: '#FBBF24',
-  blue: '#60A5FA'
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.16)',
+  borderSoft: 'rgba(16,35,27,0.08)',
+  red: '#D64545',
+  green: '#15803D',
+  yellow: '#B7791F',
+  blue: '#2563EB'
 };
 
 // ==================== الأنواع ====================
@@ -138,9 +138,9 @@ const btnGhost: React.CSSProperties = {
 };
 const btnDanger: React.CSSProperties = {
   ...btnBase,
-  background: 'rgba(255,107,107,0.12)',
+  background: 'rgba(214,69,69,0.12)',
   color: C.red,
-  border: `1px solid rgba(255,107,107,0.3)`
+  border: `1px solid rgba(214,69,69,0.3)`
 };
 
 // ==================== مكونات صغيرة ====================
@@ -175,7 +175,7 @@ const CopyButton: React.FC<{ value: string; label?: string }> = ({ value, label 
         padding: '8px 10px',
         minHeight: 36,
         color: copied ? C.green : C.muted,
-        borderColor: copied ? 'rgba(74,222,128,0.35)' : C.borderSoft
+        borderColor: copied ? 'rgba(21,128,61,0.35)' : C.borderSoft
       }}
     >
       {copied ? <IoCheckmarkCircle size={16} /> : <IoCopyOutline size={16} />}
@@ -637,9 +637,9 @@ const DomainManager: React.FC<DomainManagerProps> = ({
                 borderRadius: '0 10px 10px 0',
                 borderColor:
                   availability.available === false
-                    ? 'rgba(255,107,107,0.5)'
+                    ? 'rgba(214,69,69,0.5)'
                     : availability.available === true
-                    ? 'rgba(74,222,128,0.5)'
+                    ? 'rgba(21,128,61,0.5)'
                     : C.borderSoft
               }}
             />
@@ -742,8 +742,8 @@ const DomainManager: React.FC<DomainManagerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                background: 'rgba(74,222,128,0.08)',
-                border: '1px solid rgba(74,222,128,0.28)',
+                background: 'rgba(21,128,61,0.08)',
+                border: '1px solid rgba(21,128,61,0.28)',
                 borderRadius: 12,
                 padding: 16,
                 flexWrap: 'wrap'
@@ -839,8 +839,8 @@ const DomainManager: React.FC<DomainManagerProps> = ({
               <div
                 style={{
                   marginTop: 14,
-                  background: 'rgba(251,191,36,0.08)',
-                  border: '1px solid rgba(251,191,36,0.28)',
+                  background: 'rgba(183,121,31,0.08)',
+                  border: '1px solid rgba(183,121,31,0.28)',
                   borderRadius: 12,
                   padding: 14
                 }}
@@ -887,8 +887,8 @@ const DomainManager: React.FC<DomainManagerProps> = ({
                   <div
                     style={{
                       marginTop: 12,
-                      background: 'rgba(255,107,107,0.08)',
-                      border: '1px solid rgba(255,107,107,0.25)',
+                      background: 'rgba(214,69,69,0.08)',
+                      border: '1px solid rgba(214,69,69,0.25)',
                       borderRadius: 10,
                       padding: 10,
                       color: C.red,
@@ -937,8 +937,8 @@ const DomainManager: React.FC<DomainManagerProps> = ({
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 8,
-                    background: 'rgba(96,165,250,0.08)',
-                    border: '1px solid rgba(96,165,250,0.25)',
+                    background: 'rgba(37,99,235,0.08)',
+                    border: '1px solid rgba(37,99,235,0.25)',
                     borderRadius: 10,
                     padding: 12,
                     marginBottom: 14
@@ -964,8 +964,8 @@ const DomainManager: React.FC<DomainManagerProps> = ({
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 8,
-                    background: 'rgba(96,165,250,0.08)',
-                    border: '1px solid rgba(96,165,250,0.25)',
+                    background: 'rgba(37,99,235,0.08)',
+                    border: '1px solid rgba(37,99,235,0.25)',
                     borderRadius: 10,
                     padding: 12,
                     marginBottom: 14

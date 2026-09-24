@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatPrice } from '@/utils/currency';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
 import { Restaurant, Category, MenuItem } from '../services/types';
@@ -57,14 +58,14 @@ const RestaurantPage: React.FC = () => {
 
   if (loading) return <Loader fullScreen />;
   if (!data) return (
-    <div style={{ minHeight: '100vh', background: '#082E24', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9DC4AC', fontFamily: 'Cairo, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#F4F7F4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#5F736A', fontFamily: 'Cairo, sans-serif' }}>
       المطعم غير موجود
     </div>
   );
 
   const { restaurant, categories } = data;
   const filteredItems = getFilteredItems();
-  const primaryColor = restaurant.primaryColor || '#C8E235';
+  const primaryColor = restaurant.primaryColor || '#084835';
 
   return (
     <>
@@ -76,47 +77,47 @@ const RestaurantPage: React.FC = () => {
         {restaurant.logo && <meta property="og:image" content={getImageUrl(restaurant.logo)} />}
       </Helmet>
 
-      <div style={{ minHeight: '100vh', background: '#082E24', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
+      <div style={{ minHeight: '100vh', background: '#F4F7F4', fontFamily: 'Cairo, sans-serif' }} dir="rtl">
         {restaurant.coverImage && (
           <div style={{ height: 256, backgroundImage: `url(${getImageUrl(restaurant.coverImage)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
         )}
 
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px 32px' }}>
-          <div style={{ background: '#112E23', border: '1px solid rgba(200,226,53,0.15)', borderRadius: 16, padding: 24, marginTop: restaurant.coverImage ? -80 : 32, position: 'relative', zIndex: 1 }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid rgba(8,72,53,0.15)', borderRadius: 16, padding: 24, marginTop: restaurant.coverImage ? -80 : 32, position: 'relative', zIndex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
               {restaurant.logo && (
                 <img
                   src={getImageUrl(restaurant.logo)}
                   alt={restaurant.name}
-                  style={{ width: 96, height: 96, borderRadius: '50%', border: '4px solid rgba(200,226,53,0.3)', marginTop: restaurant.coverImage ? -48 : 0, flexShrink: 0 }}
+                  style={{ width: 96, height: 96, borderRadius: '50%', border: '4px solid rgba(8,72,53,0.3)', marginTop: restaurant.coverImage ? -48 : 0, flexShrink: 0 }}
                 />
               )}
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <h1 style={{ color: '#E8F5E9', fontSize: 24, fontWeight: 800 }}>
+                  <h1 style={{ color: '#10231B', fontSize: 24, fontWeight: 800 }}>
                     {restaurant.name}
                   </h1>
-                  <button onClick={shareRestaurant} style={{ background: 'none', border: 'none', color: '#9DC4AC', cursor: 'pointer', padding: 8, borderRadius: '50%' }} aria-label="مشاركة المطعم">
+                  <button onClick={shareRestaurant} style={{ background: 'none', border: 'none', color: '#5F736A', cursor: 'pointer', padding: 8, borderRadius: '50%' }} aria-label="مشاركة المطعم">
                     <IoShare size={20} />
                   </button>
                 </div>
                 {restaurant.description && (
-                  <p style={{ color: '#9DC4AC', marginTop: 8, fontSize: 14 }}>{restaurant.description}</p>
+                  <p style={{ color: '#5F736A', marginTop: 8, fontSize: 14 }}>{restaurant.description}</p>
                 )}
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 16 }}>
                   {restaurant.phone && (
-                    <a href={`tel:${restaurant.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#60A5FA', fontSize: 13, textDecoration: 'none' }}>
+                    <a href={`tel:${restaurant.phone}`} style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#2563EB', fontSize: 13, textDecoration: 'none' }}>
                       <IoCall size={14} /> {restaurant.phone}
                     </a>
                   )}
                   {restaurant.whatsapp && (
-                    <a href={`https://wa.me/${restaurant.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4ADE80', fontSize: 13, textDecoration: 'none' }}>
+                    <a href={`https://wa.me/${restaurant.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#15803D', fontSize: 13, textDecoration: 'none' }}>
                       <IoLogoWhatsapp size={14} /> واتساب
                     </a>
                   )}
                   {restaurant.address && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#9DC4AC', fontSize: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#5F736A', fontSize: 13 }}>
                       <IoLocation size={14} /> {restaurant.address}
                     </div>
                   )}
@@ -128,7 +129,7 @@ const RestaurantPage: React.FC = () => {
                 </div>
 
                 {restaurant.openingHours && (
-                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#9DC4AC', fontSize: 13 }}>
+                  <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6, color: '#5F736A', fontSize: 13 }}>
                     <IoTime size={14} />
                     <span>اليوم: {new Date().toLocaleDateString('ar-SA', { weekday: 'long' })}</span>
                     <span style={{ margin: '0 6px' }}>•</span>
@@ -154,8 +155,8 @@ const RestaurantPage: React.FC = () => {
                   style={{
                     padding: '8px 16px', borderRadius: 20, border: 'none', cursor: 'pointer',
                     fontFamily: 'Cairo, sans-serif', fontWeight: 600, fontSize: 13,
-                    background: selectedCategory === cat.id ? primaryColor : '#0F3D31',
-                    color: selectedCategory === cat.id ? '#082E24' : '#9DC4AC',
+                    background: selectedCategory === cat.id ? primaryColor : '#F1F5F2',
+                    color: selectedCategory === cat.id ? '#F4F7F4' : '#5F736A',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -168,30 +169,30 @@ const RestaurantPage: React.FC = () => {
           {/* Items grid */}
           <div style={{ marginTop: 24, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
             {filteredItems.map(item => (
-              <div key={item.id} style={{ background: '#112E23', border: '1px solid rgba(200,226,53,0.15)', borderRadius: 16, overflow: 'hidden', transition: 'all 0.2s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(200,226,53,0.4)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(200,226,53,0.15)'; }}>
+              <div key={item.id} style={{ background: '#FFFFFF', border: '1px solid rgba(8,72,53,0.15)', borderRadius: 16, overflow: 'hidden', transition: 'all 0.2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(8,72,53,0.4)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(8,72,53,0.15)'; }}>
                 {item.image && (
                   <img src={getImageUrl(item.image)} alt={item.name} style={{ width: '100%', height: 192, objectFit: 'cover' }} />
                 )}
                 <div style={{ padding: 16 }}>
-                  <h3 style={{ color: '#E8F5E9', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{item.name}</h3>
+                  <h3 style={{ color: '#10231B', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{item.name}</h3>
                   {item.description && (
-                    <p style={{ color: '#9DC4AC', fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>{item.description}</p>
+                    <p style={{ color: '#5F736A', fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>{item.description}</p>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       {item.discountedPrice ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ color: '#C8E235', fontSize: 18, fontWeight: 800 }}>{item.discountedPrice} ر.س</span>
-                          <span style={{ color: '#9DC4AC', fontSize: 13, textDecoration: 'line-through' }}>{item.price} ر.س</span>
+                          <span style={{ color: '#084835', fontSize: 18, fontWeight: 800 }}>{formatPrice(item.discountedPrice)}</span>
+                          <span style={{ color: '#5F736A', fontSize: 13, textDecoration: 'line-through' }}>{formatPrice(item.price)}</span>
                         </div>
                       ) : (
-                        <span style={{ color: '#C8E235', fontSize: 18, fontWeight: 800 }}>{item.price} ر.س</span>
+                        <span style={{ color: '#084835', fontSize: 18, fontWeight: 800 }}>{formatPrice(item.price)}</span>
                       )}
                     </div>
                     {!item.isAvailable && (
-                      <span style={{ background: 'rgba(255,107,107,0.12)', color: '#FF6B6B', padding: '2px 8px', borderRadius: 10, fontSize: 12 }}>غير متوفر</span>
+                      <span style={{ background: 'rgba(214,69,69,0.12)', color: '#D64545', padding: '2px 8px', borderRadius: 10, fontSize: 12 }}>غير متوفر</span>
                     )}
                   </div>
                 </div>

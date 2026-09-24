@@ -1,5 +1,6 @@
 // src/pages/Store/StoreSettingsPage.tsx
 
+import { formatPrice } from '@/utils/currency';
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@/hooks/useStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,20 +53,20 @@ import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings
 
 // ==================== ثوابت التصميم الأساسية ====================
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  prim: '#0D4A3A',
-  surf: '#0F3D31',
-  surfL: '#164D3E',
-  accent: '#C8E235',
-  acDk: '#A8C220',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  blue: '#60A5FA',
-  purple: '#A78BFA',
-  orange: '#FB923C',
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  prim: '#E8EFEA',
+  surf: '#F1F5F2',
+  surfL: '#E2EBE5',
+  accent: '#084835',
+  acDk: '#06382A',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  blue: '#2563EB',
+  purple: '#8B45B5',
+  orange: '#C2410C',
 };
 
 interface DeliverySettings {
@@ -917,7 +918,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.backgroundColor}
                     onChange={(e) => setDesignForm({ ...designForm, backgroundColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#082E24"
+                    placeholder="#F4F7F4"
                     disabled={!canUpdateSettings}
                   />
                 </div>
@@ -940,7 +941,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.cardColor}
                     onChange={(e) => setDesignForm({ ...designForm, cardColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#112E23"
+                    placeholder="#FFFFFF"
                     disabled={!canUpdateSettings}
                   />
                 </div>
@@ -963,7 +964,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.surfaceColor}
                     onChange={(e) => setDesignForm({ ...designForm, surfaceColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#0F3D31"
+                    placeholder="#F1F5F2"
                     disabled={!canUpdateSettings}
                   />
                 </div>
@@ -986,7 +987,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.textColor}
                     onChange={(e) => setDesignForm({ ...designForm, textColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#E8F5E9"
+                    placeholder="#10231B"
                     disabled={!canUpdateSettings}
                   />
                 </div>
@@ -1009,7 +1010,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.mutedColor}
                     onChange={(e) => setDesignForm({ ...designForm, mutedColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#9DC4AC"
+                    placeholder="#5F736A"
                     disabled={!canUpdateSettings}
                   />
                 </div>
@@ -1032,7 +1033,7 @@ const StoreSettingsPage: React.FC = () => {
                     value={designForm.accentColor}
                     onChange={(e) => setDesignForm({ ...designForm, accentColor: e.target.value })}
                     style={{ flex: 1, ...inputStyle }}
-                    placeholder="#C8E235"
+                    placeholder="#084835"
                     disabled={!canUpdateSettings}
                   />
                 </div>
@@ -1155,7 +1156,7 @@ const StoreSettingsPage: React.FC = () => {
       {/* ==================== تبويب التوصيل ==================== */}
       {activeTab === 'delivery' && (
         <div>
-          <div style={{ ...sectionCard, background: `rgba(200,226,53,0.07)`, marginBottom: 16 }}>
+          <div style={{ ...sectionCard, background: `rgba(8,72,53,0.07)`, marginBottom: 16 }}>
             <p style={{ color: C.text, fontSize: 13, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <IoWarning style={{ color: C.accent, flexShrink: 0 }} /> قم بتعيين أسعار التوصيل حسب المسافة. سيتم حساب سعر التوصيل تلقائياً بناءً على موقع العميل.
             </p>
@@ -1408,7 +1409,7 @@ const StoreSettingsPage: React.FC = () => {
                     <div key={idx} style={{ background: C.surf, borderRadius: 10, padding: 12 }}>
                       {product.imageUrl && <img src={getImageUrl(product.imageUrl)} alt={product.name} style={{ width: '100%', height: 100, objectFit: 'cover', borderRadius: 8, marginBottom: 8 }} />}
                       <h4 style={{ color: C.text, fontSize: 13, fontWeight: 600 }}>{product.name}</h4>
-                      <p style={{ color: C.accent, fontSize: 12, fontWeight: 700 }}>{product.price} ر.س</p>
+                      <p style={{ color: C.accent, fontSize: 12, fontWeight: 700 }}>{formatPrice(product.price)}</p>
                       <p style={{ color: C.muted, fontSize: 10 }}>الفرع: {product.branchName || '-'}</p>
                     </div>
                   ))}

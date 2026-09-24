@@ -233,7 +233,7 @@ const MultiImageUploader: React.FC<Props> = ({
                   </button>
                   <button type="button" onClick={() => remove(index)}
                     aria-label="احذف الصورة" className="btn-inline"
-                    style={{ ...tinyBtn(false), color: '#FF8A80' }}>
+                    style={{ ...tinyBtn(false), color: '#C9383D' }}>
                     <IoTrashOutline size={13} />
                   </button>
                 </div>

@@ -473,13 +473,13 @@ textarea:focus-visible,
     z-index: 60;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    background: #082E24;
+    background: #F4F7F4;
     padding: 14px;
   }
 }
 
 @media (min-width: 1024px) {
-  .orders-split { grid-template-columns: 1fr 2fr; gap: 24px; }
+  .orders-split { grid-template-columns: minmax(340px, 1fr) minmax(0, 1.6fr); gap: 20px; align-items: start; }
   .orders-detail { display: block; }
   /* زرّ الرجوع لا معنى له والعمودان ظاهران معاً */
   .orders-detail-back { display: none; }

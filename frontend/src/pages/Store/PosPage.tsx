@@ -26,15 +26,15 @@ import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { detectEngine, startScan, ScanHandle } from '@/utils/barcodeScanner';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  green: '#4ADE80'
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red: '#D64545',
+  green: '#15803D'
 };
 
 interface Product {
@@ -252,7 +252,7 @@ const PosPage: React.FC = () => {
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               minHeight: 46, padding: '0 22px', borderRadius: 13,
-              background: C.accent, color: '#0A2018', textDecoration: 'none',
+              background: C.accent, color: '#FFFFFF', textDecoration: 'none',
               fontWeight: 900, fontSize: 14
             }}
           >
@@ -309,7 +309,7 @@ const PosPage: React.FC = () => {
                   style={{
                     minWidth: 52, borderRadius: 13, cursor: 'pointer',
                     background: scanning ? C.red : C.accent,
-                    color: scanning ? '#fff' : '#0A2018', border: 'none',
+                    color: scanning ? '#fff' : '#FFFFFF', border: 'none',
                     display: 'grid', placeItems: 'center'
                   }}
                   title={scanning ? 'إيقاف المسح' : 'مسح باركود'}
@@ -469,7 +469,7 @@ const PosPage: React.FC = () => {
                     flex: 1, minHeight: 38, borderRadius: 11, fontSize: 12.5, fontWeight: 700,
                     cursor: 'pointer', fontFamily: 'inherit',
                     background: payment === option.key ? C.accent : C.surf,
-                    color: payment === option.key ? '#0A2018' : C.muted,
+                    color: payment === option.key ? '#FFFFFF' : C.muted,
                     border: `1px solid ${payment === option.key ? C.accent : 'transparent'}`
                   }}
                 >
@@ -535,7 +535,7 @@ const PosPage: React.FC = () => {
               style={{
                 minHeight: 50, borderRadius: 14, border: 'none', fontFamily: 'inherit',
                 background: cart.length === 0 ? C.surf : C.accent,
-                color: cart.length === 0 ? C.muted : '#0A2018',
+                color: cart.length === 0 ? C.muted : '#FFFFFF',
                 fontWeight: 900, fontSize: 15,
                 cursor: cart.length === 0 || saving ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
@@ -611,7 +611,7 @@ const PosPage: React.FC = () => {
                 onClick={() => setReceipt(null)}
                 style={{
                   flex: 1, minHeight: 42, borderRadius: 10, border: 'none',
-                  background: '#0D4A3A', color: '#fff', cursor: 'pointer',
+                  background: '#E8EFEA', color: '#fff', cursor: 'pointer',
                   fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit'
                 }}
               >

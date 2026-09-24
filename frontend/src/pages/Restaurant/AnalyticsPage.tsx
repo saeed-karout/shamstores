@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { formatPrice } from '@/utils/currency';
 import api from '@/services/api';
 import Loader from '@/components/common/Loader';
 import {
@@ -20,20 +21,20 @@ import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } fro
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
-  yellow: '#F59E0B',
-  purple: '#A78BFA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
+  yellow: '#B45309',
+  purple: '#8B45B5',
 };
 
 interface StatsData {
@@ -118,12 +119,12 @@ const AnalyticsPage: React.FC = () => {
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
           <h3 style={{ fontSize: 13, color: C.muted, margin: '0 0 8px', fontWeight: 500 }}>إجمالي المبيعات</h3>
-          <p style={{ fontSize: 36, fontWeight: 700, color: C.accent, margin: '0 0 8px' }}>{stats.totalSales.toFixed(2)} ر.س</p>
+          <p style={{ fontSize: 36, fontWeight: 700, color: C.accent, margin: '0 0 8px' }}>{formatPrice(stats.totalSales)}</p>
           <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>خلال {getPeriodTitle()}</p>
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>
           <h3 style={{ fontSize: 13, color: C.muted, margin: '0 0 8px', fontWeight: 500 }}>متوسط قيمة الطلب</h3>
-          <p style={{ fontSize: 36, fontWeight: 700, color: C.purple, margin: '0 0 8px' }}>{stats.averageOrder.toFixed(2)} ر.س</p>
+          <p style={{ fontSize: 36, fontWeight: 700, color: C.purple, margin: '0 0 8px' }}>{formatPrice(stats.averageOrder)}</p>
           <p style={{ fontSize: 13, color: C.muted, margin: 0 }}>خلال {getPeriodTitle()}</p>
         </div>
       </div>
@@ -164,7 +165,7 @@ const AnalyticsPage: React.FC = () => {
                 type="monotone"
                 dataKey="sales"
                 stroke={C.accent}
-                name="المبيعات (ر.س)"
+                name="المبيعات (ل.س)"
                 strokeWidth={2}
                 dot={{ fill: C.accent, r: 3 }}
               />
@@ -240,7 +241,7 @@ const AnalyticsPage: React.FC = () => {
               <tr
                 key={index}
                 style={{ borderTop: `1px solid ${C.border}` }}
-                onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(200,226,53,0.04)'}
+                onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(8,72,53,0.04)'}
                 onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
               >
                 <td style={{ padding: '14px 24px', whiteSpace: 'nowrap' }}>
@@ -251,7 +252,7 @@ const AnalyticsPage: React.FC = () => {
                 </td>
                 <td style={{ padding: '14px 24px', whiteSpace: 'nowrap', color: C.text }}>{item.count}</td>
                 <td style={{ padding: '14px 24px', whiteSpace: 'nowrap', color: C.accent, fontWeight: 600 }}>
-                  {item.total.toFixed(2)} ر.س
+                  {formatPrice(item.total)}
                 </td>
               </tr>
             ))}

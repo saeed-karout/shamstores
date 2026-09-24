@@ -194,7 +194,7 @@ const OrderAlertsSettings: React.FC<{ colors: Palette }> = ({ colors: C }) => {
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10,
                     padding: '8px 14px', borderRadius: 10, background: C.accent,
-                    color: '#0A2018', fontSize: 12.5, fontWeight: 800, textDecoration: 'none',
+                    color: '#FFFFFF', fontSize: 12.5, fontWeight: 800, textDecoration: 'none',
                   }}
                 >
                   <IoLinkOutline size={14} />
@@ -257,7 +257,7 @@ const OrderAlertsSettings: React.FC<{ colors: Palette }> = ({ colors: C }) => {
                   marginTop: 10, padding: '8px 14px', borderRadius: 10,
                   background: pushOn ? 'transparent' : C.accent,
                   border: pushOn ? `1px solid ${C.border}` : 'none',
-                  color: pushOn ? C.muted : '#0A2018',
+                  color: pushOn ? C.muted : '#FFFFFF',
                   fontSize: 12.5, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
                   opacity: !state?.push.available ? 0.5 : 1,
                 }}

@@ -4,15 +4,15 @@ import { IoStorefront, IoRestaurant, IoSearch, IoArrowBack, IoAlertCircle } from
 import { adminService } from '../../services/api/index';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
 };
 
 interface Business {
@@ -75,7 +75,7 @@ const AdminMarketingIndex: React.FC = () => {
           {/* Type selector */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
             {([['restaurant', 'مطاعم', IoRestaurant], ['store', 'متاجر', IoStorefront]] as const).map(([type, label, Icon]) => (
-              <button key={type} onClick={() => resetSearch(type)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 16px', borderRadius: 12, border: `2px solid ${businessType === type ? C.accent : C.border}`, background: businessType === type ? 'rgba(200,226,53,0.1)' : 'transparent', color: businessType === type ? C.accent : C.muted, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s' }}>
+              <button key={type} onClick={() => resetSearch(type)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 16px', borderRadius: 12, border: `2px solid ${businessType === type ? C.accent : C.border}`, background: businessType === type ? 'rgba(8,72,53,0.1)' : 'transparent', color: businessType === type ? C.accent : C.muted, fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.2s' }}>
                 <Icon size={20} /> {label}
               </button>
             ))}
@@ -91,7 +91,7 @@ const AdminMarketingIndex: React.FC = () => {
 
           {/* Error */}
           {error && (
-            <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, color: C.red, fontSize: 14 }}>
+            <div style={{ background: 'rgba(214,69,69,0.08)', border: '1px solid rgba(214,69,69,0.2)', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, color: C.red, fontSize: 14 }}>
               <IoAlertCircle size={18} style={{ flexShrink: 0 }} /> {error}
             </div>
           )}
@@ -102,11 +102,11 @@ const AdminMarketingIndex: React.FC = () => {
               <div style={{ color: C.muted, fontSize: 13, marginBottom: 10 }}>نتائج البحث ({businesses.length}):</div>
               <div style={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {businesses.map(business => (
-                  <div key={business.id} onClick={() => setSelectedBusiness(business)} style={{ background: selectedBusiness?.id === business.id ? 'rgba(200,226,53,0.1)' : C.surf, border: `${selectedBusiness?.id === business.id ? '2px' : '1px'} solid ${selectedBusiness?.id === business.id ? C.accent : C.border}`, borderRadius: 12, padding: '12px 16px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div key={business.id} onClick={() => setSelectedBusiness(business)} style={{ background: selectedBusiness?.id === business.id ? 'rgba(8,72,53,0.1)' : C.surf, border: `${selectedBusiness?.id === business.id ? '2px' : '1px'} solid ${selectedBusiness?.id === business.id ? C.accent : C.border}`, borderRadius: 12, padding: '12px 16px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <span style={{ color: C.text, fontWeight: 700, fontSize: 14 }}>{business.name}</span>
-                        {!business.isActive && <span style={{ background: 'rgba(255,107,107,0.15)', color: C.red, fontSize: 11, padding: '2px 8px', borderRadius: 10 }}>غير نشط</span>}
+                        {!business.isActive && <span style={{ background: 'rgba(214,69,69,0.15)', color: C.red, fontSize: 11, padding: '2px 8px', borderRadius: 10 }}>غير نشط</span>}
                       </div>
                       <div style={{ color: C.muted, fontSize: 12 }}>{business.email}</div>
                       {business.storeOwner && <div style={{ color: C.muted, fontSize: 11 }}>المالك: {business.storeOwner.name}</div>}

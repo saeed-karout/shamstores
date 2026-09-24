@@ -37,30 +37,22 @@ import {
   IoLayers,
   IoNotifications,
   IoCard,
-  IoFlash
+  IoFlash,
+  IoClose,
+  IoRefresh,
+  IoGrid
 } from 'react-icons/io5';
+import { BrandLogo } from '../marketing/Brand';
+import { useBusinessSummary } from '../../hooks/useBusinessSummary';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpen: () => void;
 }
 
-const C = {
-  bg: '#0D4A3A',
-  darkBg: '#082E24',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B',
-  orange: '#FB923C',
-  gold: '#FBBF24',
-  blue: '#60A5FA',
-  accentBg: 'rgba(200,226,53,0.18)',
-  redBg: 'rgba(255,107,107,0.12)',
-};
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
   const navigate = useNavigate();
   const { user, isSuperAdmin, isRestaurantOwner, isStoreOwner, isStaff, role, logout } = useAuth();
   const permissions = usePermissions();
@@ -236,138 +228,159 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   };
 
   const getPlanDisplay = () => {
-    if (planLoading) return { name: 'جاري التحميل...', icon: null, color: C.muted };
-    if (!currentPlan) return { name: 'لا توجد خطة', icon: null, color: C.muted };
+    if (planLoading) return { name: 'جاري التحميل...', icon: null };
+    if (!currentPlan) return { name: 'لا توجد خطة', icon: null };
     const plans: Record<string, any> = {
-      free: { name: 'المجانية', icon: <IoTime size={12} />, color: C.muted },
-      basic: { name: 'الأساسية', icon: <IoSparkles size={12} />, color: C.blue },
-      pro: { name: 'الاحترافية', icon: <IoDiamond size={12} />, color: C.accent },
-      enterprise: { name: 'المؤسسية', icon: <IoTrendingUp size={12} />, color: C.gold },
+      free: { name: 'المجانية', icon: <IoTime size={12} /> },
+      basic: { name: 'الأساسية', icon: <IoSparkles size={12} /> },
+      pro: { name: 'الاحترافية', icon: <IoDiamond size={12} /> },
+      enterprise: { name: 'المؤسسية', icon: <IoTrendingUp size={12} /> },
     };
-    return plans[currentPlan.name] || { name: currentPlan.name, icon: null, color: C.muted };
+    return plans[currentPlan.name] || { name: currentPlan.name, icon: null };
   };
 
   const planDisplay = getPlanDisplay();
-  const sidebarTransform = isOpen ? 'translateX(0)' : 'translateX(100%)';
+  const isOwner = (isRestaurantOwner || isStoreOwner) && !isSuperAdmin;
+  const plansPath = isStoreOwner ? '/store/plans' : '/plans';
+  const groups = groupMenu(menuItems, isSuperAdmin);
+  const { data: business } = useBusinessSummary();
+  const tabItems = TAB_PRIORITY.map((p) => menuItems.find((i: any) => i.path === p))
+    .filter(Boolean)
+    .slice(0, 4)
+    .map((i: any) => ({ ...i, short: TAB_SHORT[i.path] }));
+  const displayName = business?.name || user?.name || 'زائر';
 
   return (
     <>
-      {isOpen && <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 40 }} />}
-      {/* ⚠️ `bottom: 0` لا `height: 100vh`.
-          على متصفحات الموبايل تشمل 100vh المساحة الواقعة خلف شريط العنوان
-          وشريط الأدوات السفلي، فيمتدّ العمود تحت حافة الشاشة المرئية —
-          ومحتواه يملؤه تماماً فلا يتمرّج. النتيجة أن آخر عنصر فيه، وهو زر
-          تسجيل الخروج، لا يُرى ولا يُنقر. */}
-      <aside style={{
-        position: 'fixed', top: 0, bottom: 0, right: 0, width: 280, background: C.bg,
-        borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', overflowY: 'auto',
-        zIndex: 50, transform: sidebarTransform, transition: 'transform 0.3s ease-in-out', direction: 'rtl',
-      }}>
-        {/* Logo */}
-        <div style={{ padding: '20px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <span style={{ color: C.darkBg, fontWeight: 900, fontSize: 20 }}>S</span>
+      {isOpen && <div className="ss-side-scrim" onClick={onClose} aria-hidden="true" />}
+      <aside className={`ss-side ${isOpen ? 'is-open' : ''}`} aria-label="القائمة الرئيسية">
+        <div className="ss-side-head">
+          <NavLink to={isSuperAdmin ? '/admin' : '/dashboard'} onClick={onClose} aria-label="شام ستورز — الرئيسية">
+            <BrandLogo tone="light" size="sm" />
+          </NavLink>
+          <button type="button" className="ss-side-close" onClick={onClose} aria-label="إغلاق القائمة">
+            <IoClose size={20} />
+          </button>
+        </div>
+
+        {/* النشاط لا الشخص: التاجر يعرّف نفسه باسم متجره */}
+        <div className="ss-side-biz">
+          <div className="ss-side-avatar" aria-hidden="true">
+            {business?.logo ? <img src={business.logo} alt="" /> : displayName.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <div style={{ color: C.accent, fontWeight: 700, fontSize: 15 }}>SHAM STORES</div>
-            <div style={{ color: C.muted, fontSize: 11, marginTop: 2 }}>{isStoreOwner ? 'نظام إدارة المتاجر' : 'نظام إدارة المطاعم'}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="ss-side-biz-name">{displayName}</div>
+            <div className="ss-side-biz-meta">
+              <span>{getRoleLabel()}</span>
+              {isOwner && !planLoading && currentPlan && <span className="ss-chip">{planDisplay.icon}{planDisplay.name}</span>}
+            </div>
           </div>
         </div>
 
-        {/* User info */}
-        <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(200,226,53,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ color: C.accent, fontWeight: 700, fontSize: 16 }}>{(user?.name || 'Z').charAt(0).toUpperCase()}</span>
+        <nav className="ss-side-nav">
+          {groups.map((group) => (
+            <div key={group.title || 'main'} className="ss-side-group">
+              {group.title && <div className="ss-side-group-title">{group.title}</div>}
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/dashboard' || item.path === '/admin'}
+                  onClick={onClose}
+                  className="ss-side-link"
+                >
+                  <item.icon size={19} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ color: C.text, fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'زائر'}</div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(200,226,53,0.18)', color: C.accent, fontWeight: 600 }}>{getRoleLabel()}</span>
-                {(isRestaurantOwner || isStoreOwner) && !isSuperAdmin && !planLoading && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${planDisplay.color}20`, color: planDisplay.color, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {planDisplay.icon}{planDisplay.name}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-          {(isRestaurantOwner || isStoreOwner) && daysRemaining !== null && daysRemaining <= 14 && (
-            <div style={{ marginTop: 12, padding: '8px 10px', borderRadius: 8, background: isExpiringSoon ? `${C.orange}15` : `${C.accent}10`, border: `1px solid ${isExpiringSoon ? C.orange : C.accent}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <IoWarning size={14} color={isExpiringSoon ? C.orange : C.accent} />
-                <span style={{ fontSize: 11, color: C.text }}>{isExpiringSoon ? `⚠️ ينتهي اشتراكك بعد ${daysRemaining} أيام` : `ينتهي اشتراكك بعد ${daysRemaining} يوم`}</span>
-              </div>
-              <NavLink to={isStoreOwner ? '/store/plans' : '/plans'} style={{ display: 'block', marginTop: 6, fontSize: 11, color: isExpiringSoon ? C.orange : C.accent, textDecoration: 'underline' }}>🔄 جدد اشتراكك الآن</NavLink>
-            </div>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-            >
-              {({ isActive }) => (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  width: '100%',
-                  padding: '9px 10px',
-                  borderRadius: 8,
-                  marginBottom: 2,
-                  textDecoration: 'none',
-                  background: isActive ? C.accentBg : 'transparent',
-                  color: isActive ? C.accent : C.muted,
-                  borderRight: `3px solid ${isActive ? C.accent : 'transparent'}`,
-                  transition: 'all 0.15s ease',
-                  boxSizing: 'border-box',
-                  cursor: 'pointer',
-                }}>
-                  <item.icon size={18} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: isActive ? 600 : 400 }}>
-                    {item.label}
-                  </span>
-                  {item.badge === 'جديد' && (
-                    <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 20, background: C.accent, color: C.darkBg, fontWeight: 700, flexShrink: 0 }}>جديد</span>
-                  )}
-                </div>
-              )}
-            </NavLink>
           ))}
+          {/* الخطة: تذكيرٌ بالتجديد قبل الانتهاء، أو دعوةٌ للترقية — لا الاثنان */}
+          {isOwner && !planLoading && daysRemaining !== null && daysRemaining <= 14 ? (
+            <NavLink to={plansPath} onClick={onClose} className={`ss-side-plan ${isExpiringSoon ? 'is-warn' : ''}`}>
+              <b>ينتهي اشتراكك بعد {daysRemaining} {daysRemaining > 10 ? 'يوماً' : 'أيام'}</b>
+              <small>جدّده الآن لتبقى واجهتك وطلباتك تعمل دون انقطاع.</small>
+              <span className="ss-side-plan-cta">
+                <IoRefresh size={14} /> تجديد الاشتراك
+              </span>
+            </NavLink>
+          ) : isOwner && !planLoading && !isPro ? (
+            <NavLink to={plansPath} onClick={onClose} className="ss-side-plan">
+              <b>ارفع خطّتك</b>
+              <small>{isRestaurantOwner ? 'طلبات أونلاين، QR للطاولات وتحليلات أعمق.' : 'مخزون، كوبونات وطلبات أونلاين وأكثر.'}</small>
+              <span className="ss-side-plan-cta">
+                <IoDiamond size={14} /> عرض الخطط
+              </span>
+            </NavLink>
+          ) : null}
         </nav>
 
-        {/* Upgrade Banner */}
-        {(isRestaurantOwner || isStoreOwner) && !isSuperAdmin && !planLoading && (
-          <div style={{ padding: '12px', flexShrink: 0 }}>
-            {!isPro ? (
-              <NavLink to={isStoreOwner ? '/store/plans' : '/plans'} onClick={onClose} style={{ display: 'block', background: `linear-gradient(135deg, ${C.accent}15, ${C.accent}05)`, border: `1px solid ${C.accent}`, borderRadius: 12, padding: '14px', textDecoration: 'none', transition: 'transform 0.2s' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}><IoDiamond size={20} color={C.accent} /><span style={{ color: C.accent, fontWeight: 700, fontSize: 14 }}>🚀 فعّل الميزات المتقدمة</span></div>
-                <p style={{ color: C.muted, fontSize: 12, marginBottom: 10, lineHeight: 1.4 }}>{isRestaurantOwner ? 'احصل على طلبات أونلاين، رموز QR، تحليلات متقدمة والمزيد' : 'احصل على إدارة المخزون، كوبونات، طلبات أونلاين والمزيد'}</p>
-                <div style={{ background: C.accent, color: C.darkBg, fontWeight: 700, fontSize: 13, padding: '8px 0', borderRadius: 8, textAlign: 'center' }}>✨ ترقية الخطة الآن</div>
-              </NavLink>
-            ) : (
-              <div style={{ background: `${C.gold}10`, border: `1px solid ${C.gold}`, borderRadius: 12, padding: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}><IoCheckmarkCircle size={16} color={C.gold} /><span style={{ color: C.gold, fontWeight: 600, fontSize: 12 }}>أنت في الخطة الاحترافية</span></div>
-                <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.4 }}>أنت تستمتع بجميع الميزات المتقدمة.</p>
-                {daysRemaining !== null && daysRemaining <= 30 && <NavLink to={isStoreOwner ? '/store/plans' : '/plans'} style={{ display: 'block', marginTop: 10, fontSize: 11, color: C.accent, textAlign: 'center' }}>🔄 تجديد الاشتراك</NavLink>}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Logout */}
-        {/* الحشوة السفلية تُبعد الزر عن شريط الإيماءات في آيفون */}
-        <div style={{ borderTop: `1px solid ${C.border}`, padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0 }}>
-          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 0', minHeight: 44, background: C.redBg, color: C.red, border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}><IoLogOut size={17} /><span>تسجيل خروج</span></button>
+        <div className="ss-side-foot">
+          <button type="button" className="ss-side-logout" onClick={handleLogout}>
+            <IoLogOut size={19} aria-hidden="true" />
+            تسجيل الخروج
+          </button>
         </div>
       </aside>
+
+      {/* شريط الجوال: أهمّ أربع شاشات متاحة لهذا الحساب، والبقيّة خلف «المزيد» */}
+      <nav className="ss-tabbar" aria-label="التنقّل السريع">
+        {tabItems.map((item) => (
+          <NavLink key={item.path} to={item.path} end={item.path === '/dashboard' || item.path === '/admin'} className="ss-tab" onClick={onClose}>
+            <span className="ss-tab-ico"><item.icon size={21} aria-hidden="true" /></span>
+            <span>{item.short || item.label}</span>
+          </NavLink>
+        ))}
+        <button type="button" className={`ss-tab ${isOpen ? 'active' : ''}`} onClick={isOpen ? onClose : onOpen} aria-expanded={isOpen}>
+          <span className="ss-tab-ico"><IoGrid size={20} aria-hidden="true" /></span>
+          <span>المزيد</span>
+        </button>
+      </nav>
     </>
   );
 };
+
+// الأولويّة في شريط الجوال: ما يفتحه التاجر عشرات المرّات يومياً
+const TAB_PRIORITY = ['/dashboard', '/admin', '/orders', '/store/orders', '/menu', '/store/products', '/restaurant/pos', '/store/pos', '/tables', '/store/inventory', '/admin/restaurants', '/admin/stores', '/admin/orders', '/admin/users'];
+const TAB_SHORT: Record<string, string> = { '/dashboard': 'الرئيسية', '/admin': 'الرئيسية', '/restaurant/pos': 'الكاشير', '/store/pos': 'الكاشير' };
+
+// ==================== تجميع الروابط ====================
+// عشرون رابطاً في عمودٍ واحد لا يُقرأ — التجميع يجعل مكان كلّ شاشةٍ متوقَّعاً.
+// الترتيب داخل المجموعة يتبع ترتيب القوائم أعلاه.
+const OWNER_GROUPS: Array<{ title: string; paths: string[] }> = [
+  { title: '', paths: ['/dashboard'] },
+  { title: 'البيع', paths: ['/orders', '/store/orders', '/restaurant/pos', '/store/pos', '/tables', '/qr-codes', '/store/qr-codes', '/delivery', '/store/delivery', '/drivers', '/store/drivers'] },
+  { title: 'الكتالوج', paths: ['/menu', '/store/products', '/store/inventory'] },
+  { title: 'الزبائن والتسويق', paths: ['/restaurant/customers', '/store/customers', '/coupons', '/store/coupons', '/restaurant/campaigns', '/store/campaigns', '/restaurant/automations', '/store/automations', '/restaurant/affiliates', '/store/affiliates', '/marketing', '/store/marketing'] },
+  { title: 'التقارير', paths: ['/analytics', '/store/analytics', '/finance'] },
+  { title: 'الإعداد', paths: ['/restaurant/shipping', '/store/shipping', '/staff', '/store/staff', '/features', '/plans', '/store/plans', '/settings', '/store/settings', '/profile'] }
+];
+
+const ADMIN_GROUPS: Array<{ title: string; paths: string[] }> = [
+  { title: '', paths: ['/admin'] },
+  { title: 'الأنشطة', paths: ['/admin/restaurants', '/admin/branches', '/admin/stores', '/admin/orders', '/admin/drivers', '/admin/qr-codes'] },
+  { title: 'الحسابات', paths: ['/admin/users', '/admin/staff', '/admin/contact-messages'] },
+  { title: 'الاشتراكات', paths: ['/admin/plans', '/admin/subscriptions', '/admin/features'] },
+  { title: 'المنصّة', paths: ['/admin/push-notifications', '/admin/advertisements', '/admin/platform-settings'] }
+];
+
+function groupMenu<T extends { path: string }>(items: T[], admin: boolean) {
+  const spec = admin ? ADMIN_GROUPS : OWNER_GROUPS;
+  const used = new Set<string>();
+  const groups = spec
+    .map((g) => {
+      const list = g.paths.map((p) => items.find((i) => i.path === p)).filter((i): i is T => !!i);
+      list.forEach((i) => used.add(i.path));
+      return { title: g.title, items: list };
+    })
+    .filter((g) => g.items.length > 0);
+  // ما لا مجموعة له (قائمة الموظّف مثلاً) يبقى ظاهراً لا يضيع
+  const rest = items.filter((i) => !used.has(i.path));
+  if (rest.length) {
+    if (groups[0]?.title === '') groups[0].items.push(...rest);
+    else groups.unshift({ title: '', items: rest });
+  }
+  return groups;
+}
 
 export default Sidebar;

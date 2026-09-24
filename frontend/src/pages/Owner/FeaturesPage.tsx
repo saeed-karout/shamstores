@@ -39,15 +39,15 @@ interface CatalogFeature {
 }
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  surf: '#0F3D31',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  blue: '#60A5FA',
-  orange: '#FB923C'
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  surf: '#F1F5F2',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  blue: '#2563EB',
+  orange: '#C2410C'
 };
 
 const priceLabel = (feature: CatalogFeature): string => {
@@ -118,7 +118,7 @@ const FeaturesPage: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 12, padding: 16, color: C.text, marginBottom: 20 }}>
+        <div style={{ background: 'rgba(214,69,69,0.1)', border: '1px solid rgba(214,69,69,0.3)', borderRadius: 12, padding: 16, color: C.text, marginBottom: 20 }}>
           {error}
         </div>
       )}

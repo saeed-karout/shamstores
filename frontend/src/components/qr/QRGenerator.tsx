@@ -69,8 +69,8 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
     frameStyle: 'modern',
     cornerStyle: 'rounded',
     gradient: false,
-    gradientStart: theme.primaryColor || '#C8E235',
-    gradientEnd: '#60A5FA',
+    gradientStart: theme.primaryColor || '#084835',
+    gradientEnd: '#2563EB',
     shadow: true
   });
 
@@ -256,8 +256,8 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   // ✅ تحديث الـ variant styles لاستخدام ألوان ThemeContext
   const getVariantStyles = () => {
     const primaryColor = theme.primaryColor || '#3B82F6';
-    const accentColor = theme.accentColor || '#C8E235';
-    const bgColor = theme.backgroundColor || '#082E24';
+    const accentColor = theme.accentColor || '#084835';
+    const bgColor = theme.backgroundColor || '#F4F7F4';
     
     switch (variant) {
       case 'primary':
@@ -265,7 +265,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
       case 'accent':
         return `bg-[${accentColor}] text-[${bgColor}] hover:bg-[${accentColor}]dd shadow-md`;
       default:
-        return `border border-[${theme.mutedColor || '#9DC4AC'}] text-[${theme.textColor || '#E8F5E9'}] hover:bg-[${theme.surfaceColor || '#0F3D31'}]`;
+        return `border border-[${theme.mutedColor || '#5F736A'}] text-[${theme.textColor || '#10231B'}] hover:bg-[${theme.surfaceColor || '#F1F5F2'}]`;
     }
   };
 
@@ -321,7 +321,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
 
           {design.includeText && qrData?.url && (
             <div className="mt-4 p-3 bg-gray-800 rounded-xl">
-              <code className="text-xs text-[#C8E235] break-all font-mono">{qrData.url}</code>
+              <code className="text-xs text-[#084835] break-all font-mono">{qrData.url}</code>
             </div>
           )}
 
@@ -494,7 +494,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
             <div className="flex gap-3 pt-2">
               <button
                 onClick={saveDesignSettings}
-                className="flex-1 bg-[#C8E235] text-[#082E24] py-2.5 rounded-xl font-semibold hover:bg-[#B0C820] transition-all"
+                className="flex-1 bg-[#084835] text-[#F4F7F4] py-2.5 rounded-xl font-semibold hover:bg-[#06382A] transition-all"
               >
                 حفظ الإعدادات
               </button>

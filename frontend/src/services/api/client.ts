@@ -98,10 +98,12 @@ class ApiClient {
           return this.handleUnauthorizedError(originalRequest, error);
         }
 
+        // المعرّف = النصّ: طلباتٌ متوازية تفشل للسبب نفسه كانت تكدّس
+        // الرسالة ذاتها ثلاث مرّات فوق بعضها
         if (error.response?.data?.error && error.response.status !== 401 && error.response.status !== 404) {
-          toast.error(error.response.data.error);
+          toast.error(error.response.data.error, { id: error.response.data.error });
         } else if (!this.isSilentError(error)) {
-          toast.error('حدث خطأ في الاتصال بالخادم');
+          toast.error('حدث خطأ في الاتصال بالخادم', { id: 'network-error' });
         }
         
         return Promise.reject(error);
@@ -111,7 +113,7 @@ class ApiClient {
 
   private handleForbiddenError(error: AxiosError): void {
     const errorMessage = error.response?.data?.error || 'لا تملك صلاحية الوصول';
-    toast.error(errorMessage);
+    toast.error(errorMessage, { id: errorMessage });
     
     if (error.config?.url?.includes('/store/') && !localStorage.getItem('user')?.includes('storeId')) {
       window.location.href = '/dashboard';

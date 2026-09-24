@@ -212,11 +212,11 @@ const NewOrderAlarm: React.FC = () => {
         bottom: 16,
         zIndex: 9999,
         maxWidth: 380,
-        background: '#0D4A3A',
-        border: '1px solid #C8E235',
+        background: '#E8EFEA',
+        border: '1px solid #084835',
         borderRadius: 16,
         boxShadow: '0 12px 40px rgba(0,0,0,0.45)',
-        color: '#E8F5E9',
+        color: '#10231B',
         padding: 16,
         direction: 'rtl',
         fontFamily: 'Cairo, system-ui, sans-serif',
@@ -224,17 +224,17 @@ const NewOrderAlarm: React.FC = () => {
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{
-          width: 40, height: 40, borderRadius: 12, background: '#C8E235',
+          width: 40, height: 40, borderRadius: 12, background: '#084835',
           display: 'grid', placeItems: 'center', flexShrink: 0,
         }}>
-          <IoNotifications size={20} color="#0A2018" />
+          <IoNotifications size={20} color="#FFFFFF" />
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 900, fontSize: 15 }}>
             {pending.length > 1 ? `${pending.length} طلبات جديدة` : 'طلب جديد'}
           </div>
-          <div style={{ fontSize: 12.5, color: '#9DC4AC', marginTop: 3, lineHeight: 1.6 }}>
+          <div style={{ fontSize: 12.5, color: '#5F736A', marginTop: 3, lineHeight: 1.6 }}>
             #{latest.orderNumber}
             {latest.message ? ` · ${latest.message}` : ''}
           </div>
@@ -244,7 +244,7 @@ const NewOrderAlarm: React.FC = () => {
           onClick={() => setPending([])}
           aria-label="تجاهل"
           style={{
-            background: 'transparent', border: 'none', color: '#9DC4AC',
+            background: 'transparent', border: 'none', color: '#5F736A',
             cursor: 'pointer', padding: 4, flexShrink: 0,
           }}
         >
@@ -256,7 +256,7 @@ const NewOrderAlarm: React.FC = () => {
         onClick={() => { setPending([]); navigate(ordersPath); }}
         style={{
           width: '100%', marginTop: 14, padding: '11px', borderRadius: 12,
-          background: '#C8E235', color: '#0A2018', border: 'none',
+          background: '#084835', color: '#FFFFFF', border: 'none',
           fontWeight: 900, fontSize: 13.5, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
           fontFamily: 'inherit',

@@ -14,18 +14,18 @@ import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  prim:   '#0D4A3A',
-  surf:   '#0F3D31',
-  surfL:  '#164D3E',
-  accent: '#C8E235',
-  acDk:   '#A8C220',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  red:    '#FF6B6B',
-  blue:   '#60A5FA',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  prim:   '#E8EFEA',
+  surf:   '#F1F5F2',
+  surfL:  '#E2EBE5',
+  accent: '#084835',
+  acDk:   '#06382A',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  red:    '#D64545',
+  blue:   '#2563EB',
 };
 
 interface UserDetails {
@@ -208,11 +208,11 @@ const AdminUserDetails: React.FC = () => {
 
   const getRoleBadge = (role: string) => {
     const styles: Record<string, React.CSSProperties> = {
-      super_admin: { background: 'rgba(167,139,250,0.15)', color: '#a78bfa' },
-      owner:       { background: 'rgba(96,165,250,0.15)',  color: C.blue },
-      staff:       { background: 'rgba(200,226,53,0.15)',  color: C.accent },
-      delivery_driver: { background: 'rgba(251,146,60,0.15)', color: '#fb923c' },
-      user:        { background: 'rgba(157,196,172,0.15)', color: C.muted },
+      super_admin: { background: 'rgba(139,69,181,0.15)', color: '#8B45B5' },
+      owner:       { background: 'rgba(37,99,235,0.15)',  color: C.blue },
+      staff:       { background: 'rgba(8,72,53,0.15)',  color: C.accent },
+      delivery_driver: { background: 'rgba(194,65,12,0.15)', color: '#C2410C' },
+      user:        { background: 'rgba(95,115,106,0.15)', color: C.muted },
     };
     const labels: Record<string, string> = {
       super_admin: 'مدير المنصة',
@@ -230,11 +230,11 @@ const AdminUserDetails: React.FC = () => {
 
   const getStatusBadge = (isActive: boolean) => {
     return isActive ? (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'rgba(200,226,53,0.15)', color: C.accent }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'rgba(8,72,53,0.15)', color: C.accent }}>
         <IoCheckmarkCircle size={14} /> نشط
       </span>
     ) : (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'rgba(255,107,107,0.15)', color: C.red }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, fontSize: 12, background: 'rgba(214,69,69,0.15)', color: C.red }}>
         <IoCloseCircle size={14} /> غير نشط
       </span>
     );
@@ -242,12 +242,12 @@ const AdminUserDetails: React.FC = () => {
 
   const getOrderStatusBadge = (status: string) => {
     const styles: Record<string, React.CSSProperties> = {
-      pending:   { background: 'rgba(251,191,36,0.15)',  color: '#fbbf24' },
-      preparing: { background: 'rgba(96,165,250,0.15)',  color: C.blue },
-      ready:     { background: 'rgba(200,226,53,0.15)',  color: C.accent },
-      delivering:{ background: 'rgba(167,139,250,0.15)', color: '#a78bfa' },
-      delivered: { background: 'rgba(157,196,172,0.15)', color: C.muted },
-      cancelled: { background: 'rgba(255,107,107,0.15)', color: C.red },
+      pending:   { background: 'rgba(183,121,31,0.15)',  color: '#B7791F' },
+      preparing: { background: 'rgba(37,99,235,0.15)',  color: C.blue },
+      ready:     { background: 'rgba(8,72,53,0.15)',  color: C.accent },
+      delivering:{ background: 'rgba(139,69,181,0.15)', color: '#8B45B5' },
+      delivered: { background: 'rgba(95,115,106,0.15)', color: C.muted },
+      cancelled: { background: 'rgba(214,69,69,0.15)', color: C.red },
     };
     const labels: Record<string, string> = {
       pending: 'قيد الانتظار', preparing: 'قيد التحضير', ready: 'جاهز',
@@ -359,7 +359,7 @@ const AdminUserDetails: React.FC = () => {
                   { val: user.stats.totalOrders, label: 'إجمالي الطلبات', color: C.blue },
                   { val: user.stats.completedOrders, label: 'مكتملة', color: C.accent },
                   { val: user.stats.cancelledOrders, label: 'ملغية', color: C.red },
-                  { val: `${user.stats.totalSpent} ل.س`, label: 'إجمالي المشتريات', color: '#a78bfa' },
+                  { val: `${user.stats.totalSpent} ل.س`, label: 'إجمالي المشتريات', color: '#8B45B5' },
                 ].map((stat, i) => (
                   <div key={i} style={{ textAlign: 'center', padding: 16, background: C.surf, borderRadius: 12, border: '1px solid ' + C.border }}>
                     <div style={{ fontSize: 22, fontWeight: 700, color: stat.color }}>{stat.val}</div>
@@ -391,7 +391,7 @@ const AdminUserDetails: React.FC = () => {
                         key={order.id}
                         onClick={() => navigate(`/admin/orders/${order.id}`)}
                         style={{ cursor: 'pointer', borderBottom: '1px solid ' + C.border }}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')}
                         onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       >
                         <td style={{ padding: '12px 16px', color: C.text, fontFamily: 'monospace', fontSize: 13 }}>{order.orderNumber}</td>
@@ -525,7 +525,7 @@ const AdminUserDetails: React.FC = () => {
                     style={{
                       flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer',
                       border: `2px solid ${newBusinessType === key ? C.accent : C.border}`,
-                      background: newBusinessType === key ? 'rgba(200,226,53,0.1)' : C.surf,
+                      background: newBusinessType === key ? 'rgba(8,72,53,0.1)' : C.surf,
                       color: newBusinessType === key ? C.accent : C.muted,
                       fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14
                     }}
@@ -601,7 +601,7 @@ const AdminUserDetails: React.FC = () => {
                   width: '100%', padding: '10px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
                   fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14,
                   ...(user.isActive
-                    ? { background: 'rgba(255,107,107,0.15)', color: C.red, border: '1px solid rgba(255,107,107,0.3)' }
+                    ? { background: 'rgba(214,69,69,0.15)', color: C.red, border: '1px solid rgba(214,69,69,0.3)' }
                     : { background: C.accent, color: C.bg })
                 }}
               >
@@ -617,8 +617,8 @@ const AdminUserDetails: React.FC = () => {
                   <span style={{ color: C.muted, fontSize: 14 }}>البريد الإلكتروني:</span>
                   <span
                     style={{
-                      background: user.isEmailVerified ? 'rgba(200,226,53,0.15)' : 'rgba(245,158,11,0.15)',
-                      color: user.isEmailVerified ? C.accent : '#F59E0B',
+                      background: user.isEmailVerified ? 'rgba(8,72,53,0.15)' : 'rgba(180,83,9,0.15)',
+                      color: user.isEmailVerified ? C.accent : '#B45309',
                       borderRadius: 999,
                       padding: '3px 10px',
                       fontSize: 12,
@@ -635,7 +635,7 @@ const AdminUserDetails: React.FC = () => {
                     fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14,
                     ...(user.isEmailVerified
                       ? { background: 'transparent', color: C.muted, border: `1px solid ${C.border}` }
-                      : { background: 'rgba(200,226,53,0.15)', color: C.accent, border: '1px solid rgba(200,226,53,0.35)' })
+                      : { background: 'rgba(8,72,53,0.15)', color: C.accent, border: '1px solid rgba(8,72,53,0.35)' })
                   }}
                 >
                   {user.isEmailVerified ? 'إلغاء تفعيل البريد' : 'تفعيل البريد بدون رسالة'}
@@ -651,7 +651,7 @@ const AdminUserDetails: React.FC = () => {
 
           {/* حذف الحساب */}
           {user.role !== 'super_admin' && (
-            <div style={{ ...cardStyle, borderColor: 'rgba(255,107,107,0.3)' }}>
+            <div style={{ ...cardStyle, borderColor: 'rgba(214,69,69,0.3)' }}>
               <h2 style={{ color: C.red, fontSize: 16, fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <IoTrash style={{ color: C.red }} /> منطقة الخطر
               </h2>
@@ -660,7 +660,7 @@ const AdminUserDetails: React.FC = () => {
               </p>
               <button
                 onClick={handleDeleteUser}
-                style={{ width: '100%', padding: '10px 0', borderRadius: 10, background: 'rgba(255,107,107,0.15)', color: C.red, border: '1px solid rgba(255,107,107,0.3)', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14 }}
+                style={{ width: '100%', padding: '10px 0', borderRadius: 10, background: 'rgba(214,69,69,0.15)', color: C.red, border: '1px solid rgba(214,69,69,0.3)', cursor: 'pointer', fontFamily: 'Cairo, sans-serif', fontWeight: 700, fontSize: 14 }}
               >
                 حذف الحساب
               </button>

@@ -11,9 +11,9 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 interface StaffMember {
@@ -278,7 +278,7 @@ const fetchStaff = async () => {
               </thead>
               <tbody>
                 {filteredStaff.map((member, idx) => (
-                  <tr key={member.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(200,226,53,0.04)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                  <tr key={member.id} style={{ borderBottom: `1px solid ${C.border}` }} onMouseEnter={e => (e.currentTarget.style.background = 'rgba(8,72,53,0.04)')} onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
                     <td style={{ padding: '12px 16px', color: C.muted }}>{idx + 1}</td>
                     <td style={{ padding: '12px 16px', color: C.text, fontWeight: 600, fontSize: 13 }}>{member.name}</td>
                     <td style={{ padding: '12px 16px', color: C.muted, fontSize: 13 }}>{member.email}</td>
@@ -296,7 +296,7 @@ const fetchStaff = async () => {
                       {member.store?.name || member.restaurant?.name || '-'}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
-                      <button onClick={() => handleToggleActive(member)} style={{ background: member.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)', color: member.isActive ? C.accent : C.red, border: 'none', borderRadius: 10, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+                      <button onClick={() => handleToggleActive(member)} style={{ background: member.isActive ? 'rgba(8,72,53,0.12)' : 'rgba(214,69,69,0.12)', color: member.isActive ? C.accent : C.red, border: 'none', borderRadius: 10, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
                         {member.isActive ? 'نشط' : 'غير نشط'}
                       </button>
                     </td>

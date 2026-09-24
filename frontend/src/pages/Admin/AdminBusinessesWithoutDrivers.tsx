@@ -6,14 +6,14 @@ import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 
 const C = {
-  bg: '#082E24',
-  card: '#112E23',
-  accent: '#C8E235',
-  text: '#E8F5E9',
-  muted: '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
-  blue: '#60A5FA',
-  purple: '#A78BFA',
+  bg: '#F4F7F4',
+  card: '#FFFFFF',
+  accent: '#084835',
+  text: '#10231B',
+  muted: '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
+  blue: '#2563EB',
+  purple: '#8B45B5',
 };
 
 interface Business {

@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
+import '../../styles/dashboard.css';
 
 /**
  * المنبّه مؤجَّل — **لأن `Layout` يُستورد ساكناً من `App`.**
@@ -52,6 +53,26 @@ const pageTitles: Record<string, string> = {
   '/store/plans':             'خطط الأسعار',
   '/store/qr-codes':          'رموز QR',
   '/store/marketing':         'التسويق',
+  '/store/customers':         'الزبائن',
+  '/restaurant/customers':    'الزبائن',
+  '/store/campaigns':         'حملات الزبائن',
+  '/restaurant/campaigns':    'حملات الزبائن',
+  '/store/automations':       'رسائل تلقائية',
+  '/restaurant/automations':  'رسائل تلقائية',
+  '/store/shipping':          'مناطق التوصيل',
+  '/restaurant/shipping':     'مناطق التوصيل',
+  '/store/pos':               'الكاشير',
+  '/restaurant/pos':          'الكاشير',
+  '/store/affiliates':        'المسوّقون',
+  '/restaurant/affiliates':   'المسوّقون',
+  '/finance':                 'القسم المالي',
+  '/features':                'الميزات',
+  '/profile':                 'حسابي',
+  '/admin/branches':          'الفروع',
+  '/admin/subscriptions':     'الاشتراكات',
+  '/admin/contact-messages':  'رسائل التواصل',
+  '/admin/push-notifications':'بثّ الإشعارات',
+  '/admin/advertisements':    'الإعلانات',
 };
 
 const getTitle = (pathname: string) => {
@@ -61,7 +82,7 @@ const getTitle = (pathname: string) => {
   const match = Object.keys(pageTitles)
     .filter(k => pathname.startsWith(k))
     .sort((a, b) => b.length - a.length)[0];
-  return match ? pageTitles[match] : 'SHAM STORES';
+  return match ? pageTitles[match] : 'لوحة التحكم';
 };
 
 const Layout: React.FC = () => {
@@ -69,22 +90,21 @@ const Layout: React.FC = () => {
   const location = useLocation();
   const title = getTitle(location.pathname);
 
+  // الدُّرج يُغلق مع كلّ تنقّل — وإلا بقي فوق الشاشة الجديدة على الجوال
+  React.useEffect(() => setSidebarOpen(false), [location.pathname]);
+
+  // عنوان التبويب يتبع الشاشة: التاجر يفتح لوحته في تبويباتٍ عدّة
+  React.useEffect(() => {
+    document.title = `${title} · شام ستورز`;
+  }, [title]);
+
   return (
-    <div
-      style={{ display: 'flex', minHeight: '100vh', background: '#082E24', direction: 'rtl' }}
-    >
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="ss-dash">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} onOpen={() => setSidebarOpen(true)} />
 
-      {/* Main content — offset by sidebar width on large screens */}
-      <div
-        // minWidth: 0 ضروري: عنصر flex لا ينكمش تحت محتواه افتراضياً، فأي
-        // جدول عريض كان يدفع الصفحة كلها أفقياً بدل أن يمرّر داخل نفسه.
-        style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}
-        
-      >
+      <div className="ss-dash-main">
         <Navbar onMenuOpen={() => setSidebarOpen(true)} title={title} />
-
-        <main style={{ flex: 1, minWidth: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+        <main id="main-content" className="ss-dash-content">
           <Outlet />
         </main>
       </div>

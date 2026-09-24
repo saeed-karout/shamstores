@@ -14,9 +14,9 @@ import { arSA } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA', orange: '#FB923C',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5', orange: '#C2410C',
 };
 
 interface Driver {
@@ -60,11 +60,11 @@ interface Stats {
 }
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: 'قيد الانتظار', color: '#FBBF24', bg: 'rgba(251,191,36,0.12)' },
-  processing: { label: 'قيد المعالجة', color: '#60A5FA', bg: 'rgba(96,165,250,0.12)' },
-  shipped: { label: 'تم الشحن', color: '#A78BFA', bg: 'rgba(167,139,250,0.12)' },
-  delivered: { label: 'تم التوصيل', color: '#C8E235', bg: 'rgba(200,226,53,0.12)' },
-  cancelled: { label: 'ملغي', color: '#FF6B6B', bg: 'rgba(255,107,107,0.12)' },
+  pending: { label: 'قيد الانتظار', color: '#B7791F', bg: 'rgba(183,121,31,0.12)' },
+  processing: { label: 'قيد المعالجة', color: '#2563EB', bg: 'rgba(37,99,235,0.12)' },
+  shipped: { label: 'تم الشحن', color: '#8B45B5', bg: 'rgba(139,69,181,0.12)' },
+  delivered: { label: 'تم التوصيل', color: '#084835', bg: 'rgba(8,72,53,0.12)' },
+  cancelled: { label: 'ملغي', color: '#D64545', bg: 'rgba(214,69,69,0.12)' },
 };
 
 const nextStatus: Record<string, string> = {
@@ -208,7 +208,7 @@ const StoreDeliveryDashboard: React.FC = () => {
           {[
             { label: 'إجمالي الطلبات', value: stats.totalOrders, icon: IoReceipt, color: C.blue },
             { label: 'طلبات اليوم', value: stats.todayOrders, icon: IoCalendar, color: C.purple },
-            { label: 'قيد الانتظار', value: stats.pendingOrders, icon: IoTime, color: '#FBBF24' },
+            { label: 'قيد الانتظار', value: stats.pendingOrders, icon: IoTime, color: '#B7791F' },
             { label: 'مبيعات اليوم', value: `${stats.todaySales?.toLocaleString()} ل.س`, icon: IoCash, color: C.accent },
             { label: 'إجمالي المبيعات', value: `${stats.totalSales?.toLocaleString()} ل.س`, icon: IoWallet, color: C.accent },
           ].map((card, i) => {
@@ -439,7 +439,7 @@ const StoreDeliveryDashboard: React.FC = () => {
               )}
 
               {selectedOrder.assignedDriver && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: 12, background: 'rgba(167,139,250,0.1)', borderRadius: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: 12, background: 'rgba(139,69,181,0.1)', borderRadius: 12 }}>
                   <IoCar style={{ color: C.purple }} />
                   <div>
                     <p style={{ color: C.text, fontWeight: 500, fontSize: 14 }}>{selectedOrder.assignedDriver.name}</p>

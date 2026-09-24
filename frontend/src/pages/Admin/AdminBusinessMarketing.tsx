@@ -40,9 +40,9 @@ import MarketingSectionList from '../../components/marketing/MarketingSectionLis
 import MarketingSectionForm from '../../components/marketing/MarketingSectionForm';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 const sectionTypeNames: Record<MarketingSectionType, { title: string; icon: JSX.Element; description: string }> = {
@@ -241,8 +241,8 @@ const AdminBusinessMarketing: React.FC = () => {
         {/* Admin Info Banner */}
         <div style={{
           marginBottom: 24, padding: 16,
-          background: 'rgba(96,165,250,0.08)',
-          border: '1px solid rgba(96,165,250,0.2)',
+          background: 'rgba(37,99,235,0.08)',
+          border: '1px solid rgba(37,99,235,0.2)',
           borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 12
         }}>
           <IoMegaphone style={{ width: 20, height: 20, color: C.blue, flexShrink: 0, marginTop: 2 }} />
@@ -286,9 +286,9 @@ const AdminBusinessMarketing: React.FC = () => {
                               padding: '8px 16px', borderRadius: 10, cursor: 'move',
                               border: `2px solid ${snapshot.isDragging ? C.accent : (isAdminOnly ? C.purple : C.border)}`,
                               background: snapshot.isDragging
-                                ? 'rgba(200,226,53,0.08)'
+                                ? 'rgba(8,72,53,0.08)'
                                 : isAdminOnly
-                                ? 'rgba(167,139,250,0.08)'
+                                ? 'rgba(139,69,181,0.08)'
                                 : C.surf,
                               color: C.text,
                               ...provided.draggableProps.style,
@@ -298,7 +298,7 @@ const AdminBusinessMarketing: React.FC = () => {
                             <span style={{ fontWeight: 600, fontSize: 14 }}>{info.title}</span>
                             {isAdminOnly && (
                               <span style={{
-                                fontSize: 11, background: 'rgba(167,139,250,0.2)',
+                                fontSize: 11, background: 'rgba(139,69,181,0.2)',
                                 color: C.purple, padding: '2px 8px', borderRadius: 999
                               }}>
                                 للمدير فقط

@@ -14,9 +14,9 @@ import Button from '../../components/common/Button';
 import toast from 'react-hot-toast';
 
 const C = {
-  bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
-  text: '#E8F5E9', muted: '#9DC4AC', border: 'rgba(200,226,53,0.15)',
-  red: '#FF6B6B', blue: '#60A5FA', purple: '#A78BFA',
+  bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
+  text: '#10231B', muted: '#5F736A', border: 'rgba(8,72,53,0.15)',
+  red: '#D64545', blue: '#2563EB', purple: '#8B45B5',
 };
 
 interface Restaurant {
@@ -212,7 +212,7 @@ const AdminRestaurantDetails: React.FC = () => {
         <h1 style={{ color: C.text, fontWeight: 700, fontSize: 22, margin: 0 }}>{restaurant.name}</h1>
         <span style={{
           padding: '2px 12px', borderRadius: 999, fontSize: 12,
-          background: restaurant.isActive ? 'rgba(200,226,53,0.12)' : 'rgba(255,107,107,0.12)',
+          background: restaurant.isActive ? 'rgba(8,72,53,0.12)' : 'rgba(214,69,69,0.12)',
           color: restaurant.isActive ? C.accent : C.red,
         }}>
           {restaurant.isActive ? 'نشط' : 'غير نشط'}
@@ -221,7 +221,7 @@ const AdminRestaurantDetails: React.FC = () => {
         <button
           onClick={() => navigate(`/admin/business/restaurant/${id}/marketing`)}
           style={{
-            background: 'rgba(96,165,250,0.12)', color: C.blue,
+            background: 'rgba(37,99,235,0.12)', color: C.blue,
             padding: '6px 14px', borderRadius: 10, fontSize: 13,
             border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
             fontFamily: 'Cairo, sans-serif'
@@ -306,7 +306,7 @@ const AdminRestaurantDetails: React.FC = () => {
                           ...inputStyle,
                           flex: 1,
                           border: `1px solid ${!slugAvailable && formData.slug !== restaurant.slug ? C.red : C.border}`,
-                          background: !slugAvailable && formData.slug !== restaurant.slug ? 'rgba(255,107,107,0.08)' : C.surf,
+                          background: !slugAvailable && formData.slug !== restaurant.slug ? 'rgba(214,69,69,0.08)' : C.surf,
                         }}
                         placeholder="my-restaurant"
                         dir="ltr"

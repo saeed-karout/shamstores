@@ -5,13 +5,13 @@ import Loader from '../../components/common/Loader';
 import toast from 'react-hot-toast';
 
 const C = {
-  bg:     '#082E24',
-  card:   '#112E23',
-  surf:   '#0F3D31',
-  accent: '#C8E235',
-  text:   '#E8F5E9',
-  muted:  '#9DC4AC',
-  border: 'rgba(200,226,53,0.15)',
+  bg:     '#F4F7F4',
+  card:   '#FFFFFF',
+  surf:   '#F1F5F2',
+  accent: '#084835',
+  text:   '#10231B',
+  muted:  '#5F736A',
+  border: 'rgba(8,72,53,0.15)',
 };
 
 interface Setting {
