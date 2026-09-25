@@ -23,7 +23,7 @@ import { planLabel } from '@/utils/planLabels';
 import { planPriceText } from '@/utils/planPrice';
 import PlanComparison, { PlanPrice } from './PlanComparison';
 import PlanAddons, { usePublicAddons, scrollToAddons } from './PlanAddons';
-import { sortPlans, audienceTag, planHeadlines, planUsd, planIncludes, type ComparablePlan, type RowCtx } from './planRows';
+import { sortPlans, audienceTag, planHeadlines, planUsd, planIncludes, moreFeatures, type ComparablePlan, type RowCtx } from './planRows';
 import './plans.css';
 
 const C = {
@@ -258,7 +258,7 @@ const MerchantPlansView: React.FC<Props> = ({ kind }) => {
                   {perks.slice(0, 3).map((t) => (
                     <li key={t}><PiCheckBold aria-hidden />{t}</li>
                   ))}
-                  {perks.length > 3 && <li className="is-more">و{perks.length - 3} ميزات أخرى في المقارنة</li>}
+                  {perks.length > 3 && <li className="is-more">{moreFeatures(perks.length - 3)}</li>}
                 </ul>
                 <div className="pc-dcard-cta">{ctaFor(p)}</div>
               </article>

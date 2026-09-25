@@ -237,7 +237,7 @@ const PlanComparison: React.FC<PlanComparisonProps> = ({
           <div className="pc-row">
             <div className="pc-feat pc-head-feat">
               <span>الميزات</span>
-              <small className="latin">{SECTIONS.reduce((n, s) => n + s.rows.length, 0)} ميزة في {SECTIONS.length} أقسام</small>
+              <small className="latin">{SECTIONS.reduce((n, s) => n + s.rows.length, 0)} ميزة في {SECTIONS.length} {SECTIONS.length > 10 ? 'قسماً' : 'أقسام'}</small>
             </div>
             {plans.map((p, i) => (
               <div key={p.id} className={colClass(i)}>

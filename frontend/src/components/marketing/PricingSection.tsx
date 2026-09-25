@@ -15,7 +15,7 @@ import { planLabel } from '@/utils/planLabels';
 import PlanComparison, { PlanPrice } from '@/components/plans/PlanComparison';
 import PlanAddons, { usePublicAddons, scrollToAddons } from '@/components/plans/PlanAddons';
 import {
-  sortPlans, isFreePlan, audienceTag, planHeadlines,
+  sortPlans, isFreePlan, audienceTag, planHeadlines, moreFeatures,
   type ComparablePlan, type RowCtx
 } from '@/components/plans/planRows';
 
@@ -100,7 +100,7 @@ const PricingSection: React.FC<Props> = ({ plans, failed }) => {
                       <li key={t}><PiCheckBold aria-hidden />{t}</li>
                     ))}
                     {perks.length > MAX_PERKS && (
-                      <li className="is-more">و{perks.length - MAX_PERKS} ميزات أخرى في المقارنة</li>
+                      <li className="is-more">{moreFeatures(perks.length - MAX_PERKS)}</li>
                     )}
                   </ul>
                   <Link to="/register" className={`ss-btn ${p.isPopular ? 'ss-btn-primary' : 'ss-btn-forest'}`}>

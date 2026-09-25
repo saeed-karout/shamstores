@@ -368,7 +368,7 @@ export const planHeadlines = (plans: ComparablePlan[], i: number, ctx: RowCtx) =
   const limits: string[] = [
     isUnlimited(items) ? `${ctx.kind === 'restaurant' ? 'أصناف' : 'منتجات'} بلا حدود` : `حتى ${limit(items)} ${itemWord}`,
     isUnlimited(p.maxOrders) ? 'طلبات بلا حدود' : `${limit(p.maxOrders)} طلب شهرياً`,
-    isFreePlan(p) ? 'حساب المالك' : `${limit(p.maxUsers)} حسابات للفريق`
+    isFreePlan(p) ? 'حساب المالك' : `${limit(p.maxUsers)} ${p.maxUsers > 10 ? 'حساباً' : 'حسابات'} للفريق`
   ];
   const b = planBranches(p);
   if (b > 1) limits.push(`${limit(b)} فروع`);
@@ -420,3 +420,13 @@ export const priceParts = (pricing: { amountUsd?: number; amountSyp?: number | n
   const n = pricing?.amountUsd ?? usd;
   return { amount: `$${Math.round(n * 100) / 100}`, unit: '' };
 };
+
+/** «و3 ميزات أخرى» بعددٍ عربيّ صحيح — 1 و2 و3–10 و11+ تختلف صيغتها */
+export const moreFeatures = (n: number): string =>
+  n === 1
+    ? 'وميزةٌ أخرى في المقارنة'
+    : n === 2
+      ? 'وميزتان أخريان في المقارنة'
+      : n <= 10
+        ? `و${n} ميزات أخرى في المقارنة`
+        : `و${n} ميزةً أخرى في المقارنة`;
