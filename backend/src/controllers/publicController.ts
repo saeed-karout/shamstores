@@ -11,7 +11,9 @@ import { getCurrencyContext, resolveCurrencySettings } from '../services/currenc
 import { shouldShowPlatformBadge } from '../services/branding.service';
 import { parseOptions } from '../services/productOptions.service';
 import { resolveBusinessSeo } from '../services/seo.service';
+import { publicTracking } from '../services/tracking.service';
 import { notifyAdmins } from '../services/notification.service';
+import { withDisplayPrices } from '../services/planPricing.service';
 import { toPublicProduct } from '../services/publicProduct.service';
 import {
   normalizeDomain,
@@ -156,6 +158,8 @@ export const getBusinessBySlug = async (
           showPlatformBadge: await shouldShowPlatformBadge(restaurant.id, 'restaurant'),
           // العنوان والوصف وأيقونة التبويب لهذا المطعم — لا لشام ستورز
           seo: resolveBusinessSeo(restaurant, 'restaurant'),
+          // البكسل لمن يستحقّه وحده — `null` يعني لا حقن
+          tracking: await publicTracking(restaurant.id, 'restaurant', restaurant.trackingSettings),
           branchLabel: buildBranchSummary(restaurant).linkLabel,
           branchLinkType: buildBranchSummary(restaurant).linkType,
           linkedBranches,
@@ -249,6 +253,7 @@ export const getBusinessBySlug = async (
           plan: store.plan,
           showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store'),
           seo: resolveBusinessSeo(store, 'store'),
+          tracking: await publicTracking(store.id, 'store', store.trackingSettings),
           branchLabel: buildBranchSummary(store).linkLabel,
           branchLinkType: buildBranchSummary(store).linkType,
           linkedBranches,
@@ -877,5 +882,99 @@ export const resolveHost = async (req: Request, res: Response): Promise<void> =>
   } catch (error) {
     console.error('Error resolving host:', error);
     res.status(500).json({ success: false, error: 'حدث خطأ في تحديد النطاق' });
+  }
+};
+
+
+// ==================== كتالوج الإضافات العامّ ====================
+
+/**
+ * الإضافات المدفوعة بأسعارها — لصفحة الأسعار العامّة.
+ *
+ * كان الكتالوج خلف تسجيل الدخول وحده، فيرى الزائر «كإضافة» في جدول المقارنة
+ * ولا يعرف بكم. المنافس يعرض إضافاته بأسعارها تحت الخطط، والتاجر الذي
+ * يقارن يريد الرقم قبل أن يسجّل. السعر بالدولار وحدة حساب، والليرة بسعر
+ * الصرف الموحّد — نفس `withDisplayPrices` التي تسعّر الخطط.
+ */
+export const getPublicAddons = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const features = await prisma.feature.findMany({
+      where: { isActive: true, isCore: false, price: { gt: 0 } },
+      select: { code: true, name: true, nameEn: true, description: true, group: true, price: true, isOneTime: true },
+      orderBy: [{ group: 'asc' }, { price: 'asc' }]
+    });
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json({ success: true, data: await withDisplayPrices(features) });
+  } catch (error) {
+    console.error('خطأ في جلب الإضافات:', error);
+    res.status(500).json({ success: false, error: 'تعذّر جلب الإضافات' });
+  }
+};
+
+
+// ==================== «أعلمني حين يتوفّر» ====================
+
+/**
+ * يسجّل طلب إشعارٍ لمنتجٍ نافد أو قادم.
+ *
+ * بلا حساب: بريدٌ أو هاتف يكفي — مطالبة الزائر بإنشاء حسابٍ ليعرف موعد عودة
+ * منتجٍ تجعله يغادر. والمسجَّل يُعرَف من رمزه فلا يُسأل شيئاً.
+ *
+ * **ومرّةً لكل جهة:** طلبٌ ثانٍ من البريد نفسه لا يُكرَّر — ويُردّ بنجاح،
+ * فمن ضغط مرّتين لا يرى خطأً.
+ */
+export const requestStockAlert = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { productId } = req.params;
+    const email = String(req.body?.email || '').trim().toLowerCase().slice(0, 160) || null;
+    const phone = String(req.body?.phone || '').replace(/[^\d+]/g, '').slice(0, 20) || null;
+    const name = String(req.body?.name || '').replace(/<[^>]*>/g, '').trim().slice(0, 80) || null;
+    const userId = req.user?.id || null;
+
+    if (!userId && !email && !phone) {
+      res.status(400).json({ success: false, error: 'اكتب بريدك أو رقم هاتفك لنُعلمك' });
+      return;
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      res.status(400).json({ success: false, error: 'البريد الإلكتروني غير صالح' });
+      return;
+    }
+    if (phone && phone.replace(/\D/g, '').length < 7) {
+      res.status(400).json({ success: false, error: 'رقم الهاتف غير صالح' });
+      return;
+    }
+
+    const product = await prisma.product.findFirst({
+      where: { id: productId, isAvailable: true, store: { isActive: true } },
+      select: { id: true, storeId: true, stock: true, comingSoon: true }
+    });
+    if (!product) {
+      res.status(404).json({ success: false, error: 'المنتج غير موجود' });
+      return;
+    }
+    if (!product.comingSoon && product.stock > 0) {
+      res.status(400).json({ success: false, error: 'المنتج متوفّر الآن — يمكنك طلبه مباشرةً' });
+      return;
+    }
+
+    const contact = [
+      ...(userId ? [{ userId }] : []),
+      ...(email ? [{ email }] : []),
+      ...(phone ? [{ phone }] : [])
+    ];
+    const existing = await prisma.stockAlert.findFirst({
+      where: { productId, notifiedAt: null, OR: contact }
+    });
+    if (!existing) {
+      await prisma.stockAlert.create({
+        data: { productId, storeId: product.storeId, userId, email, phone, name }
+      });
+    }
+
+    const waiting = await prisma.stockAlert.count({ where: { productId, notifiedAt: null } });
+    res.status(existing ? 200 : 201).json({ success: true, data: { waiting } });
+  } catch (error) {
+    console.error('خطأ في طلب الإشعار:', error);
+    res.status(500).json({ success: false, error: 'تعذّر تسجيل طلبك الآن' });
   }
 };

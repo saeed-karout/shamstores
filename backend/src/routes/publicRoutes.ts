@@ -9,13 +9,16 @@ import {
   getMenuItemById,
   createContactMessage,
   resolveHost,
-  getHostBrand
+  getHostBrand,
+  getPublicAddons,
+  requestStockAlert
 } from '../controllers/publicController';
 import { getProductReviews } from '../controllers/productReviewController';
 import { getStoreManifest, getStoreIcon, getPwaStatus, getSeoSummary } from '../controllers/pwaController';
 import rateLimit from 'express-rate-limit';
 import { ingestEvents } from '../controllers/storefrontEventController';
 import { searchCatalog } from '../controllers/searchController';
+import { optionalAuthenticate } from '../middleware/optionalAuth';
 
 const router = express.Router();
 
@@ -60,6 +63,22 @@ router.get('/resolve-host', resolveHost);
 
 // هوية التاجر لصفحات الدخول والتسجيل — قبل `/:identifier` وإلا ابتلعها
 router.get('/brand', getHostBrand);
+
+router.get('/addons', getPublicAddons);
+
+/**
+ * «أعلمني حين يتوفّر» — كتابةٌ بلا مصادقة إلزامية، فلها حدّ: عشرة في عشر
+ * دقائق تكفي زائراً يطلب عدّة منتجات، وتوقف من يملأ الجدول آلياً.
+ */
+const stockAlertLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 10,
+  standardHeaders: false,
+  legacyHeaders: false,
+  message: { success: false, error: 'طلبات كثيرة — حاول بعد دقائق' }
+});
+
+router.post('/products/:productId/notify', stockAlertLimiter, optionalAuthenticate, requestStockAlert);
 
 // ✅ هذا هو المسار المطلوب - جلب بيانات المطعم/المتجر (باستخدام slug أو subdomain)
 // ==================== التطبيق المثبَّت لكل متجر ====================

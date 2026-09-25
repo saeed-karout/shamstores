@@ -10,6 +10,10 @@
 // `MenuItem` بلا مخزون — والواجهة لا تعرف الفرق لأن الخادم يوحّد الشكل.
 // الاختلاف الوحيد الظاهر أن المطعم لا يُعرض له رصيد.
 //
+// **والمرتجع من نفس الشاشة** (زرّ «مرتجع» في الرأس): رقم البيعة من الإيصال،
+// ثم الأصناف والكمّيات، ثم السبب وطريقة الردّ — وإيصال مرتجعٍ يُطبع كإيصال
+// البيع. والنوبة تعرض الصافي (المبيعات − المرتجعات) لأنه ما في الصندوق فعلاً.
+//
 // **والباركود بمحرّكين**: `BarcodeDetector` الأصيلة حيث توجد، وZXing
 // المحمَّلة عند الحاجة على Safari/iPhone — راجع utils/barcodeScanner.ts.
 
@@ -18,12 +22,13 @@ import { Link } from 'react-router-dom';
 import {
   IoSearch, IoBarcode, IoTrash, IoAdd, IoRemove, IoCart,
   IoCheckmarkCircle, IoClose, IoReceiptOutline, IoStatsChart,
-  IoLockClosed, IoSparkles
+  IoLockClosed, IoSparkles, IoArrowUndo
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { detectEngine, startScan, ScanHandle } from '@/utils/barcodeScanner';
+import { SkeletonScope, SkeletonLine, SkeletonBlock, BusyDots } from '@/components/common/Skeleton';
 
 const C = {
   bg: '#F4F7F4',
@@ -76,6 +81,66 @@ const QUICK_CASH = [5000, 10000, 25000, 50000];
 
 const money = (n: number) => formatPrice(n, DEFAULT_CURRENCY);
 
+const PAYMENT_LABEL: Record<string, string> = {
+  cash: 'نقداً',
+  card: 'بطاقة',
+  sham_cash: 'شام كاش',
+  online: 'إلكتروني'
+};
+
+/** ملخّص النوبة كما يعيده `/pos/shift` — حقول المرتجع اختيارية لخادمٍ أقدم */
+interface Shift {
+  count: number;
+  total: number;
+  byMethod: Record<string, number>;
+  recent: { orderNumber: string; total: number; paymentMethod: string; createdAt: string }[];
+  refundsCount: number;
+  refundsTotal: number;
+  refundsByMethod: Record<string, number>;
+  net: number;
+  netByMethod: Record<string, number>;
+  recentReturns: { returnNumber: string; orderNumber: string; amount: number; refundMethod: string; createdAt: string }[];
+}
+
+// ---------- المرتجع ----------
+
+interface SaleLineForReturn {
+  orderItemId: string;
+  name: string;
+  quantity: number;
+  returnedQuantity: number;
+  returnableQuantity: number;
+  price: number;
+  unitRefund: number;
+}
+
+interface SaleForReturn {
+  id: string;
+  orderNumber: string;
+  createdAt: string;
+  total: number;
+  discountAmount: number;
+  paymentMethod: string;
+  refundedTotal: number;
+  manualReturn: boolean;
+  returnable: boolean;
+  items: SaleLineForReturn[];
+  returns: { returnNumber: string; amount: number; createdAt: string }[];
+}
+
+interface ReturnReceipt {
+  returnNumber: string;
+  orderNumber: string;
+  amount: number;
+  refundMethod: string;
+  reason: string | null;
+  createdAt: string;
+  items: { name: string; quantity: number; unitPrice: number; refund: number; restocked: boolean }[];
+}
+
+/** أسباب جاهزة — الكاشير يختار بإصبع ولا يكتب والزبون واقف */
+const RETURN_REASONS = ['عيب في المنتج', 'لم يناسب الزبون', 'مقاس أو لون خاطئ', 'خطأ في البيع'];
+
 const PosPage: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [term, setTerm] = useState('');
@@ -85,7 +150,10 @@ const PosPage: React.FC = () => {
   const [discount, setDiscount] = useState('');
   const [saving, setSaving] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
-  const [shift, setShift] = useState<{ count: number; total: number } | null>(null);
+  const [shift, setShift] = useState<Shift | null>(null);
+  const [shiftOpen, setShiftOpen] = useState(false);
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnReceipt, setReturnReceipt] = useState<ReturnReceipt | null>(null);
   const [scanning, setScanning] = useState(false);
   /**
    * الميزة مقفلة.
@@ -118,7 +186,20 @@ const PosPage: React.FC = () => {
   const loadShift = useCallback(async () => {
     try {
       const data: any = await api.get('/pos/shift');
-      setShift({ count: data?.count ?? 0, total: data?.total ?? 0 });
+      const total = data?.total ?? 0;
+      const refundsTotal = data?.refundsTotal ?? 0;
+      setShift({
+        count: data?.count ?? 0,
+        total,
+        byMethod: data?.byMethod || {},
+        recent: data?.recent || [],
+        refundsCount: data?.refundsCount ?? 0,
+        refundsTotal,
+        refundsByMethod: data?.refundsByMethod || {},
+        net: data?.net ?? total - refundsTotal,
+        netByMethod: data?.netByMethod || data?.byMethod || {},
+        recentReturns: data?.recentReturns || []
+      });
     } catch {
       // ملخّص النوبة ثانويّ — غيابه لا يمنع البيع، والقفل يُكتشف من
       // نداء الأصناف فلا داعي لفقاعتَي خطأ لسببٍ واحد
@@ -271,15 +352,39 @@ const PosPage: React.FC = () => {
         <header style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
           <h1 style={{ margin: 0, fontSize: 19, fontWeight: 900, flex: 1 }}>الكاشير</h1>
           {shift && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: C.muted,
-              background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '6px 13px'
-            }}>
+            <button
+              type="button"
+              onClick={() => setShiftOpen(true)}
+              title="ملخّص النوبة"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: C.muted,
+                background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '6px 13px',
+                cursor: 'pointer', fontFamily: 'inherit'
+              }}
+            >
               <IoStatsChart size={13} color={C.accent} />
               اليوم: <b style={{ color: C.text }}>{shift.count}</b> بيعة ·
-              <b style={{ color: C.accent }}>{money(shift.total)}</b>
-            </div>
+              <b style={{ color: C.accent }}>{money(shift.net)}</b>
+              {shift.refundsTotal > 0 && (
+                <span style={{ color: C.red, fontVariantNumeric: 'tabular-nums' }}>
+                  (مرتجع − {money(shift.refundsTotal)})
+                </span>
+              )}
+            </button>
           )}
+          <button
+            type="button"
+            onClick={() => setReturnOpen(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36,
+              padding: '0 14px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit',
+              background: C.card, border: `1px solid ${C.border}`, color: C.text,
+              fontSize: 12.5, fontWeight: 800
+            }}
+          >
+            <IoArrowUndo size={14} color={C.red} />
+            مرتجع
+          </button>
         </header>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) minmax(0,1fr)', gap: 14 }}
@@ -622,10 +727,33 @@ const PosPage: React.FC = () => {
         </div>
       )}
 
+      {returnOpen && (
+        <ReturnSheet
+          recent={shift?.recent || []}
+          onClose={() => setReturnOpen(false)}
+          onDone={(r) => {
+            setReturnOpen(false);
+            setReturnReceipt(r);
+            loadShift();
+            // الرصيد عاد إلى الرفّ — والشبكة تعرضه
+            load(term);
+          }}
+        />
+      )}
+
+      {returnReceipt && <ReturnReceiptView receipt={returnReceipt} onClose={() => setReturnReceipt(null)} />}
+
+      {shiftOpen && shift && <ShiftSheet shift={shift} onClose={() => setShiftOpen(false)} />}
+
       <style>{`
         @media (max-width: 900px) {
           .pos-grid { grid-template-columns: 1fr !important; }
           .pos-cart { position: static !important; }
+        }
+        /* على الجوال تصعد نافذة المرتجع من الأسفل حيث تصلها الإبهام */
+        @media (max-width: 600px) {
+          .pos-sheet-backdrop { place-items: end center !important; padding: 0 !important; }
+          .pos-sheet { width: 100% !important; border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; }
         }
         @media print {
           body * { visibility: hidden; }
@@ -658,6 +786,509 @@ const Step: React.FC<{ icon: React.ComponentType<{ size?: number }>; onClick: ()
   >
     <Icon size={13} />
   </button>
+);
+
+// ==================== المرتجع ====================
+
+/** غطاءٌ بنافذة — على الجوال لوحةٌ من الأسفل تصلها الإبهام، وعلى المكتب نافذة وسطى */
+const Sheet: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; footer?: React.ReactNode }> = ({
+  title, onClose, children, footer
+}) => (
+  <div
+    onClick={onClose}
+    className="pos-sheet-backdrop"
+    style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 998,
+      display: 'grid', placeItems: 'center', padding: 14
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="pos-sheet"
+      dir="rtl"
+      style={{
+        background: C.card, color: C.text, borderRadius: 20, width: 'min(100%, 34rem)',
+        maxHeight: '90vh', display: 'grid', gridTemplateRows: 'auto minmax(0,1fr) auto', overflow: 'hidden'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
+        <b style={{ flex: 1, fontSize: 15.5 }}>{title}</b>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="إغلاق"
+          style={{
+            width: 36, height: 36, borderRadius: 10, border: 'none', background: C.surf,
+            color: C.muted, cursor: 'pointer', display: 'grid', placeItems: 'center'
+          }}
+        >
+          <IoClose size={18} />
+        </button>
+      </div>
+      <div style={{ overflowY: 'auto', padding: 16, display: 'grid', gap: 14, alignContent: 'start' }}>{children}</div>
+      {footer && <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}` }}>{footer}</div>}
+    </div>
+  </div>
+);
+
+/**
+ * شاشة المرتجع: رقم البيعة ← الأصناف والكمّيات ← السبب وطريقة الردّ.
+ *
+ * **المبلغ يُعرض قبل التأكيد** بحصّة الخصم مطروحة، لأنه ما سيُخرجه الكاشير
+ * من الدرج — ومفاجأته بمبلغٍ آخر بعد الضغط تُربك الزبون الواقف أمامه.
+ * والخادم يعيد الحساب بنفسه على أيّ حال؛ الرقم هنا للعرض.
+ */
+const ReturnSheet: React.FC<{
+  recent: Shift['recent'];
+  onClose: () => void;
+  onDone: (receipt: ReturnReceipt) => void;
+}> = ({ recent, onClose, onDone }) => {
+  const [ref, setRef] = useState('');
+  const [finding, setFinding] = useState(false);
+  const [sale, setSale] = useState<SaleForReturn | null>(null);
+  const [qty, setQty] = useState<Record<string, number>>({});
+  const [reason, setReason] = useState('');
+  const [note, setNote] = useState('');
+  const [method, setMethod] = useState('cash');
+  const [saving, setSaving] = useState(false);
+
+  const find = async (value = ref) => {
+    const clean = value.trim();
+    if (!clean) return;
+    setFinding(true);
+    setSale(null);
+    try {
+      const data: any = await api.get(`/pos/sales/${encodeURIComponent(clean)}`);
+      setSale(data);
+      setQty({});
+      setMethod(PAYMENTS.some((p) => p.key === data?.paymentMethod) ? data.paymentMethod : 'cash');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'تعذّر العثور على البيعة');
+    } finally {
+      setFinding(false);
+    }
+  };
+
+  const lines = sale?.items || [];
+  const selected = lines.filter((l) => (qty[l.orderItemId] || 0) > 0);
+  const refund = selected.reduce((sum, l) => sum + l.unitRefund * (qty[l.orderItemId] || 0), 0);
+  const nothingLeft = lines.length > 0 && lines.every((l) => l.returnableQuantity === 0);
+  const fullReason = [reason, note.trim()].filter(Boolean).join(' — ');
+
+  const setLine = (line: SaleLineForReturn, next: number) =>
+    setQty((prev) => ({ ...prev, [line.orderItemId]: Math.max(0, Math.min(next, line.returnableQuantity)) }));
+
+  const returnAll = () =>
+    setQty(Object.fromEntries(lines.map((l) => [l.orderItemId, l.returnableQuantity])));
+
+  const submit = async () => {
+    if (!sale || selected.length === 0) return;
+    setSaving(true);
+    try {
+      const data: any = await api.post('/pos/returns', {
+        orderId: sale.id,
+        items: selected.map((l) => ({ orderItemId: l.orderItemId, quantity: qty[l.orderItemId] })),
+        reason: fullReason || undefined,
+        refundMethod: method
+      });
+      toast.success(`تمّ المرتجع — رُدّ ${money(data.amount)}`);
+      onDone(data);
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'تعذّر تسجيل المرتجع', { duration: 6000 });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    padding: '12px 12px', borderRadius: 12, background: C.surf,
+    border: `1px solid ${C.border}`, color: C.text, fontSize: 14, fontFamily: 'inherit', width: '100%'
+  };
+
+  return (
+    <Sheet
+      title="مرتجع"
+      onClose={onClose}
+      footer={sale && sale.returnable && !nothingLeft ? (
+        <button
+          type="button"
+          onClick={submit}
+          disabled={selected.length === 0 || saving}
+          style={{
+            width: '100%', minHeight: 50, borderRadius: 14, border: 'none', fontFamily: 'inherit',
+            background: selected.length === 0 ? C.surf : C.red,
+            color: selected.length === 0 ? C.muted : '#FFFFFF',
+            fontWeight: 900, fontSize: 15,
+            cursor: selected.length === 0 || saving ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+          }}
+        >
+          {saving ? <BusyDots /> : <IoArrowUndo size={18} />}
+          {selected.length === 0 ? 'اختر ما يُرجَع' : `تأكيد المرتجع وردّ ${money(refund)}`}
+        </button>
+      ) : undefined}
+    >
+      <form
+        onSubmit={(e) => { e.preventDefault(); find(); }}
+        style={{ display: 'flex', gap: 8 }}
+      >
+        <input
+          value={ref}
+          onChange={(e) => setRef(e.target.value)}
+          placeholder="رقم البيعة من الإيصال (POS-…)"
+          autoFocus
+          dir="ltr"
+          style={{ ...inputStyle, flex: 1, textAlign: 'right' }}
+        />
+        <button
+          type="submit"
+          disabled={!ref.trim() || finding}
+          style={{
+            minWidth: 52, borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: C.accent, color: '#fff', display: 'grid', placeItems: 'center'
+          }}
+          aria-label="بحث"
+        >
+          <IoSearch size={19} />
+        </button>
+      </form>
+
+      {/* بيعات اليوم ضغطةً واحدة — أغلب المرتجعات لبيعةٍ قريبة والإيصال في يد الزبون */}
+      {!sale && !finding && recent.length > 0 && (
+        <div style={{ display: 'grid', gap: 7 }}>
+          <span style={{ fontSize: 12, color: C.muted }}>بيعات اليوم</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {recent.map((r) => (
+              <button
+                key={r.orderNumber}
+                type="button"
+                onClick={() => { setRef(r.orderNumber); find(r.orderNumber); }}
+                style={{
+                  display: 'grid', gap: 1, textAlign: 'start', padding: '7px 11px', borderRadius: 11,
+                  background: C.surf, border: `1px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit',
+                  color: C.text
+                }}
+              >
+                <b style={{ fontSize: 12, direction: 'ltr' }}>{r.orderNumber}</b>
+                <span style={{ fontSize: 11, color: C.muted, fontVariantNumeric: 'tabular-nums' }}>
+                  {money(Number(r.total))} · {new Date(r.createdAt).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {finding && (
+        <SkeletonScope label="جارٍ جلب البيعة…" style={{ display: 'grid', gap: 10 }}>
+          <SkeletonLine w="45%" h={14} />
+          <SkeletonBlock h={58} />
+          <SkeletonBlock h={58} />
+          <SkeletonLine w="60%" />
+        </SkeletonScope>
+      )}
+
+      {sale && (
+        <>
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: '4px 12px', alignItems: 'baseline',
+            fontSize: 12.5, color: C.muted
+          }}>
+            <b style={{ color: C.text, fontSize: 14, direction: 'ltr' }}>{sale.orderNumber}</b>
+            <span>{new Date(sale.createdAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}</span>
+            <span>{PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>الإجمالي {money(sale.total)}</span>
+            {sale.refundedTotal > 0 && (
+              <span style={{ color: C.red }}>أُرجع سابقاً {money(sale.refundedTotal)}</span>
+            )}
+          </div>
+
+          {!sale.returnable ? (
+            <Notice tone="red">
+              {sale.manualReturn
+                ? 'سُجّل لهذه البيعة مرتجعٌ يدويّ من القسم المالي — ألغِه هناك أولاً لتُرجع الأصناف من هنا.'
+                : 'هذا الطلب لم يُسلَّم بعد — يُلغى من شاشة الطلبات ولا يُرجَع.'}
+            </Notice>
+          ) : nothingLeft ? (
+            <Notice tone="muted">أُرجعت كل أصناف هذه البيعة من قبل.</Notice>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ flex: 1, fontSize: 12.5, fontWeight: 800 }}>ما الذي عاد؟</span>
+                <button
+                  type="button"
+                  onClick={returnAll}
+                  style={{
+                    background: 'transparent', border: 'none', color: C.accent, fontWeight: 800,
+                    fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', padding: 4
+                  }}
+                >
+                  إرجاع الكل
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gap: 8 }}>
+                {lines.map((line) => {
+                  const n = qty[line.orderItemId] || 0;
+                  const done = line.returnableQuantity === 0;
+                  return (
+                    <div key={line.orderItemId} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12,
+                      background: n > 0 ? `${C.red}0F` : C.surf,
+                      border: `1px solid ${n > 0 ? `${C.red}55` : 'transparent'}`,
+                      opacity: done ? 0.55 : 1
+                    }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>
+                        <span style={{ display: 'block', fontWeight: 700 }}>{line.name}</span>
+                        <span style={{ color: C.muted, fontSize: 11 }}>
+                          بيع {line.quantity}
+                          {line.returnedQuantity > 0 ? ` · أُرجع ${line.returnedQuantity}` : ''}
+                          {' · '}يُردّ {money(line.unitRefund)} للقطعة
+                        </span>
+                      </span>
+                      {done ? (
+                        <span style={{ fontSize: 11.5, color: C.muted }}>أُرجع كاملاً</span>
+                      ) : (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                          <Step icon={IoRemove} onClick={() => setLine(line, n - 1)} />
+                          <b style={{ minWidth: 30, textAlign: 'center', fontSize: 13.5, fontVariantNumeric: 'tabular-nums' }}>
+                            {n}/{line.returnableQuantity}
+                          </b>
+                          <Step icon={IoAdd} onClick={() => setLine(line, n + 1)} />
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'grid', gap: 7 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 800 }}>السبب</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {RETURN_REASONS.map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setReason(reason === r ? '' : r)}
+                      style={{
+                        minHeight: 36, padding: '0 12px', borderRadius: 999, cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700,
+                        background: reason === r ? C.accent : C.card,
+                        color: reason === r ? '#fff' : C.text,
+                        border: `1px solid ${reason === r ? C.accent : C.border}`
+                      }}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="ملاحظة (اختياري)"
+                  maxLength={300}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gap: 7 }}>
+                <span style={{ fontSize: 12.5, fontWeight: 800 }}>ردّ المبلغ</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {PAYMENTS.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setMethod(option.key)}
+                      style={{
+                        flex: 1, minHeight: 40, borderRadius: 11, fontSize: 12.5, fontWeight: 700,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        background: method === option.key ? C.accent : C.surf,
+                        color: method === option.key ? '#FFFFFF' : C.muted,
+                        border: `1px solid ${method === option.key ? C.accent : 'transparent'}`
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {method !== sale.paymentMethod && (
+                  <span style={{ fontSize: 11.5, color: C.muted }}>
+                    البيعة دُفعت {PAYMENT_LABEL[sale.paymentMethod] || sale.paymentMethod} — والردّ بطريقة أخرى يظهر في مطابقة النوبة كما هو.
+                  </span>
+                )}
+              </div>
+
+              {sale.discountAmount > 0 && (
+                <span style={{ fontSize: 11.5, color: C.muted }}>
+                  خصم البيعة ({money(sale.discountAmount)}) موزَّع على أصنافها — فيُردّ عن كل قطعة ما دُفع فيها فعلاً.
+                </span>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </Sheet>
+  );
+};
+
+const Notice: React.FC<{ tone: 'red' | 'muted'; children: React.ReactNode }> = ({ tone, children }) => (
+  <div style={{
+    fontSize: 12.5, lineHeight: 1.8, borderRadius: 12, padding: '10px 12px',
+    background: tone === 'red' ? `${C.red}12` : C.surf,
+    color: tone === 'red' ? C.red : C.muted
+  }}>
+    {children}
+  </div>
+);
+
+/** إيصال المرتجع — نفس هيئة إيصال البيع ونفس قواعد الطباعة (`.pos-receipt`) */
+const ReturnReceiptView: React.FC<{ receipt: ReturnReceipt; onClose: () => void }> = ({ receipt, onClose }) => (
+  <div
+    onClick={onClose}
+    style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,.62)', zIndex: 999,
+      display: 'grid', placeItems: 'center', padding: 18
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="pos-receipt"
+      style={{
+        background: '#fff', color: '#111', borderRadius: 14, padding: 20,
+        width: 'min(100%, 22rem)', maxHeight: '86vh', overflowY: 'auto',
+        fontFamily: 'monospace, monospace'
+      }}
+    >
+      <div style={{ textAlign: 'center', marginBottom: 14 }}>
+        <IoArrowUndo size={24} />
+        <div style={{ fontWeight: 800, marginTop: 6 }}>إيصال مرتجع</div>
+        <div style={{ fontWeight: 800 }}>{receipt.returnNumber}</div>
+        <div style={{ fontSize: 11.5, color: '#444' }}>عن البيعة {receipt.orderNumber}</div>
+        <div style={{ fontSize: 11, color: '#666' }}>
+          {new Date(receipt.createdAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
+        </div>
+      </div>
+
+      <div style={{ borderTop: '1px dashed #bbb', borderBottom: '1px dashed #bbb', padding: '10px 0' }}>
+        {receipt.items.map((item, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 5, gap: 8 }}>
+            <span style={{ flex: 1 }}>{item.name} ×{item.quantity}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>− {money(item.refund)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ padding: '10px 0', fontSize: 13 }}>
+        {receipt.reason && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+            <span>السبب</span><span style={{ textAlign: 'end' }}>{receipt.reason}</span>
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>طريقة الردّ</span><span>{PAYMENT_LABEL[receipt.refundMethod] || receipt.refundMethod}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 15, marginTop: 6 }}>
+          <span>المبلغ المُعاد</span><span>{money(receipt.amount)}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }} className="pos-receipt-actions">
+        <button
+          onClick={() => window.print()}
+          style={{
+            flex: 1, minHeight: 42, borderRadius: 10, border: '1px solid #ccc',
+            background: '#fff', cursor: 'pointer', fontSize: 13.5, fontFamily: 'inherit'
+          }}
+        >
+          طباعة
+        </button>
+        <button
+          onClick={onClose}
+          style={{
+            flex: 1, minHeight: 42, borderRadius: 10, border: 'none',
+            background: C.accent, color: '#fff', cursor: 'pointer',
+            fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit'
+          }}
+        >
+          تمّ
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * ملخّص النوبة — ما يطابقه الكاشير مع الدرج عند الإغلاق.
+ *
+ * الصافي لكل طريقة دفع لا مجموعٌ واحد: النقد في الدرج = مبيعات النقد −
+ * ما رُدّ نقداً، والبطاقة تُطابَق مع كشف الجهاز لا مع الدرج.
+ */
+const ShiftSheet: React.FC<{ shift: Shift; onClose: () => void }> = ({ shift, onClose }) => {
+  const methods = Array.from(new Set([...Object.keys(shift.byMethod), ...Object.keys(shift.refundsByMethod)]));
+  return (
+    <Sheet title="ملخّص نوبة اليوم" onClose={onClose}>
+      <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(3, minmax(0,1fr))' }}>
+        <Tile label={`مبيعات (${shift.count})`} value={money(shift.total)} />
+        <Tile label={`مرتجعات (${shift.refundsCount})`} value={shift.refundsTotal > 0 ? `− ${money(shift.refundsTotal)}` : money(0)} color={shift.refundsTotal > 0 ? C.red : undefined} />
+        <Tile label="الصافي" value={money(shift.net)} color={C.accent} />
+      </div>
+
+      {methods.length > 0 && (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 800 }}>حسب طريقة الدفع</span>
+          {methods.map((m) => (
+            <div key={m} style={{
+              display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12.5,
+              padding: '8px 11px', background: C.surf, borderRadius: 10, fontVariantNumeric: 'tabular-nums'
+            }}>
+              <b style={{ flex: 1 }}>{PAYMENT_LABEL[m] || m}</b>
+              <span style={{ color: C.muted }}>{money(shift.byMethod[m] || 0)}</span>
+              {(shift.refundsByMethod[m] || 0) > 0 && (
+                <span style={{ color: C.red }}>− {money(shift.refundsByMethod[m])}</span>
+              )}
+              <b style={{ color: C.accent }}>= {money(shift.netByMethod[m] ?? 0)}</b>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {shift.recentReturns.length > 0 && (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 800 }}>مرتجعات اليوم</span>
+          {shift.recentReturns.map((r) => (
+            <div key={r.returnNumber} style={{
+              display: 'flex', gap: 8, alignItems: 'baseline', fontSize: 12, color: C.muted, flexWrap: 'wrap'
+            }}>
+              <b style={{ color: C.text, direction: 'ltr' }}>{r.returnNumber}</b>
+              <span style={{ direction: 'ltr' }}>← {r.orderNumber}</span>
+              <span>{PAYMENT_LABEL[r.refundMethod] || r.refundMethod}</span>
+              <span style={{ flex: 1 }} />
+              <b style={{ color: C.red, fontVariantNumeric: 'tabular-nums' }}>− {money(r.amount)}</b>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {shift.count === 0 && shift.refundsCount === 0 && (
+        <Notice tone="muted">لا بيع ولا مرتجع اليوم بعد.</Notice>
+      )}
+    </Sheet>
+  );
+};
+
+const Tile: React.FC<{ label: string; value: string; color?: string }> = ({ label, value, color }) => (
+  <div style={{ background: C.surf, borderRadius: 12, padding: '10px 11px', minWidth: 0 }}>
+    <div style={{ fontSize: 11, color: C.muted }}>{label}</div>
+    <div style={{
+      fontSize: 14.5, fontWeight: 900, marginTop: 3, color: color || C.text,
+      fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere'
+    }}>
+      {value}
+    </div>
+  </div>
 );
 
 export default PosPage;

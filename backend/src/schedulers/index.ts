@@ -5,11 +5,28 @@ import { createBackup, pruneOldBackups, checkBackupTarget } from '../services/ba
 import emailService from '../services/emailService';
 import { runAllAutomations } from '../services/automation.service';
 import { pruneEvents } from '../services/storefrontEvents.service';
+import { sweepStockAlerts } from '../services/stockAlert.service';
 
 /**
  * تشغيل جميع المهام المجدولة
  */
 export const startSchedulers = () => {
+  /**
+   * «أعلمني حين يتوفّر» — كل ربع ساعة.
+   *
+   * المسارات الرئيسية تُبلغ فوراً، وهذا يلتقط ما عداها: استيرادٌ بملفّ،
+   * ومرتجعٌ أعاد كميّة، وإلغاء طلب. ربع ساعة تكفي — لا أحد ينتظر إشعار
+   * عودة منتجٍ بالثانية.
+   */
+  cron.schedule('*/15 * * * *', async () => {
+    try {
+      const sent = await sweepStockAlerts();
+      if (sent > 0) console.log(`🔔 أُبلغ ${sent} منتظراً بعودة منتجات`);
+    } catch (error) {
+      console.error('❌ فشل مسح طلبات «أعلمني»:', error);
+    }
+  });
+
   /**
    * الرسائل التلقائية — كل ساعة.
    *

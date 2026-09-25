@@ -79,6 +79,7 @@ import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
 import useStoreManifest from '../../hooks/useStoreManifest';
 import useCartSnapshot from '../../hooks/useCartSnapshot';
 import { StorefrontI18nProvider, makeT } from '@/i18n/storefront';
+import { activatePixels } from '@/services/pixels';
 
 // ==================== الأنواع ====================
 
@@ -254,6 +255,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         setStore(merged);
         // التتبّع بعد معرفة المتجر لا قبله: حدثٌ بلا معرّفٍ يُهمَل صامتاً
         setTrackScope('store', merged.id);
+        // البكسل قبل الحدث الأوّل كي تصل «PageView» إلى حساب التاجر الإعلاني
+        activatePixels(merged.tracking);
         track('view_store');
         applyStorefrontTheme(merged, 'store');
         // ThemeContext يخدم بقية الصفحات — يبقى متزامناً مع متغيرات المتجر
@@ -694,7 +697,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       setOptionsProduct(product);
       return;
     }
-    track('add_to_cart', (product as any).id);
+    track('add_to_cart', (product as any).id, { value: product.price, contentName: product.name });
     addToCart(toCartItem(product));
   };
 
@@ -715,7 +718,10 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
     // ومن مرّ بلوح الخيارات أضاف إلى السلّة أيضاً — تخطّيه هنا يُنقص
     // العدّاد لكل منتجٍ له مقاسٌ أو لون، وهي أكثر منتجات المتاجر
-    track('add_to_cart', (optionsProduct as any).id);
+    track('add_to_cart', (optionsProduct as any).id, {
+      value: result.unitPrice * result.quantity,
+      contentName: optionsProduct.name
+    });
     addToCart({
       ...toCartItem(optionsProduct),
       price: result.unitPrice,
@@ -900,7 +906,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
     // **بعد التحقّق لا قبله:** من ضغط الزرّ وحقولُه ناقصة لم يبدأ دفعاً،
     // وحسابُه يجعل «بدأوا الدفع» أعلى من «أضافوا للسلّة» بلا معنى
-    track('begin_checkout');
+    track('begin_checkout', undefined, { value: cartTotal - discountAmount + deliveryFee });
 
     setSubmitting(true);
     try {
@@ -942,7 +948,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       const response: any = await api.post('/orders', orderData);
 
-      track('order_placed');
+      track('order_placed', undefined, { value: total });
       toast.success(t('تم إرسال طلبك — يتابعه المتجر الآن 🎉'));
       // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
       clearRef((store as any)?.id);

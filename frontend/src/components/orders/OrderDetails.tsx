@@ -33,6 +33,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import OrderPrintActions from '@/components/orders/OrderPrintActions';
 
 const C = {
   bg: '#F4F7F4',
@@ -195,6 +196,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onUpdateStatus, onUp
             </>
           )}
         </div>
+        {/* فاتورةٌ للزبون وملصقٌ للطرد — بنقرةٍ من تفاصيل الطلب */}
+        <OrderPrintActions order={order as any} />
       </div>
 
       <div style={{ padding: 18 }}>

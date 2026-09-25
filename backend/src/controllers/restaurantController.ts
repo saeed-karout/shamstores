@@ -14,6 +14,7 @@ import r2ImagesService from '../services/r2ImagesService';
 import { buildBranchSummary, getLinkedBranches } from '../services/businessBranch.service';
 import { renameStorefront } from '../services/storefrontIdentity.service';
 import { sanitizeDesign } from '../config/storefrontDesign';
+import { sanitizeTrackingSettings } from '../services/tracking.service';
 import { sanitizeSeoSettings } from '../services/seo.service';
 import { Prisma } from '@prisma/client';
 
@@ -298,7 +299,7 @@ export const updateProfile = async (
       textColor, mutedColor, accentColor, fontFamily,
       subdomain, customDomain, isActive, deliverySettings,
       paymentSettings, currency, enabledCurrencies, language, enabledLanguages,
-      pwaShortName, nameEn, descriptionEn, storefrontDesign, seoSettings
+      pwaShortName, nameEn, descriptionEn, storefrontDesign, seoSettings, trackingSettings
     } = req.body;
 
     let restaurant = null;
@@ -393,6 +394,15 @@ export const updateProfile = async (
     }
     // إعدادات البحث تمرّ بمنقٍّ: تُحقن في `<head>` كل صفحةٍ من الواجهة
     if (seoSettings !== undefined) updateData.seoSettings = sanitizeSeoSettings(seoSettings) ?? Prisma.DbNull;
+    // معرّفات البكسل تُفحص بصيغتها — معرّفٌ ناقص يُرفض برسالةٍ لا يُحفظ صامتاً
+    if (trackingSettings !== undefined) {
+      const tracking = sanitizeTrackingSettings(trackingSettings);
+      if ('error' in tracking) {
+        res.status(400).json({ success: false, error: tracking.error });
+        return;
+      }
+      updateData.trackingSettings = tracking.value ?? Prisma.DbNull;
+    }
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
     
     if (deliverySettings !== undefined) updateData.deliverySettings = deliverySettings;

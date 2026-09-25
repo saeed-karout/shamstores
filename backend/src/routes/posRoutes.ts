@@ -13,7 +13,10 @@ import {
   searchProducts,
   lookupBySku,
   createSale,
-  getShiftSummary
+  getShiftSummary,
+  getSaleForReturn,
+  createReturn,
+  listReturns
 } from '../controllers/posController';
 
 const router = Router();
@@ -26,5 +29,10 @@ router.get('/products', searchProducts);
 router.get('/sku/:sku', lookupBySku);
 router.get('/shift', getShiftSummary);
 router.post('/sale', createSale);
+
+// المرتجعات — نفس الحرّاس أعلاه: من يبيع من الكاشير يُرجع منه
+router.get('/sales/:ref', getSaleForReturn);
+router.get('/returns', listReturns);
+router.post('/returns', createReturn);
 
 export default router;

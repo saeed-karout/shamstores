@@ -1,0 +1,161 @@
+/* frontend/src/styles/customers.css
+ *
+ * لوحة فلترة الزبائن. تبني على شريط الطلبات (`.ob-*`) ولا تعيده: البحث
+ * والتبويبات والأيقونات من هناك، وهنا ما لا مثيل له — لوحة الشروط وشرائح
+ * الشروط الفعّالة وشريط النتيجة.
+ *
+ * **الجوال أوّلاً:** اللوحة عمودٌ واحد بحقولٍ بعرض الشاشة وأهداف لمسٍ ٤٤px،
+ * وتصير شبكةً من ثلاثة أعمدة على الشاشات العريضة. وزرّ «تطبيق» ثابتٌ أسفلها
+ * كي لا يمرّر التاجر ليبحث عنه بعد أن ملأ الحقول بإبهامه.
+ */
+
+.cu-filter-btn { position: relative; }
+.cu-filter-btn[aria-expanded='true'] { background: #084835; border-color: #084835; color: #fff; }
+.cu-filter-btn b {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  background: #cdef7c;
+  color: #10231b;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.cu-sort { flex: 0 0 auto; min-width: 150px; }
+@media (max-width: 767.98px) { .cu-sort { flex: 1 1 100%; } }
+
+/* ===== اللوحة ===== */
+
+.cu-panel {
+  background: #fff;
+  border: 1px solid rgba(16, 35, 27, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(16, 35, 27, 0.04), 0 8px 24px rgba(16, 35, 27, 0.06);
+  overflow: hidden;
+}
+.cu-panel-body {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+@media (min-width: 768px) { .cu-panel-body { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .cu-panel-body { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.cu-field { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.cu-field > span { font-size: 13px; font-weight: 800; color: #10231b; }
+.cu-field small { font-size: 12px; color: #5f736a; font-weight: 500; }
+
+.cu-range { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: center; }
+.cu-range i { font-style: normal; font-size: 12.5px; color: #8a9a92; }
+
+.cu-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 35, 27, 0.12);
+  background: #f7faf8;
+  color: #10231b;
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.cu-input:focus { outline: 0; border-color: #084835; box-shadow: 0 0 0 3px rgba(8, 72, 53, 0.12); background: #fff; }
+
+/* خيارات سريعة — «آخر ٣٠ يوماً» ضغطةٌ واحدة بدل تاريخين */
+.cu-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.cu-presets button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 35, 27, 0.12);
+  background: #fff;
+  color: #10231b;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cu-presets button[aria-pressed='true'] { background: #084835; border-color: #084835; color: #fff; }
+
+.cu-panel .ob-seg { display: flex; }
+.cu-panel .ob-seg button { flex: 1; }
+
+.cu-panel-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(16, 35, 27, 0.08);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+}
+.cu-panel-foot .ss-btn { flex: 1; min-height: 46px; border-radius: 14px; }
+@media (min-width: 768px) { .cu-panel-foot { justify-content: flex-end; } .cu-panel-foot .ss-btn { flex: 0 0 auto; } }
+
+/* ===== الشروط الفعّالة ===== */
+
+.cu-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding-inline: 12px 6px;
+  border-radius: 999px;
+  border: 0;
+  background: #e5f3d0;
+  color: #084835;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cu-chip svg { opacity: 0.7; }
+.cu-chip:hover svg { opacity: 1; }
+.cu-clear {
+  border: 0;
+  background: none;
+  color: #b3261e;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+
+/* ===== شريط النتيجة ===== */
+
+.cu-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+  font-size: 13px;
+  color: #5f736a;
+}
+.cu-result b { color: #10231b; font-variant-numeric: tabular-nums; }
+
+.cu-more {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 35, 27, 0.12);
+  background: #fff;
+  color: #084835;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.cu-more:disabled { opacity: 0.6; cursor: wait; }

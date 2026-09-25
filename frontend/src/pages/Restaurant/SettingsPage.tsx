@@ -47,6 +47,7 @@ import { getImageUrl } from '@/utils/imageHelpers';
 import api from '@/services/api';
 import DomainManager from '@/components/settings/DomainManager';
 import SeoSettingsPanel, { SeoSettingsValue } from '@/components/settings/SeoSettingsPanel';
+import TrackingSettingsPanel, { TrackingSettingsValue } from '@/components/settings/TrackingSettingsPanel';
 import { publicStorefrontUrl } from '@/utils/storefrontUrl';
 
 const C = {
@@ -306,6 +307,20 @@ export const SettingsPage: React.FC = () => {
     } catch (error) {}
   };
 
+  // معرّفات البكسل — الخادم يفحص صيغتها ويرفض الخاطئ برسالةٍ تسمّي الحقل
+  const [savingTracking, setSavingTracking] = useState(false);
+  const handleSaveTracking = async (value: TrackingSettingsValue) => {
+    setSavingTracking(true);
+    try {
+      await updateRestaurant({ trackingSettings: value } as any);
+      toast.success('حُفظت أدوات التتبّع');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'تعذّر حفظ أدوات التتبّع');
+    } finally {
+      setSavingTracking(false);
+    }
+  };
+
   const [savingSeo, setSavingSeo] = useState(false);
   const handleSaveSeo = async (value: SeoSettingsValue) => {
     setSavingSeo(true);
@@ -465,7 +480,7 @@ export const SettingsPage: React.FC = () => {
     { id: 'hours', label: 'أوقات العمل', icon: IoTimer },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
     { id: 'payment', label: 'الدفع', icon: IoWalletOutline },
-    { id: 'seo', label: 'محرّكات البحث والدومين', icon: IoGlobe },
+    { id: 'seo', label: 'البحث والتتبّع والدومين', icon: IoGlobe },
      { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
 
@@ -1328,6 +1343,14 @@ export const SettingsPage: React.FC = () => {
             onSave={handleSaveSeo}
             saving={savingSeo}
             canEdit={true}
+            colors={C}
+          />
+          <TrackingSettingsPanel
+            value={(restaurant as any)?.trackingSettings}
+            onSave={handleSaveTracking}
+            saving={savingTracking}
+            canEdit={true}
+            entitled={permissions.canViewAnalytics || isSuperAdmin}
             colors={C}
           />
 

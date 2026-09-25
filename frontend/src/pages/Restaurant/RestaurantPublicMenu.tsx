@@ -52,6 +52,8 @@ import { useSocket } from '@/hooks/useSocket';
 import InstallAppPrompt from '../../components/storefront/InstallAppPrompt';
 import useStoreManifest from '../../hooks/useStoreManifest';
 import { StorefrontI18nProvider, makeT } from '@/i18n/storefront';
+import { track, setTrackScope } from '@/services/track';
+import { activatePixels } from '@/services/pixels';
 
 // ==================== الأنواع ====================
 
@@ -311,6 +313,17 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     return applyStorefrontTheme(restaurant, 'restaurant');
   }, [restaurant]);
 
+  // ---------- الإحصاء وبكسلات التاجر ----------
+  // كانت واجهة المطعم بلا حدثٍ واحد: لا زيارات في تحليلاته ولا مسار شراء —
+  // وبلا ذلك لا شيء يُرسَل إلى بكسل ميتا أو تيك توك الذي يدفع التاجر لإعلاناته
+  useEffect(() => {
+    if (!restaurant?.id) return;
+    setTrackScope('restaurant', restaurant.id);
+    const stop = activatePixels((restaurant as any).tracking);
+    track('view_store');
+    return stop;
+  }, [restaurant?.id]);
+
   // ---------- تعبئة بيانات المستخدم إن كان مسجلاً (اختياري) ----------
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -413,6 +426,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     }
 
     const price = item.discountedPrice && item.discountedPrice > 0 ? item.discountedPrice : item.price;
+    track('add_to_cart', item.id, { value: Number(price) || 0, contentName: item.name });
     addToCart({
       id: item.id,
       name: item.name,
@@ -425,6 +439,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   };
 
   const handleConfirmOptions = (item: StorefrontMenuItem, options: SelectedOptions) => {
+    track('add_to_cart', item.id, { value: options.unitPrice * options.quantity, contentName: item.name });
     addToCart({
       id: item.id,
       name: item.name,
@@ -470,6 +485,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       return;
     }
 
+    // بعد التحقّق: من ضغط والحقول ناقصة لم يبدأ دفعاً
+    track('begin_checkout', undefined, { value: cartTotal });
+
     setSubmitting(true);
     try {
       const subtotal = cartTotal;
@@ -501,6 +519,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       await api.post('/orders', orderData);
 
+      track('order_placed', undefined, { value: subtotal });
       toast.success(t('تم إرسال طلبك بنجاح 🎉'));
       // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
       clearRef((restaurant as any)?.id);

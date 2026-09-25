@@ -456,7 +456,22 @@ const EN: Record<string, string> = {
   'جارٍ البحث في الأسماء والرموز والأوصاف…': 'Searching names, SKUs and descriptions…',
   'بحثٌ في الاسم والوصف وSKU والمقاسات': 'searching name, description, SKU and sizes',
   'لا توجد منتجات تطابق بحثك — جرّب كلمةً أقصر أو رمز المنتج (SKU)':
-    'No products match — try a shorter word or the product SKU'
+    'No products match — try a shorter word or the product SKU',
+
+  // «قريباً» و«أعلمني حين يتوفّر»
+  'قريباً': 'Coming soon',
+  'قريباً — كن أوّل من يعلم': 'Coming soon — be the first to know',
+  'نفدت الكمية — نُعلمك حين يعود': 'Sold out — we will let you know when it is back',
+  'يتوفّر المتوقّع:': 'Expected:',
+  'سُجّل رقمك — سيتواصل معك المتجر حين يتوفّر.': 'Your number is saved — the store will contact you when it is available.',
+  'سنُعلمك فور توفّره.': 'We will notify you as soon as it is available.',
+  'ينتظرونه معك': 'waiting with you',
+  'جارٍ التسجيل…': 'Saving…',
+  'أعلمني حين يتوفّر': 'Notify me when available',
+  'بريدك الإلكتروني أو رقم هاتفك': 'Your email or phone number',
+  'أعلمني': 'Notify me',
+  'اكتب بريدك أو رقم هاتفك': 'Enter your email or phone number',
+  'تعذّر تسجيل طلبك الآن': 'Could not save your request right now'
 };
 
 export interface StorefrontI18n {

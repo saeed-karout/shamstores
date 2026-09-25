@@ -445,6 +445,10 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           res.status(400).json({ success: false, error: `المنتج ${product.name} غير متاح` });
           return;
         }
+        if ((product as any).comingSoon) {
+          res.status(400).json({ success: false, error: `${product.name} لم يُطرح بعد — قريباً` });
+          return;
+        }
         if (product.stock < item.quantity) {
           res.status(400).json({ success: false, error: `المنتج ${product.name} غير متوفر بالكمية المطلوبة` });
           return;

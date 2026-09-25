@@ -14,6 +14,10 @@ export interface BusinessSummary {
   type: 'restaurant' | 'store';
   /** رابط الواجهة العامّة — النطاق الفرعيّ إن وُجد، وإلا المسار على المنصّة */
   publicUrl: string | null;
+  /** للفواتير وبوالص الشحن المطبوعة */
+  phone?: string | null;
+  address?: string | null;
+  currency?: string | null;
 }
 
 export const useBusinessSummary = () => {
@@ -38,7 +42,15 @@ export const useBusinessSummary = () => {
         : b.slug
           ? `${getBaseUrl()}/${b.slug}`
           : null;
-      return { name: b.name, logo: b.logo, type: type!, publicUrl };
+      return {
+        name: b.name,
+        logo: b.logo,
+        type: type!,
+        publicUrl,
+        phone: b.phone || b.whatsapp || null,
+        address: b.address || null,
+        currency: b.currency || null
+      };
     }
   });
 };

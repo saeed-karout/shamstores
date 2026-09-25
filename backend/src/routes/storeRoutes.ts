@@ -62,7 +62,8 @@ import {
   getPublicRelatedProducts,
   createStoreBranch,
   getAllBranchesProducts,
-  updateShowAllBranchesProducts
+  updateShowAllBranchesProducts,
+  getStockAlerts
 } from '../controllers/storeController';
 import { exportProducts, productTemplate, importProducts } from '../controllers/productCsvController';
 import { getStoreVisits } from '../controllers/storefrontEventController';
@@ -91,6 +92,7 @@ router.use(authenticate);
 // تبقى على «جاري التحميل» للأبد. التعديل (`PUT`) للمالك أدناه.
 router.get('/profile', requireStaffPermission('viewProducts', 'viewOrders', 'viewInventory'), getProfile);
 router.get('/products', requireStaffPermission('viewProducts', 'viewInventory'), getProducts);
+router.get('/stock-alerts', requireStaffPermission('viewProducts', 'viewInventory'), getStockAlerts);
 router.get('/categories', requireStaffPermission('viewProducts'), getCategories);
 router.post('/products', requireStaffPermission('updateProducts'), createProduct);
 router.put('/products/:id', requireStaffPermission('updateProducts'), updateProduct);

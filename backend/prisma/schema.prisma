@@ -562,6 +562,9 @@ model Restaurant {
   /// نتائج البحث، وعنوانٌ واحد مشترك كان يجعل مئة متجرٍ تتنافس على
   /// «شام ستورز» بدل أن يظهر كلٌّ باسمه وما يبيعه.
   seoSettings                  Json?
+  /// معرّفات أدوات التتبّع الإعلانية — `{ metaPixelId, tiktokPixelId, ga4Id }`.
+  /// راجع services/tracking.service.ts — المرجع الوحيد لصيغها واستحقاقها.
+  trackingSettings             Json?
   subscriptionStart            DateTime?
   subscriptionEnd              DateTime?
   createdAt                    DateTime  @default(now())
@@ -657,6 +660,8 @@ model Store {
   pwaShortName                 String?
   /// إعدادات محرّكات البحث والمشاركة — انظر التعليق نفسه على Restaurant.
   seoSettings                  Json?
+  /// معرّفات أدوات التتبّع الإعلانية — انظر التعليق نفسه على Restaurant.
+  trackingSettings             Json?
 
   subdomain                    String    @unique
   customDomain                 String?   @unique
@@ -828,6 +833,13 @@ model Product {
   /// خيارات يختارها الزبون قبل الطلب — راجع services/productOptions.service.ts
   options       Json?
   isAvailable   Boolean  @default(true)
+  /// «قريباً» — يُعرض في المتجر ولا يُطلب بعد، ويجمع طلبات «أعلمني».
+  ///
+  /// منفصلٌ عن `isAvailable`: الموقوف مخفيّ، والقادم ظاهرٌ عمداً — التاجر
+  /// يريد أن يعرف الزبائن أنه في الطريق، ويعرف هو كم ينتظره قبل أن يطلبه.
+  comingSoon    Boolean  @default(false) @map("coming_soon")
+  /// موعد التوفّر المتوقّع إن عرفه التاجر — يُعرض «يتوفّر في …»
+  availableAt   DateTime? @map("available_at")
   unit          String   @default("piece")
   sortOrder     Int      @default(0)
   /// يرفعه التاجر يدوياً — تناظراً مع MenuItem
@@ -847,6 +859,7 @@ model Product {
   orderItems OrderItem[]
   movements  InventoryMovement[]
   reviews    ProductReview[]
+  stockAlerts StockAlert[]
   comments   ItemComment[]
 
   @@unique([storeId, sku])
@@ -886,6 +899,31 @@ model ProductReview {
   @@index([productId, isHidden, createdAt])
   @@index([userId])
   @@map("product_reviews")
+}
+
+/// طلب «أعلمني حين يتوفّر» — لمنتجٍ نافد أو قادم.
+///
+/// **بريدٌ أو هاتفٌ أو حسابٌ مسجَّل:** زبون المتجر ليس دائماً مسجَّلاً، ومطالبته
+/// بحسابٍ ليعرف موعد عودة منتجٍ تُضيّعه. والتاجر يرى العدد والجهات في لوحته
+/// فيعرف الطلب الحقيقي قبل أن يعيد التوريد.
+///
+/// `notifiedAt` يُملأ حين يعود المنتج: الطلب يُنفَّذ مرّةً واحدة ولا يُعاد.
+model StockAlert {
+  id        String    @id @default(cuid())
+  productId String    @map("product_id")
+  storeId   String    @map("store_id")
+  userId    String?   @map("user_id")
+  name      String?
+  email     String?
+  phone     String?
+  notifiedAt DateTime? @map("notified_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, notifiedAt])
+  @@index([storeId, createdAt])
+  @@map("stock_alerts")
 }
 
 model InventoryMovement {
@@ -1633,4 +1671,63 @@ model ItemComment {
   @@index([parentId])
   @@index([userId])
   @@map("item_comments")
+}
+
+/// مرتجع الكاشير — مستندٌ مستقلّ لا تعديلٌ على البيعة.
+///
+/// **لماذا جدولٌ لا حقلٌ في الطلب:** البيعة الواحدة قد تُرجَع على دفعات (قطعةٌ
+/// اليوم وأخرى بعد أسبوع)، ولكلّ دفعةٍ سببها وطريقة ردّ مالها وموظّفها
+/// وإيصالها. و`Order.returnAmount` يبقى — مجموعاً يُحدَّث من هنا — لأن القسم
+/// المالي يقرؤه ويطرحه من الصافي والربح، فلا حاجة لتعليمه مصدراً ثانياً.
+///
+/// **ومعرّفاتٌ خامّة بلا علاقات** مع الطلب والمنتج عمداً: إضافة علاقةٍ تعني
+/// سطراً في نموذجَي `Order` و`Product`، وهما يُعدَّلان بالتوازي في فروعٍ أخرى.
+/// والتحقّق من الانتماء يجري في المتحكّم قبل الكتابة على أيّ حال.
+model PosReturn {
+  id            String   @id @default(cuid())
+  /// رقم الإيصال المطبوع — `RET-…` كما البيعة `POS-…`
+  returnNumber  String   @unique @map("return_number")
+  orderId       String   @map("order_id")
+  /// منسوخٌ من البيعة: قائمة المرتجعات تُقرأ بلا ربطٍ بجدول الطلبات
+  orderNumber   String   @map("order_number")
+  storeId       String?  @map("store_id")
+  restaurantId  String?  @map("restaurant_id")
+  /// ما رُدّ للزبون — بعد توزيع خصم البيعة على أصنافها بالنسبة
+  amount        Float
+  /// cash | card | online | sham_cash — مطابقة الصندوق تحتاج النقد وحده
+  refundMethod  String   @default("cash") @map("refund_method")
+  reason        String?  @db.Text
+  createdBy     String?  @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  items PosReturnItem[]
+
+  @@index([storeId, createdAt])
+  @@index([restaurantId, createdAt])
+  @@index([orderId])
+  @@map("pos_returns")
+}
+
+model PosReturnItem {
+  id          String  @id @default(cuid())
+  returnId    String  @map("return_id")
+  /// سطر البيعة الأصل — به يُحسب «المُرجَع سابقاً» فلا يُرجَع أكثر ممّا بيع
+  orderItemId String  @map("order_item_id")
+  productId   String? @map("product_id")
+  menuItemId  String? @map("menu_item_id")
+  /// الاسم لحظة الإرجاع — المنتج قد يُحذف أو يُعاد تسميته والإيصال يبقى
+  name        String
+  quantity    Int
+  /// سعر الوحدة في البيعة
+  unitPrice   Float   @map("unit_price")
+  /// ما رُدّ عن هذا السطر (بعد حصّته من الخصم)
+  refund      Float
+  /// أُعيد إلى المخزون — `false` لصنفٍ لا يُتتبَّع رصيده (وجبةٌ تُطبخ عند الطلب)
+  restocked   Boolean @default(false)
+
+  posReturn PosReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  @@index([returnId])
+  @@index([orderItemId])
+  @@map("pos_return_items")
 }

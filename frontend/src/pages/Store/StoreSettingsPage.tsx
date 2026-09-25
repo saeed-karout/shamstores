@@ -50,6 +50,7 @@ import {
   IoSearch,
 } from 'react-icons/io5';
 import SeoSettingsPanel, { SeoSettingsValue } from '@/components/settings/SeoSettingsPanel';
+import TrackingSettingsPanel, { TrackingSettingsValue } from '@/components/settings/TrackingSettingsPanel';
 import { publicStorefrontUrl } from '@/utils/storefrontUrl';
 import { getImageUrl } from '@/utils/imageHelpers';
 import DomainManager from '@/components/settings/DomainManager';
@@ -389,6 +390,20 @@ const StoreSettingsPage: React.FC = () => {
     }
   };
 
+  // معرّفات البكسل — الخادم يفحص صيغتها ويرفض الخاطئ برسالةٍ تسمّي الحقل
+  const [savingTracking, setSavingTracking] = useState(false);
+  const handleSaveTracking = async (value: TrackingSettingsValue) => {
+    setSavingTracking(true);
+    try {
+      await updateStore({ trackingSettings: value } as any);
+      toast.success('حُفظت أدوات التتبّع');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || 'تعذّر حفظ أدوات التتبّع');
+    } finally {
+      setSavingTracking(false);
+    }
+  };
+
   // إعدادات البحث لهذا المتجر وحده — الخادم ينقّيها ويحسم المشتقّ منها
   const [savingSeo, setSavingSeo] = useState(false);
   const handleSaveSeo = async (value: SeoSettingsValue) => {
@@ -564,7 +579,7 @@ const StoreSettingsPage: React.FC = () => {
     { id: 'images', label: 'الصور', icon: IoImage },
     { id: 'delivery', label: 'التوصيل', icon: IoCar },
     { id: 'payment', label: 'الدفع', icon: IoWalletOutline },
-    { id: 'seo', label: 'محرّكات البحث', icon: IoSearch },
+    { id: 'seo', label: 'البحث والتتبّع', icon: IoSearch },
     { id: 'domain', label: 'الدومين', icon: IoGlobe },
     { id: 'branches', label: 'الفروع', icon: IoGitBranch },
   ];
@@ -1268,6 +1283,7 @@ const StoreSettingsPage: React.FC = () => {
 
       {/* ==================== تبويب محرّكات البحث ==================== */}
       {activeTab === 'seo' && (
+        <>
         <SeoSettingsPanel
           value={(store as any)?.seoSettings}
           business={{
@@ -1284,6 +1300,15 @@ const StoreSettingsPage: React.FC = () => {
           canEdit={canUpdateSettings}
           colors={C}
         />
+          <TrackingSettingsPanel
+            value={(store as any)?.trackingSettings}
+            onSave={handleSaveTracking}
+            saving={savingTracking}
+            canEdit={canUpdateSettings}
+            entitled={permissions.canViewAnalytics || isSuperAdmin}
+            colors={C}
+          />
+        </>
       )}
 
       {/* ==================== تبويب الدومين ==================== */}

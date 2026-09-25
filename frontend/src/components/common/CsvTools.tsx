@@ -121,6 +121,15 @@ interface ToolsProps {
    * موافقةً يؤكّدها هنا صريحاً.
    */
   askOptIn?: boolean;
+  /**
+   * شروطٌ تُلحق برابط التصدير (`?segment=…&minSpent=…`) — بلا `?`.
+   *
+   * كي يُصدَّر ما على الشاشة لا الجدول كلّه: التاجر ضيّق القائمة لغرض، وملفٌّ
+   * بكلّ الزبائن يُعيده إلى فرزها يدوياً في Excel.
+   */
+  exportQuery?: string;
+  /** نصّ زرّ التصدير — «تصدير ٤٢ زبوناً» حين تكون القائمة مفلترة */
+  exportLabel?: string;
 }
 
 /**
@@ -134,7 +143,9 @@ export const CsvTools: React.FC<ToolsProps> = ({
   base,
   templateName,
   exportName,
-  askOptIn
+  askOptIn,
+  exportQuery,
+  exportLabel
 }) => {
   const [optIn, setOptIn] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -187,7 +198,12 @@ export const CsvTools: React.FC<ToolsProps> = ({
           label="قالب فارغ"
           colors={colors}
         />
-        <ExportButton path={`${base}/export`} filename={exportName} colors={colors} />
+        <ExportButton
+          path={`${base}/export${exportQuery ? `?${exportQuery}` : ''}`}
+          filename={exportName}
+          label={exportLabel}
+          colors={colors}
+        />
 
         <button type="button" onClick={() => fileRef.current?.click()} style={btn(colors)}>
           <IoCloudUploadOutline size={16} />
@@ -490,7 +506,12 @@ export const ProductCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void 
 );
 
 /** وغلافٌ للزبائن — بسؤال الموافقة */
-export const CustomerCsvTools: React.FC<{ colors: CsvPalette; onDone: () => void }> = (props) => (
+export const CustomerCsvTools: React.FC<{
+  colors: CsvPalette;
+  onDone: () => void;
+  exportQuery?: string;
+  exportLabel?: string;
+}> = (props) => (
   <CsvTools
     {...props}
     base="/customers"

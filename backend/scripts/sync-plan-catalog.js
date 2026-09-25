@@ -35,7 +35,7 @@ const APPLY = process.argv.includes('--apply');
  * خططٌ خُفّضت حدودها عمداً: كانت «الانطلاقة» و«النموّ» تعطيان ما يكفي أغلب
  * المحلّات، فلا يجد التاجر سبباً للصعود إلى «الأعمال». الأسعار لا تتغيّر.
  */
-const RESHAPED = new Set(['basic', 'pos', 'pro']);
+const RESHAPED = new Set(['free', 'basic', 'pos', 'pro', 'business']);
 const LIMIT_FIELDS = ['maxUsers', 'maxMenuItems', 'maxProducts', 'maxOrders'];
 
 /** نشاطاتٌ على الخطة تتجاوز حدودها الجديدة — عددها لكل حدّ */
@@ -114,12 +114,22 @@ const parseCodes = (raw) => {
         }
       }
       if (current.description !== seed.description) data.description = seed.description;
+      // الإخفاء عن المشتركين الجدد — لا يمسّ من عليها
+      if (current.isActive !== seed.isActive) {
+        data.isActive = seed.isActive;
+        notes.push(seed.isActive ? 'تُظهَر' : 'تُخفى عن المشتركين الجدد');
+      }
+
+      const onPlan =
+        (await prisma.store.count({ where: { planId: current.id } })) +
+        (await prisma.restaurant.count({ where: { planId: current.id } }));
+      notes.push(`عليها ${onPlan} نشاطاً`);
 
       // من سيتجاوز الحدّ الجديد فور التطبيق — يُقال قبل التنفيذ لا بعده
       const over = await countOverLimit(current.id, seed);
       if (over.length) notes.push(`⚠️ يتجاوز الحدّ الجديد: ${over.join('، ')}`);
     }
-    if (notes.length) {
+    if (Object.keys(data).length || notes.some((n) => n.startsWith('⚠️'))) {
       console.log(`↑ ${seed.slug.padEnd(11)} ${notes.join(' · ')}`);
       if (APPLY) await prisma.plan.update({ where: { id: current.id }, data });
       changes += 1;

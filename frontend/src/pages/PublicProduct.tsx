@@ -26,6 +26,7 @@ import { makeT } from '@/i18n/storefront';
 import LocaleSwitcher from '@/components/storefront/LocaleSwitcher';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 import ItemComments from '@/components/storefront/ItemComments';
+import NotifyMeForm from '@/components/storefront/NotifyMeForm';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import { SoldOutTag } from '@/components/storefront/ProductGridCard';
 import ProductOptionsSheet, {
@@ -34,6 +35,7 @@ import ProductOptionsSheet, {
   OptionsResult
 } from '@/components/storefront/ProductOptionsSheet';
 import { track, setTrackScope } from '@/services/track';
+import { activatePixels } from '@/services/pixels';
 
 /**
  * ألوان الصفحة = ألوان التاجر.
@@ -198,7 +200,14 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     const productId = (product as any)?.id;
     if (!storeId || !productId) return;
     setTrackScope('store', storeId);
-    track('view_product', productId);
+    // بكسلات التاجر قبل الحدث — كثيرون يهبطون على المنتج من إعلانٍ مباشرةً،
+    // وحدث «ViewContent» الذي يسبق التفعيل لا يصل
+    const stop = activatePixels((store as any)?.tracking);
+    track('view_product', productId, {
+      value: Number((product as any)?.price) || 0,
+      contentName: (product as any)?.name
+    });
+    return stop;
   }, [store, product]);
 
   const actualProductId = productIdParam || paramProductId;
@@ -362,7 +371,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     if (!product) return;
 
     const productStock = typeof product.stock === 'number' ? product.stock : parseInt(String(product.stock)) || 0;
-    if ((product as any).soldOut === true || productStock <= 0) {
+    if ((product as any).comingSoon === true || (product as any).soldOut === true || productStock <= 0) {
       toast.error(t('المنتج غير متوفر في المخزون'));
       return;
     }
@@ -528,8 +537,14 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   const discountPercent = getDiscountPercent();
   const productStock = typeof product.stock === 'number' ? product.stock : parseInt(String(product.stock)) || 0;
   // الخادم يحسمها في `soldOut`؛ والرقم احتياطٌ لحمولةٍ من منفذٍ قديم
-  const soldOut: boolean =
-    typeof (product as any).soldOut === 'boolean' ? (product as any).soldOut : productStock <= 0;
+  const comingSoon = (product as any).comingSoon === true;
+  const soldOut: boolean = comingSoon
+    ? false
+    : typeof (product as any).soldOut === 'boolean'
+      ? (product as any).soldOut
+      : productStock <= 0;
+  // لا يُطلب الآن — نافدٌ أو لم يُطرح بعد. والفرق في الشارة والعنوان وحدهما
+  const notBuyable = soldOut || comingSoon;
   /**
    * كل صور المنتج لا الغلاف وحده.
    *
@@ -581,7 +596,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
           image: images[0] || null,
           price: finalPrice,
           sku: product.sku,
-          inStock: !soldOut,
+          inStock: !notBuyable,
           ratingAvg: (product as any).ratingAvg ?? null,
           ratingCount: (product as any).ratingCount ?? null
         }}
@@ -711,6 +726,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
               )}
 
               {soldOut && <SoldOutTag placement="center" size="lg" label={t('نفد من المخزون')} />}
+              {comingSoon && <SoldOutTag placement="center" size="lg" variant="soon" label={t('قريباً')} />}
             </div>
 
             {/* مصغرات الصور */}
@@ -788,7 +804,9 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             <div style={{ marginBottom: 24, padding: 16, background: C.surf, borderRadius: 12, border: `1px solid ${C.border}` }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ color: C.muted }}>{t('الحالة:')}</span>
-                {!soldOut ? (
+                {comingSoon ? (
+                  <span style={{ color: '#6D28D9', fontWeight: 700 }}>{t('قريباً')}</span>
+                ) : !soldOut ? (
                   <span style={{ color: C.accent, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <IoCheckmark /> {t('متوفر')}
                   </span>
@@ -798,7 +816,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                   </span>
                 )}
               </div>
-              {!soldOut && (
+              {!notBuyable && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
                   <span style={{ color: C.muted }}>{t('الكمية المتاحة:')}</span>
                   <span style={{ fontWeight: 500, color: C.text }}>{productStock} {t('قطعة')}</span>
@@ -806,8 +824,18 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
               )}
             </div>
 
+            {/* «أعلمني حين يتوفّر» — مكان الكمية حين لا يُشترى المنتج */}
+            {notBuyable && (
+              <NotifyMeForm
+                productId={product.id}
+                comingSoon={comingSoon}
+                availableAt={(product as any).availableAt}
+                t={t}
+              />
+            )}
+
             {/* اختيار الكمية */}
-            {!soldOut && (
+            {!notBuyable && (
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: C.muted, marginBottom: 8 }}>
                   {t('الكمية:')}
@@ -835,7 +863,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
             <div ref={actionRowRef} style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
               <button
                 onClick={handleAddToCart}
-                disabled={soldOut}
+                disabled={notBuyable}
                 style={{
                   flex: 1,
                   padding: '12px 0',
@@ -845,16 +873,16 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                   justifyContent: 'center',
                   gap: 8,
                   border: 'none',
-                  cursor: soldOut ? 'not-allowed' : 'pointer',
+                  cursor: notBuyable ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
                   fontSize: 15,
                   fontFamily: 'Cairo, sans-serif',
-                  background: soldOut
+                  background: notBuyable
                     ? C.surf
                     : addedToCart
                     ? 'rgba(200,226,53,0.2)'
                     : C.accent,
-                  color: soldOut
+                  color: notBuyable
                     ? C.muted
                     : addedToCart
                     ? C.accent
@@ -863,7 +891,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                 }}
               >
                 {addedToCart ? <IoCheckmark size={20} /> : <IoCart size={20} />}
-                {soldOut ? t('نفدت الكمية') : addedToCart ? t('تمت الإضافة') : t('أضف إلى السلة')}
+                {comingSoon ? t('قريباً') : soldOut ? t('نفدت الكمية') : addedToCart ? t('تمت الإضافة') : t('أضف إلى السلة')}
               </button>
 
               <button
@@ -1012,7 +1040,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
           الإضافة الأصليّ الشاشة وحدها، وتحمل ما يحتاجه القرار — الاسم
           والسعر والزرّ — بلا أن تغطّي سطراً كاملاً من الصفحة. */}
       <AnimatePresence>
-        {!soldOut && !actionInView && (
+        {!notBuyable && !actionInView && (
           <motion.div
             initial={{ y: 80, opacity: 0, x: '-50%' }}
             animate={{ y: 0, opacity: 1, x: '-50%' }}

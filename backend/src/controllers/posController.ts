@@ -407,9 +407,51 @@ export const getShiftSummary = async (req: AuthRequest, res: Response): Promise<
       byMethod[method] = (byMethod[method] || 0) + amount;
     }
 
+    /**
+     * مرتجعات اليوم — بتاريخ الإرجاع لا بتاريخ البيعة.
+     *
+     * الكاشير يطابق ما في الصندوق **الآن**: مالٌ خرج اليوم لبيعةٍ من الأمس
+     * خرج من صندوق اليوم. أمّا القسم المالي فيطرحه من بيعته الأصل (الربح
+     * يُنسب إلى يوم البيع) — سؤالان مختلفان وجوابان صحيحان كلٌّ في مكانه.
+     */
+    const returns = await prisma.posReturn.findMany({
+      where: {
+        ...(business.kind === 'store' ? { storeId: business.id } : { restaurantId: business.id }),
+        createdAt: { gte: since }
+      },
+      select: { returnNumber: true, orderNumber: true, amount: true, refundMethod: true, createdAt: true },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const refundsByMethod: Record<string, number> = {};
+    let refundsTotal = 0;
+    for (const ret of returns) {
+      refundsTotal += ret.amount;
+      refundsByMethod[ret.refundMethod] = (refundsByMethod[ret.refundMethod] || 0) + ret.amount;
+    }
+
+    // الصافي لكل طريقة — «النقد في الدرج» هو صافي النقد لا إجمالي مبيعاته
+    const netByMethod: Record<string, number> = { ...byMethod };
+    for (const [method, amount] of Object.entries(refundsByMethod)) {
+      netByMethod[method] = (netByMethod[method] || 0) - amount;
+    }
+
     res.json({
       success: true,
-      data: { count: sales.length, total, byMethod, recent: sales.slice(0, 12) }
+      data: {
+        count: sales.length,
+        /** إجمالي المبيعات قبل المرتجعات — يبقى كما كان لمن يقرؤه (تطبيق التاجر) */
+        total,
+        byMethod,
+        recent: sales.slice(0, 12),
+        refundsCount: returns.length,
+        refundsTotal,
+        refundsByMethod,
+        /** صافي المبيعات = المبيعات − المرتجعات */
+        net: total - refundsTotal,
+        netByMethod,
+        recentReturns: returns.slice(0, 12)
+      }
     });
   } catch (error) {
     console.error('POS shift summary failed:', error);
@@ -417,4 +459,482 @@ export const getShiftSummary = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
-export default { searchProducts, lookupBySku, createSale, getShiftSummary };
+// ==================== المرتجعات ====================
+//
+// **المرتجع مستندٌ لا تعديل.** البيعة تبقى كما كانت — بأصنافها وكمّياتها
+// ومبلغها — ويُضاف بجانبها مستندُ إرجاعٍ بما عاد ومتى ولماذا وكيف رُدّ المال.
+// تعديل البيعة نفسها كان سيمحو أن البيع حدث، فيبدو يومٌ باع فيه الكاشير
+// عشرين قطعةً وأرجع خمساً كأنه باع خمس عشرة — والفرق هو بالضبط ما يحتاج
+// التاجر أن يراه (بضاعةٌ ترتدّ = عيبٌ في الصنف أو في البيع).
+//
+// **والأثر المالي يمرّ عبر `Order.returnAmount`** الذي يقرؤه القسم المالي
+// أصلاً ويطرحه من الصافي ويقتطع من الربح بنسبته. فيُحدَّث هنا مجموعاً لكلّ
+// مرتجعات البيعة، ولا يتعلّم القسم المالي مصدراً ثانياً.
+
+/** حالاتٌ تعني أن البيع تمّ فعلاً — ما قبلها يُلغى لا يُرجَع */
+const RETURNABLE_STATUSES = ['served', 'delivered'];
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/** يقبل رقم البيعة بصيغها التي يكتبها الكاشير فعلاً، أو معرّفها */
+const findSaleForBusiness = async (business: Business, ref: string) => {
+  const scope = business.kind === 'store' ? { storeId: business.id } : { restaurantId: business.id };
+  const clean = ref.trim().replace(/^#/, '');
+  // الكاشير يقرأ الرقم من الإيصال فيكتبه بلا البادئة أحياناً — «LZ3K9» لا
+  // «POS-LZ3K9». والمقارنة في MySQL لا تفرّق بين الحروف الكبيرة والصغيرة.
+  const candidates = Array.from(new Set([clean, `POS-${clean}`.replace(/^POS-POS-/i, 'POS-')]));
+
+  return prisma.order.findFirst({
+    where: { ...scope, OR: [{ id: clean }, { orderNumber: { in: candidates } }] },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      orderSource: true,
+      createdAt: true,
+      total: true,
+      subtotal: true,
+      discountAmount: true,
+      paymentMethod: true,
+      customerName: true,
+      customerPhone: true,
+      returnedAt: true,
+      returnAmount: true,
+      items: {
+        select: {
+          id: true,
+          productId: true,
+          menuItemId: true,
+          quantity: true,
+          price: true,
+          product: { select: { name: true } },
+          menuItem: { select: { name: true } }
+        }
+      }
+    }
+  });
+};
+
+type SaleRecord = NonNullable<Awaited<ReturnType<typeof findSaleForBusiness>>>;
+
+/**
+ * نسبة ما يُردّ من كل ليرة في سعر الصنف.
+ *
+ * خصم البيعة يُوزَّع على أصنافها بالنسبة: بيعةٌ بـ١٠٠ألف وخصم ١٠آلاف أرجع
+ * الزبون نصفها، فيستردّ ٤٥ ألفاً لا ٥٠. ردُّ السعر الكامل كان يعني أن من
+ * يشتري بخصمٍ ثم يُرجع يربح الخصم نقداً.
+ */
+const refundRatio = (sale: SaleRecord): number => {
+  const itemsTotal = sale.items.reduce((sum, i) => sum + Number(i.price) * i.quantity, 0);
+  if (itemsTotal <= 0) return 0;
+  return Math.min(Number(sale.total) / itemsTotal, 1);
+};
+
+/** كم أُرجع من كل سطر سابقاً — بمجموعٍ واحد لا باستعلامٍ لكل سطر */
+const returnedByLine = async (
+  client: { posReturnItem: typeof prisma.posReturnItem },
+  orderItemIds: string[]
+): Promise<Map<string, number>> => {
+  if (orderItemIds.length === 0) return new Map();
+  const rows = await client.posReturnItem.groupBy({
+    by: ['orderItemId'],
+    where: { orderItemId: { in: orderItemIds } },
+    _sum: { quantity: true }
+  });
+  return new Map(rows.map((r) => [r.orderItemId, r._sum.quantity || 0]));
+};
+
+/** شكل البيعة كما تعرضها شاشة المرتجع — بما بقي قابلاً للإرجاع من كل سطر */
+const presentSale = async (sale: SaleRecord) => {
+  const returned = await returnedByLine(prisma, sale.items.map((i) => i.id));
+  const ratio = refundRatio(sale);
+  const returns = await prisma.posReturn.findMany({
+    where: { orderId: sale.id },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true, returnNumber: true, amount: true, refundMethod: true, reason: true, createdAt: true,
+      items: { select: { name: true, quantity: true, refund: true } }
+    }
+  });
+
+  return {
+    id: sale.id,
+    orderNumber: sale.orderNumber,
+    status: sale.status,
+    source: sale.orderSource,
+    createdAt: sale.createdAt,
+    subtotal: Number(sale.subtotal) || 0,
+    discountAmount: Number(sale.discountAmount) || 0,
+    total: Number(sale.total),
+    paymentMethod: sale.paymentMethod,
+    customerName: sale.customerName,
+    refundedTotal: round2(returns.reduce((sum, r) => sum + r.amount, 0)),
+    /**
+     * مرتجعٌ سُجّل يدوياً من القسم المالي قبل هذه الشاشة. لا يُبنى عليه
+     * مرتجعٌ بالأصناف: لا نعرف أيّ قطعٍ عادت فيه، ومرتجعٌ ثانٍ فوقه يطرح
+     * نفس المبلغ مرّتين.
+     */
+    manualReturn: Boolean(sale.returnedAt) && returns.length === 0,
+    returnable:
+      RETURNABLE_STATUSES.includes(String(sale.status)) &&
+      !(Boolean(sale.returnedAt) && returns.length === 0),
+    items: sale.items.map((item) => {
+      const done = returned.get(item.id) || 0;
+      return {
+        orderItemId: item.id,
+        productId: item.productId,
+        menuItemId: item.menuItemId,
+        name: item.product?.name || item.menuItem?.name || 'صنف',
+        quantity: item.quantity,
+        returnedQuantity: done,
+        returnableQuantity: Math.max(item.quantity - done, 0),
+        price: Number(item.price),
+        /** ما يُردّ عن القطعة الواحدة بعد حصّتها من الخصم */
+        unitRefund: round2(Number(item.price) * ratio)
+      };
+    }),
+    returns
+  };
+};
+
+/**
+ * جلب بيعةٍ برقمها لشاشة المرتجع.
+ *
+ * `GET /api/pos/sales/:ref` — الرقم المطبوع على الإيصال (بالبادئة أو بدونها)
+ * أو معرّف الطلب.
+ */
+export const getSaleForReturn = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = getBusiness(req);
+    const ref = String(req.params.ref || '').trim();
+    if (!business || !ref) {
+      res.status(400).json({ success: false, error: 'رقم البيعة مطلوب' });
+      return;
+    }
+
+    const sale = await findSaleForBusiness(business, ref);
+    if (!sale) {
+      res.status(404).json({ success: false, error: `لا بيعة بالرقم ${ref}` });
+      return;
+    }
+
+    res.json({ success: true, data: await presentSale(sale) });
+  } catch (error) {
+    console.error('POS getSaleForReturn failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر جلب البيعة' });
+  }
+};
+
+interface ReturnLineInput {
+  orderItemId?: string;
+  productId?: string;
+  menuItemId?: string;
+  quantity: number;
+}
+
+/**
+ * تسجيل مرتجع.
+ *
+ * `POST /api/pos/returns`
+ * `{ orderId, items: [{ orderItemId | productId | menuItemId, quantity }], reason?, refundMethod? }`
+ *
+ * **كلّه في معاملة، وقفلُ البيعة أوّل خطوة فيها.** كاشيران يُرجعان نفس
+ * القطعة من جهازين في اللحظة نفسها كانا سيقرآن «المُرجَع سابقاً = صفر»
+ * معاً فيُرجعان قطعتين من بيعةٍ فيها واحدة. تحديث صفّ الطلب أولاً يُمسك
+ * قفله، فينتظر الثاني حتى يلتزم الأوّل ثم يقرأ ما كتبه.
+ */
+export const createReturn = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = getBusiness(req);
+    if (!business) {
+      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
+      return;
+    }
+
+    const orderId = typeof req.body?.orderId === 'string' ? req.body.orderId.trim() : '';
+    const lines: ReturnLineInput[] = Array.isArray(req.body?.items) ? req.body.items : [];
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) || null : null;
+
+    if (!orderId) {
+      res.status(400).json({ success: false, error: 'البيعة مطلوبة' });
+      return;
+    }
+
+    const sale = await findSaleForBusiness(business, orderId);
+    if (!sale) {
+      res.status(404).json({ success: false, error: 'البيعة غير موجودة' });
+      return;
+    }
+
+    if (!RETURNABLE_STATUSES.includes(String(sale.status))) {
+      res.status(400).json({
+        success: false,
+        error: 'لا يُرجَع إلا ما سُلّم فعلاً — الطلب الذي لم يكتمل يُلغى من شاشة الطلبات'
+      });
+      return;
+    }
+
+    // طريقة الردّ الافتراضية هي طريقة الدفع: من دفع بشام كاش يستردّ بها،
+    // ونقدٌ يخرج من الصندوق لبيعةٍ دُفعت إلكترونياً يُربك مطابقة النوبة
+    const refundMethod = PAYMENT_METHODS.includes(req.body?.refundMethod)
+      ? req.body.refundMethod
+      : sale.paymentMethod || 'cash';
+
+    // يُطابَق السطر بمعرّفه، أو بالصنف لمن يعرف الصنف لا السطر (قارئ باركود)
+    const requested = new Map<string, number>();
+    for (const line of lines) {
+      const quantity = Math.floor(Number(line?.quantity));
+      if (!line || !(quantity > 0)) continue;
+      const item = sale.items.find((i) =>
+        line.orderItemId
+          ? i.id === line.orderItemId
+          : line.productId
+          ? i.productId === line.productId
+          : line.menuItemId
+          ? i.menuItemId === line.menuItemId
+          : false
+      );
+      if (!item) {
+        res.status(400).json({ success: false, error: 'صنفٌ في المرتجع ليس من هذه البيعة' });
+        return;
+      }
+      requested.set(item.id, (requested.get(item.id) || 0) + quantity);
+    }
+
+    if (requested.size === 0) {
+      res.status(400).json({ success: false, error: 'اختر صنفاً واحداً على الأقلّ للإرجاع' });
+      return;
+    }
+
+    const ratio = refundRatio(sale);
+    const isStore = business.kind === 'store';
+    // لاحقةٌ عشوائية: مرتجعان في نفس الجزء من الثانية (كاشيران) كانا سيتصادمان
+    // على القيد الفريد فيسقط الثاني بخطأ لا يفهمه الكاشير
+    const returnNumber = `RET-${Date.now().toString(36).toUpperCase()}${Math.random()
+      .toString(36)
+      .slice(2, 4)
+      .toUpperCase()}`;
+
+    // أرصدة الأصناف المتتبَّعة في المطعم — تُقرأ قبل المعاملة كما في البيع
+    const trackedMenuItems = isStore
+      ? new Set<string>()
+      : new Set(
+          (
+            await prisma.menuItem.findMany({
+              where: {
+                restaurantId: business.id,
+                trackStock: true,
+                id: { in: sale.items.map((i) => i.menuItemId).filter((v): v is string => Boolean(v)) }
+              },
+              select: { id: true }
+            })
+          ).map((m) => m.id)
+        );
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      // القفل — راجع التعليق أعلى الدالّة
+      await tx.order.update({ where: { id: sale.id }, data: { updatedAt: new Date() } });
+
+      const existingReturns = await tx.posReturn.count({ where: { orderId: sale.id } });
+      const fresh = await tx.order.findUnique({
+        where: { id: sale.id },
+        select: { returnedAt: true, total: true }
+      });
+      if (fresh?.returnedAt && existingReturns === 0) {
+        return {
+          error: 'سُجّل لهذه البيعة مرتجعٌ يدويّ من القسم المالي — ألغِه هناك أولاً ثم أرجع الأصناف من هنا'
+        } as const;
+      }
+
+      const already = await returnedByLine(tx, Array.from(requested.keys()));
+
+      const itemsData: Array<{
+        orderItemId: string; productId: string | null; menuItemId: string | null;
+        name: string; quantity: number; unitPrice: number; refund: number; restocked: boolean;
+      }> = [];
+
+      for (const [orderItemId, quantity] of requested) {
+        const item = sale.items.find((i) => i.id === orderItemId)!;
+        const left = item.quantity - (already.get(orderItemId) || 0);
+        const name = item.product?.name || item.menuItem?.name || 'صنف';
+        if (quantity > left) {
+          return {
+            error: left > 0
+              ? `المتبقّي للإرجاع من «${name}» ${left} فقط`
+              : `«${name}» أُرجع كاملاً من قبل`
+          } as const;
+        }
+        const restocked = isStore
+          ? Boolean(item.productId)
+          : Boolean(item.menuItemId && trackedMenuItems.has(item.menuItemId));
+        itemsData.push({
+          orderItemId,
+          productId: item.productId,
+          menuItemId: item.menuItemId,
+          name,
+          quantity,
+          unitPrice: Number(item.price),
+          refund: round2(Number(item.price) * quantity * ratio),
+          restocked
+        });
+      }
+
+      const previous = await tx.posReturn.aggregate({
+        where: { orderId: sale.id },
+        _sum: { amount: true }
+      });
+      const previousTotal = previous._sum.amount || 0;
+      const saleTotal = Number(fresh?.total ?? sale.total);
+      // التقريب قد يتجاوز الإجمالي بكسرٍ عند إرجاع آخر قطعة — الحدّ يمنع
+      // أن يُردّ أكثر ممّا دُفع ولو بقرش
+      const amount = round2(
+        Math.min(itemsData.reduce((sum, i) => sum + i.refund, 0), Math.max(saleTotal - previousTotal, 0))
+      );
+
+      const created = await tx.posReturn.create({
+        data: {
+          returnNumber,
+          orderId: sale.id,
+          orderNumber: sale.orderNumber,
+          ...(isStore ? { storeId: business.id } : { restaurantId: business.id }),
+          amount,
+          refundMethod,
+          reason,
+          createdBy: req.user?.id || null,
+          items: { create: itemsData }
+        },
+        include: { items: true }
+      });
+
+      // المخزون يعود — مع حركةٍ في دفتر المتجر تقول لماذا زاد الرصيد
+      for (const line of itemsData) {
+        if (!line.restocked) continue;
+        if (isStore && line.productId) {
+          await tx.product.update({
+            where: { id: line.productId },
+            data: { stock: { increment: line.quantity } }
+          });
+          await tx.inventoryMovement.create({
+            data: {
+              productId: line.productId,
+              quantity: line.quantity,
+              type: 'return',
+              reason: `مرتجع كاشير ${returnNumber} من ${sale.orderNumber}${reason ? ` — ${reason}` : ''}`.slice(0, 190),
+              referenceId: created.id,
+              referenceType: 'return'
+            }
+          });
+        } else if (!isStore && line.menuItemId) {
+          await tx.menuItem.update({
+            where: { id: line.menuItemId },
+            data: { stock: { increment: line.quantity } }
+          });
+        }
+      }
+
+      // المجموع لا الفرق: القسم المالي يقرأ `returnAmount` مبلغاً مُعاداً
+      // للطلب كلّه، فيُكتب مجموع كل دفعات الإرجاع حتى الآن
+      await tx.order.update({
+        where: { id: sale.id },
+        data: {
+          returnedAt: new Date(),
+          returnAmount: round2(previousTotal + amount),
+          returnReason: reason ?? undefined
+        }
+      });
+
+      return { created } as const;
+    });
+
+    if ('error' in outcome) {
+      res.status(400).json({ success: false, error: outcome.error });
+      return;
+    }
+
+    const { created } = outcome;
+    res.status(201).json({
+      success: true,
+      message: 'تمّ تسجيل المرتجع',
+      data: {
+        id: created.id,
+        returnNumber: created.returnNumber,
+        orderId: sale.id,
+        orderNumber: sale.orderNumber,
+        amount: created.amount,
+        refundMethod: created.refundMethod,
+        reason: created.reason,
+        createdAt: created.createdAt,
+        items: created.items.map((i) => ({
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+          refund: i.refund,
+          restocked: i.restocked
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('POS createReturn failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر تسجيل المرتجع' });
+  }
+};
+
+/**
+ * قائمة المرتجعات.
+ *
+ * `GET /api/pos/returns?from=YYYY-MM-DD&to=YYYY-MM-DD` — افتراضياً آخر
+ * ثلاثين يوماً. والحدّ مئتان: شاشةٌ لا تقرير، والتقرير في القسم المالي.
+ */
+export const listReturns = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const business = getBusiness(req);
+    if (!business) {
+      res.status(400).json({ success: false, error: 'معرف النشاط غير موجود' });
+      return;
+    }
+
+    const parse = (value: unknown, endOfDay: boolean): Date | null => {
+      if (typeof value !== 'string' || !value.trim()) return null;
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return null;
+      if (endOfDay && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) d.setUTCHours(23, 59, 59, 999);
+      return d;
+    };
+
+    const to = parse(req.query.to, true) || new Date();
+    const from = parse(req.query.from, false) || new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const returns = await prisma.posReturn.findMany({
+      where: {
+        ...(business.kind === 'store' ? { storeId: business.id } : { restaurantId: business.id }),
+        createdAt: { gte: from, lte: to }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { items: { select: { name: true, quantity: true, unitPrice: true, refund: true, restocked: true } } }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        range: { from, to },
+        count: returns.length,
+        total: round2(returns.reduce((sum, r) => sum + r.amount, 0)),
+        returns
+      }
+    });
+  } catch (error) {
+    console.error('POS listReturns failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر جلب المرتجعات' });
+  }
+};
+
+export default {
+  searchProducts,
+  lookupBySku,
+  createSale,
+  getShiftSummary,
+  getSaleForReturn,
+  createReturn,
+  listReturns
+};

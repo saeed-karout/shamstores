@@ -12,6 +12,7 @@
 
 type RawProduct = {
   stock: number;
+  comingSoon?: boolean;
   cost?: unknown;
   reservedStock?: unknown;
   maxStockLevel?: unknown;
@@ -19,7 +20,8 @@ type RawProduct = {
 
 export const toPublicProduct = <T extends RawProduct>(product: T) => {
   const { cost: _cost, reservedStock: _reserved, maxStockLevel: _max, ...visible } = product;
-  return { ...visible, soldOut: product.stock <= 0 };
+  // القادم ليس نافداً: شارته «قريباً» لا «Sold out»، وكلاهما لا يُطلب
+  return { ...visible, soldOut: !product.comingSoon && product.stock <= 0 };
 };
 
 export default { toPublicProduct };

@@ -60,7 +60,7 @@ export const PLAN_SEEDS: PlanSeed[] = [
         price: 0,
         maxRestaurants: 1,
         maxStores: 1,
-        maxUsers: 3,
+        maxUsers: 2,
         // خمسون صنفاً: قائمة مطعمٍ صغير كاملة، لا عيّنة منها. عشرةٌ كانت
         // تُجبر التاجر على الاختيار بين منتجاته قبل أن يرى المنصّة تعمل.
         maxMenuItems: 50,
@@ -90,7 +90,7 @@ export const PLAN_SEEDS: PlanSeed[] = [
         hasCustomDomain: false,
         hasMultiLanguage: false,
         hasBrandingRemoval: false,
-        description: 'قائمة رقمية ورمز QR للطاولات، وحتى ٥٠ صنفاً و٣٠ طلباً شهرياً للتجربة'
+        description: 'قائمة رقمية ورمز QR للطاولات، وحتى 50 صنفاً و30 طلباً شهرياً للتجربة'
       },
       {
         id: '22222222-2222-2222-2222-222222222222',
@@ -105,7 +105,10 @@ export const PLAN_SEEDS: PlanSeed[] = [
         maxMenuItems: 80,
         maxProducts: 80,
         maxOrders: 150,
-        isActive: true,
+        // مخفيّة عن المشتركين الجدد: ستّ خطط كانت تُضيّع الزائر بين أرقامٍ
+        // متقاربة. أربعٌ ظاهرة (0 / 9 / 14 / 19) تقابل باقات المنافس الثلاث
+        // وتسبقها بسعرٍ أدنى في كل مستوى. ومن عليها يبقى عليها كما هو.
+        isActive: false,
         position: 2,
         hasTableQr: true,
         hasWhatsapp: true,
@@ -116,7 +119,7 @@ export const PLAN_SEEDS: PlanSeed[] = [
         hasCustomDomain: false,
         hasMultiLanguage: false,
         hasBrandingRemoval: false,
-        description: '١٥٠ طلباً شهرياً و٨٠ صنفاً وكوبونات — الخطوة الأولى نحو دخل إضافي'
+        description: '150 طلباً شهرياً و80 صنفاً وكوبونات — الخطوة الأولى نحو دخل إضافي'
       },
       {
         id: '33333333-3333-3333-3333-333333333333',
@@ -142,7 +145,7 @@ export const PLAN_SEEDS: PlanSeed[] = [
         hasCustomDomain: false,
         hasMultiLanguage: false,
         hasBrandingRemoval: true,
-        description: '١٠٠٠ طلب شهرياً و٣٠٠ صنف، وتحليلات، وبلا علامة المنصة على متجرك'
+        description: '1000 طلب شهرياً و300 صنف، وتحليلات، وبلا علامة المنصة على متجرك'
       },
       {
         id: '44444444-4444-4444-4444-444444444444',
@@ -196,7 +199,9 @@ export const PLAN_SEEDS: PlanSeed[] = [
         maxMenuItems: 400,
         maxProducts: 400,
         maxOrders: 600,
-        isActive: true,
+        // مخفيّة كـ«الانطلاقة»: الكاشير يُباع إضافةً على أيّ خطة، ومشمولٌ في
+        // «الأعمال» و«المؤسسات» — خطةٌ خاصّة به صارت تكراراً يُربك المقارنة
+        isActive: false,
         position: 3,
         hasTableQr: true,
         hasWhatsapp: true,
@@ -208,7 +213,7 @@ export const PLAN_SEEDS: PlanSeed[] = [
         hasMultiLanguage: false,
         hasBrandingRemoval: false,
         features: ['pos'],
-        description: 'كاشير بالباركود لمحلّك، ومخزون حتى ٤٠٠ منتج، وتقارير المبيعات — مع متجرك الإلكتروني'
+        description: 'كاشير بالباركود لمحلّك، ومخزون حتى 400 منتج، وتقارير المبيعات — مع متجرك الإلكتروني'
       },
       {
         id: '66666666-6666-6666-6666-666666666666',
@@ -218,9 +223,11 @@ export const PLAN_SEEDS: PlanSeed[] = [
         maxRestaurants: 3,
         maxStores: 3,
         maxUsers: 30,
-        maxMenuItems: 2000,
-        maxProducts: 2000,
-        maxOrders: 10000,
+        // غير محدودة: باقة المنافس الوسطى (15$) غير محدودة، و«الأعمال» بـ14$
+        // يجب أن تغلبها في كل بند لا في الميزات وحدها
+        maxMenuItems: 999999,
+        maxProducts: 999999,
+        maxOrders: 999999,
         isActive: true,
         position: 5,
         isPopular: true,
@@ -234,7 +241,7 @@ export const PLAN_SEEDS: PlanSeed[] = [
         hasMultiLanguage: true,
         hasBrandingRemoval: true,
         features: ['pos', 'affiliate', 'pwa'],
-        description: 'ثلاثة فروع، كاشير ومسوّقون بالعمولة وتطبيق باسمك وواجهة بلغتين — بأقلّ من ثمنها منفردة'
+        description: 'منتجات وطلبات بلا حدود، ثلاثة فروع، كاشير ومسوّقون وتطبيق باسمك وواجهة بلغتين'
       }
 ];
 

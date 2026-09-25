@@ -192,7 +192,7 @@ export const setTrackScope = (businessType: 'store' | 'restaurant', businessId?:
 };
 
 /** يُسجّل حدثاً — آمنٌ للنداء قبل معرفة المتجر (يُهمَل) */
-export const track = (type: TrackEvent, productId?: string) => {
+export const track = (type: TrackEvent, productId?: string, detail?: PixelDetail) => {
   try {
     if (!scope) return;
 
@@ -201,6 +201,9 @@ export const track = (type: TrackEvent, productId?: string) => {
       if (seen().has(key)) return;
       remember(key);
     }
+
+    // بكسلات التاجر الإعلانية من المصدر نفسه — لا نداءٌ منفصل في كل صفحة
+    firePixel(type, { contentId: productId, ...detail });
 
     if (queue.length >= MAX_QUEUE) return;
     queue.push({ type, productId, sessionId: sessionId(), source: source(), device: device() });
@@ -224,3 +227,6 @@ if (typeof window !== 'undefined') {
 }
 
 export default { track, setTrackScope };
+
+// الاستيراد في آخر الملفّ مقبول في ESM — والوحدة لا تعتمد على هذه
+import { firePixel, type PixelDetail } from './pixels';

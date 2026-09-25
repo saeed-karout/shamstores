@@ -15,8 +15,17 @@ import { validateCurrencyUpdate, resolveCurrencySettings } from '../services/cur
 import bcrypt from 'bcrypt';
 import r2ImagesService from '../services/r2ImagesService';
 import slugify from '../utils/slugify';
+import { sanitizeTrackingSettings, publicTracking } from '../services/tracking.service';
 import { sanitizeSeoSettings, resolveBusinessSeo } from '../services/seo.service';
 import { toPublicProduct } from '../services/publicProduct.service';
+import { releaseStockAlerts } from '../services/stockAlert.service';
+
+/** تاريخ التوفّر المتوقّع — نصٌّ فارغ يمسحه، وتاريخٌ غير صالح يُتجاهل */
+const parseAvailableAt = (value: unknown): Date | null => {
+  if (!value) return null;
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
 import { shouldShowPlatformBadge } from '../services/branding.service';
 import { Prisma } from '@prisma/client';
 import fs from 'fs';
@@ -525,7 +534,7 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
       latitude, longitude, timezone, currency, language,
       whatsapp, instagram, facebook, tiktok,
       deliverySettings, paymentSettings, notificationSettings, enabledLanguages,
-      enabledCurrencies, pwaShortName, nameEn, descriptionEn, storefrontDesign, seoSettings,
+      enabledCurrencies, pwaShortName, nameEn, descriptionEn, storefrontDesign, seoSettings, trackingSettings,
       isActive 
     } = req.body;
     
@@ -568,6 +577,15 @@ export const updateProfile = async (req: AuthRequest, res: Response): Promise<vo
     }
     // إعدادات البحث تمرّ بمنقٍّ: تُحقن في `<head>` كل صفحةٍ من الواجهة
     if (seoSettings !== undefined) updateData.seoSettings = sanitizeSeoSettings(seoSettings) ?? Prisma.DbNull;
+    // معرّفات البكسل تُفحص بصيغتها — معرّفٌ ناقص يُرفض برسالةٍ لا يُحفظ صامتاً
+    if (trackingSettings !== undefined) {
+      const tracking = sanitizeTrackingSettings(trackingSettings);
+      if ('error' in tracking) {
+        res.status(400).json({ success: false, error: tracking.error });
+        return;
+      }
+      updateData.trackingSettings = tracking.value ?? Prisma.DbNull;
+    }
     if (fontFamily !== undefined) updateData.fontFamily = fontFamily;
     
     if (latitude !== undefined) updateData.latitude = latitude ? parseFloat(latitude) : null;
@@ -745,7 +763,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular, tags } = req.body;
+    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular, tags, comingSoon, availableAt } = req.body;
     
     if (!name) {
       res.status(400).json({ success: false, error: 'اسم المنتج مطلوب' });
@@ -762,6 +780,8 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
     
     const product = await prisma.product.create({
       data: {
+        comingSoon: comingSoon === true,
+        availableAt: parseAvailableAt(availableAt),
         storeId,
         name,
         nameEn: nameEn || null,
@@ -824,7 +844,7 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
-    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular, tags } = req.body;
+    const { name, nameEn, sku, description, descriptionEn, price, cost, stock, imageUrl, categoryId, isAvailable, unit, originalPrice, isPopular, tags, comingSoon, availableAt } = req.body;
     
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
@@ -839,6 +859,9 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
     if (unit !== undefined) updateData.unit = unit;
     if (tags !== undefined) updateData.tags = sanitizeTags(tags);
+    // «قريباً»: يُعرض ولا يُطلب — وموعده اختياريّ، والفراغ يمسحه
+    if (comingSoon !== undefined) updateData.comingSoon = comingSoon === true;
+    if (availableAt !== undefined) updateData.availableAt = parseAvailableAt(availableAt);
     
 
     // null يعني أن الطلب لم يمسّ الصور — لا نمحو صوراً قائمة لأن التاجر
@@ -862,6 +885,10 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
       include: { category: true }
     });
     
+    // عاد المنتج (كميّةٌ جديدة أو انتهى «قريباً»)؟ يُبلَّغ من ينتظره — بلا
+    // انتظار: الإشعار والبريد لا يؤخّران حفظ التاجر
+    releaseStockAlerts(id).catch(() => undefined);
+
     res.json({ success: true, message: 'تم تحديث المنتج بنجاح', data: updatedProduct });
   } catch (error) {
     if (isSkuConflict(error)) {
@@ -2214,7 +2241,8 @@ export const getPublicStore = async (req: Request, res: Response) => {
         plan: store.plan,
         // صفحة المنتج تكتب عنوانها ووصفها وأيقونة تبويبها من هنا
         seo: resolveBusinessSeo(store, 'store'),
-        showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store')
+        showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store'),
+        tracking: await publicTracking(store.id, 'store', store.trackingSettings)
       }
     });
   } catch (error) {
@@ -2366,4 +2394,60 @@ export default {
   getAllBranchesProducts,
   updateShowAllBranchesProducts,
   createStoreBranch,
+};
+
+// ==================== «أعلمني حين يتوفّر» — لوحة التاجر ====================
+
+/**
+ * من ينتظر أيّ منتج — مجمّعون بالمنتج، المعلّقون أوّلاً.
+ *
+ * التاجر يرى هنا الطلب الحقيقي قبل أن يعيد التوريد: عشرون ينتظرون قطعةً
+ * نفدت إشارةٌ أوضح من أيّ تقرير مبيعات. ومن ترك هاتفه وحده يظهر برقمه كي
+ * يتواصل معه التاجر بنفسه — لا قناة رسائل لدينا لإبلاغه آلياً.
+ */
+export const getStockAlerts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const storeId = await getStoreId(req);
+    if (!storeId) {
+      res.status(400).json({ success: false, error: 'معرف المتجر غير موجود' });
+      return;
+    }
+    const alerts = await prisma.stockAlert.findMany({
+      where: { storeId },
+      orderBy: { createdAt: 'desc' },
+      take: 1000,
+      include: { product: { select: { id: true, name: true, imageUrl: true, stock: true, comingSoon: true } } }
+    });
+
+    const byProduct = new Map<string, any>();
+    for (const alert of alerts) {
+      const entry =
+        byProduct.get(alert.productId) ||
+        { product: alert.product, pending: 0, notified: 0, contacts: [] as any[] };
+      if (alert.notifiedAt) entry.notified += 1;
+      else entry.pending += 1;
+      entry.contacts.push({
+        id: alert.id,
+        name: alert.name,
+        email: alert.email,
+        phone: alert.phone,
+        registered: !!alert.userId,
+        notifiedAt: alert.notifiedAt,
+        createdAt: alert.createdAt
+      });
+      byProduct.set(alert.productId, entry);
+    }
+
+    const summary = [...byProduct.values()].sort((a, b) => b.pending - a.pending);
+    res.json({
+      success: true,
+      data: {
+        products: summary,
+        counts: Object.fromEntries(summary.map((e) => [e.product.id, e.pending]))
+      }
+    });
+  } catch (error) {
+    console.error('Error getting stock alerts:', error);
+    res.status(500).json({ success: false, error: 'تعذّر جلب طلبات الإشعار' });
+  }
 };

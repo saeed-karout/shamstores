@@ -47,6 +47,9 @@ export interface StorefrontProduct {
   badges?: any;
   /** يحسبه الخادم — المتجر يتتبّع مخزونه دائماً، والمطعم لما يختاره */
   soldOut?: boolean | null;
+  /** «قريباً»: يُعرض بلا زرّ شراء — وفي صفحته «أعلمني حين يتوفّر» */
+  comingSoon?: boolean | null;
+  availableAt?: string | null;
 }
 
 interface Props {
@@ -104,6 +107,7 @@ const BADGE_TONE: Record<string, { bg: string; color: string }> = {
  * «لا يُتتبَّع» لا «صفر».
  */
 export const isSoldOut = (product: StorefrontProduct): boolean => {
+  if (product.comingSoon) return false;
   if (typeof product.soldOut === 'boolean') return product.soldOut;
   if (product.trackStock === false) return false;
   if (product.trackStock === true) return (product.stock ?? 0) <= 0;
@@ -137,7 +141,9 @@ export const SoldOutTag: React.FC<{
   label?: string;
   /** `lg` لصفحة المنتج حيث الصورة بعرض العمود */
   size?: 'sm' | 'lg';
-}> = ({ placement = 'bottom', label, size = 'sm' }) => (
+  /** `soon` = «Coming soon» بنفسجيّة لمنتجٍ لم يُطرح بعد */
+  variant?: 'sold' | 'soon';
+}> = ({ placement = 'bottom', label, size = 'sm', variant = 'sold' }) => (
   <span
     lang="en"
     dir="ltr"
@@ -153,7 +159,7 @@ export const SoldOutTag: React.FC<{
       gap: 6,
       padding: size === 'lg' ? '9px 18px 9px 15px' : '5px 10px 5px 9px',
       borderRadius: 999,
-      background: 'rgba(17, 20, 18, 0.78)',
+      background: variant === 'soon' ? 'rgba(91, 33, 182, 0.88)' : 'rgba(17, 20, 18, 0.78)',
       color: '#fff',
       fontFamily: 'Inter, system-ui, sans-serif',
       fontSize: size === 'lg' ? 13.5 : 10.5,
@@ -167,8 +173,8 @@ export const SoldOutTag: React.FC<{
       whiteSpace: 'nowrap'
     }}
   >
-    <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#FF6B6B' }} />
-    Sold out
+    <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: variant === 'soon' ? '#CDEF7C' : '#FF6B6B' }} />
+    {variant === 'soon' ? 'Coming soon' : 'Sold out'}
     {label && <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{label}</span>}
   </span>
 );
@@ -187,6 +193,7 @@ const ProductGridCard: React.FC<Props> = ({
   const { t } = useT();
   const { card: variant } = useDesign();
   const outOfStock = isSoldOut(product);
+  const comingSoon = product.comingSoon === true;
   // شارة الحسم على منتجٍ نافد وعدٌ لا يُصرف — تُترك الشارة الوحيدة المفيدة
   const badges = outOfStock ? [] : getVisualBadges(product).slice(0, 2);
   const cover = coverImage(product);
@@ -241,7 +248,7 @@ const ProductGridCard: React.FC<Props> = ({
     </div>
   );
 
-  const addControl = outOfStock ? null : quantityInCart > 0 ? (
+  const addControl = outOfStock || comingSoon ? null : quantityInCart > 0 ? (
     <QuantityStepper
       value={quantityInCart}
       onChange={(next) => onQuantityChange(product, next)}
@@ -420,6 +427,7 @@ const ProductGridCard: React.FC<Props> = ({
         )}
 
         {outOfStock && <SoldOutTag placement={isOverlay ? 'top' : 'bottom'} />}
+        {comingSoon && <SoldOutTag placement={isOverlay ? 'top' : 'bottom'} variant="soon" label={t('قريباً')} />}
 
         {/* نموذج الغطاء: النصّ داخل الصورة على تدرّج.
             التدرّج ليس زينة — نصٌّ أبيض على صورةٍ فاتحة لا يُقرأ، وهو

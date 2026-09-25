@@ -10,7 +10,8 @@ import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
 import Button from '../../components/common/Button';
 import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoCube, IoWarning, IoImage, IoCloudUpload,
-  IoReorderThreeOutline, IoSearch, IoLayersOutline
+  IoReorderThreeOutline, IoSearch, IoLayersOutline, IoNotificationsOutline, IoCallOutline, IoMailOutline,
+  IoLogoWhatsapp
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -149,6 +150,9 @@ const StoreProductsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
+  // طلبات «أعلمني حين يتوفّر» — العدد على البطاقة، والجهات في نافذة
+  const [stockAlerts, setStockAlerts] = useState<{ counts: Record<string, number>; products: any[] }>({ counts: {}, products: [] });
+  const [alertsProductId, setAlertsProductId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -181,6 +185,8 @@ const StoreProductsPage: React.FC = () => {
     sku: '',
     options: [] as OptionGroup[],
     isAvailable: true,
+    comingSoon: false,
+    availableAt: '',
   });
 
   useEffect(() => {
@@ -247,6 +253,20 @@ const StoreProductsPage: React.FC = () => {
     bg: dynamicColors.bg
   };
 
+  const fetchStockAlerts = async () => {
+    try {
+      const data: any = await api.get('/store/stock-alerts');
+      const payload = data?.counts ? data : data?.data || {};
+      setStockAlerts({ counts: payload.counts || {}, products: payload.products || [] });
+    } catch {
+      /* غير حرج: البطاقات تعمل بلا العدد */
+    }
+  };
+
+  useEffect(() => {
+    fetchStockAlerts();
+  }, []);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -312,7 +332,7 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const resetProductForm = () => {
-    setProductForm({ tags: [], storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', options: [], isAvailable: true });
+    setProductForm({ tags: [], storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', options: [], isAvailable: true, comingSoon: false, availableAt: '' });
     setSelectedProduct(null);
   };
 
@@ -371,6 +391,8 @@ const StoreProductsPage: React.FC = () => {
           return [];
         })(),
         isAvailable: product.isAvailable,
+        comingSoon: (product as any).comingSoon === true,
+        availableAt: (product as any).availableAt ? String((product as any).availableAt).slice(0, 10) : '',
       });
     } else { resetProductForm(); }
     setShowProductModal(true);
@@ -407,7 +429,9 @@ const StoreProductsPage: React.FC = () => {
         // التخفيض، فيبقى price هو ما يُحصَّل ولا يحتاج أي موضع قراءة تعديلاً.
         originalPrice: productForm.originalPrice ? parseFloat(productForm.originalPrice) : null,
         isPopular: productForm.isPopular === true,
-        images: productForm.images, stock: parseInt(productForm.stock) || 0 };
+        images: productForm.images, stock: parseInt(productForm.stock) || 0,
+        comingSoon: productForm.comingSoon === true,
+        availableAt: productForm.comingSoon && productForm.availableAt ? productForm.availableAt : null };
       if (selectedProduct) {
         await api.put(`/store/products/${selectedProduct.id}`, data);
         toast.success('تم تحديث المنتج بنجاح');
@@ -752,7 +776,11 @@ const StoreProductsPage: React.FC = () => {
                     )}
                     <span className="pc-badges">
                       {hasDiscount && <span className="pc-badge is-sale">-{discountPercent}%</span>}
-                      {product.stock === 0 && <span className="pc-badge is-dark">نفد</span>}
+                      {(product as any).comingSoon ? (
+                        <span className="pc-badge is-sale" style={{ background: '#6D28D9' }}>قريباً</span>
+                      ) : (
+                        product.stock === 0 && <span className="pc-badge is-dark">نفد</span>
+                      )}
                       {!product.isAvailable && <span className="pc-badge is-dark">مخفيّ</span>}
                     </span>
                   </div>
@@ -769,6 +797,30 @@ const StoreProductsPage: React.FC = () => {
                       {stockStatus.text}
                       {product.stock > 0 ? ` · ${product.stock}` : ''}
                     </span>
+                    {/* من طلب «أعلمني» — الطلب الحقيقي قبل إعادة التوريد */}
+                    {(stockAlerts.counts[product.id] || 0) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setAlertsProductId(product.id)}
+                        style={{
+                          marginTop: 6,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 5,
+                          padding: '3px 10px',
+                          borderRadius: 999,
+                          border: '1px solid rgba(109,40,217,0.25)',
+                          background: 'rgba(109,40,217,0.08)',
+                          color: '#6D28D9',
+                          fontSize: 12,
+                          fontWeight: 800,
+                          fontFamily: 'inherit',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <IoNotificationsOutline size={13} /> {stockAlerts.counts[product.id]} ينتظرون عودته
+                      </button>
+                    )}
                   </div>
 
                   {/* الأزرار ظاهرةٌ دائماً — كانت تظهر عند المرور بالمؤشّر فقط، فلا يصلها تاجرٌ على هاتفه */}
@@ -993,6 +1045,34 @@ const StoreProductsPage: React.FC = () => {
               }}
             />
           </div>
+          {/* «قريباً»: يظهر في المتجر بلا زرّ شراء، ويجمع «أعلمني حين يتوفّر» */}
+          <div style={{ border: `1px dashed ${dynamicColors.border}`, borderRadius: 12, padding: 12, display: 'grid', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={productForm.comingSoon}
+                onChange={(e) => setProductForm({ ...productForm, comingSoon: e.target.checked })}
+                style={{ width: 16, height: 16, accentColor: dynamicColors.accent }}
+              />
+              <span style={{ color: dynamicColors.text, fontSize: 14, fontWeight: 600 }}>
+                «قريباً» — اعرضه قبل طرحه واجمع من ينتظره
+              </span>
+            </label>
+            {productForm.comingSoon && (
+              <div>
+                <label style={dynamicLabelStyle}>موعد التوفّر المتوقّع (اختياري)</label>
+                <input
+                  type="date"
+                  value={productForm.availableAt}
+                  onChange={(e) => setProductForm({ ...productForm, availableAt: e.target.value })}
+                  style={dynamicInputStyle}
+                />
+                <p style={{ color: dynamicColors.muted, fontSize: 11.5, marginTop: 6, lineHeight: 1.75 }}>
+                  حين تُطفئ «قريباً» وفي المخزون كميّة، يصل إشعارٌ تلقائيّ لكل من طلب «أعلمني».
+                </p>
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm({ ...productForm, isAvailable: e.target.checked })} style={{ width: 16, height: 16, accentColor: dynamicColors.accent }} />
             <span style={{ color: dynamicColors.text, fontSize: 14, fontWeight: 500 }}>المنتج متاح للبيع</span>
@@ -1001,6 +1081,74 @@ const StoreProductsPage: React.FC = () => {
             {uploading ? 'جاري الحفظ...' : 'حفظ المنتج'}
           </button>
         </div>
+      </Modal>
+
+      {/* ==================== من ينتظر المنتج ==================== */}
+      <Modal
+        isOpen={!!alertsProductId}
+        onClose={() => setAlertsProductId(null)}
+        title={`ينتظرون «${stockAlerts.products.find((e) => e.product?.id === alertsProductId)?.product?.name || ''}»`}
+      >
+        {(() => {
+          const entry = stockAlerts.products.find((e) => e.product?.id === alertsProductId);
+          if (!entry) return null;
+          return (
+            <div style={{ display: 'grid', gap: 10 }}>
+              <p style={{ color: dynamicColors.muted, fontSize: 13, lineHeight: 1.8, margin: 0 }}>
+                يصل إشعارٌ تلقائيّ لأصحاب الحسابات والبريد حين يعود المنتج. من ترك رقم هاتفه وحده تواصل معه
+                أنت — زرّ واتساب بجانب رقمه.
+              </p>
+              {entry.contacts.map((c: any) => (
+                <div
+                  key={c.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: `1px solid ${dynamicColors.border}`,
+                    opacity: c.notifiedAt ? 0.6 : 1
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0, display: 'grid', gap: 2 }}>
+                    <b style={{ color: dynamicColors.text, fontSize: 13.5 }}>
+                      {c.name || (c.registered ? 'زبون مسجَّل' : 'زائر')}
+                    </b>
+                    <span style={{ color: dynamicColors.muted, fontSize: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {c.email && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} dir="ltr">
+                          <IoMailOutline size={13} /> {c.email}
+                        </span>
+                      )}
+                      {c.phone && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} dir="ltr">
+                          <IoCallOutline size={13} /> {c.phone}
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ color: dynamicColors.muted, fontSize: 11.5 }}>
+                      {c.notifiedAt ? 'أُبلغ ✓' : `طلب في ${new Date(c.createdAt).toLocaleDateString('ar-SY')}`}
+                    </span>
+                  </div>
+                  {c.phone && (
+                    <a
+                      href={`https://wa.me/${String(c.phone).replace(/\D/g, '')}?text=${encodeURIComponent(
+                        `مرحباً، «${entry.product?.name}» الذي طلبت أن نُعلمك به ${entry.product?.stock > 0 ? 'متوفّر الآن' : 'سيتوفّر قريباً'}.`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="مراسلة واتساب"
+                      style={{ color: '#128C7E', display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 10, background: 'rgba(37,211,102,0.12)' }}
+                    >
+                      <IoLogoWhatsapp size={18} />
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </Modal>
 
     </div>

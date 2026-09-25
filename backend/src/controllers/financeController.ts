@@ -137,6 +137,21 @@ export const recordReturn = async (req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
+    /**
+     * مرتجعات الكاشير تُدار من شاشتها.
+     *
+     * هناك يُكتب `returnAmount` مجموعاً لدفعات إرجاعٍ بأصنافها، وقد أُعيد
+     * مخزونها. تسجيلٌ يدويّ هنا كان سيكتب فوق المجموع رقماً لا يطابق ما
+     * عاد فعلاً، وإلغاؤه يُصفّر الأثر المالي بينما البضاعة عادت إلى الرفّ.
+     */
+    if ((await prisma.posReturn.count({ where: { orderId: order.id } })) > 0) {
+      res.status(409).json({
+        success: false,
+        error: 'لهذا الطلب مرتجعات مسجّلة من الكاشير بأصنافها — تُدار من شاشة الكاشير'
+      });
+      return;
+    }
+
     const raw = req.body?.amount;
     // بلا مبلغ: الطلب كلّه مرتجع — وهي الحالة الأغلب
     const amount = raw === undefined || raw === null || raw === '' ? order.total : Number(raw);
@@ -195,6 +210,21 @@ export const cancelReturn = async (req: AuthRequest, res: Response): Promise<voi
     const order = await prisma.order.findFirst({ where });
     if (!order) {
       res.status(404).json({ success: false, error: 'الطلب غير موجود' });
+      return;
+    }
+
+    /**
+     * مرتجعات الكاشير تُدار من شاشتها.
+     *
+     * هناك يُكتب `returnAmount` مجموعاً لدفعات إرجاعٍ بأصنافها، وقد أُعيد
+     * مخزونها. تسجيلٌ يدويّ هنا كان سيكتب فوق المجموع رقماً لا يطابق ما
+     * عاد فعلاً، وإلغاؤه يُصفّر الأثر المالي بينما البضاعة عادت إلى الرفّ.
+     */
+    if ((await prisma.posReturn.count({ where: { orderId: order.id } })) > 0) {
+      res.status(409).json({
+        success: false,
+        error: 'لهذا الطلب مرتجعات مسجّلة من الكاشير بأصنافها — تُدار من شاشة الكاشير'
+      });
       return;
     }
 

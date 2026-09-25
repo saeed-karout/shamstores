@@ -33,6 +33,7 @@ import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
+import OrderPrintActions from '@/components/orders/OrderPrintActions';
 
 const C = {
   bg: '#F4F7F4',
@@ -174,6 +175,8 @@ const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateSt
           <IoTime size={13} />
           {format(new Date(order.createdAt), 'dd MMMM yyyy — hh:mm a', { locale: ar })}
         </div>
+        {/* فاتورةٌ للزبون وملصقٌ للطرد — بنقرةٍ من تفاصيل الطلب */}
+        <OrderPrintActions order={order as any} />
       </div>
 
       <div style={{ padding: 18 }}>
