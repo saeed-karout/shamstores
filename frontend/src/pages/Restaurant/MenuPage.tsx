@@ -14,6 +14,7 @@ import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoSearch, IoLayersO
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
+import MultiImageUploader from '@/components/settings/MultiImageUploader';
 import useUsdPricing from '@/hooks/useUsdPricing';
 import UsdPriceFields from '@/components/pricing/UsdPriceFields';
 import AiImportTool from '@/components/ai/AiImportTool';
@@ -156,6 +157,8 @@ const MenuPage: React.FC = () => {
     price: '',
     discountedPrice: '',
     image: '',
+    /** معرض الصنف — الغلاف `image` هو أوّل صوره دائماً */
+    images: [] as string[],
     sku: '',
     trackStock: false,
     stock: '',
@@ -177,7 +180,7 @@ const MenuPage: React.FC = () => {
     setItemForm({
       restaurantId: selectedRestaurantId === 'all' ? (restaurant?.id || '') : selectedRestaurantId,
       categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '',
-      price: '', discountedPrice: '', image: '', sku: '', preparationTime: '', calories: '',
+      price: '', discountedPrice: '', image: '', images: [], sku: '', preparationTime: '', calories: '',
       trackStock: false, stock: '', minStockLevel: '',
       hasSizes: false, hasAddons: false,
     });
@@ -241,7 +244,12 @@ const MenuPage: React.FC = () => {
         categoryId: item.categoryId, name: item.name, nameEn: item.nameEn || '',
         description: item.description || '', descriptionEn: item.descriptionEn || '',
         price: item.price.toString(), discountedPrice: item.discountedPrice?.toString() || '',
-        image: item.image || '', sku: item.sku || '',
+        image: item.image || '',
+        // صنفٌ قديم بلا معرض: غلافه صورته الوحيدة
+        images: Array.isArray((item as any).images) && (item as any).images.length
+          ? ((item as any).images as string[])
+          : item.image ? [item.image] : [],
+        sku: item.sku || '',
         trackStock: Boolean((item as any).trackStock),
         stock: (item as any).stock?.toString() || '',
         minStockLevel: (item as any).minStockLevel?.toString() || '',
@@ -315,6 +323,7 @@ const MenuPage: React.FC = () => {
       }
       const data = {
         ...itemForm,
+        image: itemForm.images[0] || '',
         seoTitle,
         restaurantId: itemForm.restaurantId || selectedRestaurantId,
         price: basePrice,
@@ -808,19 +817,27 @@ const MenuPage: React.FC = () => {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-              <label style={{ ...labelStyle, marginBottom: 0 }}>الصورة</label>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>الصور</label>
+              {/* يحسّن الغلاف — أوّل صورة في المعرض */}
               <EnhanceImageButton
-                imageUrl={itemForm.image || null}
+                imageUrl={itemForm.images[0] || null}
                 colors={C}
                 onEnhanced={async (file) => {
                   const result = await api.upload<{ imageUrl: string }>('/upload', file, 'items');
-                  setItemForm((f) => ({ ...f, image: result.imageUrl }));
+                  setItemForm((f) => ({ ...f, image: result.imageUrl, images: [result.imageUrl, ...f.images.slice(1)] }));
                 }}
               />
             </div>
-            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'item')} style={inputStyle} disabled={uploading} />
-            {uploading && <p style={{ fontSize: 13, color: C.accent, marginTop: 4 }}>جاري رفع الصورة...</p>}
-            {itemForm.image && <img src={getImageUrl(itemForm.image)} alt="معاينة" style={{ width: 128, height: 128, objectFit: 'cover', marginTop: 8, borderRadius: 8 }} />}
+            <MultiImageUploader
+              value={itemForm.images}
+              onChange={(images) => setItemForm((f) => ({ ...f, images, image: images[0] || '' }))}
+              entityType="items"
+              entityId={itemForm.restaurantId || selectedRestaurantId}
+              colors={{ card: C.card, surf: C.surf, accent: C.accent, bg: C.bg, text: C.text, muted: C.muted, border: C.border, red: C.red }}
+            />
+            <p style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>
+              الصورة الأولى غلاف الصنف في القائمة، والبقية تظهر في صفحته — رتّبها بالأسهم أو بنجمة الغلاف.
+            </p>
           </div>
 
           {/* Sizes */}

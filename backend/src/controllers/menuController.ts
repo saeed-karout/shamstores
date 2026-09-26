@@ -26,6 +26,21 @@ const getRestaurantId = async (req: AuthRequest): Promise<string | null> => {
   return req.user?.restaurantId || null;
 };
 
+/**
+ * معرض صور الصنف: حتى 8 روابط نصّية غير مكرّرة (رابط R2 أو مسار رفعٍ نسبيّ،
+ * ويُرفض ما يحمل مخطّطاً خطراً كـ javascript: أو data:). `undefined` حين لا
+ * يُرسَل المعرض — فيبقى القديم ولا يُمسح بالخطأ.
+ */
+const MAX_ITEM_IMAGES = 8;
+const normalizeGallery = (images: unknown, _cover?: unknown): string[] | undefined => {
+  if (!Array.isArray(images)) return undefined;
+  const list = images
+    .filter((u): u is string => typeof u === 'string')
+    .map((u) => u.trim())
+    .filter((u) => u && u.length <= 1024 && !/^(javascript|data|vbscript):/i.test(u));
+  return Array.from(new Set(list)).slice(0, MAX_ITEM_IMAGES);
+};
+
 // ==================== الفئات ====================
 
 export const getCategories = async (
@@ -312,6 +327,7 @@ export const createMenuItem = async (
     }
 
     const { categoryId, name, description, price, originalPrice, image, position, sku, trackStock, stock, minStockLevel } = req.body;
+    const gallery = normalizeGallery(req.body?.images, image);
 
     // التحقق من وجود الفئة
     const category = await prisma.category.findFirst({
@@ -347,7 +363,8 @@ export const createMenuItem = async (
         ...pickTranslatedText(req.body),
         price,
         originalPrice: originalPrice || null,
-        image: image || null,
+        image: gallery ? gallery[0] ?? null : image || null,
+        ...(gallery ? { images: gallery } : {}),
         position: position || 0,
         sku: skuResult.value,
         ...normalizeStock(trackStock, stock, minStockLevel),
@@ -419,6 +436,7 @@ export const updateMenuItem = async (
     }
 
     const { categoryId, name, description, price, originalPrice, image, position, isAvailable, sku, trackStock, stock, minStockLevel } = req.body;
+    const gallery = normalizeGallery(req.body?.images, image);
 
     const item = await prisma.menuItem.findFirst({
       where: { id, restaurantId }
@@ -476,7 +494,10 @@ export const updateMenuItem = async (
         ...pickTranslatedText(req.body),
         price: price || item.price,
         originalPrice: originalPrice !== undefined ? originalPrice : item.originalPrice,
-        image: image !== undefined ? image : item.image,
+        // المعرض إن أُرسل هو المرجع، والغلاف أوّل صوره — كما في منتجات المتجر
+        ...(gallery
+          ? { images: gallery, image: gallery[0] ?? null }
+          : { image: image !== undefined ? image : item.image }),
         position: position !== undefined ? position : item.position,
         isAvailable: isAvailable !== undefined ? isAvailable : item.isAvailable,
         // آخِراً: في وضع الدولار يكتب السعر المحسوب فوق المُرسَل
