@@ -7,7 +7,8 @@ import { AuthRequest } from '../types';
 import { authenticate, authorize } from '../middleware/auth';
 import prisma from '../services/prisma';
 import shipping, { BusinessType } from '../services/shipping.service';
-import { GOVERNORATES } from '../config/syria';
+import { GOVERNORATES, isGovernorate } from '../config/syria';
+import deliveryAreas from '../services/deliveryArea.service';
 
 const router = Router();
 
@@ -45,13 +46,15 @@ router.get('/public/:slug', async (req: Request, res: Response) => {
       return;
     }
 
-    const zones = await shipping.listActiveZones(
-      business.id,
-      restaurant ? 'restaurant' : 'store'
-    );
+    const businessType = restaurant ? 'restaurant' : 'store';
+    const zones = await shipping.listActiveZones(business.id, businessType);
+
+    // أحياء كل محافظة معها — طلبٌ واحد بدل أربعة عشر عند فتح السلّة
+    const areas = await deliveryAreas.activeAreasByGovernorate(business.id, businessType);
+    const withAreas = zones.map((z) => ({ ...z, areas: areas.get(z.governorate) || [] }));
 
     res.setHeader('Cache-Control', 'public, max-age=120');
-    res.json({ success: true, data: zones });
+    res.json({ success: true, data: withAreas });
   } catch (error) {
     console.error('public shipping zones failed:', error);
     res.status(500).json({ success: false, error: 'تعذّر جلب مناطق التوصيل' });
@@ -88,6 +91,50 @@ router.put('/zones', async (req: AuthRequest, res: Response) => {
     res.json({ success: true, message: 'حُفظت مناطق التوصيل', data: zones });
   } catch (error) {
     console.error('saveZones failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر حفظ المناطق' });
+  }
+});
+
+// ==================== أحياء المحافظة ====================
+
+router.get('/zones/:governorate/areas', async (req: AuthRequest, res: Response) => {
+  try {
+    const business = businessOf(req);
+    const governorate = String(req.params.governorate || '');
+    if (!business || !isGovernorate(governorate)) {
+      res.status(400).json({ success: false, error: 'طلب غير صالح' });
+      return;
+    }
+    res.json({
+      success: true,
+      data: {
+        areas: await deliveryAreas.listAreas(business.id, business.type, governorate),
+        presets: deliveryAreas.AREA_PRESETS[governorate] || []
+      }
+    });
+  } catch (error) {
+    console.error('listAreas failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر جلب المناطق' });
+  }
+});
+
+router.put('/zones/:governorate/areas', async (req: AuthRequest, res: Response) => {
+  try {
+    const business = businessOf(req);
+    const governorate = String(req.params.governorate || '');
+    if (!business || !isGovernorate(governorate)) {
+      res.status(400).json({ success: false, error: 'طلب غير صالح' });
+      return;
+    }
+    const data = await deliveryAreas.saveAreas(
+      business.id,
+      business.type,
+      governorate,
+      req.body?.areas ?? req.body
+    );
+    res.json({ success: true, message: 'حُفظت المناطق', data });
+  } catch (error) {
+    console.error('saveAreas failed:', error);
     res.status(500).json({ success: false, error: 'تعذّر حفظ المناطق' });
   }
 });

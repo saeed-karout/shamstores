@@ -18,7 +18,9 @@ import slugify from '../utils/slugify';
 import { sanitizeTrackingSettings, publicTracking } from '../services/tracking.service';
 import { sanitizeSeoSettings, resolveBusinessSeo } from '../services/seo.service';
 import { toPublicProduct } from '../services/publicProduct.service';
+import { publicCheckoutOptions, applyDepositInput } from '../services/checkoutExtras.service';
 import { releaseStockAlerts } from '../services/stockAlert.service';
+import { applyUsdPriceInput } from '../services/usdPricing.service';
 
 /** تاريخ التوفّر المتوقّع — نصٌّ فارغ يمسحه، وتاريخٌ غير صالح يُتجاهل */
 const parseAvailableAt = (value: unknown): Date | null => {
@@ -778,8 +780,25 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
     
+    // متجرٌ يسعّر بالدولار: `price` يُحسب على الخادم من `priceUsd`
+    const usdPricing: Record<string, any> = {};
+    const usdCheck = await applyUsdPriceInput('store', storeId, req.body, usdPricing);
+    if (usdCheck.error) {
+      res.status(400).json({ success: false, error: usdCheck.error });
+      return;
+    }
+
+    // العربون: نسبة أو مبلغ لكل قطعة — يُتحقَّق منه هنا ويُحسب عند الطلب
+    const deposit: Record<string, any> = {};
+    const depositError = applyDepositInput(req.body, deposit);
+    if (depositError) {
+      res.status(400).json({ success: false, error: depositError });
+      return;
+    }
+
     const product = await prisma.product.create({
       data: {
+        ...deposit,
         comingSoon: comingSoon === true,
         availableAt: parseAvailableAt(availableAt),
         storeId,
@@ -788,6 +807,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
         sku,
         description: description || null,
         descriptionEn: descriptionEn || null,
+        seoTitle: String(req.body?.seoTitle || '').trim().slice(0, 90) || null,
         price: parseFloat(price),
         cost: cost ? parseFloat(cost) : null,
         stock: stock || 0,
@@ -810,7 +830,8 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
         // البيانات يظهر لاحقاً في واجهة الزبون لا في شاشة التاجر
         options: normalizeOptions(req.body?.options) as any,
         // الصور تمرّ بالتطبيع دائماً، فلا يتباعد الغلاف عن المصفوفة
-        ...(buildImageUpdate(req.body, 'imageUrl') || {})
+        ...(buildImageUpdate(req.body, 'imageUrl') || {}),
+        ...usdPricing
       },
       include: { category: true }
     });
@@ -851,11 +872,15 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     if (nameEn !== undefined) updateData.nameEn = nameEn;
     if (sku !== undefined) updateData.sku = sku;
     if (description !== undefined) updateData.description = description;
+    // الوصف الإنجليزي كان يُرسَل من النموذج ويُهمَل هنا — فيضيع بعد أوّل تعديل
+    if (descriptionEn !== undefined) updateData.descriptionEn = descriptionEn || null;
+    if (req.body?.seoTitle !== undefined) updateData.seoTitle = String(req.body.seoTitle || '').trim().slice(0, 90) || null;
     if (price !== undefined) updateData.price = parseFloat(price);
     if (cost !== undefined) updateData.cost = cost ? parseFloat(cost) : null;
     if (stock !== undefined) updateData.stock = stock;
     if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
-    if (categoryId !== undefined) updateData.categoryId = categoryId;
+    // «بدون فئة» يصل نصّاً فارغاً — والفارغ مفتاحٌ أجنبيّ لا وجود له فيرتدّ الحفظ ٥٠٠
+    if (categoryId !== undefined) updateData.categoryId = categoryId || null;
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
     if (unit !== undefined) updateData.unit = unit;
     if (tags !== undefined) updateData.tags = sanitizeTags(tags);
@@ -875,9 +900,21 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
     }
     if (isPopular !== undefined) updateData.isPopular = isPopular === true;
     if (req.body?.options !== undefined) updateData.options = normalizeOptions(req.body.options) as any;
+    const depositError = applyDepositInput(req.body, updateData);
+    if (depositError) {
+      res.status(400).json({ success: false, error: depositError });
+      return;
+    }
 
     const imageUpdate = buildImageUpdate(req.body, 'imageUrl');
     if (imageUpdate) Object.assign(updateData, imageUpdate);
+
+    // بعد حقول الليرة عمداً: في وضع الدولار يكتب السعر المحسوب فوق المُرسَل
+    const usdCheck = await applyUsdPriceInput('store', product.storeId, req.body, updateData);
+    if (usdCheck.error) {
+      res.status(400).json({ success: false, error: usdCheck.error });
+      return;
+    }
 
     const updatedProduct = await prisma.product.update({ 
       where: { id }, 
@@ -2219,6 +2256,8 @@ export const getPublicStore = async (req: Request, res: Response) => {
         // تكشف المسموح فقط — والمتحكّم العامّ يفعل ذلك منذ حين، وبقي هذا
         // المسار (وهو ما تستعمله صفحة المنتج) على الحال القديمة.
         paymentOptions: getPublicPaymentOptions(store.paymentSettings),
+        // خطوة واتساب والمعاينة والهدايا والعربون — المدفوع منها لمن يملك استحقاقه
+        checkoutOptions: await publicCheckoutOptions(store.id, 'store', (store as any).checkoutSettings, store.products.some((p: any) => !!p.depositType)),
         notificationSettings: store.notificationSettings,
         timezone: store.timezone,
         currency: store.currency,
@@ -2242,6 +2281,8 @@ export const getPublicStore = async (req: Request, res: Response) => {
         // صفحة المنتج تكتب عنوانها ووصفها وأيقونة تبويبها من هنا
         seo: resolveBusinessSeo(store, 'store'),
         showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store'),
+        // «تاجر موثّق» — صفحة المنتج تقرأ المتجر من هنا لا من /public
+        verified: !!store.verifiedAt,
         tracking: await publicTracking(store.id, 'store', store.trackingSettings)
       }
     });

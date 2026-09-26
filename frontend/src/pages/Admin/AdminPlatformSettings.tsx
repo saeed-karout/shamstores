@@ -14,6 +14,7 @@ import {
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import ExchangeRateCard from '@/components/admin/ExchangeRateCard';
+import SupportSettingsCard from '@/components/admin/SupportSettingsCard';
 
 const C = {
   bg: '#F4F7F4', card: '#FFFFFF', surf: '#F1F5F2', accent: '#084835',
@@ -300,6 +301,9 @@ const AdminPlatformSettings: React.FC = () => {
       {/* سعر الصرف — بطاقة مستقلة أعلى الصفحة: قيمتها تُضرب في كل سعر على
           المنصة، فلا تصلح حقلاً بين أربعين إعداداً */}
       <ExchangeRateCard colors={C} />
+
+      {/* رقم واتساب الدعم ومقاطع مركز المساعدة — قائمةٌ لا تصلح حقلاً نصّياً */}
+      <SupportSettingsCard colors={C} onSaved={fetchSettings} />
 
       {/* Maintenance Mode Toggle */}
       <div style={{ marginBottom: 24 }}>

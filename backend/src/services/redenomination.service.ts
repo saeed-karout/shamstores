@@ -50,7 +50,11 @@ const SYP_FIELDS: Array<{ model: string; fields: string[] }> = [
   { model: 'driverDelivery', fields: ['earnings'] },
   { model: 'driverEarning', fields: ['amount'] },
   { model: 'advertisement', fields: ['price'] },
-  { model: 'coupon', fields: ['minOrderAmount'] }
+  { model: 'coupon', fields: ['minOrderAmount'] },
+  // التسعير بالدولار: سعر التاجر الخاص (ليرة/دولار) وخطوة التقريب بالليرة
+  // يُقسَمان كسعر المنصّة. أما `priceUsd` فدولارٌ لا يُمَسّ — راجع usdPricing.service
+  { model: 'store', fields: ['customUsdRate', 'priceRoundingStep'] },
+  { model: 'restaurant', fields: ['customUsdRate', 'priceRoundingStep'] }
 ];
 
 /** حقول لا تُمَسّ، ولكلٍّ سبب صريح */
@@ -59,12 +63,50 @@ const SKIPPED = [
   { field: 'Subscription.price / totalPaid / discount', reason: 'منسوخة من سعر الخطة بالدولار' },
   { field: 'Feature.price', reason: 'تُسعَّر بالدولار كالخطط' },
   { field: 'Coupon.discountValue', reason: 'قد يكون نسبة مئوية — يُعالَج بشرط النوع' },
-  { field: 'Driver.totalDeliveries', reason: 'عدّاد لا مبلغ' }
+  { field: 'Driver.totalDeliveries', reason: 'عدّاد لا مبلغ' },
+  { field: 'Product/MenuItem.priceUsd / originalPriceUsd، OrderItem.priceUsd', reason: 'بالدولار — التسعير بالدولار' }
 ];
 
 export const getAppliedAt = async (): Promise<string | null> => {
   const value = await SettingService.getString(APPLIED_KEY, '');
   return value || null;
+};
+
+/**
+ * مدّة فترة الانتقال بالأيام بعد التنفيذ — إعدادٌ للمنصّة يضبطه السوبر أدمن.
+ * الافتراضي سنة: الناس يحسبون بالأرقام القديمة شهوراً بعد تبديل العملة.
+ */
+export const TRANSITION_DAYS_KEY = 'syp_redenomination_transition_days';
+export const DEFAULT_TRANSITION_DAYS = 365;
+
+export interface RedenominationTransition {
+  /** صحيحٌ ما دامت الواجهة تعرض المقابل القديم بجانب السعر الجديد */
+  active: boolean;
+  appliedAt: string | null;
+  until: string | null;
+  /** السعر القديم = الجديد × هذا */
+  divisor: number;
+}
+
+/**
+ * حالة فترة الانتقال — المصدر الوحيد للواجهات. لا عَلَم منفصل: التنفيذ
+ * نفسه (`APPLIED_KEY`) يبدأ الفترة، فلا يمكن أن تُعرض «الأسعار القديمة»
+ * قبل أن تصير قديمة فعلاً.
+ */
+export const getTransitionState = async (): Promise<RedenominationTransition> => {
+  const appliedAt = await getAppliedAt();
+  const applied = appliedAt ? new Date(appliedAt) : null;
+  if (!applied || Number.isNaN(applied.getTime())) {
+    return { active: false, appliedAt: null, until: null, divisor: DIVISOR };
+  }
+  const days = await SettingService.getNumber(TRANSITION_DAYS_KEY, DEFAULT_TRANSITION_DAYS);
+  const until = new Date(applied.getTime() + Math.max(0, days) * 86_400_000);
+  return {
+    active: Date.now() < until.getTime(),
+    appliedAt: applied.toISOString(),
+    until: until.toISOString(),
+    divisor: DIVISOR
+  };
 };
 
 /** يبني معاينة بلا أي كتابة. */
@@ -175,4 +217,4 @@ export const applyRedenomination = async (force = false): Promise<ApplyResult> =
   return { ok: true, updated, newUsdRate };
 };
 
-export default { DIVISOR, APPLIED_KEY, getAppliedAt, planRedenomination, applyRedenomination };
+export default { DIVISOR, APPLIED_KEY, getAppliedAt, getTransitionState, planRedenomination, applyRedenomination };

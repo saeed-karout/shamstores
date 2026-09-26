@@ -8,6 +8,7 @@
 // مختلف لكل متجر يجعل نفس المنتج بسعرين متباعدين ويفتح باب التلاعب.
 
 import SettingService from './setting.service';
+import { getTransitionState, RedenominationTransition } from './redenomination.service';
 
 /** عملة التخزين. لا تتغيّر — تغييرها يعني إعادة تسعير كل شيء. */
 export const BASE_CURRENCY = 'SYP';
@@ -139,7 +140,30 @@ export interface CurrencySettings {
    * خطأ بمئات الأضعاف.
    */
   usdUnavailable: boolean;
+  /**
+   * فترة الانتقال بعد حذف الصفرين: الواجهة تعرض السعر الجديد ومقابله القديم
+   * بخطٍّ صغير — الزبون ما زال يفكّر بالأرقام القديمة. راجع redenomination.service
+   */
+  redenomination: RedenominationTransition;
 }
+
+/**
+ * سعر الصرف الفعلي لنشاطٍ بعينه.
+ *
+ * الأصل سعر المنصّة الموحّد (راجع أعلى الملف). والاستثناء الوحيد: تاجرٌ
+ * **يسعّر** بالدولار واختار سعره اليومي — فأسعاره بالليرة محسوبة بسعره، وعرضها
+ * بالدولار يجب أن يعود بالسعر نفسه وإلا ظهر منتج الـ10$ بـ11.54$ لزبونه.
+ */
+export const businessUsdRate = (
+  business: { pricingCurrency?: string | null; usdRateSource?: string | null; customUsdRate?: number | null },
+  platformRate: number | null
+): number | null => {
+  if (business?.pricingCurrency === 'USD' && business?.usdRateSource === 'custom') {
+    const custom = Number(business.customUsdRate);
+    if (Number.isFinite(custom) && custom >= MIN_USD_RATE && custom <= MAX_USD_RATE) return custom;
+  }
+  return platformRate;
+};
 
 /** يقرأ قائمة العملات المخزّنة (Json حر) ويُرجع رموزاً مدعومة بلا تكرار */
 const parseStoredCurrencies = (raw: unknown): string[] => {
@@ -169,8 +193,12 @@ const parseStoredCurrencies = (raw: unknown): string[] => {
 export const resolveCurrencySettings = async (business: {
   currency?: string | null;
   enabledCurrencies?: unknown;
+  pricingCurrency?: string | null;
+  usdRateSource?: string | null;
+  customUsdRate?: number | null;
 }): Promise<CurrencySettings> => {
-  const usdRate = await getUsdRate();
+  const [platformRate, redenomination] = await Promise.all([getUsdRate(), getTransitionState()]);
+  const usdRate = businessUsdRate(business, platformRate);
 
   const stored = parseStoredCurrencies(business.enabledCurrencies);
   // النشاط الذي لم يختر بعد: عملته المفردة القديمة هي إعداده الفعلي
@@ -200,7 +228,8 @@ export const resolveCurrencySettings = async (business: {
     enabledCurrencies: effective,
     usdRate,
     canSwitch: effective.length > 1,
-    usdUnavailable: requested.includes('USD') && !usdRate
+    usdUnavailable: requested.includes('USD') && !usdRate,
+    redenomination
   };
 };
 

@@ -42,6 +42,7 @@ import shippingRoutes from './routes/shippingRoutes';
 import customerRoutes from './routes/customerRoutes';
 import campaignRoutes from './routes/campaignRoutes';
 import posRoutes from './routes/posRoutes';
+import pricingRoutes from './routes/pricingRoutes';
 import affiliateRoutes from './routes/affiliateRoutes';
 import telegramRoutes from './routes/telegramRoutes';
 import planRoutes from './routes/planRoutes';
@@ -51,6 +52,7 @@ import userRoutes from './routes/userRoutes';
 import couponRoutes from './routes/couponRoutes';
 import deliveryRoutes from './routes/deliveryRoutes';
 import financeRoutes from './routes/financeRoutes';
+import codRoutes from './routes/codRoutes';
 import storeRoutes from './routes/storeRoutes';
 import featureRoutes from './routes/featureRoutes';
 import platformSettingsRoutes from './routes/platformSettingsRoutes';
@@ -58,11 +60,16 @@ import publicRoutes from './routes/publicRoutes';
 import marketingRoutes from './routes/marketingRoutes';
 import subscriptionRoutes from './routes/subscriptionRoutes';
 import customDomainRoutes from './routes/customDomainRoutes';
+import verificationRoutes from './routes/verificationRoutes';
+import supportRoutes from './routes/supportRoutes';
 
 import { extractSubdomain } from './middleware/subdomain';
 import advertisementRoutes from './routes/advertisementRoutes';
 import inventoryRoutes from './routes/inventoryRoutes';
 import itemCommentRoutes from './routes/itemCommentRoutes';
+import souqRoutes from './routes/souqRoutes';
+import checkoutRoutes from './routes/checkoutRoutes';
+import aiRoutes from './routes/aiRoutes';
 import { startSchedulers } from './schedulers';
 
 // إسكات السجلات المطوّلة في الإنتاج (كانت تطبع حمولات التوكن)
@@ -109,7 +116,9 @@ app.use(
             // الفيديو يُقدَّم من R2 على نطاق مختلف؛ بدون mediaSrc يمنعه defaultSrc
             mediaSrc: ["'self'", 'data:', 'blob:', 'https:'],
             connectSrc: ["'self'", 'https:', 'wss:'],
-            frameSrc: ["'self'", 'https://www.google.com', 'https://shamstores.firebaseapp.com'],
+            // youtube-nocookie: مقاطع «مركز المساعدة»، وblob: لعرض وثيقة التوثيق (PDF)
+            // للمشرف من ذاكرة المتصفّح دون رابطٍ عامّ
+            frameSrc: ["'self'", 'https://www.google.com', 'https://shamstores.firebaseapp.com', 'https://www.youtube-nocookie.com', 'blob:'],
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
             formAction: ["'self'"],
@@ -328,6 +337,8 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/campaigns', campaignRoutes);
 // الكاشير — إضافة مدفوعة، الحارس داخل الموجّه
 app.use('/api/pos', posRoutes);
+// التسعير بالدولار والبيع بالليرة — services/usdPricing.service.ts
+app.use('/api/pricing', pricingRoutes);
 // المسوّقون بالعمولة — الحارس داخل الموجّه، وتتبّع الزيارة عامّ
 app.use('/api/affiliate', affiliateRoutes);
 // تيليجرام لا يحمل رمزنا: الحماية بالسرّ في ترويسة النداء لا بالمصادقة
@@ -338,6 +349,8 @@ app.use('/api/user', userRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/finance', financeRoutes);
+// تسوية التحصيل عند الاستلام مع المندوبين — ومسارات تطبيق السائق داخله
+app.use('/api/cod', codRoutes);
 app.use('/api/store', storeRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/public', publicRoutes);
@@ -347,9 +360,19 @@ app.use('/api/marketing', marketingRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/inventory', inventoryRoutes);
+// المساعد الذكي: استيراد من صور المنشورات وكتابة الوصف
+app.use('/api/ai', aiRoutes);
 // التعليقات على المنتجات والوجبات — عامّةٌ للقراءة والنشر، وإشرافٌ للتاجر
 app.use('/api/comments', itemCommentRoutes);
 app.use('/api/custom-domain', customDomainRoutes);
+// «سوق شام ستورز» — دليلٌ عامّ للمتاجر والمطاعم وبحثٌ عبرها
+app.use('/api/souq', souqRoutes);
+// «تاجر موثّق» — الوثائق خاصة وتُعرض للمشرف عبر الخادم فقط
+app.use('/api/verification', verificationRoutes);
+// الدعم البشري ومركز المساعدة في لوحة التاجر
+app.use('/api/support', supportRoutes);
+// إضافات إتمام الطلب: واتساب، المعاينة، هدايا المغتربين، العربون والأقساط
+app.use('/api/checkout', checkoutRoutes);
 
 
 // ==============================================

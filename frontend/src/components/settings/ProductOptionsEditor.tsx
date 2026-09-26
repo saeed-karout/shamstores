@@ -10,6 +10,7 @@
 // الإدخال ويؤجّل أبسط حالة: تاجر يريد ثلاثة مقاسات.
 
 import { useState } from 'react';
+import { getImageUrl } from '@/utils/imageHelpers';
 import {
   IoAddOutline,
   IoTrashOutline,
@@ -242,7 +243,7 @@ const ProductOptionsEditor: React.FC<Props> = ({
                     }}
                   >
                     {item.image ? (
-                      <img src={item.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getImageUrl(item.image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <IoImageOutline size={13} />
                     )}
@@ -335,7 +336,7 @@ const ProductOptionsEditor: React.FC<Props> = ({
                       background: C.surf
                     }}
                   >
-                    <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getImageUrl(image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </button>
                 );
               })}

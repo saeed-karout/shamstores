@@ -20,6 +20,7 @@ import {
   IoSaveOutline
 } from 'react-icons/io5';
 import api from '@/services/api';
+import DeliveryAreasEditor from '@/components/shipping/DeliveryAreasEditor';
 
 type DeliveryMode = 'driver' | 'shipping';
 
@@ -84,7 +85,8 @@ const ShippingZonesPage: React.FC = () => {
           مناطق التوصيل والشحن
         </h1>
         <p style={s.lede}>
-          فعّل المحافظات التي تخدمها، وحدّد أجرة كلٍّ منها ومن يُسلّم فيها.
+          فعّل المحافظات التي تخدمها، وحدّد أجرة كلٍّ منها ومن يُسلّم فيها — ولأجرةٍ أدقّ أضف
+          مناطقها وأحياءها بأجرة لكلٍّ منها.
         </p>
       </header>
 
@@ -182,6 +184,15 @@ const ShippingZonesPage: React.FC = () => {
                   </select>
                 </Field>
               </div>
+            )}
+
+            {/* الأحياء تُحفظ مستقلّة — راجع DeliveryAreasEditor */}
+            {zone.isActive && (
+              <DeliveryAreasEditor
+                governorate={zone.governorate}
+                governorateName={zone.name}
+                zoneFee={Number(zone.fee) || 0}
+              />
             )}
           </div>
         ))}

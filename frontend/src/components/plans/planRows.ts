@@ -11,11 +11,15 @@
 //     table_qr، coupons، promotions (قسم التسويق)، analytics، custom_domain،
 //     pos، affiliate — تُفتح بعَلَم الخطة أو برمزها في `features` أو بإضافة مشتراة
 //   - inventory غير صارمة في middleware/checkPlan.ts: تمرّ لأي خطة مدفوعة لا للمجانية
+//   - aiQuota.service: استيراد الصور بالذكاء الاصطناعي لكل الخطط (المجانية ٢٠ صورة
+//     مرّة واحدة)، وكاتب الوصف لأي خطة مدفوعة أو لمن اشترى إضافة ai_writer
 //   - requirePaidPlanForStaff: إدارة الموظفين لأي خطة مدفوعة فقط — فالمجانية
 //     «المالك فقط» مهما كان maxUsers
-//   - businessHasEntitlement: pwa، branding_removal، multi_language
+//   - businessHasEntitlement: pwa، branding_removal، multi_language، وتسوية التحصيل
+//   - checkoutExtras.service: gift_orders وdeposits — برمزهما أو بما يفتح analytics (النموّ فما فوق)
+//     (cod_settlement أو analytics — services/cod.service.ts)
 //   - بلا بوابة (كل الخطط): الزبائن والتعليقات والتقييمات، الحملات، الرسائل
-//     التلقائية، مناطق التوصيل، القسم المالي، القوالب، SEO، الدفع (نقداً وشام كاش
+//     التلقائية، مناطق التوصيل وأحياؤها، القسم المالي، القوالب، SEO، الدفع (نقداً وشام كاش
 //     — services/payment.service.ts لا يفحص الخطة)
 // الإضافات المنفردة (`GET /api/public/addons`) تُشترى على أي خطة، فالميزة غير
 // المشمولة وذات الإضافة تُعرض «كإضافة» لا «غير متاحة».
@@ -159,6 +163,14 @@ export const planIncludes = (p: ComparablePlan, code: string) => {
 const gate = (code: string) => (p: ComparablePlan, ctx: RowCtx): Cell =>
   planIncludes(p, code) ? true : !ctx.addons || ctx.addons.has(code) ? 'addon' : false;
 
+/**
+ * «النموّ فما فوق» لإضافات الدفع (هدايا المغتربين، العربون والأقساط): الخادم
+ * يفتحها برمزها كإضافة أو بما يفتح التحليلات — راجع
+ * backend/src/services/checkoutExtras.service.ts (`hasCheckoutEntitlement`).
+ */
+const gateProCheckout = (code: string) => (p: ComparablePlan, ctx: RowCtx): Cell =>
+  planIncludes(p, 'analytics') || hasCode(p, code) ? true : ctx.addons?.has(code) ? 'addon' : false;
+
 const byKind = (restaurant: string, store: string, both: string) => (ctx: RowCtx) =>
   ctx.kind === 'restaurant' ? restaurant : ctx.kind === 'store' ? store : both;
 
@@ -207,6 +219,8 @@ export const SECTIONS: Section[] = [
     rows: [
       { key: 'catalog', label: 'صور وأسعار وتصنيفات فرعية ووسوم', value: () => true },
       { key: 'options', label: 'خيارات: مقاسات وألوان وإضافات', hint: 'بسعرٍ مختلف لكل خيار', value: () => true },
+      // بلا بوابة: pricingRoutes لا يفحص الخطة — التسعير يمسّ مبلغ كل طلب
+      { key: 'usd_pricing', label: 'سعّر بالدولار وبِع بالليرة تلقائياً', hint: 'تتحدّث أسعار الليرة مع سعر الصرف — سعر المنصّة أو سعرك اليومي، مع تقريبٍ تختاره', value: () => true },
       {
         key: 'inventory',
         label: 'المخزون وتنبيه قرب النفاد',
@@ -217,7 +231,21 @@ export const SECTIONS: Section[] = [
       { key: 'soldout', label: 'عرض «نفد» للمنتج المنتهي', hint: 'يبقى ظاهراً لزبائنك بلا زرّ شراء', value: () => true },
       { key: 'soon', label: 'منتجات «قريباً» مع «أعلمني حين يتوفّر»', hint: 'يترك الزبون رقمه، وترى من ينتظر كل منتج', value: () => true },
       { key: 'search', label: 'بحث عميق بالاسم والوصف ورمز SKU', value: () => true },
-      { key: 'csv', label: 'استيراد وتصدير بملفّات CSV', value: () => true }
+      { key: 'csv', label: 'استيراد وتصدير بملفّات CSV', value: () => true },
+      // الأرقام من AI_LIMITS في backend/src/services/aiQuota.service.ts
+      {
+        key: 'ai_import',
+        label: 'متجرك من صور منشوراتك بالذكاء الاصطناعي',
+        hint: 'ترفع لقطات منشوراتك فتُقرأ الأسماء والأسعار والمقاسات، وتراجعها قبل الحفظ',
+        value: (p) => (isFreePlan(p) ? '20 صورة للتجربة' : '100 صورة يومياً')
+      },
+      {
+        key: 'ai_writer',
+        label: 'كتابة الوصف بالذكاء الاصطناعي',
+        hint: 'وصفٌ بالعربية والإنجليزية وعنوانٌ لمحرّكات البحث من اسم المنتج وصورته',
+        perk: 'كاتب الوصف الذكي',
+        value: (p, ctx) => (!isFreePlan(p) || hasCode(p, 'ai_writer') ? true : ctx.addons?.has('ai_writer') ? 'addon' : false)
+      }
     ]
   },
   {
@@ -228,6 +256,8 @@ export const SECTIONS: Section[] = [
       { key: 'online', label: 'طلبات أونلاين وتتبّع للزبون', hint: 'توصيل أو استلام أو داخل المطعم، والزبون يتابع حالة طلبه من رابطه', value: (p) => !!p.hasOnlineOrders },
       { key: 'alerts', label: 'تنبيه صوتيّ وإشعار متصفّح وتيليغرام', hint: 'لا يفوتك طلب ولو كانت اللوحة مغلقة', value: (p) => !!p.hasOnlineOrders },
       { key: 'invoice', label: 'طباعة فاتورة الطلب', value: (p) => !!p.hasOnlineOrders },
+      // بلا بوابة: روابط wa.me فقط — لا API ولا كلفة على المنصّة
+      { key: 'wa_order', label: 'الطلب يصلك على واتساب برسالة جاهزة', hint: 'زرّ للزبون بعد الطلب، وزرّ منك لإرسال التأكيد ورابط التتبّع', value: (p) => !!p.hasOnlineOrders },
       {
         key: 'qr',
         label: byKind('الطاولات ورموز QR', 'رموز QR للمتجر والمنتجات', 'الطاولات ورموز QR'),
@@ -256,9 +286,18 @@ export const SECTIONS: Section[] = [
     title: 'الشحن والتوصيل',
     icon: PiMopedDuotone,
     rows: [
-      { key: 'zones', label: 'مناطق توصيل وأجرة لكل منطقة أو محافظة', value: () => true },
+      { key: 'zones', label: 'مناطق توصيل وأجرة لكل محافظة وحيّ', hint: 'أجرة وحدّ توصيل مجاني ومدّة لكل حيّ، والأجرة تُحسب تلقائياً عند الطلب', value: () => true },
+      { key: 'address', label: 'عنوان بأقرب نقطة دالّة وموقع على الخريطة', hint: 'يظهر لك وعلى بوليصة الشحن مع رابط الخريطة', value: () => true },
       { key: 'drivers', label: 'السائقون وإسناد طلبات التوصيل', hint: 'تسلّم الطلب لسائق وتتابع التسليم', value: (p) => !!p.hasOnlineOrders },
-      { key: 'label', label: 'طباعة ملصق الشحن', value: (p) => !!p.hasOnlineOrders }
+      { key: 'label', label: 'طباعة ملصق الشحن', value: (p) => !!p.hasOnlineOrders },
+      // routes/codRoutes.ts: `analytics` (تمنحها «النموّ» فما فوق) أو رمز `cod_settlement`
+      {
+        key: 'cod_settlement',
+        label: 'تسوية التحصيل عند الاستلام مع المندوبين',
+        hint: 'كم حصّل كل مندوب، وكم سلّمك، وكم بقي في ذمّته — مع تسليمٍ جزئي وسجلّ وتصدير CSV',
+        perk: 'تسوية التحصيل مع المندوبين',
+        value: (p) => planIncludes(p, 'analytics') || hasCode(p, 'cod_settlement')
+      }
     ]
   },
   {
@@ -279,7 +318,22 @@ export const SECTIONS: Section[] = [
     icon: PiWalletDuotone,
     rows: [
       { key: 'cod', label: 'الدفع عند الاستلام', value: () => true },
-      { key: 'shamcash', label: 'تحويل شام كاش', hint: 'يحوّل الزبون إلى محفظتك مباشرة، بلا وسيط', value: () => true }
+      { key: 'shamcash', label: 'تحويل شام كاش', hint: 'يحوّل الزبون إلى محفظتك مباشرة، بلا وسيط', value: () => true },
+      { key: 'inspection', label: '«معاينة قبل الدفع» عند الاستلام', hint: 'شارة تطمئن الزبون، ويراها السائق على الطلب', value: () => true },
+      {
+        key: 'gift_orders',
+        label: '«اشترِ لأهلك» — طلبات المغتربين',
+        hint: 'يدفع المغترب من الخارج بتعليماتك، وتوصل الهدية لأهله — مع إخفاء الأسعار عن المستلم',
+        perk: 'طلبات المغتربين',
+        value: gateProCheckout('gift_orders')
+      },
+      {
+        key: 'deposits',
+        label: byKind('العربون والأقساط (للمتاجر)', 'العربون والأقساط', 'العربون والأقساط (للمتاجر)'),
+        hint: 'عربون لكل منتج، وجدول أقساط للطلب يراه الزبون في صفحة التتبّع',
+        perk: 'العربون والأقساط',
+        value: (p, ctx) => (ctx.kind === 'restaurant' ? '—' : gateProCheckout('deposits')(p, ctx))
+      }
     ]
   },
   {
@@ -300,6 +354,11 @@ export const SECTIONS: Section[] = [
       { key: 'subdomain', label: 'رابط فرعيّ باسمك', hint: 'name.shamstores.com — فور التسجيل', value: () => true },
       { key: 'domain', label: 'نطاقك الخاص مع SSL تلقائية', hint: 'مثل mystore.com بسجلّ CNAME واحد', perk: 'نطاقك الخاص', value: gate('custom_domain') },
       { key: 'seo', label: 'إعدادات SEO لمتجرك', hint: 'العنوان والوصف وصورة المشاركة لمحركات البحث وروابط التواصل', value: () => true },
+      // مجانية عمداً: الثقة تخدم المنصّة كلّها، والمتجر الصغير أحوج إليها من الكبير
+      { key: 'verified', label: 'شارة «تاجر موثّق» الزرقاء', hint: 'نتحقّق من هويتك فتظهر الشارة بجانب اسمك في واجهتك', value: () => true },
+      // كل الخطط تظهر في السوق (services/souq.service.ts)؛ المدفوعة بأولوية ترتيب
+      // مُعلَنة على صفحة السوق نفسها — لا بوابة، فالخلية نصّ لا ✓/✗
+      { key: 'souq', label: 'الظهور في «سوق شام ستورز»', hint: 'دليلٌ عامّ يبحث فيه الزبائن بالمحافظة والتصنيف ثمّ يطلبون من واجهتك', value: (p) => (isFreePlan(p) ? 'ظهور عادي' : 'أولوية في الترتيب') },
       { key: 'badge', label: 'إخفاء «مدعوم من شام ستورز»', perk: 'بلا شارة المنصّة', value: gate('branding_removal') },
       { key: 'pwa', label: 'تطبيق باسمك (PWA)', hint: 'يُثبَّت على شاشة هاتف الزبون باسمك وشعارك', perk: 'تطبيق باسمك', value: gate('pwa') }
     ]
@@ -345,6 +404,7 @@ export const SECTIONS: Section[] = [
     icon: PiLifebuoyDuotone,
     rows: [
       { key: 'support', label: 'دعم بالعربية', value: () => true },
+      { key: 'human_support', label: 'دعم بشري عبر واتساب ومركز مساعدة', hint: 'قائمة خطوات البداية ومقاطع شرح قصيرة داخل لوحتك', value: () => true },
       { key: 'export', label: 'بياناتك ملكك: تصدير ومغادرة بلا رسوم', value: () => true },
       { key: 'addons', label: 'إضافات منفردة من لوحتك', hint: 'اشترِ ميزة واحدة دون تغيير خطتك', value: () => true }
     ]

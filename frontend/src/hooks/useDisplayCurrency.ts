@@ -22,6 +22,8 @@ export interface CurrencySettings {
   usdRate: number | null;
   canSwitch: boolean;
   usdUnavailable: boolean;
+  /** فترة الانتقال بعد حذف الصفرين — راجع redenomination.service في الخادم */
+  redenomination?: { active: boolean; divisor: number; appliedAt: string | null; until: string | null } | null;
 }
 
 export interface CurrencyOption {
@@ -106,9 +108,10 @@ export const useDisplayCurrency = (
     }
   }, [businessKey]);
 
+  const oldSypFactor = settings?.redenomination?.active ? settings.redenomination.divisor : null;
   const currency: DisplayCurrency = useMemo(
-    () => ({ code, usdRate: settings?.usdRate ?? null }),
-    [code, settings?.usdRate]
+    () => ({ code, usdRate: settings?.usdRate ?? null, oldSypFactor }),
+    [code, settings?.usdRate, oldSypFactor]
   );
 
   const options: CurrencyOption[] = useMemo(

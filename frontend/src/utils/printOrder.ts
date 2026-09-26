@@ -34,6 +34,10 @@ export interface PrintableOrder {
   deliveryAddress?: string | null;
   customerAddress?: string | null;
   governorate?: string | null;
+  /** العنوان المنظَّم (محافظة، منطقة، نقطة دالّة…) — راجع components/orders/OrderDeliveryInfo */
+  deliveryDetails?: unknown;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
   notes?: string | null;
   total?: number | string;
   subtotal?: number | string | null;
@@ -43,6 +47,17 @@ export interface PrintableOrder {
   isPaid?: boolean;
   paymentMethod?: string | null;
   table?: { name?: string | null } | null;
+  // إضافات إتمام الطلب — راجع backend/src/services/checkoutExtras.service.ts
+  isGift?: boolean;
+  giftPayerName?: string | null;
+  giftMessage?: string | null;
+  /** طلب الدافع إخفاء الأسعار: الملصق والإيصال بلا مبالغ */
+  giftHidePrices?: boolean;
+  paymentStatus?: string | null;
+  inspectionAllowed?: boolean;
+  depositAmount?: number | string | null;
+  depositPaidAt?: string | null;
+  remainingAmount?: number | string | null;
   orderItems?: Array<{
     quantity: number;
     price: number | string;
@@ -91,6 +106,49 @@ const addonsOf = (addons: string[] | string | null | undefined): string[] => {
     /* نصّ */
   }
   return String(addons).split(',').map((s) => s.trim()).filter(Boolean);
+};
+
+interface StructuredAddress {
+  place: string;
+  landmark: string;
+  building: string;
+  mapUrl: string | null;
+}
+
+/**
+ * العنوان المنظَّم إن وُجد — والمحافظة باسمها لا برمزها (`rif-dimashq`) الذي
+ * كانت الورقة تطبعه كما هو.
+ */
+const structuredAddress = (order: PrintableOrder): StructuredAddress | null => {
+  let d: any = order.deliveryDetails;
+  if (typeof d === 'string') {
+    try {
+      d = JSON.parse(d);
+    } catch {
+      d = null;
+    }
+  }
+  if (!d || typeof d !== 'object') return null;
+  const lat = d.lat ?? order.deliveryLat;
+  const lng = d.lng ?? order.deliveryLng;
+  return {
+    place: [d.governorateName, d.areaName].filter(Boolean).join(' — '),
+    landmark: d.landmark || '',
+    building: [d.building ? `بناء ${d.building}` : '', d.floor ? `طابق ${d.floor}` : ''].filter(Boolean).join('، '),
+    mapUrl: lat && lng ? `https://maps.google.com/?q=${lat},${lng}` : null
+  };
+};
+
+/**
+ * ما يُحصَّل عند التسليم — مرآة `amountDueOnDelivery` على الخادم (بلا الأقساط:
+ * الملصق يُطبع من صفّ الطلب وحده). هديةٌ مؤكَّدة أو طلبٌ مدفوع → صفر، وعربونٌ
+ * مستلم يُطرح من الإجمالي.
+ */
+const dueOnDelivery = (order: PrintableOrder): number => {
+  if (order.isPaid) return 0;
+  if (order.paymentStatus === 'awaiting_transfer' || order.paymentStatus === 'confirmed') return 0;
+  const deposit = order.depositPaidAt ? num(order.depositAmount) : 0;
+  return Math.max(0, num(order.total) - deposit);
 };
 
 const dateText = (iso: string) => {
@@ -150,7 +208,12 @@ export const printInvoice = (order: PrintableOrder, business: PrintableBusiness)
   const discount = num(order.discountAmount);
   const delivery = num(order.deliveryFee);
   const address = order.deliveryAddress || order.customerAddress;
+  const structured = structuredAddress(order);
   const number = order.orderNumber ?? order.id.slice(-6).toUpperCase();
+  // إيصال هدية: الدافع طلب ألّا يرى المستلم الأسعار — والفاتورة تُوضع غالباً
+  // داخل الطرد. فلا أعمدة أسعار ولا إجماليات، ويبقى المبلغ في لوحة التاجر.
+  const giftSlip = !!order.isGift && !!order.giftHidePrices;
+  const deposit = num(order.depositAmount);
 
   const rows = items
     .map((item, index) => {
@@ -163,8 +226,8 @@ export const printInvoice = (order: PrintableOrder, business: PrintableBusiness)
           item.notes ? `<div class="muted small">ملاحظة: ${esc(item.notes)}</div>` : ''
         }${sku ? `<div class="muted small num">SKU ${esc(sku)}</div>` : ''}</td>
         <td class="num c">${item.quantity}</td>
-        <td class="num">${money(item.price)}</td>
-        <td class="num">${money(num(item.price) * item.quantity)}</td>
+        ${giftSlip ? '' : `<td class="num">${money(item.price)}</td>
+        <td class="num">${money(num(item.price) * item.quantity)}</td>`}
       </tr>`;
     })
     .join('');
@@ -204,7 +267,7 @@ export const printInvoice = (order: PrintableOrder, business: PrintableBusiness)
         </div>
       </div>
       <div class="doc">
-        <h2>فاتورة</h2>
+        <h2>${giftSlip ? 'إيصال هدية' : 'فاتورة'}</h2>
         <div class="num"><b>#${esc(number)}</b></div>
         <div class="muted small">${esc(dateText(order.createdAt))}</div>
       </div>
@@ -215,7 +278,9 @@ export const printInvoice = (order: PrintableOrder, business: PrintableBusiness)
         <h3>الزبون</h3>
         ${esc(order.customerName || 'زبون')}<br>
         ${order.customerPhone ? `<span class="num">${esc(order.customerPhone)}</span><br>` : ''}
-        ${address ? `${esc(address)}${order.governorate ? ` — ${esc(order.governorate)}` : ''}` : ''}
+        ${structured
+          ? `${esc(structured.place)}${structured.landmark ? `<br><b>أقرب نقطة: ${esc(structured.landmark)}</b>` : ''}${structured.building ? `<br>${esc(structured.building)}` : ''}`
+          : address ? `${esc(address)}${order.governorate ? ` — ${esc(order.governorate)}` : ''}` : ''}
         ${order.table?.name ? `طاولة ${esc(order.table.name)}` : ''}
       </div>
       <div class="box">
@@ -227,17 +292,22 @@ export const printInvoice = (order: PrintableOrder, business: PrintableBusiness)
     </div>
 
     <table>
-      <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th><th>السعر</th><th>المجموع</th></tr></thead>
+      <thead><tr><th>#</th><th>الصنف</th><th>الكمية</th>${giftSlip ? '' : '<th>السعر</th><th>المجموع</th>'}</tr></thead>
       <tbody>${rows}</tbody>
     </table>
 
-    <div class="totals">
+    ${giftSlip ? '' : `<div class="totals">
       <div><span>مجموع الأصناف</span><span class="num">${money(itemsTotal)}</span></div>
       ${discount > 0 ? `<div><span>الخصم</span><span class="num">−${money(discount)}</span></div>` : ''}
       ${delivery > 0 ? `<div><span>التوصيل</span><span class="num">${money(delivery)}</span></div>` : ''}
       <div class="grand"><span>الإجمالي</span><span class="num">${money(total)}</span></div>
+      ${deposit > 0 ? `<div><span>العربون ${order.depositPaidAt ? '(مستلم)' : '(لم يُستلم)'}</span><span class="num">${money(deposit)}</span></div>
+      <div><span>المتبقّي عند الاستلام</span><span class="num">${money(order.remainingAmount)}</span></div>` : ''}
       <span class="paid" style="color:${order.isPaid ? '#0C7A55' : '#B42318'}">${order.isPaid ? 'مدفوع' : 'غير مدفوع'}</span>
-    </div>
+    </div>`}
+
+    ${order.isGift ? `<div class="box" style="margin-top:18px"><h3>🎁 هدية${order.giftPayerName && !giftSlip ? ` من ${esc(order.giftPayerName)}` : ''}</h3>${order.giftMessage ? esc(order.giftMessage) : 'مع أطيب التمنيات'}</div>` : ''}
+    ${order.inspectionAllowed ? `<div class="muted small" style="margin-top:10px">معاينة قبل الدفع: يحقّ للزبون فحص الطلب عند الاستلام.</div>` : ''}
 
     ${order.notes ? `<div class="box" style="margin-top:18px"><h3>ملاحظات</h3>${esc(order.notes)}</div>` : ''}
 
@@ -252,8 +322,11 @@ export const printShippingLabel = (order: PrintableOrder, business: PrintableBus
   const currency = business.currency || 'SYP';
   const items = order.orderItems || [];
   const pieces = items.reduce((sum, item) => sum + item.quantity, 0);
-  const cod = order.isPaid ? 0 : num(order.total);
+  const cod = dueOnDelivery(order);
+  const hidePrices = !!order.isGift && !!order.giftHidePrices;
+  const awaitingTransfer = order.paymentStatus === 'awaiting_transfer';
   const address = order.deliveryAddress || order.customerAddress;
+  const structured = structuredAddress(order);
   const number = order.orderNumber ?? order.id.slice(-6).toUpperCase();
 
   const css = `
@@ -264,6 +337,8 @@ export const printShippingLabel = (order: PrintableOrder, business: PrintableBus
     .to-name { font-size: 16pt; font-weight: 800; line-height: 1.3; }
     .to-phone { font-size: 15pt; font-weight: 800; }
     .addr { font-size: 11pt; line-height: 1.6; }
+    .landmark { font-size: 13pt; font-weight: 800; }
+    .map { font-size: 8pt; word-break: break-all; margin-top: 1mm; }
     .order { display: flex; justify-content: space-between; align-items: center; }
     .order b { font-size: 20pt; }
     .cod { text-align: center; background: #000; color: #fff; border-radius: 3mm; padding: 3mm; }
@@ -278,13 +353,19 @@ export const printShippingLabel = (order: PrintableOrder, business: PrintableBus
       <div class="lbl">إلى</div>
       <div class="to-name">${esc(order.customerName || 'الزبون')}</div>
       ${order.customerPhone ? `<div class="to-phone num">${esc(order.customerPhone)}</div>` : ''}
-      <div class="addr">${esc(address || 'استلام من المحل')}${order.governorate ? `<br><b>${esc(order.governorate)}</b>` : ''}</div>
+      ${structured
+        ? `<div class="addr"><b>${esc(structured.place)}</b>${structured.landmark ? `<div class="landmark">أقرب نقطة: ${esc(structured.landmark)}</div>` : ''}${structured.building ? esc(structured.building) : ''}${structured.mapUrl ? `<div class="map num">${esc(structured.mapUrl)}</div>` : ''}</div>`
+        : `<div class="addr">${esc(address || 'استلام من المحل')}${order.governorate ? `<br><b>${esc(order.governorate)}</b>` : ''}</div>`}
     </div>
     <div class="cod">
-      ${cod > 0
+      ${awaitingTransfer
+        ? `<div class="amount">بانتظار الدفع — لا تسلّم</div>`
+        : cod > 0 && !hidePrices
         ? `<div class="lbl" style="color:#fff">المبلغ عند الاستلام</div><div class="amount num">${esc(formatPrice(cod, currency as any))}</div>`
         : `<div class="amount">مدفوع — لا تحصيل</div>`}
     </div>
+    ${order.inspectionAllowed ? `<div class="row addr"><b>معاينة قبل الدفع</b> — يفحص الزبون الطلب قبل أن يدفع</div>` : ''}
+    ${order.isGift ? `<div class="row addr"><span class="lbl">🎁 هدية${order.giftPayerName ? ` من ${esc(order.giftPayerName)}` : ''}</span>${order.giftMessage ? `<br>${esc(order.giftMessage)}` : ''}</div>` : ''}
     <div class="row from">
       <div class="lbl">من</div>
       <b>${esc(business.name)}</b>${business.phone ? ` · <span class="num">${esc(business.phone)}</span>` : ''}

@@ -520,6 +520,9 @@ model Restaurant {
   customDomainVerificationCode String?   @unique
   /// معرّف Custom Hostname في Cloudflare — به نقرأ الحالة ونحذف عند فكّ الربط
   customDomainHostnameId       String?
+  /// «تاجر موثّق»: متى وافق المشرف على هوية صاحب النشاط. `null` = غير موثّق.
+  /// تاريخٌ لا عَلَم: يقول متى تحقّقنا، ويُمسح عند سحب التوثيق.
+  verifiedAt                   DateTime?
   /// حالة النطاق عند Cloudflare: pending / active / blocked …
   customDomainStatus           String?
   /// حالة شهادة TLS — النطاق لا يعمل على https قبل أن تصبح active
@@ -532,6 +535,9 @@ model Restaurant {
   deliverySettings             Json?
   /// إعدادات طرق الدفع لكل نشاط: { shamCash: { enabled, accountNumber, accountName, note } }
   paymentSettings              Json?
+  /// خيارات إتمام الطلب: خطوة واتساب، المعاينة قبل الدفع، هدايا المغتربين،
+  /// والعربون — راجع services/checkoutExtras.service.ts
+  checkoutSettings             Json?
   /// اللغات المفعّلة في واجهة الزبون، مثل ["ar"] أو ["ar","en"].
   /// العربية وحدها متاحة بلا ميزة multi_language — راجع services/language.service.ts
   enabledLanguages             Json?
@@ -539,6 +545,17 @@ model Restaurant {
   /// الأسعار تُخزَّن بالليرة دائماً؛ هذه عملات **عرض** لا تخزين، والدولار
   /// منها يتطلّب سعر صرف مضبوطاً من السوبر أدمن — راجع services/currency.service.ts
   enabledCurrencies            Json?
+  /// عملة **إدخال** الأسعار: "SYP" (الافتراضي) أو "USD".
+  /// بالدولار يُخزَّن `priceUsd` لكل صنف، ويبقى `price` بالليرة مشتقّاً منه
+  /// بسعر الصرف — فكل القراءات القائمة تعمل كما هي. راجع services/usdPricing.service.ts
+  pricingCurrency              String    @default("SYP")
+  /// "platform" (سعر المنصّة الموحّد) أو "custom" (سعر التاجر اليومي)
+  usdRateSource                String    @default("platform")
+  /// سعر التاجر الخاص: كم ليرة للدولار. يُقسَم عند إعادة تقويم الليرة.
+  customUsdRate                Float?
+  customUsdRateUpdatedAt       DateTime?
+  /// تقريب السعر المحسوب لأقرب مضاعف (100، 500، 1000…). صفر = بلا تقريب.
+  priceRoundingStep            Float     @default(0)
   /// إعدادات الرسائل التلقائية.
   ///
   /// `{ lapsed: { enabled, afterDays, title, body }, abandonedCart: { … } }`
@@ -565,6 +582,16 @@ model Restaurant {
   /// معرّفات أدوات التتبّع الإعلانية — `{ metaPixelId, tiktokPixelId, ga4Id }`.
   /// راجع services/tracking.service.ts — المرجع الوحيد لصيغها واستحقاقها.
   trackingSettings             Json?
+  /// الظهور في «سوق شام ستورز» — الدليل العامّ على /souq.
+  ///
+  /// **`null` يعني «الافتراضي» لا «لا»:** كل نشاطٍ ظاهرٌ ما لم يُطفئه التاجر
+  /// صراحةً. ولو كان الافتراضي مخفيّاً لبقي السوق فارغاً — فالتاجر لا يعرف
+  /// بالخيار حتى يرى زبوناً جاءه منه. راجع services/souq.service.ts.
+  souqListed                   Boolean?
+  /// رمز المحافظة من config/syria.ts — لا اسمها، كي لا يكسر التطبيع المطابقة
+  souqGovernorate              String?
+  /// تصنيف النشاط في السوق — رمزٌ من config/souq.ts
+  souqCategory                 String?
   subscriptionStart            DateTime?
   subscriptionEnd              DateTime?
   createdAt                    DateTime  @default(now())
@@ -638,6 +665,8 @@ model Store {
 
   deliverySettings     Json?
   paymentSettings      Json?
+  /// خيارات إتمام الطلب — نفس بنية المطعم (services/checkoutExtras.service.ts)
+  checkoutSettings     Json?
   notificationSettings Json?
   /// اللغات المفعّلة في واجهة الزبون — نفس قواعد المطعم
   enabledLanguages     Json?
@@ -645,6 +674,12 @@ model Store {
   /// الأسعار تُخزَّن بالليرة دائماً؛ هذه عملات **عرض** لا تخزين، والدولار
   /// منها يتطلّب سعر صرف مضبوطاً من السوبر أدمن — راجع services/currency.service.ts
   enabledCurrencies    Json?
+  /// التسعير بالدولار — نفس حقول المطعم وقواعده، راجع services/usdPricing.service.ts
+  pricingCurrency        String    @default("SYP")
+  usdRateSource          String    @default("platform")
+  customUsdRate          Float?
+  customUsdRateUpdatedAt DateTime?
+  priceRoundingStep      Float     @default(0)
   /// إعدادات الرسائل التلقائية.
   ///
   /// `{ lapsed: { enabled, afterDays, title, body }, abandonedCart: { … } }`
@@ -662,6 +697,10 @@ model Store {
   seoSettings                  Json?
   /// معرّفات أدوات التتبّع الإعلانية — انظر التعليق نفسه على Restaurant.
   trackingSettings             Json?
+  /// الظهور في «سوق شام ستورز» — انظر التعليق نفسه على Restaurant.
+  souqListed                   Boolean?
+  souqGovernorate              String?
+  souqCategory                 String?
 
   subdomain                    String    @unique
   customDomain                 String?   @unique
@@ -670,6 +709,9 @@ model Store {
   customDomainVerificationCode String?   @unique
   /// معرّف Custom Hostname في Cloudflare — به نقرأ الحالة ونحذف عند فكّ الربط
   customDomainHostnameId       String?
+  /// «تاجر موثّق»: متى وافق المشرف على هوية صاحب النشاط. `null` = غير موثّق.
+  /// تاريخٌ لا عَلَم: يقول متى تحقّقنا، ويُمسح عند سحب التوثيق.
+  verifiedAt                   DateTime?
   /// حالة النطاق عند Cloudflare: pending / active / blocked …
   customDomainStatus           String?
   /// حالة شهادة TLS — النطاق لا يعمل على https قبل أن تصبح active
@@ -746,8 +788,15 @@ model MenuItem {
   sku             String?
   description     String?
   descriptionEn   String?
+  /// عنوان الصفحة لمحرّكات البحث — يكتبه التاجر أو مساعد الذكاء الاصطناعي.
+  /// فارغٌ يعني «اسم الصنف | اسم المطعم» كما كان.
+  seoTitle        String?  @map("seo_title")
   price           Float
   originalPrice   Float?
+  /// السعر بالدولار حين يسعّر المطعم بالدولار — `price` يُشتقّ منه بسعر الصرف.
+  /// `null` يعني صنفاً مسعّراً بالليرة مباشرة. لا يُقسَم عند إعادة التقويم.
+  priceUsd         Float?
+  originalPriceUsd Float?
   /// صورة الغلاف — مشتقة من images[0]، أُبقيت للتوافق مع القراءات القائمة.
   image           String?
   /// مصفوفة روابط الصور. الغلاف أولها.
@@ -806,9 +855,15 @@ model Product {
   description   String?
   /// الوصف بالإنجليزية — يرتدّ إلى العربي حين يكون فارغاً
   descriptionEn String?
+  /// عنوان صفحة المنتج لمحرّكات البحث — فارغٌ يعني «اسم المنتج | اسم المتجر»
+  seoTitle      String?  @map("seo_title")
   price         Float
   /// السعر قبل التخفيض. أعلى من price يعني عرضاً؛ مساوٍ أو أقل يُتجاهَل.
   originalPrice Float?
+  /// السعر بالدولار حين يسعّر المتجر بالدولار — `price` يُشتقّ منه بسعر الصرف.
+  /// `null` يعني منتجاً مسعّراً بالليرة مباشرة. لا يُقسَم عند إعادة التقويم.
+  priceUsd         Float?
+  originalPriceUsd Float?
   cost          Float?
   stock         Int      @default(0)
   reservedStock Int      @default(0)
@@ -840,6 +895,10 @@ model Product {
   comingSoon    Boolean  @default(false) @map("coming_soon")
   /// موعد التوفّر المتوقّع إن عرفه التاجر — يُعرض «يتوفّر في …»
   availableAt   DateTime? @map("available_at")
+  /// عربونٌ يُدفع مسبقاً لهذا المنتج: `percent` من سعر السطر أو `fixed` لكل
+  /// قطعة. `null` = بلا عربون. المبلغ يحسبه الخادم عند الطلب لا الواجهة.
+  depositType   String?  @db.VarChar(10)
+  depositValue  Float?
   unit          String   @default("piece")
   sortOrder     Int      @default(0)
   /// يرفعه التاجر يدوياً — تناظراً مع MenuItem
@@ -950,6 +1009,9 @@ model Order {
   customerPhone          String?
   status                 OrderStatus        @default(pending)
   total                  Float
+  /// سعر الصرف (ليرة/دولار) الذي حُسبت به أسعار الأصناف المسعّرة بالدولار
+  /// لحظة الطلب. `null` لطلبٍ كلّه بالليرة — المبالغ نفسها بالليرة دائماً.
+  exchangeRate           Float?
   subtotal               Float?             @default(0)
   discountAmount         Float?             @default(0)
   couponCode             String?
@@ -984,6 +1046,23 @@ model Order {
   ratingComment          String?
   ratedAt                DateTime?
   orderSource            String             @default("restaurant")
+  /// مفتاح عدم التكرار — يولّده جهاز الكاشير قبل الإرسال. بيعةٌ أُرسلت
+  /// على شبكةٍ ضعيفة ثم أُعيدت من طابور «دون اتصال» تُسجَّل مرّةً واحدة.
+  /// نسخةٌ للقراءة فقط: التفرّد يحرسه `PosSaleKey` — قيدٌ فريد على جدول
+  /// الطلبات القائم يوقف `db push` في الإنتاج بتحذير «فقدان بيانات».
+  idempotencyKey         String?            @db.VarChar(64)
+  /// متى بيعت فعلاً على الجهاز إن وصلت لاحقاً من طابور «دون اتصال»
+  offlineSoldAt          DateTime?
+  /// بيعت دون اتصال والرصيد لم يكفِ عند المزامنة — تُقبل ويُرفع العلَم
+  /// للمراجعة بدل رفض بيعةٍ قبض الكاشير ثمنها فعلاً
+  stockShortage          Boolean            @default(false)
+  /// العنوان المنظَّم كما اختاره الزبون: المحافظة والمنطقة وأقرب نقطة دالّة
+  /// والبناء والطابق، مع لقطةٍ من اسم المنطقة وأجرتها لحظة الطلب.
+  ///
+  /// **JSON بجانب `deliveryAddress` لا بديلاً عنه:** تطبيق السائق والطباعة
+  /// والطلبات القديمة كلّها تقرأ النصّ، فيبقى النصّ مركّباً من هذه الحقول.
+  /// راجع services/deliveryArea.service.ts
+  deliveryDetails        Json?
   deliveryProofImage     String?
   deliveryProofSignature String?
   deliveryProofType      String?
@@ -991,6 +1070,30 @@ model Order {
   driverRating           Int?
   driverRatingComment    String?
   driverRatedAt          DateTime?
+  // ─── إضافات إتمام الطلب — راجع services/checkoutExtras.service.ts ───
+  /// «معاينة قبل الدفع»: لقطةٌ من إعداد التاجر لحظة الطلب — يقرؤها السائق.
+  /// لقطة لا قراءةٌ حيّة: تاجرٌ يطفئ الخيار غداً لا يُسقط وعداً قُطع لزبون اليوم.
+  inspectionAllowed      Boolean            @default(false)
+  /// «اشترِ لأهلك»: الدافع خارج سوريا والمستلم داخلها. المستلم هو
+  /// `customerName`/`customerPhone`/`deliveryAddress` — كل ما يقرأ الطلب
+  /// (السائق والطباعة والتتبّع) يصل إليه بلا تغيير.
+  isGift                 Boolean            @default(false)
+  giftPayerName          String?            @db.VarChar(120)
+  giftPayerPhone         String?            @db.VarChar(32)
+  giftPayerEmail         String?            @db.VarChar(160)
+  giftMessage            String?            @db.Text
+  /// لا أسعار على ملصق المستلم ولا في صفحة تتبّعه
+  giftHidePrices         Boolean            @default(false)
+  /// حالة الدفع المسبق — منفصلة عن `status` عمداً: `awaiting_transfer` يعني
+  /// أن الطلب لا يُجهَّز حتى يؤكّد التاجر وصول التحويل، ثم `confirmed`.
+  /// `null` لطلبٍ عاديّ لا دفع مسبقاً فيه.
+  paymentStatus          String?            @db.VarChar(24)
+  paymentConfirmedAt     DateTime?
+  /// العربون: يحسبه الخادم من منتجات الطلب. المتبقّي = الإجمالي − العربون،
+  /// ويُحصَّل عند التسليم أو بالأقساط.
+  depositAmount          Float?
+  depositPaidAt          DateTime?
+  remainingAmount        Float?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
@@ -1011,6 +1114,8 @@ model Order {
   items         OrderItem[]
   driverEarning DriverEarning?
   deliveries    DriverDelivery[]
+  installments  OrderInstallment[]
+  saleKey       PosSaleKey?
 
   @@index([restaurantId])
   @@index([storeId])
@@ -1018,6 +1123,35 @@ model Order {
   @@index([status])
   @@index([createdAt])
   @@index([orderNumber])
+}
+
+/// قسطٌ من جدول تقسيط يضعه التاجر لطلبٍ بعينه — يدويّ بالكامل: التاجر يحدّد
+/// المبالغ والمواعيد، ويعلّم كلّ قسطٍ مدفوعاً حين يستلمه. لا تحصيل آليّ.
+/// مفتاح عدم تكرار بيعة الكاشير — جدولٌ مستقلّ كي يُنشأ قيده الفريد مع
+/// الجدول نفسه بلا بيانات قديمة يُحذَّر منها. يُكتب داخل معاملة البيعة، فإن
+/// سبقه مفتاحٌ مطابق (P2002) سقطت البيعة المكرّرة كاملةً.
+model PosSaleKey {
+  key       String   @id @db.VarChar(64)
+  orderId   String   @unique @map("order_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("pos_sale_keys")
+}
+
+model OrderInstallment {
+  id        String    @id @default(cuid())
+  orderId   String
+  seq       Int
+  dueDate   DateTime
+  amount    Float
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
 }
 
 model OrderItem {
@@ -1034,6 +1168,8 @@ model OrderItem {
   /// وتبقى فارغة في الطلبات القديمة، فتُقرأ عندها من المنتج مع تعليم
   /// التقدير في الواجهة.
   cost       Float?
+  /// سعر الوحدة بالدولار لحظة البيع إن كان الصنف مسعّراً بالدولار
+  priceUsd   Float?
   size       String?
   addons     Json?
   notes      String?
@@ -1653,16 +1789,20 @@ model ItemComment {
   isMerchantReply Boolean @default(false) @map("is_merchant_reply")
   /// يخفيه التاجر دون حذفه — كالتقييمات: الإخفاء يُبقي الدليل
   isHidden        Boolean @default(false) @map("is_hidden")
+  /// عدّادا الإعجاب وعدمه — منسوخان من `ItemCommentReaction` ويُحدَّثان معها
+  /// في المعاملة نفسها: القائمة تُرتَّب بهما وتعرضهما بلا تجميعٍ لكل صفحة
   likes           Int     @default(0)
+  dislikes        Int     @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  product  Product?      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  menuItem MenuItem?     @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  parent   ItemComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies  ItemComment[] @relation("CommentReplies")
+  product   Product?              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  menuItem  MenuItem?             @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  user      User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  parent    ItemComment?          @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ItemComment[]         @relation("CommentReplies")
+  reactions ItemCommentReaction[]
 
   @@index([productId, isHidden, createdAt])
   @@index([menuItemId, isHidden, createdAt])
@@ -1671,6 +1811,28 @@ model ItemComment {
   @@index([parentId])
   @@index([userId])
   @@map("item_comments")
+}
+
+/// إعجاب زبونٍ بتعليقٍ أو عدمه — صفٌّ واحد لكل (تعليق، حساب).
+///
+/// **القيد الفريد هو الحارس:** نقرتان متزامنتان لا تصنعان صفّين، فلا يتضاعف
+/// العدّاد. و`value` ‎+1 أو ‎-1؛ التبديل يغيّر القيمة، والإلغاء يحذف الصف.
+///
+/// **`userId` خامٌ بلا علاقة** مع `User` عمداً: العلاقة تضيف سطراً إلى نموذج
+/// المستخدم المشترك بين فروعٍ كثيرة، والتحقّق يجري من الرمز لا من القاعدة.
+model ItemCommentReaction {
+  id        String   @id @default(cuid())
+  commentId String   @map("comment_id")
+  userId    String   @map("user_id")
+  value     Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  comment ItemComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([userId])
+  @@map("item_comment_reactions")
 }
 
 /// مرتجع الكاشير — مستندٌ مستقلّ لا تعديلٌ على البيعة.
@@ -1730,4 +1892,146 @@ model PosReturnItem {
   @@index([returnId])
   @@index([orderItemId])
   @@map("pos_return_items")
+}
+
+/// طلب توثيق «تاجر موثّق».
+///
+/// **الوثائق لا تُحفظ كروابط عامة:** العمود يحمل مفتاحاً خاصّاً يقرؤه
+/// `services/privateDocs.service.ts` وحده، ولا يُعرض الملف إلا للمشرف عبر
+/// مسارٍ محروس. هوية التاجر ليست صورة منتج تُنشر على CDN.
+model VerificationRequest {
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id")
+  /// restaurant | store
+  businessType String    @map("business_type")
+  businessId   String    @map("business_id")
+  legalName    String    @map("legal_name")
+  tradeName    String?   @map("trade_name")
+  phone        String
+  address      String?   @db.Text
+  /// هوية أو سجلّ تجاري — مفتاح تخزين خاص لا رابط
+  documentKey  String    @map("document_key") @db.VarChar(512)
+  documentMime String?   @map("document_mime")
+  documentName String?   @map("document_name")
+  shopPhotoKey  String?  @map("shop_photo_key") @db.VarChar(512)
+  shopPhotoMime String?  @map("shop_photo_mime")
+  /// pending | approved | rejected | revoked
+  status       String    @default("pending")
+  reason       String?   @db.Text
+  reviewedBy   String?   @map("reviewed_by")
+  reviewedAt   DateTime? @map("reviewed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@index([businessType, businessId])
+  @@index([status, createdAt])
+  @@map("verification_requests")
+}
+
+/// سجلّ استهلاك مساعد الذكاء الاصطناعي — سطرٌ لكل استدعاء.
+///
+/// **لماذا جدولٌ لا عدّادٌ في المتجر:** الحصّة نوعان — «مرّة واحدة» للمجانية
+/// و«يومية» للمدفوعة — وكلاهما يُحسب بجمعٍ على نافذة زمنية. عدّادٌ واحد لا
+/// يعرف متى صُرف ما صُرف، فيحتاج مهمّة تصفير ليلية تفشل بصمت يوماً ما.
+///
+/// والسطر يحمل النوع (`import` | `describe`) ووحداته: صورة محلَّلة للاستيراد،
+/// ووصفٌ مكتوب للمساعد — فالتكلفة تُقاس بما يُرسَل للنموذج لا بما يُحفظ.
+model AiUsage {
+  id           String   @id @default(cuid())
+  /// restaurant | store
+  businessType String   @map("business_type")
+  businessId   String   @map("business_id")
+  userId       String?  @map("user_id")
+  /// import | describe
+  kind         String
+  units        Int      @default(1)
+  inputTokens  Int?     @map("input_tokens")
+  outputTokens Int?     @map("output_tokens")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([businessType, businessId, kind, createdAt])
+  @@map("ai_usage")
+}
+
+/// منطقةٌ أو حيٌّ داخل محافظة، بأجرتها — تحت `ShippingZone` لا بديلاً عنه.
+///
+/// **لماذا تُربط بالمحافظة لا بمعرّف صفّ المنطقة:** صفّ `ShippingZone` لا
+/// يُنشأ إلا حين يحفظ التاجر المحافظات، وربطُ الأحياء به يفرض ترتيباً في
+/// الحفظ يُفقد أحياءً كتبها التاجر قبل أن يضغط «حفظ المناطق».
+///
+/// وحين تملك المحافظة أحياءً مفعّلة تُسعَّر الطلبات بالحيّ؛ وإلا بقيت
+/// بأجرة المحافظة كما كانت — فالمتاجر القائمة لا يتغيّر عليها شيء.
+model DeliveryArea {
+  id           String  @id @default(cuid())
+  businessId   String  @map("business_id")
+  /// restaurant | store
+  businessType String  @map("business_type")
+  /// رمز المحافظة من config/syria.ts
+  governorate  String
+  name         String  @db.VarChar(80)
+  fee          Float   @default(0)
+  /// توصيلٌ مجانيّ فوق هذا المبلغ. `null` = يُتبع حدّ المحافظة
+  freeOverAmount Float? @map("free_over_amount")
+  /// نصٌّ حرّ للزبون: «خلال ساعة»، «اليوم قبل المغرب»
+  etaText      String? @map("eta_text") @db.VarChar(60)
+  isActive     Boolean @default(true) @map("is_active")
+  sortOrder    Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([businessId, businessType, governorate])
+  @@map("delivery_areas")
+}
+
+/// مبلغٌ حصّله مندوبٌ نقداً عند التسليم — سطرٌ لكل طلب.
+///
+/// **المندوب مفتاحٌ نصّي لا علاقة:** قد يكون سائقاً في النظام
+/// (`driver:<userId>`) أو «أبو محمد» الذي يوصّل للمحلّ منذ سنوات ولا حساب
+/// له (`courier:<الاسم>`). والتسوية تجمع على المفتاح في الحالتين.
+model CodCollection {
+  id             String   @id @default(cuid())
+  orderId        String   @unique @map("order_id")
+  businessId     String   @map("business_id")
+  businessType   String   @map("business_type")
+  courierKey     String   @map("courier_key") @db.VarChar(120)
+  courierName    String   @map("courier_name") @db.VarChar(100)
+  /// driver | courier
+  courierType    String   @map("courier_type") @db.VarChar(10)
+  driverUserId   String?  @map("driver_user_id")
+  /// المبلغ المحصَّل فعلاً — قد يخالف المتوقَّع (رفض الزبون قطعة)
+  amount         Float
+  /// إجمالي الطلب لحظة التحصيل — للمقارنة لا للحساب
+  expectedAmount Float?   @map("expected_amount")
+  note           String?  @db.VarChar(300)
+  /// driver_app | merchant
+  source         String   @default("merchant") @db.VarChar(20)
+  recordedBy     String?  @map("recorded_by")
+  collectedAt    DateTime @default(now()) @map("collected_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([businessId, businessType, courierKey])
+  @@index([driverUserId])
+  @@map("cod_collections")
+}
+
+/// تسليمُ مندوبٍ ما بيده للتاجر — جزئياً أو كاملاً.
+///
+/// **سجلٌّ لا رصيد:** رصيدٌ واحد يُعدَّل لا يقول متى سُلّم ماذا، والخلاف مع
+/// المندوب يُحلّ بالتواريخ. والخطأ يُلغى بـ`voidedAt` لا بالحذف.
+model CodHandover {
+  id           String    @id @default(cuid())
+  businessId   String    @map("business_id")
+  businessType String    @map("business_type")
+  courierKey   String    @map("courier_key") @db.VarChar(120)
+  courierName  String    @map("courier_name") @db.VarChar(100)
+  amount       Float
+  note         String?   @db.VarChar(300)
+  recordedBy   String?   @map("recorded_by")
+  voidedAt     DateTime? @map("voided_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([businessId, businessType, courierKey])
+  @@map("cod_handovers")
 }

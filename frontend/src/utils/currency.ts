@@ -45,6 +45,11 @@ export interface DisplayCurrency {
   code: string;
   /** كم ليرة للدولار الواحد. `null` يعني: لا تحوّل، اعرض بالليرة. */
   usdRate?: number | null;
+  /**
+   * فترة الانتقال بعد حذف الصفرين: الليرة القديمة = الجديدة × هذا.
+   * `null` خارج الفترة — فلا يُعرض المقابل القديم. راجع `formatOldSyp`.
+   */
+  oldSypFactor?: number | null;
 }
 
 export type CurrencyInput = string | DisplayCurrency | null | undefined;
@@ -128,6 +133,23 @@ export const formatPrice = (
 
   if (options.hideSymbol) return formatted;
   return `${formatted} ${getCurrencySymbol(code)}`;
+};
+
+/**
+ * مقابل السعر بالليرة القديمة (رقماً منسّقاً) أثناء فترة الانتقال — أو `null`.
+ *
+ * يُعرض بالليرة وحدها: من يعرض بالدولار لا يحتاج مقابلاً قديماً، والزبون
+ * الذي ما زال يفكّر بـ«خمسين ألف» هو من يقرأ الليرة.
+ */
+export const formatOldSyp = (amount: number | string | null | undefined, currency: CurrencyInput): string | null => {
+  if (!currency || typeof currency === 'string') return null;
+  const factor = currency.oldSypFactor;
+  if (!factor || factor <= 1) return null;
+  if (convertFromBase(0, currency).code !== BASE_CURRENCY) return null;
+  const numeric = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (!Number.isFinite(numeric as number) || (numeric as number) <= 0) return null;
+  // الرقم وحده: الوحدة «ل.س قديمة» نصٌّ يُترجَم في المكوّن
+  return groupNumber((numeric as number) * factor, 0);
 };
 
 /** تنسيق مختصر للأرقام الكبيرة (عدد الطلبات مثلاً) */

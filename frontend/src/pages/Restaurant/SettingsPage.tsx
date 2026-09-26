@@ -11,7 +11,9 @@ import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker
 import PalettePicker from '@/components/settings/PalettePicker';
 import { DEFAULT_DESIGN, resolveDesign, type StorefrontDesign } from '@/utils/storefrontDesign';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
+import CheckoutOptionsSettings from '@/components/settings/CheckoutOptionsSettings';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
+import UsdPricingSettings from '@/components/settings/UsdPricingSettings';
 import LanguageDisplaySettings from '@/components/settings/LanguageDisplaySettings';
 import useFeatures from '@/hooks/useFeatures';
 import OrderAlertsSettings from '@/components/settings/OrderAlertsSettings';
@@ -48,7 +50,9 @@ import api from '@/services/api';
 import DomainManager from '@/components/settings/DomainManager';
 import SeoSettingsPanel, { SeoSettingsValue } from '@/components/settings/SeoSettingsPanel';
 import TrackingSettingsPanel, { TrackingSettingsValue } from '@/components/settings/TrackingSettingsPanel';
+import SouqListingPanel from '@/components/settings/SouqListingPanel';
 import { publicStorefrontUrl } from '@/utils/storefrontUrl';
+import VerificationSettingsCard from '@/components/settings/VerificationSettingsCard';
 
 const C = {
   bg:     '#F4F7F4',
@@ -541,6 +545,8 @@ export const SettingsPage: React.FC = () => {
       {/* ==================== عام ==================== */}
       {activeTab === 'general' && (
         <div>
+          {/* «تاجر موثّق» — مدخلٌ إلى صفحته، لا نموذجٌ بين الحقول */}
+          <VerificationSettingsCard />
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoRestaurant style={{ color: C.accent }} />
@@ -747,6 +753,10 @@ export const SettingsPage: React.FC = () => {
               })}
               colors={C}
             />
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <UsdPricingSettings colors={C} />
           </div>
 
           <div style={{ marginTop: 20 }}>
@@ -1317,12 +1327,16 @@ export const SettingsPage: React.FC = () => {
 
       {/* ==================== SEO والدومين ==================== */}
       {activeTab === 'payment' && (
+        <>
         <ShamCashSettingsTab
           value={paymentSettings}
           onSave={handleSavePayment}
           saving={savingPayment}
           colors={C}
         />
+        {/* واتساب بعد الطلب، المعاينة، هدايا المغتربين — يحفظ نفسه بنفسه */}
+        <CheckoutOptionsSettings colors={C} />
+        </>
       )}
 
       {activeTab === 'seo' && (
@@ -1353,6 +1367,8 @@ export const SettingsPage: React.FC = () => {
             entitled={permissions.canViewAnalytics || isSuperAdmin}
             colors={C}
           />
+          {/* الظهور في «سوق شام ستورز» — من باب الوصول إلى الزبائن كمحرّكات البحث */}
+          <SouqListingPanel canEdit={true} colors={C} />
 
           {/* إدارة الروابط والنطاق المخصص — تتحقق فعلياً من DNS */}
           <DomainManager

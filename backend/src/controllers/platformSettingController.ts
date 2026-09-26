@@ -1,5 +1,6 @@
 // backend/src/controllers/platformSettingController.ts
 
+import { repriceAllOnPlatformRate } from '../services/usdPricing.service';
 import { Response } from 'express';
 import {
   getUsdRate,
@@ -863,10 +864,17 @@ export const updateExchangeRate = async (req: AuthRequest, res: Response): Promi
       `💱 سعر الصرف غُيّر إلى ${result.rate} ل.س للدولار — بواسطة ${req.user?.email || 'غير معروف'}`
     );
 
+    // التجّار المسعّرون بالدولار على سعر المنصّة: أسعارهم بالليرة تتبع السعر
+    // الجديد الآن — لا عند أوّل طلب، وإلا رأى الزبون سعراً ودفع غيره.
+    const repriced = await repriceAllOnPlatformRate().catch((err) => {
+      console.error('Reprice after rate change failed:', err);
+      return null;
+    });
+
     res.json({
       success: true,
       message: 'تم تحديث سعر الصرف — يسري فوراً على المنصة كلها',
-      data: { usdRate: result.rate }
+      data: { usdRate: result.rate, repriced }
     });
   } catch (error) {
     console.error('Error updating exchange rate:', error);

@@ -13,6 +13,7 @@
 import type { FirebaseApp } from 'firebase/app';
 import api from './api';
 import { getVisitorId } from '../utils/visitor';
+import { warmOfflineCache } from './offlineCache';
 
 const SW_PATH = '/firebase-messaging-sw.js';
 
@@ -170,6 +171,8 @@ export const registerAppServiceWorker = async (): Promise<void> => {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
   try {
     await registerServiceWorker();
+    // المتجر يُفتح دون اتصال في الزيارة التالية — راجع offlineCache.ts
+    warmOfflineCache();
   } catch (error) {
     console.warn('تعذّر تسجيل عامل الخدمة:', error);
   }

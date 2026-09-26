@@ -28,6 +28,7 @@ export interface ShippingZone {
   deliveryMode: 'driver' | 'shipping';
 }
 import QuantityStepper from './QuantityStepper';
+import OldSypHint from './OldSypHint';
 import { sf } from '@/utils/storefrontTheme';
 import { sd } from '@/utils/storefrontDesign';
 import { formatPrice } from '@/utils/currency';
@@ -35,6 +36,7 @@ import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import type { CartItem } from '@/services/types';
 import { useT } from '@/i18n/storefront';
+import useOnlineStatus from '@/hooks/useOnlineStatus';
 
 export type StorefrontOrderType = 'dine_in' | 'takeaway' | 'delivery';
 
@@ -83,6 +85,10 @@ export interface CartSheetProps {
   /** موقع النشاط، يُستخدم مركزاً للخريطة قبل أي اختيار */
   businessLocation?: { lat: number; lng: number };
   deliveryFee?: number;
+  /** حقول العنوان المنظَّم (DeliveryAddressFields) — تحلّ محلّ المحافظة والعنوان النصّي */
+  deliveryFields?: React.ReactNode;
+  /** ما ينقص العنوان المنظَّم — يُضاف إلى «ينقص» ويعطّل الإرسال */
+  deliveryMissing?: string[];
 
   discount?: number;
   couponCode?: string;
@@ -96,6 +102,16 @@ export interface CartSheetProps {
 
   submitting?: boolean;
   onSubmit: () => void;
+
+  /**
+   * نقاط تركيبٍ لإضافات إتمام الطلب (هدية المغترب، المعاينة، العربون) —
+   * راجع checkout/CheckoutExtras.tsx. السلّة لا تعرف ما بداخلها.
+   */
+  extraSection?: React.ReactNode;
+  summaryExtra?: React.ReactNode;
+  extraMissing?: string[];
+  /** عنوان قسم «بياناتك» — في طلب الهدية هي بيانات المستلم */
+  customerTitle?: string;
 }
 
 const REQUIRED_MARK = <span style={{ color: '#FF6B6B' }}>*</span>;
@@ -139,6 +155,8 @@ const CartSheet: React.FC<CartSheetProps> = ({
   onDeliveryLocationChange,
   businessLocation,
   deliveryFee = 0,
+  deliveryFields,
+  deliveryMissing = [],
   discount = 0,
   couponCode,
   onCouponApply,
@@ -147,7 +165,11 @@ const CartSheet: React.FC<CartSheetProps> = ({
   paymentMethod = 'cash',
   onPaymentMethodChange,
   submitting = false,
-  onSubmit
+  onSubmit,
+  extraSection,
+  summaryExtra,
+  extraMissing,
+  customerTitle
 }) => {
   const { t, lang } = useT();
   const [couponInput, setCouponInput] = useState('');
@@ -173,11 +195,17 @@ const CartSheet: React.FC<CartSheetProps> = ({
   if (items.length === 0) missing.push('السلة فارغة');
   if (nameRequired && !customerName.trim()) missing.push('الاسم');
   if (phoneRequired && !customerPhone.trim()) missing.push('رقم الهاتف');
-  if (addressRequired && !address.trim()) missing.push('عنوان التوصيل');
+  if (addressRequired && !deliveryFields && !address.trim()) missing.push('عنوان التوصيل');
+  if (addressRequired && deliveryFields) missing.push(...deliveryMissing);
   // تُطلب فقط حين يضبط المتجر مناطقه — وإلا منعنا الطلب في متاجر لم تُهيّأ
-  if (addressRequired && shippingZones.length > 0 && !governorate) missing.push('المحافظة');
+  if (addressRequired && !deliveryFields && shippingZones.length > 0 && !governorate) missing.push('المحافظة');
+  if (extraMissing?.length) missing.push(...extraMissing);
 
-  const canSubmit = missing.length === 0 && !submitting;
+  // إتمام الطلب يحتاج اتصالاً — التصفّح دون اتصال مسموح، أمّا طلبٌ يُحفظ
+  // ليُرسَل «لاحقاً» فقد يصل بعد نفاد الصنف أو تغيّر سعره، والزبون يظنّه
+  // وصل. فالزرّ يتعطّل ويقول السبب بدل أن يفشل بعد الضغط
+  const { online } = useOnlineStatus();
+  const canSubmit = missing.length === 0 && !submitting && online;
 
   // شام كاش لا يُعرض إلا إن فعّله التاجر **وأرسل الخادم رقم محفظته**: خيارٌ
   // بلا رقمٍ يحوّل إليه الزبون أسوأ من غيابه.
@@ -240,6 +268,11 @@ const CartSheet: React.FC<CartSheetProps> = ({
        */
       footer={items.length === 0 ? null : (
         <>
+          {!online && (
+            <div role="alert" style={{ color: '#FBBF24', fontSize: 12, fontWeight: 700, marginBottom: 9, textAlign: 'center', lineHeight: 1.7 }}>
+              {t('أنت غير متصل — إتمام الطلب يحتاج اتصالاً بالإنترنت. سلّتك محفوظة، أكمل حين يعود الاتصال.')}
+            </div>
+          )}
           {missing.length > 0 && (
             <div style={{ color: '#FBBF24', fontSize: 11.5, marginBottom: 9, textAlign: 'center' }}>
               {t('أكمل')}: {missing.map((m) => t(m)).join('، ')}
@@ -478,9 +511,11 @@ const CartSheet: React.FC<CartSheetProps> = ({
             )
           )}
 
+          {extraSection}
+
           {/* بيانات الزبون — الطلب كضيف، بلا تسجيل دخول */}
           <section style={{ marginBottom: 18 }}>
-            <h4 style={sectionTitle}>{t('بياناتك')}</h4>
+            <h4 style={sectionTitle}>{t(customerTitle || 'بياناتك')}</h4>
             <div style={{ display: 'grid', gap: 10 }}>
               <div>
                 <label style={fieldLabel} htmlFor="sf-cart-name">
@@ -513,7 +548,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
                 />
               </div>
 
-              {orderType === 'delivery' && shippingZones.length > 0 && onGovernorateChange && (
+              {orderType === 'delivery' && deliveryFields}
+
+              {orderType === 'delivery' && !deliveryFields && shippingZones.length > 0 && onGovernorateChange && (
                 <div>
                   <label style={fieldLabel} htmlFor="sf-cart-governorate">
                     {t('المحافظة')} {REQUIRED_MARK}
@@ -549,7 +586,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                 </div>
               )}
 
-              {orderType === 'delivery' && onAddressChange && (
+              {orderType === 'delivery' && !deliveryFields && onAddressChange && (
                 <div>
                   <label style={fieldLabel} htmlFor="sf-cart-address">
                     {t('عنوان التوصيل')} {REQUIRED_MARK}
@@ -777,6 +814,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
             )}
             <div style={{ height: 1, background: sf.border, margin: '3px 0' }} />
             <SummaryRow label={t('الإجمالي')} value={formatPrice(total, currency)} bold />
+            {/* فترة الانتقال بعد حذف الصفرين — لا يرسم شيئاً خارجها */}
+            <OldSypHint amount={total} currency={currency} style={{ textAlign: 'end', fontSize: 11.5 }} />
+            {summaryExtra}
           </section>
         </>
       )}

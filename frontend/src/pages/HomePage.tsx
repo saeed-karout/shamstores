@@ -185,6 +185,8 @@ const HomePage: React.FC = () => {
             {NAV.map((n) => (
               <button key={n.id} className="ss-nav-link" onClick={() => go(n.id)}>{n.label}</button>
             ))}
+            {/* مدخل الزبائن إلى «سوق شام ستورز» — رابطٌ واحد لا قسمٌ جديد */}
+            <Link to="/souq" className="ss-nav-link">السوق</Link>
           </div>
           <div className="ss-nav-actions" style={{ color: '#fff' }}>
             {isAuthenticated ? (
@@ -218,6 +220,7 @@ const HomePage: React.FC = () => {
           {NAV.map((n) => (
             <button key={n.id} className="ss-nav-link" onClick={() => go(n.id)}>{n.label}</button>
           ))}
+          <Link to="/souq" className="ss-nav-link">السوق</Link>
           <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
             {isAuthenticated ? (
               <>
@@ -545,6 +548,7 @@ const HomePage: React.FC = () => {
                 <li><button onClick={() => go('solutions')}>الحلول</button></li>
                 <li><button onClick={() => go('templates')}>القوالب</button></li>
                 <li><button onClick={() => go('pricing')}>الأسعار</button></li>
+                <li><Link to="/souq">سوق شام ستورز</Link></li>
               </ul>
             </div>
             <div>

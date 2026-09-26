@@ -13,6 +13,13 @@
 //   node scripts/seed-demo-businesses.js                  # معاينة بلا كتابة
 //   node scripts/seed-demo-businesses.js --apply          # إنشاء ما ليس موجوداً
 //   node scripts/seed-demo-businesses.js --apply --reset  # حذفٌ وإعادة إنشاء
+//
+// والإثراء (بانرات وعروض وإعلان، صور متعدّدة، ربط الألوان بالصور، حسومات)
+// يُطبَّق تلقائياً على ما يُنشأ. ولأنشطةٍ موجودة أصلاً — كما في الإنتاج —
+// بلا حذف ولا مساس بطلباتها، وآمنٌ للتكرار (راجع demo-enrichment.js):
+//
+//   node scripts/seed-demo-businesses.js --enrich          # معاينة الإثراء
+//   node scripts/seed-demo-businesses.js --enrich --apply  # تنفيذه
 
 const { prepareDatabaseUrl } = require('./db-env');
 
@@ -24,6 +31,56 @@ const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 const APPLY = process.argv.includes('--apply');
 const RESET = process.argv.includes('--reset');
+const ENRICH = process.argv.includes('--enrich');
+const { enrichBusiness, allImageUrls } = require('./demo-enrichment');
+
+/**
+ * يفحص روابط صور الإثراء قبل أي كتابة — صورةٌ حذفها Unsplash تظهر
+ * مربّعاً فارغاً أمام العميل، وهذا أسوأ من غيابها.
+ */
+async function checkImages() {
+  const urls = allImageUrls();
+  const broken = [];
+  // خمسةٌ في كل دفعة: طلبات HTTP إلى Unsplash لا اتصالات قاعدة
+  for (let i = 0; i < urls.length; i += 5) {
+    const results = await Promise.all(
+      urls.slice(i, i + 5).map(async (url) => {
+        try {
+          const res = await fetch(url, { method: 'HEAD' });
+          return res.ok ? null : `${res.status} ${url}`;
+        } catch (err) {
+          return `${err.message} ${url}`;
+        }
+      })
+    );
+    broken.push(...results.filter(Boolean));
+  }
+  return { total: urls.length, broken };
+}
+
+async function runEnrich() {
+  console.log(APPLY ? 'إثراء أنشطة العرض (تنفيذ):' : 'إثراء أنشطة العرض — معاينة (أضف --apply للتنفيذ):');
+  const { total, broken } = await checkImages();
+  if (broken.length) {
+    console.log(`✗ ${broken.length} من ${total} صورة لا تفتح:`);
+    broken.forEach((line) => console.log('   ' + line));
+    throw new Error('صورٌ معطوبة — لم يُكتب شيء');
+  }
+  console.log(`✓ ${total} رابط صورة يعمل
+`);
+
+  for (const b of BUSINESSES) {
+    const r = await enrichBusiness(prisma, b, { apply: APPLY });
+    if (r.skipped) {
+      console.log(`• «${b.name}» /${b.slug} — تُخطّي: ${r.skipped}`);
+      continue;
+    }
+    console.log(
+      `${APPLY ? '✓' : '•'} «${b.name}» /${b.slug} — صور: ${r.images}، ألوان مربوطة: ${r.colors}، حسومات: ${r.discounts}، ` +
+        `أقسام تسويق: ${r.sectionsCreated} جديد / ${r.sectionsUpdated} محدَّث، الكوبون: ${r.coupon}`
+    );
+  }
+}
 
 /** كلمة مرور كلّ حسابات العرض — تُعطى للعميل ليجرّب اللوحة بنفسه */
 const DEMO_PASSWORD = 'ShamDemo2026';
@@ -593,6 +650,9 @@ async function removeBusiness(b) {
     await prisma.orderItem.deleteMany({ where: { orderId: { in: orders.map((o) => o.id) } } });
     await prisma.order.deleteMany({ where: { [key]: biz.id } });
     await prisma.coupon.deleteMany({ where: { [key]: biz.id } });
+    // أقسام التسويق مربوطةٌ بالمعرّف لا بعلاقة — لا تُحذف تلقائياً مع النشاط
+    await prisma.marketingSection.deleteMany({ where: { businessId: biz.id } });
+    await prisma.marketingSettings.deleteMany({ where: { businessId: biz.id } });
     if (isRestaurant) {
       await prisma.menuItem.deleteMany({ where: { restaurantId: biz.id } });
       await prisma.table.deleteMany({ where: { restaurantId: biz.id } });
@@ -612,6 +672,11 @@ async function removeBusiness(b) {
 
 (async () => {
   try {
+    if (ENRICH) {
+      await runEnrich();
+      return;
+    }
+
     const plan =
       (await prisma.plan.findFirst({ where: { name: 'enterprise' } })) ||
       (await prisma.plan.findFirst({ orderBy: { price: 'desc' } }));
@@ -641,7 +706,9 @@ async function removeBusiness(b) {
       }
       if (existing || emailTaken) await removeBusiness(b);
       const { items } = await createBusiness(b, plan.id, passwordHash);
-      console.log(`✓ أُنشئ: ${label} (${items} عنصراً، ١٢ طلباً)`);
+      // نشاطٌ جديد يولد مُثرىً — لا خطوة ثانية يُنسى تشغيلها
+      await enrichBusiness(prisma, b, { apply: true });
+      console.log(`✓ أُنشئ: ${label} (${items} عنصراً، ١٢ طلباً، مع المحتوى التسويقي)`);
     }
 
     console.log(`\nالدخول: البريد أعلاه، وكلمة المرور ${DEMO_PASSWORD}`);

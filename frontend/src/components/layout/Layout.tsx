@@ -12,6 +12,8 @@ import '../../styles/dashboard.css';
  * لا يُعرض إلا عند وصول طلب، وحزمته تصل قبله بكثير.
  */
 const NewOrderAlarm = lazy(() => import('../alerts/NewOrderAlarm'));
+// زرّ دعم واتساب — مؤجَّلٌ للسبب نفسه، ولا يُرسم إلا لحساب تاجرٍ ورقمٍ مضبوط
+const SupportWhatsAppFab = lazy(() => import('../support/SupportWhatsAppFab'));
 
 // Map route prefixes to page titles (Arabic)
 const pageTitles: Record<string, string> = {
@@ -68,6 +70,8 @@ const pageTitles: Record<string, string> = {
   '/store/affiliates':        'المسوّقون',
   '/restaurant/affiliates':   'المسوّقون',
   '/finance':                 'القسم المالي',
+  '/store/cod-settlement':    'تسوية التحصيل',
+  '/restaurant/cod-settlement': 'تسوية التحصيل',
   '/features':                'الميزات',
   '/profile':                 'حسابي',
   '/admin/branches':          'الفروع',
@@ -75,6 +79,9 @@ const pageTitles: Record<string, string> = {
   '/admin/contact-messages':  'رسائل التواصل',
   '/admin/push-notifications':'بثّ الإشعارات',
   '/admin/advertisements':    'الإعلانات',
+  '/admin/verifications':     'طلبات التوثيق',
+  '/verification':            'توثيق النشاط',
+  '/help':                    'مركز المساعدة',
 };
 
 const getTitle = (pathname: string) => {
@@ -115,6 +122,7 @@ const Layout: React.FC = () => {
           «نشطٌ على اللوحة» ولم يكن يحدث عنده شيء عند وصول طلب */}
       <Suspense fallback={null}>
         <NewOrderAlarm />
+        <SupportWhatsAppFab />
       </Suspense>
     </div>
   );

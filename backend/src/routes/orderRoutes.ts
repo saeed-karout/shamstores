@@ -18,6 +18,7 @@ import { checkPlanFeature } from '../middleware/checkPlan';
 import { rateOrder } from '../controllers/deliveryController';
 import { getReviewableItems, submitReview } from '../controllers/productReviewController';
 import { exportOrders } from '../controllers/orderCsvController';
+import { getPublicOrderTracking } from '../controllers/checkoutController';
 
 const router = Router();
 
@@ -29,6 +30,14 @@ const router = Router();
  * @access  Public
  */
 router.post('/', createOrder);
+
+/**
+ * @route   GET /api/orders/:orderId/track
+ * @desc    صفحة تتبّع الطلب العامّة (`/track/:orderId`) — كانت تنادي هذا المسار
+ *          ولم يكن موجوداً. المعرّف الطويل هو المفتاح؛ راجع checkoutController
+ * @access  Public
+ */
+router.get('/:orderId/track', getPublicOrderTracking);
 
 // ==================== المسارات الخاصة ====================
 

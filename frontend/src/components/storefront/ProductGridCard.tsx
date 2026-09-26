@@ -29,6 +29,7 @@ import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getVisualBadges } from '@/utils/catalogBadges';
 import QuantityStepper from './QuantityStepper';
+import OldSypHint from './OldSypHint';
 import { useT } from '@/i18n/storefront';
 
 export interface StorefrontProduct {
@@ -245,6 +246,8 @@ const ProductGridCard: React.FC<Props> = ({
           {formatPrice(original, currency)}
         </div>
       )}
+      {/* بعد المشطوب لا بينه وبين السعر: السعران الحاليّ والسابق يُقرآن معاً */}
+      <OldSypHint amount={product.price} currency={currency} color={isOverlay ? 'rgba(255,255,255,0.72)' : undefined} />
     </div>
   );
 

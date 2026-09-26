@@ -37,9 +37,11 @@ import {
   useScrolledPast
 } from '../ShopShellParts';
 import type { ShopLayoutProps } from '../ShopLayout';
+import VerifiedBadge from '../VerifiedBadge';
 
 const LandingShell: React.FC<ShopLayoutProps> = ({
   name,
+  verified = false,
   description,
   logo,
   coverImage,
@@ -170,7 +172,10 @@ const LandingShell: React.FC<ShopLayoutProps> = ({
               }}
             />
           )}
-          <h1 style={{ margin: 0, fontSize: 'clamp(20px, 3.6vw, 26px)', fontWeight: 900 }}>{name}</h1>
+          <h1 style={{ margin: 0, fontSize: 'clamp(20px, 3.6vw, 26px)', fontWeight: 900 }}>
+            {name}
+            {verified && <VerifiedBadge size={20} businessName={name} />}
+          </h1>
           {description && (
             <p style={{ margin: '7px auto 0', maxWidth: 480, fontSize: 13, lineHeight: 1.85, color: sf.muted }}>
               {description}

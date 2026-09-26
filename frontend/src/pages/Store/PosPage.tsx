@@ -22,13 +22,17 @@ import { Link } from 'react-router-dom';
 import {
   IoSearch, IoBarcode, IoTrash, IoAdd, IoRemove, IoCart,
   IoCheckmarkCircle, IoClose, IoReceiptOutline, IoStatsChart,
-  IoLockClosed, IoSparkles, IoArrowUndo
+  IoLockClosed, IoSparkles, IoArrowUndo, IoCloudOfflineOutline, IoSync
 } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
 import { detectEngine, startScan, ScanHandle } from '@/utils/barcodeScanner';
 import { SkeletonScope, SkeletonLine, SkeletonBlock, BusyDots } from '@/components/common/Skeleton';
+import {
+  QueuedSale, newIdempotencyKey, enqueueSale, listQueue, discardSale, retryFailed,
+  onQueueChange, syncQueue, saveCatalog, loadCatalog, postSale, isNetworkError
+} from '@/services/posOfflineQueue';
 
 const C = {
   bg: '#F4F7F4',
@@ -63,6 +67,8 @@ interface Line extends Product {
 
 interface Receipt {
   orderNumber: string;
+  /** محفوظةٌ على الجهاز ولم تصل الخادم بعد — يُطبع عليها «بانتظار المزامنة» */
+  pending?: boolean;
   subtotal: number;
   discountAmount: number;
   total: number;
@@ -155,6 +161,13 @@ const PosPage: React.FC = () => {
   const [returnOpen, setReturnOpen] = useState(false);
   const [returnReceipt, setReturnReceipt] = useState<ReturnReceipt | null>(null);
   const [scanning, setScanning] = useState(false);
+  // ---------- دون اتصال ----------
+  const [queue, setQueue] = useState<QueuedSale[]>([]);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [online, setOnline] = useState(() => navigator.onLine !== false);
+  // آخر نداء أصنافٍ فشل لانقطاع الشبكة — فالمعروض من نسخة الجهاز
+  const [catalogOffline, setCatalogOffline] = useState(false);
   /**
    * الميزة مقفلة.
    *
@@ -175,13 +188,86 @@ const PosPage: React.FC = () => {
   const load = useCallback(async (q: string) => {
     try {
       const data: any = await api.get(`/pos/products${q ? `?q=${encodeURIComponent(q)}` : ''}`);
-      setProducts(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setProducts(list);
       setLocked(false);
+      setCatalogOffline(false);
+      // القائمة الكاملة تُحفظ على الجهاز — البحث بها حين ينقطع الخطّ
+      if (!q) saveCatalog(list);
     } catch (e: any) {
       if (e?.response?.status === 403) setLocked(true);
-      else toast.error('تعذّر جلب الأصناف');
+      else if (isNetworkError(e)) {
+        // بلا شبكة: البحث في نسخة الجهاز بدل شاشة أصنافٍ فارغة
+        const cached = await loadCatalog<Product>();
+        const needle = q.trim().toLowerCase();
+        setProducts(
+          needle
+            ? cached.filter((p) => p.name.toLowerCase().includes(needle) || (p.sku || '').toLowerCase().includes(needle))
+            : cached
+        );
+        setCatalogOffline(true);
+        if (cached.length > 0) setLocked(false);
+      } else toast.error('تعذّر جلب الأصناف');
     }
   }, []);
+
+  // ---------- الطابور والمزامنة ----------
+  const refreshQueue = useCallback(async () => setQueue(await listQueue()), []);
+
+  const syncNow = useCallback(async (manual = false) => {
+    setSyncing(true);
+    try {
+      const result = await syncQueue();
+      if (result.synced > 0) {
+        toast.success(`تمّت مزامنة ${result.synced} بيعة`);
+        load(term);
+        loadShift();
+      }
+      if (result.shortages > 0) {
+        toast(`${result.shortages} بيعة سُجّلت والرصيد لا يكفيها — راجع المخزون`, { icon: '⚠️', duration: 8000 });
+      }
+      if (result.priceChanged > 0) {
+        toast(`${result.priceChanged} بيعة سعرها بعيد جداً عن سعر اليوم فحُسبت بسعر اليوم — راجعها`, { icon: 'ℹ️', duration: 8000 });
+      }
+      if (result.failed > 0) {
+        toast.error(`${result.failed} بيعة رفضها الخادم — افتح الطابور للمراجعة`, { duration: 8000 });
+      }
+      if (manual && result.interrupted) toast.error('ما زال الاتصال مقطوعاً — ستُرسل تلقائياً حين يعود');
+    } finally {
+      setSyncing(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [term, load]);
+
+  useEffect(() => {
+    refreshQueue();
+    const off = onQueueChange(refreshQueue);
+    return () => { off(); };
+  }, [refreshQueue]);
+
+  // المزامنة تلقائية: عند الإقلاع، وعند عودة الشبكة، وكل نصف دقيقة ما دام
+  // في الطابور شيء — `online` وحده لا يكفي: الراوتر قد يبقى «متصلاً» والخطّ
+  // خلفه ميّت، ثم يعود دون أن يُطلق المتصفّح حدثاً
+  const pendingCount = queue.filter((s) => s.status === 'pending').length;
+  const failedCount = queue.length - pendingCount;
+
+  useEffect(() => {
+    const up = () => { setOnline(true); syncNow(); };
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
+  }, [syncNow]);
+
+  useEffect(() => {
+    if (pendingCount === 0) return;
+    const first = window.setTimeout(() => syncNow(), 1500);
+    const timer = window.setInterval(() => syncNow(), 30000);
+    return () => { window.clearTimeout(first); window.clearInterval(timer); };
+  }, [pendingCount > 0, syncNow]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadShift = useCallback(async () => {
     try {
@@ -217,14 +303,25 @@ const PosPage: React.FC = () => {
   const addProduct = useCallback((product: Product) => {
     setCart((prev) => {
       const existing = prev.find((l) => l.id === product.id);
+      // دون اتصال الرصيد المعروض نسخةٌ قديمة، والبضاعة في يد الزبون فعلاً:
+      // تنبيهٌ لا منع — والخادم يقبلها ويعلّمها للمراجعة عند المزامنة
+      const offlineNow = navigator.onLine === false;
       if (existing) {
         if (existing.quantity >= available(product)) {
+          if (offlineNow) {
+            toast(`الرصيد المحفوظ ${product.stock} من «${product.name}» — ستُعلَّم للمراجعة`, { icon: '⚠️', id: `short-${product.id}` });
+            return prev.map((l) => (l.id === product.id ? { ...l, quantity: l.quantity + 1 } : l));
+          }
           toast.error(`المتاح ${product.stock} فقط من «${product.name}»`);
           return prev;
         }
         return prev.map((l) => (l.id === product.id ? { ...l, quantity: l.quantity + 1 } : l));
       }
       if (available(product) < 1) {
+        if (offlineNow) {
+          toast(`«${product.name}» نافدٌ في آخر نسخة — ستُعلَّم للمراجعة`, { icon: '⚠️', id: `short-${product.id}` });
+          return [...prev, { ...product, quantity: 1 }];
+        }
         toast.error(`«${product.name}» غير متوفّر`);
         return prev;
       }
@@ -281,23 +378,72 @@ const PosPage: React.FC = () => {
   const total = subtotal - discountValue;
   const change = Number(received) > 0 ? Number(received) - total : 0;
 
+  const resetCart = () => {
+    setCart([]);
+    setReceived('');
+    setDiscount('');
+  };
+
+  /**
+   * يحفظ البيعة على الجهاز ويُخرج إيصالاً «بانتظار المزامنة».
+   *
+   * الرقم محلّيّ من المفتاح — رقم البيعة الحقيقيّ يولّده الخادم عند
+   * المزامنة، والإيصال يقول ذلك بوضوح كي لا يُبحث به في المرتجعات.
+   */
+  const queueSale = async (key: string, soldAt: string) => {
+    try {
+      await enqueueSale({
+        key,
+        soldAt,
+        items: cart.map((l) => ({ productId: l.id, name: l.name, quantity: l.quantity, price: l.price })),
+        paymentMethod: payment,
+        discountAmount: discountValue,
+        localTotal: total
+      });
+    } catch {
+      // IndexedDB ممنوعة (تصفّح خاصّ قديم) — لا نطبع إيصالاً لبيعةٍ لم تُحفظ
+      toast.error('لا اتصال، وتعذّر حفظ البيعة على هذا الجهاز — لا تُتمّها الآن', { duration: 8000 });
+      return;
+    }
+    setReceipt({
+      orderNumber: `محلّي-${key.replace(/-/g, '').slice(0, 6).toUpperCase()}`,
+      pending: true,
+      subtotal,
+      discountAmount: discountValue,
+      total,
+      paymentMethod: payment,
+      items: cart.map((l) => ({ name: l.name, quantity: l.quantity, price: l.price, lineTotal: l.price * l.quantity }))
+    });
+    resetCart();
+    toast('حُفظت البيعة على الجهاز — تُرسل تلقائياً حين يعود الاتصال', { icon: '📥', duration: 5000 });
+  };
+
   const complete = async () => {
     if (cart.length === 0) return;
     setSaving(true);
+    // المفتاح قبل أوّل محاولة: إن وصلت هذه وضاع ردّها، فالنسخة التي تدخل
+    // الطابور تحمل المفتاح نفسه ولا تُسجَّل مرّتين
+    const key = newIdempotencyKey();
+    const soldAt = new Date().toISOString();
     try {
-      const data: any = await api.post('/pos/sale', {
+      if (navigator.onLine === false) {
+        await queueSale(key, soldAt);
+        return;
+      }
+      const data: any = await postSale({
         items: cart.map((l) => ({ productId: l.id, quantity: l.quantity })),
         paymentMethod: payment,
-        discountAmount: discountValue
+        discountAmount: discountValue,
+        idempotencyKey: key
       });
       setReceipt(data);
-      setCart([]);
-      setReceived('');
-      setDiscount('');
+      resetCart();
       load(term);
       loadShift();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error || 'تعذّر إتمام البيعة', { duration: 6000 });
+      // بلا ردّ (انقطاع أو مهلة) = الطابور. أمّا ردٌّ بخطأ فحقيقيّ يُعرض
+      if (isNetworkError(e)) await queueSale(key, soldAt);
+      else toast.error(e?.response?.data?.error || 'تعذّر إتمام البيعة', { duration: 6000 });
     } finally {
       setSaving(false);
     }
@@ -385,7 +531,40 @@ const PosPage: React.FC = () => {
             <IoArrowUndo size={14} color={C.red} />
             مرتجع
           </button>
+          {queue.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setQueueOpen(true)}
+              title="بيعات محفوظة على الجهاز لم تصل الخادم بعد"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36,
+                padding: '0 14px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit',
+                background: failedCount > 0 ? `${C.red}14` : '#FEF3C7',
+                border: `1px solid ${failedCount > 0 ? C.red : '#F59E0B'}`,
+                color: failedCount > 0 ? C.red : '#78350F',
+                fontSize: 12.5, fontWeight: 800
+              }}
+            >
+              <IoSync size={14} className={syncing ? 'pos-spin' : undefined} />
+              بانتظار المزامنة: <b style={{ fontVariantNumeric: 'tabular-nums' }}>{pendingCount}</b>
+              {failedCount > 0 && <span>· مرفوضة {failedCount}</span>}
+            </button>
+          )}
         </header>
+
+        {(!online || catalogOffline) && (
+          <div role="status" style={{
+            display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12,
+            padding: '10px 14px', borderRadius: 13, background: '#FEF3C7', color: '#78350F',
+            border: '1px solid #F59E0B', fontSize: 13, fontWeight: 700, lineHeight: 1.7
+          }}>
+            <IoCloudOfflineOutline size={18} style={{ flexShrink: 0 }} />
+            <span>
+              لا اتصال — البيع مستمرّ. البيعات تُحفظ على هذا الجهاز وتُرسل وحدها حين يعود الاتصال،
+              والأصناف والأرصدة من آخر نسخة محفوظة.
+            </span>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.6fr) minmax(0,1fr)', gap: 14 }}
              className="pos-grid">
@@ -452,7 +631,9 @@ const PosPage: React.FC = () => {
               gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))'
             }}>
               {products.map((product) => {
-                const out = available(product) < 1;
+                // دون اتصال الرصيد نسخةٌ قديمة: الصنف «النافد» فيها قد يكون على
+                // الرفّ فعلاً، فلا يُقفل — `addProduct` ينبّه والخادم يعلّمه
+                const out = available(product) < 1 && online && !catalogOffline;
                 return (
                   <button
                     key={product.id}
@@ -674,6 +855,14 @@ const PosPage: React.FC = () => {
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
               <IoReceiptOutline size={26} />
               <div style={{ fontWeight: 800, marginTop: 6 }}>{receipt.orderNumber}</div>
+              {receipt.pending && (
+                <div style={{
+                  margin: '6px auto 0', display: 'inline-block', padding: '2px 10px',
+                  border: '1px dashed #111', borderRadius: 6, fontSize: 11.5, fontWeight: 800
+                }}>
+                  بانتظار المزامنة
+                </div>
+              )}
               <div style={{ fontSize: 11, color: '#666' }}>
                 {new Date().toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}
               </div>
@@ -745,6 +934,15 @@ const PosPage: React.FC = () => {
 
       {shiftOpen && shift && <ShiftSheet shift={shift} onClose={() => setShiftOpen(false)} />}
 
+      {queueOpen && (
+        <QueueSheet
+          queue={queue}
+          syncing={syncing}
+          onSync={() => syncNow(true)}
+          onClose={() => setQueueOpen(false)}
+        />
+      )}
+
       <style>{`
         @media (max-width: 900px) {
           .pos-grid { grid-template-columns: 1fr !important; }
@@ -761,10 +959,94 @@ const PosPage: React.FC = () => {
           .pos-receipt { position: absolute; inset: 0; margin: 0; box-shadow: none; }
           .pos-receipt-actions { display: none !important; }
         }
+        .pos-spin { animation: pos-spin 1s linear infinite; }
+        @keyframes pos-spin { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );
 };
+
+/**
+ * الطابور: ما لم يصل الخادم بعد، وما رفضه.
+ *
+ * **المرفوضة لا تُحذف وحدها:** بيعةٌ قبض الكاشير ثمنها ثم رفضها الخادم
+ * (صنفٌ حُذف مثلاً) مالٌ في الدرج بلا قيد. حذفها قرار التاجر بعد أن يراها،
+ * لا قرار الشيفرة.
+ */
+const QueueSheet: React.FC<{
+  queue: QueuedSale[];
+  syncing: boolean;
+  onSync: () => void;
+  onClose: () => void;
+}> = ({ queue, syncing, onSync, onClose }) => (
+  <Sheet
+    title="بيعات بانتظار المزامنة"
+    onClose={onClose}
+    footer={
+      <button
+        type="button"
+        onClick={onSync}
+        disabled={syncing}
+        style={{
+          width: '100%', minHeight: 46, borderRadius: 13, border: 'none', fontFamily: 'inherit',
+          background: C.accent, color: '#FFFFFF', fontWeight: 900, fontSize: 14,
+          cursor: syncing ? 'wait' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+        }}
+      >
+        <IoSync size={16} className={syncing ? 'pos-spin' : undefined} />
+        {syncing ? 'جارٍ الإرسال…' : 'أرسل الآن'}
+      </button>
+    }
+  >
+    {queue.length === 0 ? (
+      <p style={{ color: C.muted, fontSize: 13, textAlign: 'center', margin: '18px 0' }}>كل البيعات وصلت الخادم.</p>
+    ) : (
+      <div style={{ display: 'grid', gap: 9 }}>
+        {queue.map((sale) => (
+          <div key={sale.key} style={{
+            border: `1px solid ${sale.status === 'failed' ? C.red : C.border}`, borderRadius: 12,
+            padding: '10px 12px', background: C.card
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 800 }}>
+              <span>{new Date(sale.soldAt).toLocaleString('ar', { dateStyle: 'short', timeStyle: 'short' })}</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>{money(sale.localTotal)}</span>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4, lineHeight: 1.7 }}>
+              {sale.items.map((l) => `${l.name} ×${l.quantity}`).join('، ')}
+            </div>
+            {sale.status === 'failed' && (
+              <>
+                <div style={{ fontSize: 12, color: C.red, marginTop: 6, fontWeight: 700 }}>
+                  رفضها الخادم: {sale.error}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button type="button" onClick={() => retryFailed(sale.key)} style={queueAction(C.accent)}>
+                    أعد المحاولة
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('حذف هذه البيعة من الجهاز نهائياً؟ لن تُسجَّل في الدفاتر.')) discardSale(sale.key);
+                    }}
+                    style={queueAction(C.red)}
+                  >
+                    احذفها
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </Sheet>
+);
+
+const queueAction = (color: string): React.CSSProperties => ({
+  flex: 1, minHeight: 36, borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit',
+  background: 'transparent', border: `1px solid ${color}`, color, fontSize: 12.5, fontWeight: 800
+});
 
 const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div style={{ display: 'flex', justifyContent: 'space-between' }}>

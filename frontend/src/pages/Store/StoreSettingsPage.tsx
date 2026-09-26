@@ -15,6 +15,7 @@ import StorefrontDesignPicker from '@/components/settings/StorefrontDesignPicker
 import PalettePicker from '@/components/settings/PalettePicker';
 import { DEFAULT_DESIGN, resolveDesign, type StorefrontDesign } from '@/utils/storefrontDesign';
 import CurrencyDisplaySettings from '@/components/settings/CurrencyDisplaySettings';
+import UsdPricingSettings from '@/components/settings/UsdPricingSettings';
 import LanguageDisplaySettings from '@/components/settings/LanguageDisplaySettings';
 import useFeatures from '@/hooks/useFeatures';
 import OrderAlertsSettings from '@/components/settings/OrderAlertsSettings';
@@ -51,10 +52,13 @@ import {
 } from 'react-icons/io5';
 import SeoSettingsPanel, { SeoSettingsValue } from '@/components/settings/SeoSettingsPanel';
 import TrackingSettingsPanel, { TrackingSettingsValue } from '@/components/settings/TrackingSettingsPanel';
+import SouqListingPanel from '@/components/settings/SouqListingPanel';
 import { publicStorefrontUrl } from '@/utils/storefrontUrl';
 import { getImageUrl } from '@/utils/imageHelpers';
 import DomainManager from '@/components/settings/DomainManager';
 import ShamCashSettingsTab, { PaymentSettingsValue } from '@/components/settings/ShamCashSettingsTab';
+import CheckoutOptionsSettings from '@/components/settings/CheckoutOptionsSettings';
+import VerificationSettingsCard from '@/components/settings/VerificationSettingsCard';
 
 // ==================== ثوابت التصميم الأساسية ====================
 const C = {
@@ -640,6 +644,8 @@ const StoreSettingsPage: React.FC = () => {
       {/* ==================== تبويب عام ==================== */}
       {activeTab === 'general' && (
         <div>
+          {/* «تاجر موثّق» — مدخلٌ إلى صفحته، لا نموذجٌ بين الحقول */}
+          <VerificationSettingsCard />
           <div style={sectionCard}>
             <h2 style={{ color: C.text, fontSize: 16, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <IoStorefront style={{ color: C.accent }} />
@@ -863,6 +869,10 @@ const StoreSettingsPage: React.FC = () => {
               colors={{ ...C, warn: C.orange }}
               disabled={!canUpdateSettings}
             />
+          </div>
+
+          <div style={{ marginTop: 20 }}>
+            <UsdPricingSettings colors={{ ...C, warn: C.orange }} disabled={!canUpdateSettings} />
           </div>
 
           <div style={{ marginTop: 20 }}>
@@ -1272,6 +1282,7 @@ const StoreSettingsPage: React.FC = () => {
 
       {/* ==================== تبويب الدفع ==================== */}
       {activeTab === 'payment' && (
+        <>
         <ShamCashSettingsTab
           value={paymentSettings}
           onSave={handleSavePayment}
@@ -1279,6 +1290,9 @@ const StoreSettingsPage: React.FC = () => {
           canEdit={canUpdateSettings}
           colors={C}
         />
+        {/* واتساب بعد الطلب، المعاينة، هدايا المغتربين، العربون — يحفظ نفسه بنفسه */}
+        <CheckoutOptionsSettings colors={C} canEdit={canUpdateSettings} />
+        </>
       )}
 
       {/* ==================== تبويب محرّكات البحث ==================== */}
@@ -1308,6 +1322,8 @@ const StoreSettingsPage: React.FC = () => {
             entitled={permissions.canViewAnalytics || isSuperAdmin}
             colors={C}
           />
+          {/* الظهور في «سوق شام ستورز» — من باب الوصول إلى الزبائن كمحرّكات البحث */}
+          <SouqListingPanel canEdit={canUpdateSettings} colors={C} />
         </>
       )}
 

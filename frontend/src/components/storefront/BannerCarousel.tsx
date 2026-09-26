@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import { useT } from '@/i18n/storefront';
 import { sd } from '@/utils/storefrontDesign';
+import { useSaveData } from '@/utils/saveData';
 
 export interface BannerSlide {
   id: string;
@@ -57,7 +58,14 @@ const BannerCarousel: React.FC<BannerCarouselProps> = ({
   const [paused, setPaused] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
 
-  const visible = useMemo(() => slides.filter((slide) => slide.imageUrl), [slides]);
+  const saveData = useSaveData();
+
+  // وضع توفير البيانات: شريحةٌ واحدة ثابتة. كل شريحةٍ إضافية صورةٌ بعرض
+  // الشاشة تُحمَّل ولو لم يمرّر إليها أحد — وهي أغلى ما في الصفحة
+  const visible = useMemo(() => {
+    const withImages = slides.filter((slide) => slide.imageUrl);
+    return saveData ? withImages.slice(0, 1) : withImages;
+  }, [slides, saveData]);
   const count = visible.length;
 
   // التشغيل التلقائي يتوقف مع تفضيل تقليل الحركة: بانر يتحرّك وحده مصدر

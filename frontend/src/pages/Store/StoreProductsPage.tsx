@@ -23,6 +23,13 @@ import MultiImageUploader from '@/components/settings/MultiImageUploader';
 import ProductOptionsEditor, { OptionGroup } from '@/components/settings/ProductOptionsEditor';
 import { getDiscountPercent } from '@/utils/catalogBadges';
 import { formatPrice } from '@/utils/currency';
+import useUsdPricing from '@/hooks/useUsdPricing';
+import UsdPriceFields from '@/components/pricing/UsdPriceFields';
+import AiImportTool from '@/components/ai/AiImportTool';
+import AiDescribeButton from '@/components/ai/AiDescribeButton';
+import EnhanceImageButton from '@/components/ai/EnhanceImageButton';
+import { apiClient } from '@/services/api/client';
+import ProductDepositField, { DepositKind, depositPayload } from '@/components/store/ProductDepositField';
 
 // ✅ الألوان الثابتة فقط للعناصر التي لا تتغير (الأحمر، الأزرق، إلخ)
 const staticColors = {
@@ -168,6 +175,11 @@ const StoreProductsPage: React.FC = () => {
     image: '',
   });
 
+  // التسعير بالدولار: حقلان منفصلان عن `productForm` — وضع الليرة لا يعرفهما أصلاً
+  const usdPricing = useUsdPricing();
+  const [usdForm, setUsdForm] = useState({ priceUsd: '', originalPriceUsd: '' });
+  // عنوان محرّكات البحث — منفصلٌ كحقلي الدولار، ويملؤه مساعد الوصف غالباً
+  const [seoTitle, setSeoTitle] = useState('');
   const [productForm, setProductForm] = useState({
     tags: [] as string[],
     storeId: '',
@@ -187,6 +199,9 @@ const StoreProductsPage: React.FC = () => {
     isAvailable: true,
     comingSoon: false,
     availableAt: '',
+    // العربون — راجع components/store/ProductDepositField.tsx
+    depositType: '' as DepositKind,
+    depositValue: '',
   });
 
   useEffect(() => {
@@ -332,7 +347,9 @@ const StoreProductsPage: React.FC = () => {
   };
 
   const resetProductForm = () => {
-    setProductForm({ tags: [], storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', options: [], isAvailable: true, comingSoon: false, availableAt: '' });
+    setUsdForm({ priceUsd: '', originalPriceUsd: '' });
+    setSeoTitle('');
+    setProductForm({ tags: [], storeId: selectedBranchId === 'all' ? (store?.id || '') : selectedBranchId, categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '', price: '', originalPrice: '', isPopular: false, images: [], imageUrl: '', stock: '', sku: '', options: [], isAvailable: true, comingSoon: false, availableAt: '', depositType: '', depositValue: '' });
     setSelectedProduct(null);
   };
 
@@ -351,6 +368,11 @@ const StoreProductsPage: React.FC = () => {
     if (selectedBranchId === 'all') { toast.error('اختر فرعاً محدداً لإدارة المنتجات'); return; }
     if (product) {
       setSelectedProduct(product);
+      setSeoTitle((product as any).seoTitle || '');
+      setUsdForm({
+        priceUsd: (product as any).priceUsd != null ? String((product as any).priceUsd) : '',
+        originalPriceUsd: (product as any).originalPriceUsd != null ? String((product as any).originalPriceUsd) : '',
+      });
       setProductForm({
         // الوسوم تصل مصفوفةً أو نصّاً JSON حسب مسار الحفظ — كالخيارات
         tags: (() => {
@@ -393,6 +415,8 @@ const StoreProductsPage: React.FC = () => {
         isAvailable: product.isAvailable,
         comingSoon: (product as any).comingSoon === true,
         availableAt: (product as any).availableAt ? String((product as any).availableAt).slice(0, 10) : '',
+        depositType: ((product as any).depositType || '') as DepositKind,
+        depositValue: (product as any).depositValue ? String((product as any).depositValue) : '',
       });
     } else { resetProductForm(); }
     setShowProductModal(true);
@@ -420,10 +444,14 @@ const StoreProductsPage: React.FC = () => {
   const handleSaveProduct = async () => {
     try {
       if (!productForm.name) { toast.error('اسم المنتج مطلوب'); return; }
-      if (!productForm.price || parseFloat(productForm.price) <= 0) { toast.error('السعر مطلوب ويجب أن يكون أكبر من 0'); return; }
-      const price = parseFloat(productForm.price);
+      // بالدولار: الليرة معاينةٌ تمرّ حارس «السعر > 0» في الخادم، ثم يُعيد
+      // الخادم حسابها من `priceUsd` — فلا يُحفظ رقم المتصفّح أبداً
+      const usdSyp = usdPricing.isUsd ? usdPricing.preview(usdForm.priceUsd) : null;
+      if (usdPricing.isUsd && !usdSyp) { toast.error('السعر بالدولار مطلوب ويجب أن يكون أكبر من 0'); return; }
+      if (!usdPricing.isUsd && (!productForm.price || parseFloat(productForm.price) <= 0)) { toast.error('السعر مطلوب ويجب أن يكون أكبر من 0'); return; }
+      const price = usdSyp ?? parseFloat(productForm.price);
       if (isNaN(price) || price <= 0) { toast.error('السعر يجب أن يكون رقماً صحيحاً أكبر من 0'); return; }
-      const data = { ...productForm, storeId: productForm.storeId || selectedBranchId, price, 
+      const data = { ...productForm, storeId: productForm.storeId || selectedBranchId, price, seoTitle,
         // كان discountedPrice — حقل لا وجود له في المخطط ولا في المتحكّم
         // إطلاقاً: يملؤه التاجر ويُرمى بصمت. الصحيح تخزين سعر ما **قبل**
         // التخفيض، فيبقى price هو ما يُحصَّل ولا يحتاج أي موضع قراءة تعديلاً.
@@ -431,7 +459,13 @@ const StoreProductsPage: React.FC = () => {
         isPopular: productForm.isPopular === true,
         images: productForm.images, stock: parseInt(productForm.stock) || 0,
         comingSoon: productForm.comingSoon === true,
-        availableAt: productForm.comingSoon && productForm.availableAt ? productForm.availableAt : null };
+        availableAt: productForm.comingSoon && productForm.availableAt ? productForm.availableAt : null,
+        ...depositPayload(productForm.depositType, productForm.depositValue, !!(selectedProduct as any)?.depositType),
+        ...(usdPricing.isUsd ? {
+          priceUsd: parseFloat(usdForm.priceUsd),
+          originalPriceUsd: usdForm.originalPriceUsd ? parseFloat(usdForm.originalPriceUsd) : null,
+          originalPrice: usdPricing.preview(usdForm.originalPriceUsd),
+        } : {}) };
       if (selectedProduct) {
         await api.put(`/store/products/${selectedProduct.id}`, data);
         toast.success('تم تحديث المنتج بنجاح');
@@ -722,6 +756,15 @@ const StoreProductsPage: React.FC = () => {
             <span>{visibleProducts.length}</span>
           </h2>
           <div className="pc-section-tools">
+            {(isSuperAdmin || isStoreOwner) && (
+              <AiImportTool
+                kind="store"
+                colors={reorderColors}
+                onDone={fetchData}
+                branchId={selectedBranchId === 'all' ? undefined : selectedBranchId}
+                categories={categories.map((c) => c.name)}
+              />
+            )}
             {(isSuperAdmin || isStoreOwner) && <ProductCsvTools colors={reorderColors} onDone={fetchData} />}
             {(isSuperAdmin || isStoreOwner) && products.length > 1 && (
               <ReorderToggle
@@ -943,6 +986,18 @@ const StoreProductsPage: React.FC = () => {
               <input type="text" value={productForm.nameEn} onChange={(e) => setProductForm({ ...productForm, nameEn: e.target.value })} style={dynamicInputStyle} placeholder="Product name" />
             </div>
           </div>
+          {usdPricing.isUsd && usdPricing.config ? (
+            <UsdPriceFields
+              config={usdPricing.config}
+              preview={usdPricing.preview}
+              priceUsd={usdForm.priceUsd}
+              originalPriceUsd={usdForm.originalPriceUsd}
+              onChange={(next) => setUsdForm({ ...usdForm, ...next })}
+              inputStyle={dynamicInputStyle}
+              labelStyle={dynamicLabelStyle}
+              colors={dynamicColors}
+            />
+          ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={dynamicLabelStyle}>السعر (ل.س) <span style={{ color: staticColors.red }}>*</span></label>
@@ -966,6 +1021,7 @@ const StoreProductsPage: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
 
           <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
             <input
@@ -1001,6 +1057,22 @@ const StoreProductsPage: React.FC = () => {
               واحدة من عمود «الوسوم» في ملفّ CSV.
             </p>
           </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <AiDescribeButton
+              name={productForm.name}
+              price={productForm.price}
+              category={productForm.categoryId ? categories.find((c) => c.id === productForm.categoryId)?.name : null}
+              notes={productForm.description}
+              imageUrl={productForm.images[0] || productForm.imageUrl || null}
+              hasExisting={!!(productForm.description.trim() || productForm.descriptionEn.trim())}
+              onApply={(copy) => {
+                setProductForm((f) => ({ ...f, description: copy.description, descriptionEn: copy.descriptionEn, nameEn: f.nameEn || copy.nameEn }));
+                if (copy.seoTitle) setSeoTitle(copy.seoTitle);
+              }}
+              plansHref="/store/plans"
+              colors={dynamicColors}
+            />
+          </div>
           <div>
             <label style={dynamicLabelStyle}>الوصف (عربي)</label>
             <textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} style={{ ...dynamicInputStyle, resize: 'vertical' }} rows={3} placeholder="وصف المنتج..." />
@@ -1010,7 +1082,24 @@ const StoreProductsPage: React.FC = () => {
             <textarea value={productForm.descriptionEn} onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })} style={{ ...dynamicInputStyle, resize: 'vertical' }} rows={3} placeholder="Product description..." />
           </div>
           <div>
-            <label style={dynamicLabelStyle}>صور المنتج</label>
+            <label style={dynamicLabelStyle}>عنوان الصفحة في محرّكات البحث</label>
+            <input type="text" maxLength={90} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} style={dynamicInputStyle} placeholder={`${productForm.name || 'اسم المنتج'} | ${store?.name || 'متجرك'}`} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+              <label style={{ ...dynamicLabelStyle, marginBottom: 0 }}>صور المنتج</label>
+              <EnhanceImageButton
+                imageUrl={productForm.images[0] || productForm.imageUrl || null}
+                colors={dynamicColors}
+                onEnhanced={async (file) => {
+                  const res = await apiClient.uploadMultipleImages([file], 'products', productForm.storeId || selectedBranchId, 'gallery');
+                  const url = res?.images?.[0]?.url;
+                  if (!url) throw new Error('upload failed');
+                  // المحسّنة تحلّ محلّ الغلاف؛ بقية الصور كما هي
+                  setProductForm((f) => ({ ...f, images: [url, ...f.images.slice(1)].slice(0, 8), imageUrl: url }));
+                }}
+              />
+            </div>
             <MultiImageUploader
               value={productForm.images}
               onChange={(images) => setProductForm({ ...productForm, images })}
@@ -1073,6 +1162,14 @@ const StoreProductsPage: React.FC = () => {
               </div>
             )}
           </div>
+          <ProductDepositField
+            type={productForm.depositType}
+            value={productForm.depositValue}
+            onChange={(next) => setProductForm({ ...productForm, ...next })}
+            colors={dynamicColors}
+            inputStyle={dynamicInputStyle}
+            labelStyle={dynamicLabelStyle}
+          />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <input type="checkbox" checked={productForm.isAvailable} onChange={(e) => setProductForm({ ...productForm, isAvailable: e.target.checked })} style={{ width: 16, height: 16, accentColor: dynamicColors.accent }} />
             <span style={{ color: dynamicColors.text, fontSize: 14, fontWeight: 500 }}>المنتج متاح للبيع</span>

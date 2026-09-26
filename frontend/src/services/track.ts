@@ -69,7 +69,11 @@ const source = (): string => {
 
     let value = 'direct';
     const ref = document.referrer;
-    if (ref) {
+    // روابط «سوق شام ستورز» تحمل `?ref=souq`: المُحيل وحده لا يكفي — السوق
+    // على نطاق المنصّة نفسه، فتُحسب زيارته «مباشرة» ولا يرى التاجر أن السوق
+    // جلبه. والوسم ثابتٌ ومحدود فلا يفتح باباً لقيمٍ حرّة في تقرير المصادر.
+    if (new URLSearchParams(location.search).get('ref') === 'souq') value = 'souq';
+    else if (ref) {
       try {
         const host = new URL(ref).hostname.toLowerCase().replace(/^(www|m|l)\./, '');
         if (host && host !== location.hostname.toLowerCase() && !host.endsWith('.shamstores.com')) {

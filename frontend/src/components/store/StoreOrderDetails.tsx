@@ -33,7 +33,8 @@ import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
-import OrderPrintActions from '@/components/orders/OrderPrintActions';
+import OrderCheckoutPanel from '@/components/orders/OrderCheckoutPanel';
+import { DeliveryAddressView, CodCollectionCard } from '@/components/orders/OrderDeliveryInfo';
 
 const C = {
   bg: '#F4F7F4',
@@ -176,7 +177,8 @@ const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateSt
           {format(new Date(order.createdAt), 'dd MMMM yyyy — hh:mm a', { locale: ar })}
         </div>
         {/* فاتورةٌ للزبون وملصقٌ للطرد — بنقرةٍ من تفاصيل الطلب */}
-        <OrderPrintActions order={order as any} />
+        {/* الطباعة داخل اللوحة: تطبع حالة الدفع بعد «تم استلام الدفعة» والعربون لا لقطة القائمة القديمة */}
+        <OrderCheckoutPanel order={order as any} withPrint />
       </div>
 
       <div style={{ padding: 18 }}>
@@ -237,12 +239,15 @@ const StoreOrderDetails: React.FC<StoreOrderDetailsProps> = ({ order, onUpdateSt
               <IoCall size={14} /> {order.customerPhone}
             </a>
           )}
-          {order.deliveryAddress && (
+          {order.deliveryAddress && !(order as any).deliveryDetails && (
             <div style={{ color: C.muted, fontSize: 12.5, marginTop: 8, display: 'flex', gap: 6, lineHeight: 1.8 }}>
               <IoLocation size={14} style={{ flexShrink: 0, marginTop: 3 }} />
               {order.deliveryAddress}
             </div>
           )}
+          {/* العنوان المنظَّم وتسجيل التحصيل — components/orders/OrderDeliveryInfo */}
+          <DeliveryAddressView order={order as any} />
+          <CodCollectionCard order={order as any} currency={DEFAULT_CURRENCY} />
         </div>
 
         {/* المنتجات */}

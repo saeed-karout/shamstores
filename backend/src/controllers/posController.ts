@@ -19,6 +19,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
+import { getPricingConfig, priceForItem } from '../services/usdPricing.service';
 import { emitOrderRealtimeEvent } from '../realtime/socket';
 
 /** طرق الدفع كما في تعداد Prisma — قيمة خارجها ترتدّ 500 بلا سبب مفهوم */
@@ -78,12 +79,14 @@ export const searchProducts = async (req: AuthRequest, res: Response): Promise<v
           ...(categoryId ? { categoryId } : {}),
           ...(term ? { OR: [{ name: { contains: term } }, { sku: { contains: term } }] } : {})
         },
-        select: { id: true, name: true, sku: true, price: true, stock: true, unit: true, imageUrl: true },
+        select: { id: true, name: true, sku: true, price: true, priceUsd: true, stock: true, unit: true, imageUrl: true },
         // الأكثر مبيعاً أولاً: الكاشير يبيع نفس العشرة أصناف طوال اليوم
         orderBy: [{ ordersCount: 'desc' }, { name: 'asc' }],
         take: 60
       });
-      items = rows.map((r) => ({ ...r, price: Number(r.price) }));
+      // نفس سعر الواجهة والطلب: المسعّر بالدولار يُحسب بسعر الصرف الآن
+      const cfg = await getPricingConfig('store', business.id);
+      items = rows.map(({ priceUsd, ...r }) => ({ ...r, price: priceForItem({ price: r.price, priceUsd }, cfg).price }));
     } else {
       const rows = await prisma.menuItem.findMany({
         where: {
@@ -92,15 +95,16 @@ export const searchProducts = async (req: AuthRequest, res: Response): Promise<v
           ...(categoryId ? { categoryId } : {}),
           ...(term ? { OR: [{ name: { contains: term } }, { sku: { contains: term } }] } : {})
         },
-        select: { id: true, name: true, sku: true, price: true, image: true, trackStock: true, stock: true },
+        select: { id: true, name: true, sku: true, price: true, priceUsd: true, image: true, trackStock: true, stock: true },
         orderBy: [{ ordersCount: 'desc' }, { name: 'asc' }],
         take: 60
       });
+      const cfg = await getPricingConfig('restaurant', business.id);
       items = rows.map((r) => ({
         id: r.id,
         name: r.name,
         sku: r.sku,
-        price: Number(r.price),
+        price: priceForItem(r, cfg).price,
         // `null` لغير المتتبَّع، والرقم للمتتبَّع — والفرق يحسم هل يُمنع البيع
         stock: r.trackStock ? (r.stock ?? 0) : null,
         unit: 'piece',
@@ -136,17 +140,22 @@ export const lookupBySku = async (req: AuthRequest, res: Response): Promise<void
     if (business.kind === 'store') {
       const row = await prisma.product.findFirst({
         where: { storeId: business.id, sku },
-        select: { id: true, name: true, sku: true, price: true, stock: true, unit: true, imageUrl: true }
+        select: { id: true, name: true, sku: true, price: true, priceUsd: true, stock: true, unit: true, imageUrl: true }
       });
-      if (row) item = { ...row, price: Number(row.price) };
+      if (row) {
+        const { priceUsd, ...rest } = row;
+        const cfg = await getPricingConfig('store', business.id);
+        item = { ...rest, price: priceForItem({ price: row.price, priceUsd }, cfg).price };
+      }
     } else {
       const row = await prisma.menuItem.findFirst({
         where: { restaurantId: business.id, sku },
-        select: { id: true, name: true, sku: true, price: true, image: true, trackStock: true, stock: true }
+        select: { id: true, name: true, sku: true, price: true, priceUsd: true, image: true, trackStock: true, stock: true }
       });
       if (row) {
+        const cfg = await getPricingConfig('restaurant', business.id);
         item = {
-          id: row.id, name: row.name, sku: row.sku, price: Number(row.price),
+          id: row.id, name: row.name, sku: row.sku, price: priceForItem(row, cfg).price,
           stock: row.trackStock ? (row.stock ?? 0) : null, unit: 'piece', imageUrl: row.image
         };
       }
@@ -169,7 +178,90 @@ export const lookupBySku = async (req: AuthRequest, res: Response): Promise<void
 interface SaleLine {
   productId: string;
   quantity: number;
+  /** سعر الجهاز — يُقرأ للبيعة المؤجّلة وحدها */
+  price?: number;
 }
+
+// ==================== البيع دون اتصال ====================
+//
+// الكهرباء والإنترنت ينقطعان في المحلّ السوري أكثر ممّا يبقيان. والكاشير
+// لا يستطيع أن يقول للزبون «ارجع حين يعود النت» — فيبيع، والجهاز يحفظ
+// البيعة في طابورٍ محلّي ويرسلها حين يعود الاتصال.
+//
+// **مفتاح عدم التكرار يولّده الجهاز لا الخادم:** على شبكةٍ ضعيفة قد تصل
+// البيعة ويضيع الردّ، فيظنّها الجهاز فشلت ويعيدها. المفتاح نفسه في
+// المحاولتين يجعل الثانية تعيد إيصال الأولى بدل بيعةٍ مكرّرة ومخزونٍ
+// مخصومٍ مرّتين.
+
+const IDEMPOTENCY_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** أقصى عمرٍ لبيعةٍ مؤجّلة يُقبل تاريخها كما هو — جهازٌ بساعةٍ مخطئة لا يكتب في الشهر الماضي */
+const OFFLINE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * وقت البيع الفعليّ لبيعةٍ مؤجّلة.
+ *
+ * بيعةٌ تمّت الحادية عشرة ليلاً ووصلت صباحاً تُحسب لنوبة أمس لا اليوم —
+ * وإلا لم يطابق الصندوق أيّاً من اليومين. والتاريخ المستقبليّ أو القديم
+ * جداً ساعةُ جهازٍ مخطئة فيُهمل ويُعتمد وقت الوصول.
+ */
+const parseSoldAt = (value: unknown): Date | null => {
+  if (typeof value !== 'string' && typeof value !== 'number') return null;
+  const date = new Date(value);
+  const time = date.getTime();
+  if (Number.isNaN(time)) return null;
+  const now = Date.now();
+  if (time > now + 5 * 60 * 1000 || now - time > OFFLINE_MAX_AGE_MS) return null;
+  return date;
+};
+
+/** إيصال بيعةٍ مسجّلة — لإعادته كما هو حين تصل المحاولة نفسها مرّةً ثانية */
+const receiptOf = async (orderId: string) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      items: {
+        select: {
+          quantity: true,
+          price: true,
+          product: { select: { name: true } },
+          menuItem: { select: { name: true } }
+        }
+      }
+    }
+  });
+  if (!order) return null;
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    subtotal: Number(order.subtotal ?? 0),
+    discountAmount: Number(order.discountAmount ?? 0),
+    total: Number(order.total),
+    paymentMethod: order.paymentMethod,
+    createdAt: order.createdAt,
+    stockShortage: order.stockShortage,
+    duplicate: true,
+    items: order.items.map((i) => ({
+      name: i.product?.name || i.menuItem?.name || '—',
+      quantity: i.quantity,
+      price: Number(i.price),
+      lineTotal: Number(i.price) * i.quantity
+    }))
+  };
+};
+
+/** بيعةٌ سبقت بالمفتاح نفسه لهذا النشاط؟ — مفتاحُ نشاطٍ آخر لا يكشف بيعته */
+const findByIdempotencyKey = async (business: Business, key: string) => {
+  const row = await prisma.posSaleKey.findUnique({
+    where: { key },
+    select: { order: { select: { id: true, storeId: true, restaurantId: true } } }
+  });
+  const existing = row?.order;
+  if (!existing) return { found: false as const };
+  const owner = business.kind === 'store' ? existing.storeId : existing.restaurantId;
+  if (owner !== business.id) return { found: true as const, foreign: true as const };
+  return { found: true as const, foreign: false as const, id: existing.id };
+};
 
 /**
  * إتمام بيعة.
@@ -189,6 +281,28 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
+    // ---------- عدم التكرار والبيع المؤجّل ----------
+    const rawKey = typeof req.body?.idempotencyKey === 'string' ? req.body.idempotencyKey.trim() : '';
+    const idempotencyKey = IDEMPOTENCY_RE.test(rawKey) ? rawKey : null;
+    // «مؤجّلة» = بيعت والجهاز بلا اتصال والنقود في الدرج. لا تُرفض لنقص
+    // الرصيد: رفضُها لا يعيد البضاعة إلى الرفّ، بل يُسقط بيعةً حقيقية من
+    // الدفاتر. فتُقبل ويُرفع علمٌ يراجعه التاجر.
+    const offline = req.body?.offline === true;
+    const soldAt = offline ? parseSoldAt(req.body?.soldAt) : null;
+
+    if (idempotencyKey) {
+      const prior = await findByIdempotencyKey(business, idempotencyKey);
+      if (prior.found) {
+        if (prior.foreign) {
+          res.status(409).json({ success: false, error: 'مفتاح البيعة مستعمل' });
+          return;
+        }
+        const receipt = await receiptOf(prior.id);
+        res.status(200).json({ success: true, message: 'البيعة مسجّلة سابقاً', data: receipt });
+        return;
+      }
+    }
+
     const lines: SaleLine[] = Array.isArray(req.body?.items) ? req.body.items : [];
     const paymentMethod = PAYMENT_METHODS.includes(req.body?.paymentMethod)
       ? req.body.paymentMethod
@@ -203,7 +317,12 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
 
     const clean = lines
       .filter((l) => l && typeof l.productId === 'string' && Number(l.quantity) > 0)
-      .map((l) => ({ productId: l.productId, quantity: Math.floor(Number(l.quantity)) }));
+      .map((l) => ({
+        productId: l.productId,
+        quantity: Math.floor(Number(l.quantity)),
+        // سعر الجهاز لحظة البيع — يُعتمد للمؤجّلة وحدها (راجع `items` أدناه)
+        devicePrice: offline && Number.isFinite(Number(l.price)) ? Number(l.price) : null
+      }));
 
     if (clean.length === 0) {
       res.status(400).json({ success: false, error: 'لا أصناف في البيعة' });
@@ -213,17 +332,20 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
     const ids = clean.map((l) => l.productId);
     const isStore = business.kind === 'store';
 
+    // السعر المسعّر بالدولار يُحسب بالليرة بسعر الصرف لحظة البيع — نفس دالة
+    // الطلب الإلكتروني، فلا يفترق سعر الكاشير عن سعر الواجهة
+    const pricing = await getPricingConfig(business.kind, business.id);
     const catalog = isStore
       ? (await prisma.product.findMany({
           where: { id: { in: ids }, storeId: business.id },
-          select: { id: true, name: true, price: true, cost: true, stock: true }
-        })).map((p) => ({ ...p, price: Number(p.price), stock: p.stock as number | null }))
+          select: { id: true, name: true, price: true, priceUsd: true, cost: true, stock: true }
+        })).map((p) => ({ ...p, ...priceForItem(p, pricing), stock: p.stock as number | null }))
       : (await prisma.menuItem.findMany({
           where: { id: { in: ids }, restaurantId: business.id },
-          select: { id: true, name: true, price: true, trackStock: true, stock: true }
+          select: { id: true, name: true, price: true, priceUsd: true, trackStock: true, stock: true }
         })).map((m: any) => ({
           ...m,
-          price: Number(m.price),
+          ...priceForItem(m, pricing),
           cost: null as number | null,
           // نفس القاعدة: غير المتتبَّع `null` فلا يُفحص سقفه
           stock: m.trackStock ? ((m.stock as number | null) ?? 0) : null
@@ -242,11 +364,13 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
     // صحيحةٌ للوجبات وخاطئةٌ للمعلّبات: مطعمٌ يبيع بيبسي له عدد. فالمعيار
     // الآن `stock !== null` — أي «هل لهذا الصنف رصيدٌ يُتتبَّع» — وهو صحيح
     // للطرفين، ويستثني وجبات المطعم من تلقاء نفسه.
-    const short = clean.find((l) => {
+    const shortages = clean.filter((l) => {
       const item = byId.get(l.productId)!;
       return item.stock !== null && item.stock < l.quantity;
     });
-    if (short) {
+    const short = shortages[0];
+    // البيعة المؤجّلة تمرّ ولو نقص الرصيد — راجع التعليق عند `offline` أعلاه
+    if (short && !offline) {
       const item = byId.get(short.productId)!;
       res.status(400).json({
         success: false,
@@ -255,9 +379,24 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
+    // **البيعة المؤجّلة بسعر الجهاز لا بسعر اليوم.** الزبون دفع ما رآه على
+    // الشاشة والنقود في الدرج؛ إعادة حسابها بسعر صرفٍ تغيّر بعد ساعات تجعل
+    // الدفاتر تخالف الدرج. والحدّ (نصف السعر الحالي إلى ضعفه) يصدّ رقماً
+    // فاسداً في ذاكرة الجهاز لا تقلّب سعر الصرف — وما خرج عنه يُحسب بسعر اليوم.
     const items = clean.map((l) => {
       const found = byId.get(l.productId)!;
-      return { id: found.id, quantity: l.quantity, price: found.price, cost: found.cost ?? null };
+      const trusted =
+        l.devicePrice !== null &&
+        l.devicePrice > 0 &&
+        l.devicePrice >= found.price * 0.5 &&
+        l.devicePrice <= found.price * 2;
+      return {
+        id: found.id,
+        quantity: l.quantity,
+        price: trusted ? (l.devicePrice as number) : found.price,
+        priceUsd: found.priceUsd,
+        cost: found.cost ?? null
+      };
     });
 
     const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -265,7 +404,18 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
     const total = subtotal - discount;
     const orderNumber = `POS-${Date.now().toString(36).toUpperCase()}`;
 
-    const order = await prisma.$transaction(async (tx) => {
+    // الرصيد يصير سالباً هنا عمداً: هو الحقيقة — البضاعة خرجت من المحلّ.
+    // والملاحظة تسمّي الأصناف كي يعرف التاجر ماذا يجرد، لا أن هناك «شيئاً ما»
+    const stockShortage = offline && shortages.length > 0;
+    const shortageNote = stockShortage
+      ? `بيعت دون اتصال والرصيد لم يكفِ: ${shortages
+          .map((l) => `«${byId.get(l.productId)!.name}» (المتاح ${byId.get(l.productId)!.stock}، المباع ${l.quantity})`)
+          .join('، ')}`
+      : null;
+
+    let order;
+    try {
+      order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
           orderNumber,
@@ -282,9 +432,19 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
           paymentMethod,
           // البيع في المحلّ مدفوعٌ عند إتمامه — لا حالة «قيد التحصيل»
           isPaid: true,
-          createdBy: req.user?.id || null
+          createdBy: req.user?.id || null,
+          idempotencyKey,
+          ...(soldAt ? { createdAt: soldAt, offlineSoldAt: soldAt } : {}),
+          stockShortage,
+          notes: shortageNote,
+          exchangeRate: items.some((i) => i.priceUsd !== null) ? pricing?.effectiveRate ?? null : null
         }
       });
+
+      // المفتاح داخل المعاملة: إن سبقه مطابقٌ رفضه القيد الفريد وسقطت البيعة كلّها
+      if (idempotencyKey) {
+        await tx.posSaleKey.create({ data: { key: idempotencyKey, orderId: created.id } });
+      }
 
       for (const item of items) {
         await tx.orderItem.create({
@@ -293,6 +453,7 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
             ...(isStore ? { productId: item.id } : { menuItemId: item.id }),
             quantity: item.quantity,
             price: item.price,
+            priceUsd: item.priceUsd,
             cost: item.cost
           }
         });
@@ -318,6 +479,19 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
 
       return created;
     });
+    } catch (error: any) {
+      // سباق: محاولتان بالمفتاح نفسه وصلتا معاً (الطابور وإعادة يدوية)،
+      // فسبقت إحداهما. قيد التفرّد رفض الثانية كاملةً — لا صنف ولا خصم —
+      // فنعيد إيصال الأولى كأن الثانية لم تكن.
+      if (idempotencyKey && error?.code === 'P2002') {
+        const prior = await findByIdempotencyKey(business, idempotencyKey);
+        if (prior.found && !prior.foreign) {
+          res.status(200).json({ success: true, message: 'البيعة مسجّلة سابقاً', data: await receiptOf(prior.id) });
+          return;
+        }
+      }
+      throw error;
+    }
 
     // اللوحة على جهازٍ آخر ترى البيعة فوراً — والمخزون معها
     try {
@@ -355,6 +529,7 @@ export const createSale = async (req: AuthRequest, res: Response): Promise<void>
         total,
         paymentMethod,
         createdAt: order.createdAt,
+        stockShortage,
         items: items.map((i) => ({
           name: byId.get(i.id)!.name,
           quantity: i.quantity,
@@ -430,6 +605,21 @@ export const getShiftSummary = async (req: AuthRequest, res: Response): Promise<
       refundsByMethod[ret.refundMethod] = (refundsByMethod[ret.refundMethod] || 0) + ret.amount;
     }
 
+    // بيعاتٌ مؤجّلة وصلت والرصيد لا يكفيها — أسبوعٌ لا يومٌ: المزامنة قد
+    // تتأخّر يوماً، والتاجر يحتاج أن يراها حتى يجرد لا أن تختفي بانتهاء النوبة
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const stockShortages = await prisma.order.findMany({
+      where: {
+        ...(business.kind === 'store' ? { storeId: business.id } : { restaurantId: business.id }),
+        orderSource: 'pos',
+        stockShortage: true,
+        createdAt: { gte: weekAgo }
+      },
+      select: { orderNumber: true, notes: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+
     // الصافي لكل طريقة — «النقد في الدرج» هو صافي النقد لا إجمالي مبيعاته
     const netByMethod: Record<string, number> = { ...byMethod };
     for (const [method, amount] of Object.entries(refundsByMethod)) {
@@ -450,7 +640,8 @@ export const getShiftSummary = async (req: AuthRequest, res: Response): Promise<
         /** صافي المبيعات = المبيعات − المرتجعات */
         net: total - refundsTotal,
         netByMethod,
-        recentReturns: returns.slice(0, 12)
+        recentReturns: returns.slice(0, 12),
+        stockShortages
       }
     });
   } catch (error) {

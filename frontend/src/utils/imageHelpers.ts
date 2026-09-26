@@ -1,5 +1,7 @@
 // frontend/src/utils/imageHelpers.ts
 
+import { isSaveDataActive } from './saveData';
+
 export interface ImageOptions {
   width?: number;
   height?: number;
@@ -55,6 +57,30 @@ export const sizedImage = (url?: string | null, size: ImageSize = 'md'): string 
 };
 
 /**
+ * أصغر نسخةٍ مقبولة لوضع توفير البيانات.
+ *
+ * صورنا المولَّدة لها نسخةٌ صغيرة جاهزة. وصور Unsplash (حسابات العرض
+ * ومتاجر نسخت روابطها) تقبل العرض والجودة في الرابط نفسه — فنطلبها بعرض
+ * 400 وجودة أقلّ بدل ما كُتب في الرابط. وغير ذلك يبقى كما هو: رابطٌ لا
+ * نعرف كيف نصغّره لا نخمّن له مقاساً فيُكسر.
+ */
+const saveDataVariant = (url: string): string => {
+  if (VARIANT_RE.test(url)) return sizedImage(url, 'sm');
+  if (url.startsWith('https://images.unsplash.com/')) {
+    try {
+      const parsed = new URL(url);
+      const width = Number(parsed.searchParams.get('w')) || Infinity;
+      parsed.searchParams.set('w', String(Math.min(width, 400)));
+      parsed.searchParams.set('q', '55');
+      return parsed.toString();
+    } catch {
+      return url;
+    }
+  }
+  return url;
+};
+
+/**
  * الحصول على رابط صورة محسن (للاستخدام في upload.service)
  */
 export const getOptimizedImageUrl = (url: string, options?: ImageOptions): string => {
@@ -67,7 +93,11 @@ export const getOptimizedImageUrl = (url: string, options?: ImageOptions): strin
 export const getImageUrl = (url: string, options?: ImageOptions): string => {
   // التحقق من وجود URL
   if (!url) return '';
-  
+
+  // وضع توفير البيانات: النسخة الصغيرة (400 بكسل) لكل صورةٍ تقبل التصغير —
+  // هنا لا في كل مكوّن، فلا يفلت بانرٌ أو غلافٌ نسي أحدٌ تصغيره
+  if (isSaveDataActive()) url = saveDataVariant(url);
+
   console.log('🖼️ getImageUrl input:', url);
   
   // ✅ رابط من R2 — يُوحَّد على الرابط العام المضبوط حالياً

@@ -2,7 +2,7 @@
 
 import { orderStatusLabel } from '../utils/orderStatus';
 import { Response } from 'express';
-import shippingService from '../services/shipping.service';
+import deliveryAreas, { AddressQuote } from '../services/deliveryArea.service';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { isPaymentMethodAllowed } from '../services/payment.service';
@@ -13,6 +13,8 @@ import { alertMerchantOfNewOrder } from '../services/merchantAlerts.service';
 import { attributeOrder, syncReferralStatus } from '../services/affiliate.service';
 import { canAcceptOrder } from '../services/orderQuota.service';
 import { validateSelection } from '../services/productOptions.service';
+import { createOrderPricer } from '../services/usdPricing.service';
+import { resolveCheckoutExtras, emailGiftPayer } from '../services/checkoutExtras.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -30,6 +32,53 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
+
+/**
+ * أجرة التوصيل من إعدادات النشاط المحفوظة — للطلب الذي لا محافظة فيه.
+ *
+ * كانت تُقبل من جسم الطلب: زبونٌ يرسل `deliveryFee: 0` من أدوات المطوّر
+ * يأخذ التوصيل مجاناً. والمطعم الذي لم يضبط مناطقه كان يُسجَّل طلبه بأجرة
+ * صفر لأن واجهته لا ترسلها أصلاً. الآن: الأجرة الأساس (`baseFee`، أو
+ * `deliveryFee` القديم)، ومجانيةٌ فوق `freeDeliveryAbove`، وللمتجر فقط زيادةٌ
+ * بالمسافة كما تعرضها واجهته — المطعم يعرض الأساس وحده، فلا يُحصَّل غيره.
+ */
+const settingsDeliveryFee = async (
+  businessType: 'store' | 'restaurant',
+  businessId: string,
+  afterDiscount: number,
+  lat: unknown,
+  lng: unknown
+): Promise<{ fee: number; distance: number }> => {
+  const business: any =
+    businessType === 'store'
+      ? await prisma.store.findUnique({ where: { id: businessId }, select: { deliverySettings: true, latitude: true, longitude: true } })
+      : await prisma.restaurant.findUnique({ where: { id: businessId }, select: { deliverySettings: true, latitude: true, longitude: true } });
+  let settings: any = business?.deliverySettings;
+  if (typeof settings === 'string') {
+    try {
+      settings = JSON.parse(settings);
+    } catch {
+      settings = null;
+    }
+  }
+  if (!settings || typeof settings !== 'object') return { fee: 0, distance: 0 };
+
+  const base = Math.max(0, Number(settings.baseFee ?? settings.deliveryFee) || 0);
+  const freeAbove = Number(settings.freeDeliveryAbove) || 0;
+  if (freeAbove > 0 && afterDiscount >= freeAbove) return { fee: 0, distance: 0 };
+
+  const cLat = Number(lat);
+  const cLng = Number(lng);
+  const bLat = Number(business?.latitude);
+  const bLng = Number(business?.longitude);
+  if (businessType !== 'store' || !cLat || !cLng || !bLat || !bLng) return { fee: Math.round(base), distance: 0 };
+
+  const distance = calculateDistance(bLat, bLng, cLat, cLng);
+  const minDistance = Number(settings.minDistance) || 0;
+  const perKm = Math.max(0, Number(settings.feePerKm) || 0);
+  const extra = distance > minDistance ? (distance - minDistance) * perKm : 0;
+  return { fee: Math.round(base + extra), distance: Math.round(distance * 100) / 100 };
+};
 
 const getBusinessId = async (req: AuthRequest): Promise<{ type: 'restaurant' | 'store', id: string } | null> => {
   if (req.user?.role === 'super_admin') {
@@ -254,9 +303,8 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       restaurantId: providedRestaurantId,
       orderType = 'dine_in',
       deliveryAddress, deliveryLat, deliveryLng,
-      deliveryFee: providedDeliveryFee,
       governorate,
-      deliveryDistance: providedDeliveryDistance
+      // `deliveryFee` و`deliveryDistance` لا يُقرآن من الجسم — يحسبهما الخادم
     } = req.body;
 
 
@@ -373,6 +421,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     // حساب عناصر الطلب
     let calculatedTotal = 0;
     const orderItemsToCreate = [];
+    // الأصناف المسعّرة بالدولار تُحسب بالليرة بسعر الصرف **الآن** — ويُخزَّن
+    // السعر المستعمل في الطلب. راجع services/usdPricing.service.ts
+    const pricer = createOrderPricer();
 
     for (const item of orderItemsData) {
       if ((!item.menuItemId && !item.productId) || !item.quantity) {
@@ -391,6 +442,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       // تكلفة الوحدة تُلتقط الآن لا وقت التقرير: قراءتها لاحقاً من المنتج
       // تجعل أرباح الشهر الماضي تتغيّر كلّما عدّل التاجر سعر الشراء.
       let unitCost: number | null = null;
+      let unitPriceUsd: number | null = null;
       // ما يختاره الزبون من خيارات المنتج — يُتحقّق منه ويُسعَّر على الخادم
       let selectedSize: string | null = item.size || null;
       let selectedAddons: string[] | null = Array.isArray(item.addons) ? item.addons : null;
@@ -422,7 +474,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
         }
         // ⚠️ السعر يُحسب من قاعدة البيانات فقط. هذا مسار عام بلا مصادقة،
         // وقبول السعر من العميل كان يسمح بشراء أي صنف بأي مبلغ.
-        price = Number(menuItem.price) || 0;
+        const priced = await pricer.line('restaurant', menuItem.restaurantId, menuItem);
+        price = priced.price;
+        unitPriceUsd = priced.priceUsd;
 
         const picked = validateSelection((menuItem as any).options, item.selectedOptions);
         if (!picked.ok) {
@@ -457,7 +511,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           res.status(400).json({ success: false, error: 'المنتج لا ينتمي لهذا المتجر' });
           return;
         }
-        price = Number(product.price) || 0;
+        const priced = await pricer.line('store', product.storeId, product);
+        price = priced.price;
+        unitPriceUsd = priced.priceUsd;
         unitCost = product.cost === null || product.cost === undefined ? null : Number(product.cost);
 
         // ⚠️ فرق سعر الخيار يُحسب هنا لا في المتصفح: «مقاس كبير +5000»
@@ -481,6 +537,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
         quantity: item.quantity,
         price: price,
         cost: unitCost,
+        priceUsd: unitPriceUsd,
         size: selectedSize,
         addons: selectedAddons,
         notes: item.notes || null
@@ -517,19 +574,33 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     //
     // وحين لا تُرسَل محافظة يبقى السلوك القديم كما هو — متاجرُ لم تضبط
     // مناطقها بعد تعمل بلا تغيير.
-    let finalDeliveryFee = Math.max(0, Number(providedDeliveryFee) || 0);
+    // لا يُقرأ `deliveryFee` من الجسم إطلاقاً — راجع settingsDeliveryFee
+    let finalDeliveryFee = 0;
     let effectiveOrderType = orderType;
 
     const zoneBusinessId = storeId || restaurantId;
     const zoneBusinessType = storeId ? 'store' : 'restaurant';
 
-    if (governorate && zoneBusinessId && (orderType === 'delivery' || orderType === 'shipping')) {
-      const zoneQuote = await shippingService.quote(
+    // الحيّ (إن أُرسل) يدقّق أجرة المحافظة — services/deliveryArea.service.ts
+    let addressQuote: AddressQuote | null = null;
+    const isDeliveryLike = orderType === 'delivery' || orderType === 'shipping';
+
+    // أقرب نقطة دالّة إلزاميةٌ مع الحيّ: بها يجد المندوب الباب، والحيّ وحده
+    // شارعٌ طويل. والواجهات القديمة (بلا حيّ) لا تُطالَب بما لا تعرضه.
+    if (isDeliveryLike && req.body?.deliveryAreaId && !String(req.body?.deliveryLandmark || '').trim()) {
+      res.status(400).json({ success: false, error: 'اكتب أقرب نقطة دالّة للعنوان' });
+      return;
+    }
+
+    if (governorate && zoneBusinessId && isDeliveryLike) {
+      const zoneQuote = await deliveryAreas.quoteAddress(
         zoneBusinessId,
         zoneBusinessType as 'store' | 'restaurant',
         String(governorate),
+        req.body?.deliveryAreaId ? String(req.body.deliveryAreaId) : null,
         Math.max(0, computedSubtotal - computedDiscount)
       );
+      addressQuote = zoneQuote;
 
       if (!zoneQuote.ok) {
         res.status(400).json({ success: false, error: zoneQuote.error || 'محافظة غير مدعومة' });
@@ -543,7 +614,19 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       // أي سائق (`driverPush` يتخطّى ما ليس `delivery`).
       effectiveOrderType = zoneQuote.deliveryMode === 'driver' ? 'delivery' : 'shipping';
     }
-    const finalDeliveryDistance = Math.max(0, Number(providedDeliveryDistance) || 0);
+    // بلا محافظة: الأجرة من إعدادات التوصيل المحفوظة، والمسافة محسوبةٌ هنا
+    let finalDeliveryDistance = 0;
+    if (!addressQuote && isDeliveryLike && zoneBusinessId) {
+      const settingsQuote = await settingsDeliveryFee(
+        zoneBusinessType as 'store' | 'restaurant',
+        zoneBusinessId,
+        Math.max(0, computedSubtotal - computedDiscount),
+        deliveryLat,
+        deliveryLng
+      );
+      finalDeliveryFee = settingsQuote.fee;
+      finalDeliveryDistance = settingsQuote.distance;
+    }
     const finalTotal = Math.max(0, computedSubtotal - computedDiscount);
 
     const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 99).toString().padStart(2, '0')}`;
@@ -563,7 +646,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       paymentMethod,
       orderType: effectiveOrderType,
       governorate: governorate || null,
-      deliveryAddress: deliveryAddress || null,
+      // `customerAddress` اسمٌ كانت واجهة المطعم ترسله فيُسقَط — فيصل طلب
+      // التوصيل بلا عنوان
+      deliveryAddress: deliveryAddress || req.body?.customerAddress || null,
       deliveryLat: deliveryLat || null,
       deliveryLng: deliveryLng || null,
       deliveryFee: finalDeliveryFee,
@@ -577,13 +662,39 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     };
 
     if (userId) orderData.createdBy = userId;
+    if (pricer.rateUsed) orderData.exchangeRate = pricer.rateUsed;
+
+    // العنوان المنظَّم: يُحفظ كما هو، ويُركَّب منه النصّ الذي يقرؤه الجميع
+    if (isDeliveryLike && deliveryAreas.hasStructuredAddress(req.body)) {
+      const built = deliveryAreas.buildDeliveryDetails(req.body, governorate ? String(governorate) : null, addressQuote);
+      orderData.deliveryDetails = built.details;
+      if (built.addressText) orderData.deliveryAddress = built.addressText;
+    }
+
+    // إضافات إتمام الطلب: المعاينة قبل الدفع، هدية المغترب، العربون.
+    // تُحسب على الخادم وتُدمج هنا — راجع services/checkoutExtras.service.ts
+    const checkoutExtras = await resolveCheckoutExtras({
+      body: req.body,
+      storeId,
+      restaurantId,
+      orderType: effectiveOrderType,
+      customerPhone: orderData.customerPhone,
+      items: orderItemsToCreate.map((i) => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
+      total: orderData.total
+    });
+    if (checkoutExtras.ok === false) {
+      res.status(checkoutExtras.status).json({ success: false, error: checkoutExtras.error });
+      return;
+    }
+    Object.assign(orderData, checkoutExtras.data);
 
     // التوزيع التلقائي للسائق (للمتاجر فقط).
     //
     // `effectiveOrderType` لا `orderType`: طلبُ محافظةٍ بعيدة صار `shipping`
     // أعلاه، وإسنادُه إلى سائقٍ في مدينة المتجر يعني سائقاً يرفض وطلباً
     // يتعطّل بلا سببٍ ظاهر لأحد.
-    if (storeId && effectiveOrderType === 'delivery') {
+    // طلبٌ ينتظر تحويلاً أو عربوناً لا يُسنَد لسائق — لن يخرج قبل الدفع
+    if (storeId && effectiveOrderType === 'delivery' && !checkoutExtras.holdDispatch) {
       const bestDriver = await findBestDriver(storeId, deliveryLat, deliveryLng);
       if (bestDriver) {
         orderData.assignedDriverId = bestDriver.id;
@@ -610,6 +721,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
           quantity: itemData.quantity,
           price: itemData.price,
           cost: itemData.cost,
+          priceUsd: itemData.priceUsd,
           size: itemData.size,
           addons: itemData.addons,
           notes: itemData.notes
@@ -705,6 +817,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
 
     // والتاجر كذلك: السوكِت يبثّ الطلب، لكنه لا يبلغ من أغلق اللوحة. فيبرد
     // الطلب حتى يلغيه الزبون، والتاجر لا يعلم أنه كان عنده طلب.
+    // هدية مغترب: تعليمات الدفع إلى بريد الدافع إن تركه — بلا انتظار
+    if (orderData.isGift) void emailGiftPayer(order.id, 'placed');
+
     void alertMerchantOfNewOrder({
       id: order.id,
       orderNumber: order.orderNumber,
@@ -749,6 +864,13 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
     const order = await prisma.order.findFirst({ where });
     if (!order) {
       res.status(404).json({ success: false, error: 'الطلب غير موجود' });
+      return;
+    }
+
+    // هدية مغتربٍ لم يصل تحويلها لا تُجهَّز: التاجر يؤكّد الاستلام أوّلاً
+    // (POST /api/checkout/orders/:id/confirm-payment). الإلغاء يبقى مسموحاً.
+    if ((order as any).paymentStatus === 'awaiting_transfer' && status !== 'cancelled' && status !== 'pending') {
+      res.status(409).json({ success: false, error: 'هذا طلب هدية بانتظار التحويل — أكّد استلام الدفعة قبل تجهيزه.' });
       return;
     }
 

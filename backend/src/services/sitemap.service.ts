@@ -10,6 +10,7 @@
 // ثقة الزاحف بها كلها.
 
 import prisma from './prisma';
+import { getDirectory } from './souq.service';
 
 const SITE = 'https://shamstores.com';
 
@@ -17,6 +18,8 @@ const SITE = 'https://shamstores.com';
 const STATIC_PAGES: Array<{ path: string; priority: string; changefreq: string }> = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
   { path: '/register', priority: '0.9', changefreq: 'monthly' },
+  // «سوق شام ستورز» — الصفحة العامّة الوحيدة التي تتغيّر يومياً على نطاق المنصّة
+  { path: '/souq', priority: '0.9', changefreq: 'daily' },
   { path: '/user/login', priority: '0.5', changefreq: 'monthly' },
   { path: '/about', priority: '0.6', changefreq: 'monthly' },
   { path: '/contact', priority: '0.6', changefreq: 'monthly' },
@@ -73,6 +76,15 @@ export const buildSitemap = async (): Promise<string> => {
       // النطاق الفرعي هو العنوان القانوني للواجهة — وهو ما يضعه التاجر في
       // إعلاناته، فالفهرسة عليه لا على مسار فرعي في النطاق الرئيسي
       entries.push(urlEntry(`https://${handle}.shamstores.com/`, business.updatedAt, 'daily', '0.7'));
+    }
+
+    // صفحات المحافظات في السوق — ما فيه متاجر فقط: صفحةٌ فارغة في الخريطة
+    // يعدّها الزاحف محتوىً رقيقاً فيخفض ثقته بالباقي
+    const souqGovernorates = new Set(
+      (await getDirectory()).map((b) => b.governorate).filter((g): g is string => !!g)
+    );
+    for (const code of souqGovernorates) {
+      entries.push(urlEntry(`${SITE}/souq/${code}`, null, 'daily', '0.7'));
     }
   } catch (error) {
     // خريطة بالصفحات الثابتة خير من خطأ ٥٠٠ يجعل الزاحف يهجرها

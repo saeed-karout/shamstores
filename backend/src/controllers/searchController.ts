@@ -18,6 +18,10 @@ import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import prisma from '../services/prisma';
 
+// أدوات التقطيع والمطابقة والصلة مُصدَّرة: بحث «سوق شام ستورز» عبر المتاجر
+// (services/souq.service.ts) يستعملها نفسها — كي لا يطابق السوق «ايفون» ويخطئ
+// المتجر «آيفون»، أو العكس.
+
 /** سقف المرشّحين قبل الترتيب — يكفي أيّ بحثٍ معقول ويحمي القاعدة من «أ» */
 const CANDIDATE_CAP = 400;
 const MAX_LIMIT = 48;
@@ -35,7 +39,7 @@ const likeEscape = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
  *
  * والكلمة القصيرة (حرفان فأقلّ) لا تُوسَّع: «ا» كانت ستصير `_` فتطابق كل شيء.
  */
-const patternsOf = (token: string): string[] => {
+export const patternsOf = (token: string): string[] => {
   const clean = token.replace(/[ً-ْـ]/g, '');
   const exact = `%${likeEscape(clean)}%`;
   if (clean.length < 3) return [exact];
@@ -46,7 +50,7 @@ const patternsOf = (token: string): string[] => {
   return loose === likeEscape(clean) ? [exact] : [exact, `%${loose}%`];
 };
 
-const tokenize = (raw: string): string[] =>
+export const tokenize = (raw: string): string[] =>
   raw
     .toLowerCase()
     .replace(/[\u0000-\u001f]+/g, ' ')
@@ -80,7 +84,7 @@ const findBusiness = async (identifier: string): Promise<Business | null> => {
  * SQL خام لا Prisma: الوسوم والخيارات عمودا JSON، وPrisma لا يعرف `LIKE`
  * على JSON في MySQL. `CAST(... AS CHAR)` يقرؤهما نصّاً بحروفه العربية.
  */
-const tokenClause = (tokens: string[], columns: Prisma.Sql[]): Prisma.Sql => {
+export const tokenClause = (tokens: string[], columns: Prisma.Sql[]): Prisma.Sql => {
   const perToken = tokens.map((token) => {
     const likes = patternsOf(token).flatMap((pattern) =>
       columns.map((col) => Prisma.sql`${col} LIKE ${pattern}`)
@@ -91,7 +95,7 @@ const tokenClause = (tokens: string[], columns: Prisma.Sql[]): Prisma.Sql => {
 };
 
 /** درجة الصلة — تُحسب في الذاكرة على مئات المرشّحين لا في القاعدة */
-const scoreOf = (row: any, tokens: string[], phrase: string, categoryName: string): { score: number; matchedIn: string } => {
+export const scoreOf = (row: any, tokens: string[], phrase: string, categoryName: string): { score: number; matchedIn: string } => {
   const name = lower(row.name);
   const nameEn = lower(row.nameEn);
   const sku = lower(row.sku);

@@ -27,6 +27,11 @@ import StickyCategoryNav from '@/components/storefront/StickyCategoryNav';
 import MenuItemListCard, { StorefrontMenuItem } from '@/components/storefront/MenuItemListCard';
 import ItemOptionsSheet, { SelectedOptions } from '@/components/storefront/ItemOptionsSheet';
 import CartSheet, { StorefrontOrderType, StorefrontPaymentMethod, cartLineKey } from '@/components/storefront/CartSheet';
+import { useCheckoutExtras, readCheckoutOptions, GiftBanner } from '@/components/storefront/checkout/CheckoutExtras';
+import OrderPlacedSheet, { PlacedOrder } from '@/components/storefront/checkout/OrderPlacedSheet';
+import type { WaOrderLine } from '@/utils/whatsapp';
+import DeliveryAddressFields from '@/components/storefront/DeliveryAddressFields';
+import useDeliveryAddress from '@/hooks/useDeliveryAddress';
 import BottomCartBar from '@/components/storefront/BottomCartBar';
 import BottomSheet from '@/components/storefront/BottomSheet';
 import StorefrontSkeleton from '@/components/storefront/StorefrontSkeleton';
@@ -199,6 +204,9 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
   const [orderNotes, setOrderNotes] = useState('');
   const [address, setAddress] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // الطلب الذي سُجّل للتوّ — تعرضه شاشة «تمّ تسجيل طلبك» بزرّ واتساب والتتبّع
+  const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
+  const [placedLines, setPlacedLines] = useState<WaOrderLine[]>([]);
 
   const [showOrderTracking, setShowOrderTracking] = useState(false);
   const [myOrders, setMyOrders] = useState<any[]>([]);
@@ -406,6 +414,13 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     [cart]
   );
 
+  // مناطق التوصيل وأحياؤها — حين يضبطها المطعم تحلّ محلّ حقل العنوان النصّي
+  // وتُحسب الأجرة على الخادم؛ وإلا يبقى التوصيل كما كان
+  const deliveryAddr = useDeliveryAddress({
+    slug: (restaurant as any)?.slug || currentSlug,
+    subtotal: cartTotal
+  });
+
   /** الكمية الإجمالية لصنف في السلة عبر كل صيَغه */
   const quantityByItemId = useMemo(() => {
     const map = new Map<string, number>();
@@ -480,7 +495,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       toast.error(t('الاسم ورقم الهاتف مطلوبان'));
       return;
     }
-    if (orderType === 'delivery' && !address.trim()) {
+    if (orderType === 'delivery' && !deliveryAddr.enabled && !address.trim()) {
       toast.error(t('عنوان التوصيل مطلوب'));
       return;
     }
@@ -514,20 +529,33 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         paymentMethod: (restaurant as any)?.paymentOptions?.methods?.includes(paymentMethod) ? paymentMethod : 'cash',
         orderType,
         // يُتجاهَل بصمت إن كان منتهياً أو لنشاطٍ آخر — الخادم يتحقّق
-        referralCode: getRef((restaurant as any)?.id) || undefined
+        referralCode: getRef((restaurant as any)?.id) || undefined,
+        ...(orderType === 'delivery' && deliveryAddr.enabled ? deliveryAddr.payload : {}),
+        // هدية المغترب — الخادم يتحقّق منها
+        ...checkoutExtras.payload
       };
 
-      await api.post('/orders', orderData);
+      const response: any = await api.post('/orders', orderData);
 
       track('order_placed', undefined, { value: subtotal });
       toast.success(t('تم إرسال طلبك بنجاح 🎉'));
       // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
       clearRef((restaurant as any)?.id);
+      if (orderType === 'delivery' && deliveryAddr.enabled) deliveryAddr.remember();
       clearCart();
       setCartOpen(false);
       setOrderNotes('');
 
       if (isAuthenticated) fetchMyOrders();
+
+      // شاشة «تمّ تسجيل طلبك»: رقم الطلب وزرّ واتساب ورابط التتبّع — وهو
+      // وحده طريق الضيف غير المسجّل إلى متابعة طلبه
+      const created = response?.data || response;
+      if (created?.id) {
+        setPlacedLines(cart.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, extras: [i.size, ...(i.addons || [])].filter(Boolean).join('، ') || null })));
+        setPlacedOrder(created);
+        checkoutExtras.reset();
+      }
 
       // ⚠️ كان يفتح واتساب تلقائياً هنا.
       //
@@ -578,6 +606,34 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       fetchMyOrders(true);
     }
+  });
+
+  // أجرة التوصيل بلا مناطق: نفس قاعدة الخادم (settingsDeliveryFee في
+  // orderController) — الأساس، ومجانيةٌ فوق الحدّ. كانت تقرأ `deliveryFee`
+  // وهو مفتاحٌ لا يكتبه نموذج الإعدادات (يكتب `baseFee`) فتعرض صفراً دائماً.
+  const settingsDeliveryFee = useMemo(() => {
+    let ds: any = (restaurant as any)?.deliverySettings;
+    if (typeof ds === 'string') {
+      try { ds = JSON.parse(ds); } catch { ds = null; }
+    }
+    if (!ds) return 0;
+    const freeAbove = Number(ds.freeDeliveryAbove) || 0;
+    if (freeAbove > 0 && cartTotal >= freeAbove) return 0;
+    return Math.round(Math.max(0, Number(ds.baseFee ?? ds.deliveryFee) || 0));
+  }, [restaurant, cartTotal]);
+
+  // إضافات إتمام الطلب (هدية المغترب، المعاينة) — قبل شاشات الحالة لأنها
+  // خطّاف. لا عربون في المطعم: الوجبة لا تُحجز بدفعةٍ مقدّمة.
+  const checkoutOptions = useMemo(() => readCheckoutOptions(restaurant), [restaurant]);
+  const checkoutExtras = useCheckoutExtras({
+    options: checkoutOptions,
+    items: cart,
+    currency,
+    total: cartTotal + (orderType === 'delivery' ? (deliveryAddr.enabled ? deliveryAddr.fee : settingsDeliveryFee) : 0),
+    customerPhone,
+    availableOrderTypes: tableId ? ['dine_in'] : ['takeaway', 'delivery'],
+    orderType,
+    onOrderTypeChange: setOrderType
   });
 
   // ---------- شاشات الحالة ----------
@@ -656,6 +712,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
 
       <StorefrontLayout
         name={language.pick(restaurant, 'name')}
+        verified={!!(restaurant as any)?.verified}
         description={language.pick(restaurant, 'description')}
         logo={restaurant.logo}
         coverImage={restaurant.coverImage}
@@ -711,6 +768,17 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
           />
         }
       >
+        {/* «اشترِ لأهلك في سوريا» — لا لزبون الطاولة: هو في المطعم أصلاً */}
+        {checkoutExtras.giftAvailable && !tableId && !isSearching && (
+          <GiftBanner
+            onStart={() => {
+              checkoutExtras.setGift((g) => ({ ...g, enabled: true }));
+              if (cart.length > 0) setCartOpen(true);
+              else toast(t('أضف ما تريد إهداءه إلى السلة، ثمّ أكمل الطلب كهدية'), { icon: '🎁' });
+            }}
+          />
+        )}
+
         {/* شريط أدوات: بحث + ترتيب + حساب */}
         <div
           style={{
@@ -1075,12 +1143,49 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         onNotesChange={setOrderNotes}
         address={address}
         onAddressChange={setAddress}
-        deliveryFee={Number(restaurant?.deliverySettings?.deliveryFee) || 0}
+        deliveryFee={deliveryAddr.enabled ? deliveryAddr.fee : settingsDeliveryFee}
+        deliveryFields={
+          deliveryAddr.enabled ? (
+            <DeliveryAddressFields
+              state={deliveryAddr}
+              currency={currency}
+              businessLocation={
+                (restaurant as any)?.latitude && (restaurant as any)?.longitude
+                  ? { lat: Number((restaurant as any).latitude), lng: Number((restaurant as any).longitude) }
+                  : undefined
+              }
+            />
+          ) : undefined
+        }
+        deliveryMissing={deliveryAddr.missing}
         paymentOptions={(restaurant as any)?.paymentOptions}
         paymentMethod={paymentMethod}
         onPaymentMethodChange={setPaymentMethod}
         submitting={submitting}
         onSubmit={submitOrder}
+        extraSection={checkoutExtras.section}
+        summaryExtra={checkoutExtras.summary}
+        extraMissing={checkoutExtras.missing}
+        customerTitle={checkoutExtras.customerTitle}
+      />
+
+      {/* ==================== تمّ تسجيل الطلب ==================== */}
+      <OrderPlacedSheet
+        order={placedOrder}
+        lines={placedLines}
+        options={checkoutOptions}
+        merchantWhatsapp={restaurant.whatsapp || restaurant.phone}
+        shamCash={(restaurant as any)?.paymentOptions?.shamCash || null}
+        currency={currency}
+        onClose={() => setPlacedOrder(null)}
+        onTrack={
+          isAuthenticated
+            ? () => {
+                setPlacedOrder(null);
+                setShowOrderTracking(true);
+              }
+            : undefined
+        }
       />
 
       {/* ==================== تتبّع الطلبات (للمسجّلين فقط) ==================== */}

@@ -31,9 +31,11 @@ import {
   useScrolledPast
 } from '../ShopShellParts';
 import type { ShopLayoutProps } from '../ShopLayout';
+import VerifiedBadge from '../VerifiedBadge';
 
 const ShowcaseShell: React.FC<ShopLayoutProps> = ({
   name,
+  verified = false,
   description,
   logo,
   coverImage,
@@ -235,6 +237,7 @@ const ShowcaseShell: React.FC<ShopLayoutProps> = ({
               }}
             >
               {name}
+              {verified && <VerifiedBadge size={22} ring businessName={name} />}
             </h1>
             {description && (
               <p

@@ -17,6 +17,7 @@ import { formatPrice } from '@/utils/currency';
 import type { CurrencyInput } from '@/utils/currency';
 import { getImageUrl } from '@/utils/imageHelpers';
 import QuantityStepper from './QuantityStepper';
+import OldSypHint from './OldSypHint';
 import { useT } from '@/i18n/storefront';
 import { SoldOutTag } from './ProductGridCard';
 
@@ -322,6 +323,7 @@ const MenuItemListCard: React.FC<MenuItemListCardProps> = ({
                 {formatPrice(beforePrice, currency)}
               </span>
             )}
+            <OldSypHint amount={finalPrice} currency={currency} style={{ flexBasis: '100%' }} />
           </div>
 
           {!unavailable && (

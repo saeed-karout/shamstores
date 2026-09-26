@@ -15,6 +15,7 @@ import { publicTracking } from '../services/tracking.service';
 import { notifyAdmins } from '../services/notification.service';
 import { withDisplayPrices } from '../services/planPricing.service';
 import { toPublicProduct } from '../services/publicProduct.service';
+import { publicCheckoutOptions } from '../services/checkoutExtras.service';
 import {
   normalizeDomain,
   resolveBusinessByCustomDomain,
@@ -145,6 +146,8 @@ export const getBusinessBySlug = async (
           language: restaurant.language,
           // طرق الدفع المفعّلة فقط، وبلا رقم المحفظة ما لم تكن مُفعّلة
           paymentOptions: getPublicPaymentOptions(restaurant.paymentSettings),
+          // خطوة واتساب والمعاينة والهدايا والعربون — المدفوع منها لمن يملك استحقاقه
+          checkoutOptions: await publicCheckoutOptions(restaurant.id, 'restaurant', (restaurant as any).checkoutSettings),
           languageSettings: await resolveLanguageSettings(restaurant, 'restaurant'),
           currencyContext: await getCurrencyContext(restaurant.currency),
           // عملات العرض المفعّلة وسعر الصرف — بها تبدّل الواجهة بلا نداء
@@ -156,6 +159,8 @@ export const getBusinessBySlug = async (
           plan: restaurant.plan,
           // الشارة يحسمها الخادم: الواجهة لا ترى الميزات المشتراة مفردةً
           showPlatformBadge: await shouldShowPlatformBadge(restaurant.id, 'restaurant'),
+          // «تاجر موثّق» — منطقيّ فقط: تاريخ التوثيق وتفاصيله لا تخصّ الزائر
+          verified: !!restaurant.verifiedAt,
           // العنوان والوصف وأيقونة التبويب لهذا المطعم — لا لشام ستورز
           seo: resolveBusinessSeo(restaurant, 'restaurant'),
           // البكسل لمن يستحقّه وحده — `null` يعني لا حقن
@@ -240,6 +245,8 @@ export const getBusinessBySlug = async (
           // كان يُرسل paymentSettings خاماً: رقم المحفظة والملاحظات الداخلية
           // لأي زائر، حتى وطريقة الدفع مطفأة. هذه البنية تكشف المسموح فقط.
           paymentOptions: getPublicPaymentOptions(store.paymentSettings),
+          // خطوة واتساب والمعاينة والهدايا والعربون — المدفوع منها لمن يملك استحقاقه
+          checkoutOptions: await publicCheckoutOptions(store.id, 'store', (store as any).checkoutSettings, products.some((p: any) => !!p.depositType)),
           notificationSettings: store.notificationSettings,
           timezone: store.timezone,
           currency: store.currency,
@@ -252,6 +259,7 @@ export const getBusinessBySlug = async (
           updatedAt: store.updatedAt,
           plan: store.plan,
           showPlatformBadge: await shouldShowPlatformBadge(store.id, 'store'),
+          verified: !!store.verifiedAt,
           seo: resolveBusinessSeo(store, 'store'),
           tracking: await publicTracking(store.id, 'store', store.trackingSettings),
           branchLabel: buildBranchSummary(store).linkLabel,
@@ -377,6 +385,7 @@ export const getTableById = async (
           descriptionEn: restaurant.descriptionEn,
           slug: restaurant.slug,
           logo: restaurant.logo,
+          verified: !!restaurant.verifiedAt,
           primaryColor: restaurant.primaryColor,
           secondaryColor: restaurant.secondaryColor,
           backgroundColor: restaurant.backgroundColor,
@@ -459,6 +468,7 @@ export const getProductById = async (
           descriptionEn: store.descriptionEn,
           slug: store.slug,
           logo: store.logo,
+          verified: !!store.verifiedAt,
           primaryColor: store.primaryColor,
           secondaryColor: store.secondaryColor,
           backgroundColor: store.backgroundColor,
@@ -546,6 +556,7 @@ export const getMenuItemById = async (
           descriptionEn: restaurant.descriptionEn,
           slug: restaurant.slug,
           logo: restaurant.logo,
+          verified: !!restaurant.verifiedAt,
           primaryColor: restaurant.primaryColor,
           secondaryColor: restaurant.secondaryColor,
           backgroundColor: restaurant.backgroundColor,
@@ -720,6 +731,7 @@ export const getMenuItemByShareToken = async (
           descriptionEn: restaurant.descriptionEn,
           slug: restaurant.slug,
           logo: restaurant.logo,
+          verified: !!restaurant.verifiedAt,
           primaryColor: restaurant.primaryColor,
           secondaryColor: restaurant.secondaryColor,
           backgroundColor: restaurant.backgroundColor,

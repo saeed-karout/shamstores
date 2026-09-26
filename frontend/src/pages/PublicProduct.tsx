@@ -13,6 +13,8 @@ import api from '../services/api';
 import { ProductSkeleton } from '@/components/storefront/StorefrontSkeleton';
 import toast from 'react-hot-toast';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
+import ProductGallery from '@/components/storefront/ProductGallery';
+import OptionImageSwatches, { imageOptionGroups, activeSwatch } from '@/components/storefront/OptionImageSwatches';
 import { formatPrice } from '@/utils/currency';
 import useDisplayCurrency from '@/hooks/useDisplayCurrency';
 import ProductReviews from '@/components/storefront/ProductReviews';
@@ -25,10 +27,13 @@ import useStorefrontLanguage from '@/hooks/useStorefrontLanguage';
 import { makeT } from '@/i18n/storefront';
 import LocaleSwitcher from '@/components/storefront/LocaleSwitcher';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
+import VerifiedBadge from '@/components/storefront/VerifiedBadge';
 import ItemComments from '@/components/storefront/ItemComments';
 import NotifyMeForm from '@/components/storefront/NotifyMeForm';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import { SoldOutTag } from '@/components/storefront/ProductGridCard';
+import OldSypHint from '@/components/storefront/OldSypHint';
+import { InspectionBadge, DepositBadge } from '@/components/storefront/checkout/CheckoutExtras';
 import ProductOptionsSheet, {
   parseProductOptions,
   hasOptions,
@@ -153,6 +158,17 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
   );
   const t = useMemo(() => makeT(language.lang), [language.lang]);
   const design = resolveDesign((store as any)?.storefrontDesign);
+
+  /**
+   * خيارات المنتج — محسوبةٌ مرّة لكل منتج لا في كل تصيير.
+   *
+   * كانت تُحلَّل داخل JSX فتصل إلى اللوح مصفوفةً جديدة كل مرّة، واللوح
+   * يعيد تهيئة اختياره حين تتغيّر: اختيار «أحمر» يقلب صورة الصفحة، فتُصيَّر
+   * من جديد، فيعود المقاس المختار إلى أوّل قيمة.
+   */
+  const productOptions = useMemo(() => parseProductOptions((product as any)?.options), [product]);
+  /** العيّنة التي ضغطها الزبون فوق الصورة لكل مجموعة — تُحمَل إلى اللوح */
+  const [swatchPicks, setSwatchPicks] = useState<Record<string, string>>({});
 
   /**
    * عملة العرض — اختيار الزائر في واجهة المتجر نفسها.
@@ -480,17 +496,25 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
     return discounted > 0 ? discounted : original;
   };
 
+  /**
+   * السعر قبل الحسم. الخادم يرسل `originalPrice` (أعلى من `price` = عرض)،
+   * والصفحة كانت تنتظر `discountedPrice` الذي لا يُرسَل أبداً — فالمنتج
+   * المخفَّض في البطاقة يظهر هنا بسعره فقط، بلا شطبٍ ولا نسبة.
+   */
   const getOriginalPrice = (): number => {
     if (!product) return 0;
-    return parsePrice(product.price);
+    const price = parsePrice(product.price);
+    if (parsePrice(product.discountedPrice) > 0) return price;
+    const original = parsePrice((product as any).originalPrice);
+    return original > price ? original : price;
   };
 
   const getDiscountPercent = (): number => {
     if (!product) return 0;
-    const discounted = parsePrice(product.discountedPrice);
-    const original = parsePrice(product.price);
-    if (discounted > 0 && discounted < original) {
-      return Math.round(((original - discounted) / original) * 100);
+    const final = getFinalPrice();
+    const original = getOriginalPrice();
+    if (final > 0 && final < original) {
+      return Math.round(((original - final) / original) * 100);
     }
     return 0;
   };
@@ -572,6 +596,13 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
       // الغلاف أولاً حتى لو لم يكن ضمن المصفوفة
       list = [product.imageUrl, ...list];
     }
+    // صورة قيمةٍ (لون) ليست في المعرض تُلحق به — وإلا ضغط الزبون «أزرق»
+    // ولم يتغيّر شيء أمامه
+    productOptions.forEach((group) =>
+      group.values.forEach((value) => {
+        if (value.image && !list.includes(value.image)) list.push(value.image);
+      })
+    );
     return list.filter(Boolean);
   })();
 
@@ -592,6 +623,7 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
         product={{
           id: product.id,
           name: product.name,
+          seoTitle: (product as any).seoTitle ?? null,
           description: product.description,
           image: images[0] || null,
           price: finalPrice,
@@ -607,7 +639,12 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
         open={optionsOpen}
         name={language.pick(product, 'name')}
         basePrice={parsePrice(product.price)}
-        options={parseProductOptions((product as any).options)}
+        options={productOptions}
+        initialSelection={Object.fromEntries(
+          imageOptionGroups(productOptions)
+            .map((group) => [group.name, activeSwatch(group, images[currentImageIndex], swatchPicks)])
+            .filter(([, label]) => !!label)
+        )}
         currency={currency}
         onClose={() => setOptionsOpen(false)}
         onConfirm={confirmOptions}
@@ -627,23 +664,26 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
               <span className="shop-only-wide">{t('العودة إلى المتجر')}</span>
             </Link>
 
-            <Link
-              to={`/${store.slug}`}
-              style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color: C.text,
-                textDecoration: 'none',
-                flex: 1,
-                minWidth: 0,
-                textAlign: 'center',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
-              {language.pick(store, 'name')}
-            </Link>
+            {/* الشارة خارج الرابط لا داخله: زرٌّ داخل <a> يفتح المتجر بدل الشرح */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Link
+                to={`/${store.slug}`}
+                style={{
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: C.text,
+                  textDecoration: 'none',
+                  minWidth: 0,
+                  textAlign: 'center',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {language.pick(store, 'name')}
+              </Link>
+              {(store as any)?.verified && <VerifiedBadge size={18} businessName={language.pick(store, 'name')} translate={t} />}
+            </div>
 
             {/* زرّ اللغة هنا لا في واجهة المتجر وحدها.
                 الزبون قد يهبط على صفحة منتجٍ مباشرةً — من جوجل أو من رابطٍ
@@ -699,57 +739,30 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
               marginInline: immersive ? -16 : 0
             }}
           >
-            <div style={{ position: 'relative' }}>
-              {images.length > 0 && images[0] ? (
-                <img
-                  src={getImageUrl(sizedImage(images[currentImageIndex], 'md'))}
-                  alt={product.name}
-                  style={{
-                    width: '100%',
-                    height: immersive ? 'min(72vh, 520px)' : 384,
-                    objectFit: 'cover',
-                    borderRadius: immersive ? 0 : sd.rImage,
-                    display: 'block',
-                    filter: soldOut ? 'saturate(50%)' : undefined
-                  }}
-                />
-              ) : (
-                <div style={{ width: '100%', height: immersive ? 'min(72vh, 520px)' : 384, background: C.surf, borderRadius: immersive ? 0 : sd.rImage, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: C.muted }}>{t('لا توجد صورة')}</span>
-                </div>
-              )}
-
-              {discountPercent > 0 && (
-                <div style={{ position: 'absolute', top: 16, right: 16, background: C.red, color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
-                  {t('خصم')} {discountPercent}%
-                </div>
-              )}
-
-              {soldOut && <SoldOutTag placement="center" size="lg" label={t('نفد من المخزون')} />}
-              {comingSoon && <SoldOutTag placement="center" size="lg" variant="soon" label={t('قريباً')} />}
-            </div>
-
-            {/* مصغرات الصور */}
-            {images.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 16, overflowX: 'auto', paddingBottom: 8 }}>
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentImageIndex(idx)}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 8,
-                      overflow: 'hidden',
-                      border: currentImageIndex === idx ? `2px solid ${C.accent}` : '2px solid transparent',
-                      cursor: 'pointer',
-                      padding: 0,
-                      flexShrink: 0
-                    }}
-                  >
-                    <img src={getImageUrl(img)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </button>
-                ))}
+            {/* المعرض: سحبٌ وأسهمٌ ولوحة مفاتيح ومصغّرات وتكبير — والفهرس هنا
+                لا فيه، لأن اختيار اللون يقلب الصورة من خارجه */}
+            {images.length > 0 && images[0] ? (
+              <ProductGallery
+                images={images}
+                index={currentImageIndex}
+                onIndexChange={setCurrentImageIndex}
+                alt={product.name}
+                height={immersive ? 'min(72vh, 520px)' : 384}
+                radius={immersive ? 0 : sd.rImage}
+                imageFilter={soldOut ? 'saturate(50%)' : undefined}
+                accent={C.accent}
+              >
+                {discountPercent > 0 && (
+                  <div style={{ position: 'absolute', top: 16, right: 16, background: C.red, color: '#fff', padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 700, zIndex: 1 }}>
+                    {t('خصم')} {discountPercent}%
+                  </div>
+                )}
+                {soldOut && <SoldOutTag placement="center" size="lg" label={t('نفد من المخزون')} />}
+                {comingSoon && <SoldOutTag placement="center" size="lg" variant="soon" label={t('قريباً')} />}
+              </ProductGallery>
+            ) : (
+              <div style={{ width: '100%', height: immersive ? 'min(72vh, 520px)' : 384, background: C.surf, borderRadius: immersive ? 0 : sd.rImage, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: C.muted }}>{t('لا توجد صورة')}</span>
               </div>
             )}
           </div>
@@ -788,7 +801,32 @@ const PublicProduct: React.FC<PublicProductProps> = ({ storeData: propStoreData,
                   {formatPrice(finalPrice, currency)}
                 </span>
               )}
+              <OldSypHint amount={finalPrice} currency={currency} style={{ fontSize: 13, marginTop: 4 }} />
+              {/* «معاينة قبل الدفع» والعربون — من إعداد التاجر وحقلَي المنتج */}
+              {((store as any)?.checkoutOptions?.inspection ||
+                ((store as any)?.checkoutOptions?.deposits && (product as any)?.depositType)) && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+                  {(store as any)?.checkoutOptions?.inspection && <InspectionBadge translate={t} />}
+                  {(store as any)?.checkoutOptions?.deposits && (
+                    <DepositBadge product={product as any} currency={currency} translate={t} />
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* الألوان المصوّرة فوق القرار لا بعده — العيّنة تقلب المعرض */}
+            <OptionImageSwatches
+              groups={productOptions}
+              shownImage={images[currentImageIndex]}
+              picks={swatchPicks}
+              onPick={(group, label, image) => {
+                setSwatchPicks((prev) => ({ ...prev, [group]: label }));
+                const index = image ? images.indexOf(image) : -1;
+                if (index >= 0) setCurrentImageIndex(index);
+              }}
+              colors={{ text: C.text, muted: C.muted, accent: C.accent, border: C.border, surf: C.surf }}
+              t={t}
+            />
 
             {/* الوصف */}
             {product.description && (

@@ -25,13 +25,15 @@ export const RESERVED_SUBDOMAINS = new Set([
   'www', 'api', 'admin', 'cdn', 'images', 'img', 'media', 'static', 'assets',
   'auth', 'dashboard', 'app', 'mail', 'smtp', 'ftp', 'ns1', 'ns2', 'blog',
   'help', 'support', 'status', 'docs', 'dev', 'staging', 'test', 'demo',
-  'shop', 'store', 'my', 'account', 'billing', 'pay', 'checkout', 'secure'
+  'shop', 'store', 'my', 'account', 'billing', 'pay', 'checkout', 'secure',
+  // «سوق شام ستورز» على /souq — متجرٌ بهذا الاسم كان سيحجب السوق أو يُحجَب به
+  'souq'
 ]);
 
 /** مسارات الواجهة التي يجب ألا تُفسَّر كمعرّف نشاط تجاري */
 export const RESERVED_PATHS = new Set([
   'terms', 'privacy', 'about', 'faq', 'contact',
-  'login', 'register', 'dashboard', 'admin', 'user', 'track', 'api'
+  'login', 'register', 'dashboard', 'admin', 'user', 'track', 'api', 'souq'
 ]);
 
 export const isReservedSubdomain = (subdomain: string): boolean =>

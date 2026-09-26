@@ -246,6 +246,19 @@ const EN: Record<string, string> = {
   'شحن': 'Shipping',
   'اختر المحافظة…': 'Choose a governorate…',
   'المحافظة': 'Governorate',
+  // العنوان المنظَّم — components/storefront/DeliveryAddressFields.tsx
+  'اختر المنطقة…': 'Choose an area…',
+  'المنطقة': 'Area',
+  'مجاني فوق': 'Free over',
+  'خلال': 'within',
+  'يوم': 'days',
+  'البناء': 'Building',
+  'الطابق': 'Floor',
+  'أقرب نقطة دالّة': 'Nearest landmark',
+  'مثال: جانب صيدلية الشفاء، مقابل الجامع': 'e.g. next to Al-Shifa pharmacy, opposite the mosque',
+  'اسم أو رقم البناء': 'Building name or number',
+  'مثال: الثالث': 'e.g. 3rd',
+  'الموقع على الخريطة (اختياري)': 'Location on map (optional)',
 
   // ===== حالات الطلب =====
   // النصّ نفسه يظهر شارةً في «طلباتي» وسطراً في شريط التقدّم، فمدخلٌ واحد
@@ -344,6 +357,8 @@ const EN: Record<string, string> = {
   'الكل': 'All',
   'عملة العرض': 'Display currency',
   'عروض وإعلانات': 'Offers and announcements',
+  'عروض خاصة': 'Special offers',
+  'عرض التفاصيل': 'View details',
   'الشريحة السابقة': 'Previous slide',
   'الشريحة التالية': 'Next slide',
 
@@ -368,6 +383,7 @@ const EN: Record<string, string> = {
   'تكبير الصورة': 'Zoom image',
   'الصورة السابقة': 'Previous image',
   'الصورة التالية': 'Next image',
+  'الصورة': 'Image',
   'إغلاق العرض المكبّر': 'Close zoom',
 
   // ---------- الموقع ----------
@@ -438,6 +454,15 @@ const EN: Record<string, string> = {
   'كن أوّل من يسأل عن هذه الوجبة.': 'Be the first to ask about this dish.',
   'عرض المزيد': 'Show more',
   'تعذّر تحميل المزيد': 'Could not load more',
+  'سجّل الدخول لتعلّق': 'Sign in to comment',
+  'التعليق والتفاعل للزبائن المسجّلين — يظهر اسم حسابك مع ما تكتبه.': 'Commenting and reacting are for signed-in customers — your account name appears with what you write.',
+  'سجّل الدخول لتتفاعل مع التعليقات': 'Sign in to react to comments',
+  'أعجبني': 'Like',
+  'لم يعجبني': 'Dislike',
+  'تعذّر حفظ تفاعلك': 'Could not save your reaction',
+  'ترتيب التعليقات': 'Sort comments',
+  'الأكثر إعجاباً': 'Most liked',
+  'أضف اسمك في صفحة حسابك ليظهر مع تعليقك': 'Add your name in your account page to comment',
 
   // اللغة والعملة في زرٍّ واحد
   'اللغة والعملة': 'Language & currency',
@@ -458,6 +483,10 @@ const EN: Record<string, string> = {
   'لا توجد منتجات تطابق بحثك — جرّب كلمةً أقصر أو رمز المنتج (SKU)':
     'No products match — try a shorter word or the product SKU',
 
+  // فترة الانتقال بعد حذف صفرَي الليرة — المقابل القديم تحت السعر
+  'ل.س قديمة': 'old SYP',
+  'بالليرة القديمة': 'In old Syrian pounds',
+
   // «قريباً» و«أعلمني حين يتوفّر»
   'قريباً': 'Coming soon',
   'قريباً — كن أوّل من يعلم': 'Coming soon — be the first to know',
@@ -471,7 +500,76 @@ const EN: Record<string, string> = {
   'بريدك الإلكتروني أو رقم هاتفك': 'Your email or phone number',
   'أعلمني': 'Notify me',
   'اكتب بريدك أو رقم هاتفك': 'Enter your email or phone number',
-  'تعذّر تسجيل طلبك الآن': 'Could not save your request right now'
+  'تعذّر تسجيل طلبك الآن': 'Could not save your request right now',
+
+  // ---------- الشبكة الضعيفة ووضع توفير البيانات ----------
+  'أنت غير متصل — الأسعار قد تكون قديمة': "You're offline — prices may be out of date",
+  'الاتصال ضعيف — نعرض آخر نسخة محفوظة والأسعار قد تكون قديمة': 'Weak connection — showing the last saved copy; prices may be out of date',
+  'تحديث': 'Refresh',
+  'إيقاف': 'Turn off',
+  'وضع توفير البيانات مفعّل تلقائياً لأن الشبكة بطيئة: صور أصغر وبلا حركة': 'Data saver is on because your network is slow: smaller images, no animations',
+  'وضع توفير البيانات مفعّل: صور أصغر وبلا حركة': 'Data saver is on: smaller images, no animations',
+  'الإنترنت بطيء أو الباقة محدودة؟': 'Slow internet or limited data?',
+  'فعّل وضع توفير البيانات': 'Turn on data saver',
+  'أنت غير متصل — إتمام الطلب يحتاج اتصالاً بالإنترنت. سلّتك محفوظة، أكمل حين يعود الاتصال.':
+    "You're offline — placing an order needs an internet connection. Your cart is saved; finish when you're back online.",
+  'لا اتصال بالإنترنت — لم يُرسل طلبك. سلّتك محفوظة، أعد المحاولة حين يعود الاتصال.':
+    'No internet connection — your order was not sent. Your cart is saved; try again when you are back online.',
+
+  // «تاجر موثّق»
+  'تاجر موثّق': 'Verified merchant',
+  'تاجر موثّق — تحقّقت شام ستورز من هويته': 'Verified merchant — identity checked by ShamStores',
+  'تحقّقت شام ستورز من هوية صاحب هذا النشاط عبر وثيقة رسمية (هوية شخصية أو سجلّ تجاري) ورقم هاتف فعّال.':
+    'ShamStores has checked the identity of this business owner using an official document (ID card or commercial registration) and an active phone number.',
+  'وراء هذا المتجر شخصٌ أو شركة حقيقية معروفة لدينا.': 'A real person or company known to us is behind this store.',
+  'إن واجهتك مشكلة في طلب، يمكننا الوصول إلى صاحبه.': 'If something goes wrong with an order, we can reach the owner.',
+  'الشارة لا تعني ضماناً لجودة المنتجات — اقرأ التقييمات واسأل قبل الشراء.':
+    'The badge is not a guarantee of product quality — read reviews and ask before you buy.',
+  // ---------- إضافات إتمام الطلب: واتساب، المعاينة، هدايا المغتربين، العربون ----------
+  'تمّ تسجيل طلبك': 'Order placed',
+  'أرسل الطلب للتاجر على واتساب': 'Send the order to the shop on WhatsApp',
+  'طلبك وصل المتجر فعلاً — الرسالة نسخةٌ تسرّع التواصل.': 'The shop already has your order — the message just speeds things up.',
+  'تتبّع طلبك': 'Track your order',
+  'انسخ رابط التتبّع': 'Copy tracking link',
+  'معاينة قبل الدفع': 'Inspect before you pay',
+  'افحص طلبك عند الاستلام، وادفع فقط إن كان كما طلبت.': 'Check your order on delivery and pay only if it is what you ordered.',
+  'معاينة قبل الدفع: افحص طلبك عند الاستلام، وادفع فقط إن كان كما طلبت.': 'Inspect before you pay: check your order on delivery and pay only if it is what you ordered.',
+  'اشترِ لأهلك في سوريا': 'Buy for your family in Syria',
+  'أنت في الخارج؟ اطلب لهم من هنا وادفع أنت — ونوصل الهدية إلى بابهم.': 'Living abroad? Order for them here and pay yourself — we deliver the gift to their door.',
+  'أضف ما تريد إهداءه إلى السلة، ثمّ أكمل الطلب كهدية': 'Add what you want to gift to the cart, then check out as a gift',
+  'هذا الطلب هدية — أنا خارج سوريا': 'This order is a gift — I live outside Syria',
+  'تدفع أنت من الخارج، ونوصله لأهلك في سوريا.': 'You pay from abroad; we deliver to your family in Syria.',
+  'بياناتك (الدافع)': 'Your details (payer)',
+  'اسم الدافع': "Payer's name",
+  'رقم الدافع مع رمز الدولة': "Payer's phone with country code",
+  'بريدك الإلكتروني (اختياري) — نرسل لك تأكيد الدفع': 'Your email (optional) — we will confirm your payment',
+  'رسالة تُرفق بالهدية (اختياري)': 'Gift message (optional)',
+  'أخفِ الأسعار عن المستلم': 'Hide prices from the recipient',
+  'اكتب بيانات المستلم وعنوانه في سوريا أدناه. بعد الطلب تظهر لك تعليمات الدفع، ولا يُجهَّز الطلب قبل أن يؤكّد المتجر وصول دفعتك.':
+    "Enter the recipient's details and address in Syria below. Payment instructions appear after you order, and the order is prepared only once the shop confirms your payment.",
+  'بيانات المستلم في سوريا': 'Recipient in Syria',
+  'رقم مستلم سوري': 'Syrian recipient number',
+  'طلب هدية — بانتظار دفعتك': 'Gift order — awaiting your payment',
+  'ادفع': 'Pay',
+  'حسب تعليمات المتجر، ولن يُجهَّز الطلب قبل تأكيد وصول دفعتك:': "following the shop's instructions. The order is prepared once your payment is confirmed:",
+  'أرسل صورة إيصال التحويل للمتجر على واتساب مع رقم الطلب.': 'Send a photo of the transfer receipt to the shop on WhatsApp with your order number.',
+  'هدية لك': 'A gift for you',
+  'أرسل لك أحد أحبّائك هذه الهدية.': 'Someone who loves you sent you this gift.',
+  'بانتظار تأكيد الدفعة — يبدأ التجهيز فور وصولها.': 'Awaiting payment confirmation — preparation starts as soon as it arrives.',
+  'بعض المنتجات تتطلّب عربوناً': 'Some items need a deposit',
+  'يُدفع مسبقاً، والباقي عند الاستلام. تظهر طريقة الدفع بعد تأكيد الطلب.': 'paid upfront, the rest on delivery. Payment details appear after you place the order.',
+  'العربون المطلوب الآن': 'Deposit due now',
+  'المتبقّي عند الاستلام': 'Remaining on delivery',
+  'والمتبقّي عند الاستلام': 'remaining on delivery',
+  'يؤكّد المتجر استلام العربون ثمّ يجهّز طلبك.': 'The shop confirms the deposit, then prepares your order.',
+  'عربون': 'Deposit',
+  'والباقي عند الاستلام': 'rest on delivery',
+  'العربون': 'Deposit',
+  'مستلم': 'Received',
+  'بانتظار الدفع': 'Awaiting payment',
+  'جدول الأقساط': 'Installment plan',
+  'القسط': 'Installment',
+  'مستحقّ': 'Due'
 };
 
 export interface StorefrontI18n {

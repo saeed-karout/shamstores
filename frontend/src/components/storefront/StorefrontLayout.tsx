@@ -22,6 +22,9 @@ import { sf, sfBrandGradient, sfBrandPattern } from '@/utils/storefrontTheme';
 import { sd } from '@/utils/storefrontDesign';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { useT } from '@/i18n/storefront';
+import { StorefrontNetworkBar, SaveDataFooterToggle } from './NetworkBar';
+import { useStorefrontSaveData } from '@/utils/saveData';
+import VerifiedBadge from './VerifiedBadge';
 
 export interface StorefrontBranch {
   id: string;
@@ -33,6 +36,8 @@ export interface StorefrontBranch {
 
 export interface StorefrontLayoutProps {
   name: string;
+  /** «تاجر موثّق» — الشارة بجانب الاسم الكبير في الغلاف */
+  verified?: boolean;
   description?: string;
   logo?: string;
   coverImage?: string;
@@ -63,6 +68,7 @@ export const STOREFRONT_GUTTER = 16;
 
 const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
   name,
+  verified = false,
   description,
   logo,
   coverImage,
@@ -226,6 +232,7 @@ const StorefrontLayout: React.FC<StorefrontLayoutProps> = ({
                 }}
               >
                 {name}
+                {verified && <VerifiedBadge size={22} ring businessName={name} />}
               </h1>
               {description && (
                 <p
@@ -469,5 +476,20 @@ const contactButton: React.CSSProperties = {
   boxShadow: sd.shadowCard
 };
 
+/**
+ * شريط الشبكة ووضع توفير البيانات حول واجهة المطعم — كما في ShopLayout
+ * للمتجر، فلا يختلف سلوك الزبون بين النشاطين.
+ */
+const StorefrontLayoutWithNetwork: React.FC<StorefrontLayoutProps> = (props) => {
+  const saveData = useStorefrontSaveData();
+  return (
+    <>
+      <StorefrontNetworkBar saveData={saveData} />
+      <StorefrontLayout {...props} />
+      <SaveDataFooterToggle saveData={saveData} />
+    </>
+  );
+};
+
 export { MINI_HEADER_HEIGHT };
-export default StorefrontLayout;
+export default StorefrontLayoutWithNetwork;

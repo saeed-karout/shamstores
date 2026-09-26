@@ -133,7 +133,7 @@ export const RESERVED_SUBDOMAINS = [
   'www', 'api', 'admin', 'cdn', 'images', 'img', 'media', 'static', 'assets',
   'auth', 'dashboard', 'app', 'mail', 'smtp', 'blog', 'help', 'support',
   'status', 'docs', 'dev', 'staging', 'test', 'demo', 'shop', 'store', 'my',
-  'account', 'billing', 'pay', 'checkout', 'secure'
+  'account', 'billing', 'pay', 'checkout', 'secure', 'souq'
 ];
 
 export const isReservedSubdomain = (subdomain: string): boolean =>

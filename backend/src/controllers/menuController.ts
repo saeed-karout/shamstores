@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import crypto from 'crypto';
+import { applyUsdPriceInput } from '../services/usdPricing.service';
 
 // دالة مساعدة للحصول على restaurantId
 const getRestaurantId = async (req: AuthRequest): Promise<string | null> => {
@@ -283,6 +284,21 @@ const normalizeStock = (
   };
 };
 
+/**
+ * الحقول النصّية الاختيارية: الاسم والوصف بالإنجليزية وعنوان محرّكات البحث.
+ *
+ * ما لم يُرسَل لا يُلمس (تعديل السعر وحده لا يمسح الترجمة)، والمُرسَل فارغاً
+ * يُمسح عمداً.
+ */
+const pickTranslatedText = (body: any): Record<string, string | null> => {
+  const out: Record<string, string | null> = {};
+  const limits: Record<string, number> = { nameEn: 150, descriptionEn: 1500, seoTitle: 90 };
+  for (const [key, max] of Object.entries(limits)) {
+    if (body?.[key] !== undefined) out[key] = String(body[key] ?? '').trim().slice(0, max) || null;
+  }
+  return out;
+};
+
 export const createMenuItem = async (
   req: AuthRequest,
   res: Response
@@ -313,19 +329,30 @@ export const createMenuItem = async (
       return;
     }
 
+    // مطعمٌ يسعّر بالدولار: `price` يُحسب على الخادم من `priceUsd`
+    const usdPricing: Record<string, any> = {};
+    const usdCheck = await applyUsdPriceInput('restaurant', restaurantId, req.body, usdPricing);
+    if (usdCheck.error) {
+      res.status(400).json({ success: false, error: usdCheck.error });
+      return;
+    }
+
     const item = await prisma.menuItem.create({
       data: {
         restaurantId,
         categoryId,
         name,
         description: description || null,
+        // الاسم والوصف الإنجليزيان كانا يُرسَلان من النموذج ويُهمَلان هنا
+        ...pickTranslatedText(req.body),
         price,
         originalPrice: originalPrice || null,
         image: image || null,
         position: position || 0,
         sku: skuResult.value,
         ...normalizeStock(trackStock, stock, minStockLevel),
-        isAvailable: true
+        isAvailable: true,
+        ...usdPricing
       }
     });
 
@@ -425,6 +452,13 @@ export const updateMenuItem = async (
       nextSku = skuResult.value;
     }
 
+    const usdPricing: Record<string, any> = {};
+    const usdCheck = await applyUsdPriceInput('restaurant', item.restaurantId, req.body, usdPricing);
+    if (usdCheck.error) {
+      res.status(400).json({ success: false, error: usdCheck.error });
+      return;
+    }
+
     const updatedItem = await prisma.menuItem.update({
       where: { id },
       data: {
@@ -439,11 +473,14 @@ export const updateMenuItem = async (
         categoryId: categoryId !== undefined ? categoryId : item.categoryId,
         name: name || item.name,
         description: description !== undefined ? description : item.description,
+        ...pickTranslatedText(req.body),
         price: price || item.price,
         originalPrice: originalPrice !== undefined ? originalPrice : item.originalPrice,
         image: image !== undefined ? image : item.image,
         position: position !== undefined ? position : item.position,
-        isAvailable: isAvailable !== undefined ? isAvailable : item.isAvailable
+        isAvailable: isAvailable !== undefined ? isAvailable : item.isAvailable,
+        // آخِراً: في وضع الدولار يكتب السعر المحسوب فوق المُرسَل
+        ...usdPricing
       }
     });
 

@@ -29,7 +29,7 @@ import {
   IoLocationOutline,
   IoArrowUp
 } from 'react-icons/io5';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion } from 'framer-motion';
 import { sf, sfBrandGradient, sfBrandPattern } from '@/utils/storefrontTheme';
 import { getImageUrl, sizedImage } from '@/utils/imageHelpers';
 import { sd } from '@/utils/storefrontDesign';
@@ -39,6 +39,9 @@ import { IconAction, ScrollTopButton, useScrolledPast } from './ShopShellParts';
 import BoutiqueShell from './shells/BoutiqueShell';
 import ShowcaseShell from './shells/ShowcaseShell';
 import LandingShell from './shells/LandingShell';
+import { StorefrontNetworkBar, SaveDataFooterToggle } from './NetworkBar';
+import { useStorefrontSaveData } from '@/utils/saveData';
+import VerifiedBadge from './VerifiedBadge';
 
 export interface ShopCategoryTile {
   id: string;
@@ -56,6 +59,9 @@ export interface ShopBranchLink {
 
 export interface ShopLayoutProps {
   name: string;
+  /** «تاجر موثّق» — تحقّقت المنصّة من هويته. الشارة بجانب الاسم الكبير لا
+   *  في سطر الرأس الضيّق: هناك يقصّها «…» مع الأسماء الطويلة */
+  verified?: boolean;
   description?: string;
   logo?: string;
   coverImage?: string;
@@ -118,6 +124,7 @@ export interface ShopLayoutProps {
 
 const ClassicShell: React.FC<ShopLayoutProps> = ({
   name,
+  verified = false,
   description,
   logo,
   coverImage,
@@ -409,6 +416,7 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
           <div style={{ position: 'absolute', insetInline: 0, bottom: 0, padding: 'clamp(16px, 3vw, 32px)' }}>
             <h1 style={{ margin: 0, fontSize: 'clamp(22px, 3.6vw, 38px)', fontWeight: 900, letterSpacing: '-0.01em', color: '#fff', textShadow: '0 2px 16px rgba(0,0,0,0.3)' }}>
               {name}
+              {verified && <VerifiedBadge size={22} ring businessName={name} />}
             </h1>
             {description && (
               <p
@@ -617,10 +625,25 @@ const ClassicShell: React.FC<ShopLayoutProps> = ({
  */
 const ShopLayout: React.FC<ShopLayoutProps> = (props) => {
   const { shell } = useDesign();
-  if (shell === 'boutique') return <BoutiqueShell {...props} />;
-  if (shell === 'showcase') return <ShowcaseShell {...props} />;
-  if (shell === 'landing') return <LandingShell {...props} />;
-  return <ClassicShell {...props} />;
+  // هنا لا في كل هيكل: الأربعة يرثون الشريط ووضع التوفير من مكانٍ واحد،
+  // وتبدّل الوضع يعيد رسم الهيكل فتتبدّل صور الغلاف والشعار فوراً
+  const saveData = useStorefrontSaveData();
+  const Shell =
+    shell === 'boutique' ? BoutiqueShell
+      : shell === 'showcase' ? ShowcaseShell
+      : shell === 'landing' ? LandingShell
+      : ClassicShell;
+
+  return (
+    <>
+      <StorefrontNetworkBar saveData={saveData} />
+      {/* حركات framer-motion لا تمرّ بقاعدة CSS التي تُطفئ البقيّة */}
+      <MotionConfig reducedMotion={saveData ? 'always' : 'never'}>
+        <Shell {...props} />
+      </MotionConfig>
+      <SaveDataFooterToggle saveData={saveData} />
+    </>
+  );
 };
 
 export default ShopLayout;

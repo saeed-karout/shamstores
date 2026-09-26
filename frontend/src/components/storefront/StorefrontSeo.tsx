@@ -58,6 +58,8 @@ interface Business {
 export interface SeoProduct {
   id: string;
   name: string;
+  /** عنوانٌ كتبه التاجر أو المساعد لمحرّكات البحث — يغلب «الاسم | المتجر» */
+  seoTitle?: string | null;
   description?: string | null;
   image?: string | null;
   price?: number;
@@ -148,7 +150,7 @@ const StorefrontSeo: React.FC<Props> = ({ business, type, itemCount, product, pa
   const businessTitle =
     seo.title ||
     (type === 'restaurant' ? `${name} — القائمة الرقمية والطلب أونلاين` : `${name} — متجر إلكتروني`);
-  const title = product ? `${product.name} | ${name}` : businessTitle;
+  const title = product ? product.seoTitle?.trim() || `${product.name} | ${name}` : businessTitle;
 
   const businessDescription =
     seo.description ||

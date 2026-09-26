@@ -26,6 +26,7 @@ import {
 import { Helmet } from 'react-helmet-async';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '@/utils/imageHelpers';
+import ProductGallery from '@/components/storefront/ProductGallery';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const C = {
@@ -50,6 +51,7 @@ const PublicItem: React.FC = () => {
   const [showAddedToCart, setShowAddedToCart] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
@@ -263,11 +265,27 @@ const PublicItem: React.FC = () => {
   const { unitPrice, originalPrice, totalPrice } = calculatePrice();
   const restaurant = item.restaurant as any;
   const basePrice = item.discountedPrice ? Number(item.discountedPrice) : Number(item.price);
+  /** كل صور الصنف، الغلاف أولاً — `images` يصل مصفوفةً أو نصّ JSON */
+  const itemImages = ((): string[] => {
+    const raw = (item as any).images;
+    let list: string[] = [];
+    if (Array.isArray(raw)) list = raw.filter(Boolean).map(String);
+    else if (typeof raw === 'string' && raw.trim()) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) list = parsed.filter(Boolean).map(String);
+      } catch {
+        /* نصٌّ ليس JSON — الغلاف وحده يكفي */
+      }
+    }
+    if (item.image && !list.includes(item.image)) list = [item.image, ...list];
+    return list;
+  })();
 
   return (
     <>
       <Helmet>
-        <title>{item.name} | {restaurant?.name || 'قائمة طعام'}</title>
+        <title>{(item as any).seoTitle?.trim() || `${item.name} | ${restaurant?.name || 'قائمة طعام'}`}</title>
         <meta name="description" content={item.description || `اطلب ${item.name} الآن`} />
         <meta property="og:title" content={item.name} />
         <meta property="og:description" content={item.description || ''} />
@@ -345,7 +363,7 @@ const PublicItem: React.FC = () => {
                 {item.image ? (
                   <div style={{ position: 'relative', borderRadius: 24, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', background: C.card, border: `1px solid ${C.border}` }}>
                     {/* ظلٌّ لامع مكان الصورة حتى تصل — لا دائرة تحميل */}
-                    {!imageLoaded && (
+                    {!imageLoaded && itemImages.length < 2 && (
                       <div
                         aria-hidden="true"
                         style={{
@@ -358,12 +376,25 @@ const PublicItem: React.FC = () => {
                       />
                     )}
                     <style>{`@keyframes sf-shimmer { 0% { background-position: 100% 0 } 100% { background-position: -100% 0 } }`}</style>
-                    <img
-                      src={getImageUrl(item.image)}
-                      alt={item.name}
-                      onLoad={() => setImageLoaded(true)}
-                      style={{ width: '100%', height: 'auto', objectFit: 'cover', display: 'block', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.5s' }}
-                    />
+                    {/* صنفٌ بأكثر من صورة يُعرض معرضاً يُسحب ويُكبَّر — وبصورةٍ واحدة كما كان */}
+                    {itemImages.length > 1 ? (
+                      <ProductGallery
+                        images={itemImages}
+                        index={imageIndex}
+                        onIndexChange={setImageIndex}
+                        alt={item.name}
+                        height={400}
+                        radius={0}
+                        accent={C.accent}
+                      />
+                    ) : (
+                      <img
+                        src={getImageUrl(item.image)}
+                        alt={item.name}
+                        onLoad={() => setImageLoaded(true)}
+                        style={{ width: '100%', height: 'auto', objectFit: 'cover', display: 'block', opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.5s' }}
+                      />
+                    )}
 
                     {/* علامة الخصم */}
                     {item.discountedPrice && (
@@ -383,7 +414,8 @@ const PublicItem: React.FC = () => {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.3, type: 'spring' }}
-                  style={{ position: 'absolute', bottom: -16, left: -16, background: '#16A34A', color: '#fff', borderRadius: 16, padding: '12px 24px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}
+                  // مع المعرض ينتقل إلى أعلى الصورة — أسفلها صارت المصغّرات
+                  style={{ position: 'absolute', ...(itemImages.length > 1 ? { top: 12, left: 12 } : { bottom: -16, left: -16 }), zIndex: 3, background: '#16A34A', color: '#fff', borderRadius: 16, padding: '12px 24px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}
                 >
                   <div style={{ fontSize: 12, opacity: 0.9 }}>السعر</div>
                   <div style={{ fontSize: 22, fontWeight: 700 }}>{formatPrice(totalPrice)} ل.س</div>

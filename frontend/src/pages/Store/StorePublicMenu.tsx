@@ -43,6 +43,9 @@ import OrderTrackingModal from '@/components/OrderTrackingModal';
 import ShopLayout from '@/components/storefront/ShopLayout';
 import ProductGridCard, { StorefrontProduct } from '@/components/storefront/ProductGridCard';
 import CartSheet, { StorefrontOrderType, StorefrontPaymentMethod } from '@/components/storefront/CartSheet';
+import { useCheckoutExtras, readCheckoutOptions, GiftBanner } from '@/components/storefront/checkout/CheckoutExtras';
+import OrderPlacedSheet, { PlacedOrder } from '@/components/storefront/checkout/OrderPlacedSheet';
+import type { WaOrderLine } from '@/utils/whatsapp';
 import BottomCartBar from '@/components/storefront/BottomCartBar';
 import BottomSheet from '@/components/storefront/BottomSheet';
 import ProductOptionsSheet, {
@@ -56,6 +59,8 @@ import useCatalogSearch from '@/hooks/useCatalogSearch';
 import StorefrontSeo from '@/components/storefront/StorefrontSeo';
 import PlatformBadge from '@/components/storefront/PlatformBadge';
 import { PickedLocation } from '@/components/storefront/LocationPickerMap';
+import DeliveryAddressFields from '@/components/storefront/DeliveryAddressFields';
+import useDeliveryAddress from '@/hooks/useDeliveryAddress';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
@@ -172,6 +177,9 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
   const [address, setAddress] = useState('');
   const [deliveryLocation, setDeliveryLocation] = useState<PickedLocation | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // الطلب الذي سُجّل للتوّ — تعرضه شاشة «تمّ تسجيل طلبك» بزرّ واتساب والتتبّع
+  const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
+  const [placedLines, setPlacedLines] = useState<WaOrderLine[]>([]);
 
   const [couponCode, setCouponCode] = useState('');
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -827,8 +835,16 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     [shippingZones, governorate]
   );
 
+  // العنوان المنظَّم (محافظة ← منطقة ← نقطة دالّة) حين يضبط التاجر مناطقه
+  const deliveryAddr = useDeliveryAddress({
+    slug: (store as any)?.slug || urlSlug,
+    zones: shippingZones,
+    subtotal: cartTotal - discountAmount
+  });
+
   const deliveryFee = useMemo(() => {
     if (orderType !== 'delivery') return 0;
+    if (deliveryAddr.enabled) return deliveryAddr.fee;
 
     // **المنطقة تغلب حساب المسافة:** التاجر الذي ضبط أجرة محافظته قصد
     // رقماً بعينه، وحسابُ المسافة فوقه يعطي رقماً ثالثاً لا هو اختاره
@@ -866,7 +882,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     } catch {
       return Math.round(base);
     }
-  }, [orderType, store, cartTotal, discountAmount, deliveryLocation, selectedZone, shippingZones]);
+  }, [orderType, store, cartTotal, discountAmount, deliveryLocation, selectedZone, shippingZones, deliveryAddr.enabled, deliveryAddr.fee]);
 
   // ---------- إرسال الطلب ----------
   const submitOrder = async () => {
@@ -899,7 +915,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       toast.error(t('الاسم ورقم الهاتف مطلوبان'));
       return;
     }
-    if (orderType === 'delivery' && !deliveryLocation && !address.trim()) {
+    if (orderType === 'delivery' && !deliveryAddr.enabled && !deliveryLocation && !address.trim()) {
       toast.error(t('حدّد موقع التوصيل أو اكتب العنوان'));
       return;
     }
@@ -943,7 +959,11 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         // الخادم يُعيد حسابها من المحافظة ولا يثق بما نرسله — هذه للعرض
         governorate: orderType === 'delivery' ? governorate || null : null,
         // يُتجاهَل بصمت إن كان منتهياً أو لنشاطٍ آخر — الخادم يتحقّق
-        referralCode: getRef((store as any)?.id) || undefined
+        referralCode: getRef((store as any)?.id) || undefined,
+        // يغلب حقول العنوان أعلاه حين تكون المناطق مضبوطة
+        ...(orderType === 'delivery' && deliveryAddr.enabled ? deliveryAddr.payload : {}),
+        // هدية المغترب — الخادم يتحقّق ويحسب؛ العربون لا يُرسَل بل يُحسب هناك
+        ...checkoutExtras.payload
       };
 
       const response: any = await api.post('/orders', orderData);
@@ -952,6 +972,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       toast.success(t('تم إرسال طلبك — يتابعه المتجر الآن 🎉'));
       // الرمز استُهلك: إبقاؤه ينسب كل طلبٍ لاحق للمسوّق نفسه
       clearRef((store as any)?.id);
+      if (orderType === 'delivery' && deliveryAddr.enabled) deliveryAddr.remember();
       clearCart();
       setCartOpen(false);
       setOrderNotes('');
@@ -967,10 +988,28 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       //
       // بدلها: تتبّع الطلب فوراً — وهو ما يريده الزبون بعد الضغط.
       fetchMyOrders();
-      setShowOrderTracking(true);
+      // شاشة «تمّ تسجيل طلبك» أوّلاً: رقم الطلب وزرّ واتساب وما يُدفع مسبقاً،
+      // ومنها إلى التتبّع. أسطر السلّة تُلتقط من `cart` — ما زال لقطة هذا
+      // الرسم رغم إفراغها أعلاه.
+      const created = response?.data || response;
+      if (created?.id) {
+        setPlacedLines(cart.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, extras: [i.size, ...(i.addons || [])].filter(Boolean).join('، ') || null })));
+        setPlacedOrder(created);
+        checkoutExtras.reset();
+      } else {
+        setShowOrderTracking(true);
+      }
     } catch (error: any) {
       console.error('Error submitting order:', error);
-      toast.error(error?.response?.data?.error || 'تعذّر إرسال الطلب، حاول مجدداً');
+      // بلا ردٍّ = الشبكة لا الخادم: نقول ذلك صراحةً، فالزبون لا يعيد الطلب
+      // عشر مرّات ظنّاً أن العطل في المتجر
+      toast.error(
+        error?.response?.data?.error ||
+          (!error?.response
+            ? t('لا اتصال بالإنترنت — لم يُرسل طلبك. سلّتك محفوظة، أعد المحاولة حين يعود الاتصال.')
+            : 'تعذّر إرسال الطلب، حاول مجدداً'),
+        { duration: 6000 }
+      );
     } finally {
       setSubmitting(false);
     }
@@ -1022,6 +1061,21 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
     }
   });
 
+  // إضافات إتمام الطلب (هدية المغترب، المعاينة، العربون) — قبل شاشات الحالة
+  // لأنها خطّاف. أنواع الطلب تُحسب هنا بنفس قاعدة `availableOrderTypes` أدناه.
+  const checkoutOptions = useMemo(() => readCheckoutOptions(store), [store]);
+  const checkoutExtras = useCheckoutExtras({
+    options: checkoutOptions,
+    items: cart,
+    products: products as any,
+    currency,
+    total: Math.max(0, cartTotal - discountAmount + deliveryFee),
+    customerPhone,
+    availableOrderTypes: store?.deliverySettings?.enableDelivery !== false ? ['delivery', 'takeaway'] : ['takeaway'],
+    orderType,
+    onOrderTypeChange: setOrderType
+  });
+
   // ---------- شاشات الحالة ----------
   if (loading) return <StorefrontSkeleton />;
 
@@ -1065,6 +1119,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
 
       <ShopLayout
         name={language.pick(store, 'name')}
+        verified={!!(store as any)?.verified}
         description={language.pick(store, 'description')}
         logo={store.logo}
         coverImage={store.coverImage}
@@ -1129,6 +1184,14 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
           />
         }
       >
+        {/* الإعلان والبانرات أعلى الصفحة حيث تُرى — والعروض تبقى بعد الشبكة.
+            تُخفى عند البحث أو التصفية: الزبون حينها يريد نتائجه لا إعلاناً */}
+        {!isSearching && !onlyDiscounted && activeCategory === 'all' && (
+          <div style={{ marginTop: 14 }}>
+            <PublicMarketingSections businessId={store.id} businessType="store" only={['announcement', 'banner']} />
+          </div>
+        )}
+
         {/* شريط الأدوات — البحث انتقل إلى الشريط العلوي الدائم */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
           <button
@@ -1183,6 +1246,17 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         )}
 
         </div>
+
+        {/* «اشترِ لأهلك في سوريا» — حين يفعّل التاجر هدايا المغتربين */}
+        {checkoutExtras.giftAvailable && !isSearching && (
+          <GiftBanner
+            onStart={() => {
+              checkoutExtras.setGift((g) => ({ ...g, enabled: true }));
+              if (cart.length > 0) setCartOpen(true);
+              else toast(t('أضف ما تريد إهداءه إلى السلة، ثمّ أكمل الطلب كهدية'), { icon: '🎁' });
+            }}
+          />
+        )}
 
         {/* ===== الأقسام الفرعية =====
             بطاقاتٌ مصوّرة لا شرائح نصّية — أوّلها «الكل» يعيد إلى الأب.
@@ -1287,7 +1361,7 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         {/* المحتوى التسويقي بعد الشبكة — لا يزاحم المنتجات */}
         {!isSearching && !onlyDiscounted && (
           <div style={{ marginTop: 28 }}>
-            <PublicMarketingSections businessId={store.id} businessType="store" limitPerSection={6} />
+            <PublicMarketingSections businessId={store.id} businessType="store" limitPerSection={6} only={['offer']} />
             <div style={{ marginTop: 24 }}>
               <PublicAdvertisements
                 businessId={store.id}
@@ -1467,6 +1541,20 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         shippingZones={shippingZones}
         governorate={governorate}
         onGovernorateChange={setGovernorate}
+        deliveryFields={
+          deliveryAddr.enabled ? (
+            <DeliveryAddressFields
+              state={deliveryAddr}
+              currency={currency}
+              businessLocation={
+                store.latitude && store.longitude
+                  ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+                  : undefined
+              }
+            />
+          ) : undefined
+        }
+        deliveryMissing={deliveryAddr.missing}
         discount={discountAmount}
         couponCode={couponCode}
         onCouponApply={applyCoupon}
@@ -1479,6 +1567,25 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         onPaymentMethodChange={setPaymentMethod}
         submitting={submitting}
         onSubmit={submitOrder}
+        extraSection={checkoutExtras.section}
+        summaryExtra={checkoutExtras.summary}
+        extraMissing={checkoutExtras.missing}
+        customerTitle={checkoutExtras.customerTitle}
+      />
+
+      {/* ==================== تمّ تسجيل الطلب ==================== */}
+      <OrderPlacedSheet
+        order={placedOrder}
+        lines={placedLines}
+        options={checkoutOptions}
+        merchantWhatsapp={store.whatsapp || store.phone}
+        shamCash={(store as any)?.paymentOptions?.shamCash || null}
+        currency={currency}
+        onClose={() => setPlacedOrder(null)}
+        onTrack={() => {
+          setPlacedOrder(null);
+          setShowOrderTracking(true);
+        }}
       />
 
       {/* ==================== خيارات المنتج ==================== */}

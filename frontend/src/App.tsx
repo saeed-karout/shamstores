@@ -15,6 +15,8 @@ import { isStorefrontHost } from './utils/subdomain';
 // frontend/src/pages/auth
 const EmailVerification = lazy(() => import('./pages/auth/EmailVerification'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+// «سوق شام ستورز» — صفحة عامّة مستقلّة، لا تُحمَّل مع الصفحة الرئيسية
+const SouqPage = lazy(() => import('./pages/souq/SouqPage'));
 // ==================== صفحات المالكين ====================
 const RestaurantDashboard = lazy(() => import('./pages/Owner/RestaurantDashboard'));
 const StoreDashboard = lazy(() => import('./pages/Owner/StoreDashboard'));
@@ -70,6 +72,7 @@ const CommentsPage = lazy(() => import('./pages/Owner/CommentsPage'));
 const CampaignsPage = lazy(() => import('./pages/Store/CampaignsPage'));
 const AutomationsPage = lazy(() => import('./pages/Store/AutomationsPage'));
 const ShippingZonesPage = lazy(() => import('./pages/Store/ShippingZonesPage'));
+const CodSettlementPage = lazy(() => import('./pages/Delivery/CodSettlementPage'));
 const PosPage = lazy(() => import('./pages/Store/PosPage'));
 const AffiliatesPage = lazy(() => import('./pages/Store/AffiliatesPage'));
 const AdminFeatures = lazy(() => import('./pages/Admin/AdminFeatures'));
@@ -77,6 +80,9 @@ const AdminBusinessMarketing = lazy(() => import('./pages/Admin/AdminBusinessMar
 const AdminAdvertisements = lazy(() => import('./pages/Admin/AdminAdvertisements'));
 const AdminSubscriptions = lazy(() => import('./pages/Admin/AdminSubscriptions'));
 const AdminContactMessages = lazy(() => import('./pages/Admin/AdminContactMessages'));
+const AdminVerifications = lazy(() => import('./pages/Admin/AdminVerifications'));
+const VerificationPage = lazy(() => import('./pages/Owner/VerificationPage'));
+const HelpCenterPage = lazy(() => import('./pages/Owner/HelpCenterPage'));
 // ==================== صفحات عامة ====================
 // **مؤجَّلة كبقيّة الصفحات، ولا استثناء لها.** كانت ساكنةً فتدخل الحزمة
 // الرئيسية ومعها framer-motion (١٢٨ ك.ب) — يحمّلها كلُّ زبونٍ يفتح متجراً
@@ -89,6 +95,8 @@ const PublicItem = lazy(() => import('./pages/PublicItem'));
 const PublicProduct = lazy(() => import('./pages/PublicProduct'));
 const RestaurantPage = lazy(() => import('./pages/RestaurantPage'));
 const DeliveryTracking = lazy(() => import('./pages/DeliveryTracking'));
+// تتبّع الطلب العامّ — كان على النطاق الفرعي وحده، فرابط التتبّع لمتجرٍ بلا نطاقٍ فرعي (وكلّ رابطٍ محلياً) يقع على 404
+const TrackOrderPage = lazy(() => import('./pages/TrackOrder'));
 const DriverDashboard = lazy(() => import('./pages/DriverDashboard'));
 const MaintenancePage = lazy(() => import('./pages/MaintenancePage'));
 const AdminMarketingIndex = lazy(() => import('./pages/Admin/AdminMarketingIndex'));
@@ -258,8 +266,12 @@ const MainApp: React.FC = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        {/* قبل `/:slug` وإلا عُومل «souq» معرّفَ متجر — والاسم محجوز في الخادم */}
+        <Route path="/souq" element={<SouqPage />} />
+        <Route path="/souq/:gov" element={<SouqPage />} />
         <Route path="/delivery/login" element={<DeliveryLogin />} />
         <Route path="/orders/:orderId/track" element={<DeliveryTracking />} />
+        <Route path="/track/:orderId" element={<TrackOrderPage />} />
         <Route path="/maintenance" element={<MaintenancePage />} />
 
         {/* ==================== الحساب — لكل من سجّل دخوله ==================== */}
@@ -318,6 +330,9 @@ const MainApp: React.FC = () => {
             <Route path="/restaurant/automations" element={<AutomationsPage />} />
             <Route path="/store/shipping" element={<ShippingZonesPage />} />
             <Route path="/restaurant/shipping" element={<ShippingZonesPage />} />
+            {/* تسوية التحصيل — للمالك وفي «النموّ» فما فوق؛ الحارس في الخادم */}
+            <Route path="/store/cod-settlement" element={<CodSettlementPage />} />
+            <Route path="/restaurant/cod-settlement" element={<CodSettlementPage />} />
             {/* الحارس في الخادم لا هنا: `pos` إضافة مدفوعة تُفحص على كل مسار */}
             <Route path="/store/pos" element={<PosPage />} />
             <Route path="/restaurant/pos" element={<PosPage />} />
@@ -328,6 +343,9 @@ const MainApp: React.FC = () => {
             <Route path="/store/qr-codes" element={<PlanRoute feature="tableQr"><StoreQRCodesPage /></PlanRoute>} />
             <Route path="/store/marketing" element={<PlanRoute feature="marketing"><BusinessMarketing /></PlanRoute>} />
             <Route path="/store/plans" element={<StorePlansPage />} />
+            {/* «تاجر موثّق» ومركز المساعدة — مجانيّان لكل الخطط، فلا PlanRoute */}
+            <Route path="/verification" element={<VerificationPage />} />
+            <Route path="/help" element={<HelpCenterPage />} />
           </Route>
         </Route>
 
@@ -359,6 +377,7 @@ const MainApp: React.FC = () => {
             <Route path="/admin/advertisements" element={<AdminAdvertisements />} />
             <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
             <Route path="/admin/contact-messages" element={<AdminContactMessages />} />
+            <Route path="/admin/verifications" element={<AdminVerifications />} />
             <Route path="/admin/marketing" element={<AdminMarketingIndex />} />
             <Route path="/admin/business/:type/:id/marketing" element={<AdminBusinessMarketing />} />
           </Route>

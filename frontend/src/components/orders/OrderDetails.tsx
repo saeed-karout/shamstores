@@ -33,7 +33,8 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { formatPrice, DEFAULT_CURRENCY } from '@/utils/currency';
-import OrderPrintActions from '@/components/orders/OrderPrintActions';
+import OrderCheckoutPanel from '@/components/orders/OrderCheckoutPanel';
+import { DeliveryAddressView, CodCollectionCard } from '@/components/orders/OrderDeliveryInfo';
 
 const C = {
   bg: '#F4F7F4',
@@ -197,7 +198,8 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onUpdateStatus, onUp
           )}
         </div>
         {/* فاتورةٌ للزبون وملصقٌ للطرد — بنقرةٍ من تفاصيل الطلب */}
-        <OrderPrintActions order={order as any} />
+        {/* الطباعة داخل اللوحة: تطبع حالة الدفع بعد «تم استلام الدفعة» والعربون لا لقطة القائمة القديمة */}
+        <OrderCheckoutPanel order={order as any} withPrint />
       </div>
 
       <div style={{ padding: 18 }}>
@@ -260,12 +262,15 @@ const OrderDetails: React.FC<OrderDetailsProps> = ({ order, onUpdateStatus, onUp
                   <IoCall size={14} /> {order.customerPhone}
                 </a>
               )}
-              {(order.deliveryAddress || order.deliveryLocation) && (
+              {(order.deliveryAddress || order.deliveryLocation) && !(order as any).deliveryDetails && (
                 <div style={{ color: C.muted, fontSize: 12.5, marginTop: 8, display: 'flex', gap: 6, lineHeight: 1.8 }}>
                   <IoLocation size={14} style={{ flexShrink: 0, marginTop: 3 }} />
                   {order.deliveryAddress || order.deliveryLocation}
                 </div>
               )}
+              {/* العنوان المنظَّم وتسجيل التحصيل — components/orders/OrderDeliveryInfo */}
+              <DeliveryAddressView order={order as any} />
+              <CodCollectionCard order={order as any} />
             </div>
           </>
         )}

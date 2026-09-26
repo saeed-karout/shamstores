@@ -53,6 +53,8 @@ firebase-adminsdk*.json
 # ==================== Backend ====================
 backend/uploads/
 backend/temp/
+# وثائق توثيق التجّار في التطوير المحلي — هويّات، لا تُرفع إلى git
+backend/private-uploads/
 backend/dist/
 
 # ==================== Frontend ====================

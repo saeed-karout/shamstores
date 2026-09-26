@@ -2,20 +2,23 @@
 //
 // التعليقات على المنتجات والوجبات — `/api/comments`.
 //
-// **شطران في ملفٍ واحد:** عامٌّ يقرأ ويكتب بلا حساب، وإشرافٌ للتاجر. جمعُهما
+// **شطران في ملفٍ واحد:** عامٌّ يقرأه الجميع ويكتب فيه الزبون المسجَّل،
+// وإشرافٌ للتاجر. جمعُهما
 // هنا يُبقي قواعد الشيء الواحد في مكانٍ واحد؛ وكلّ مسار إشرافٍ يحمل حرّاسه
 // بنفسه بدل `router.use` كي لا يُغلق الشطر العامّ بالخطأ.
 
-import { Router } from 'express';
-import rateLimit, { Options } from 'express-rate-limit';
+import { Router, Request } from 'express';
+import rateLimit, { Options, ipKeyGenerator } from 'express-rate-limit';
 import { authenticate, authorize, requireStaffPermission } from '../middleware/auth';
 import { optionalAuthenticate } from '../middleware/optionalAuth';
 import env from '../config/env';
+import { AuthRequest } from '../types';
 import {
   getProductComments,
   getMenuItemComments,
   createProductComment,
   createMenuItemComment,
+  setCommentReaction,
   getManageComments,
   replyToComment,
   setCommentVisibility,
@@ -36,8 +39,8 @@ const commentLimiter = rateLimit({
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  // المرفوض (اسمٌ ناقص، روابط كثيرة) لا يُحتسب: لم يُكتب صفّ، والزبون
-  // الذي نسي اسمه لا يجوز أن يستنفد حصّته في تصحيح نموذجه
+  // المرفوض (نصٌّ قصير، روابط كثيرة، ضيفٌ بلا حساب) لا يُحتسب: لم يُكتب
+  // صفّ، ومن يصحّح نموذجه لا يجوز أن يستنفد حصّته
   skipFailedRequests: true,
   skip: () => env.DISABLE_RATE_LIMIT,
   handler: (_req, res) => {
@@ -49,13 +52,34 @@ const commentLimiter = rateLimit({
   }
 } as Partial<Options>);
 
+/**
+ * حدّ التفاعل: ستّون نقرة إعجابٍ كلّ عشر دقائق لكل حساب.
+ *
+ * بالحساب لا بالعنوان: زبائن مقهى واحد يتشاركون عنواناً، وحسابٌ واحد يتنقّل
+ * بين الشبكات. والستّون تتّسع لمن يقرأ نقاشاً طويلاً ويبدّل رأيه، وتضيق على
+ * سكربتٍ ينفخ عدّاداً.
+ */
+const reactionLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req: Request) => (req as AuthRequest).user?.id || ipKeyGenerator(req.ip || ''),
+  skip: () => env.DISABLE_RATE_LIMIT,
+  handler: (_req, res) => {
+    res.status(429).json({ success: false, error: 'تفاعلاتٌ كثيرة في وقتٍ قصير. حاول بعد دقائق.', retryAfter: true });
+  }
+} as Partial<Options>);
+
 // ==================== عامّ ====================
-// `optionalAuthenticate`: الزبون المسجَّل يعلّق باسم حسابه، والضيف باسمٍ
-// يكتبه — والرمز التالف يُعامَل ضيفاً لا مرفوضاً.
-router.get('/product/:productId', getProductComments);
-router.post('/product/:productId', commentLimiter, optionalAuthenticate, createProductComment);
-router.get('/menu-item/:menuItemId', getMenuItemComments);
-router.post('/menu-item/:menuItemId', commentLimiter, optionalAuthenticate, createMenuItemComment);
+// القراءة للجميع، و`optionalAuthenticate` فيها ليعرف القارئ المسجَّل أيّ
+// زرٍّ ضغطه — والرمز التالف يُعامَل ضيفاً لا مرفوضاً.
+// والكتابة والتفاعل بحسابٍ فقط (`authenticate`): الاسم يُؤخذ من الحساب.
+router.get('/product/:productId', optionalAuthenticate, getProductComments);
+router.post('/product/:productId', commentLimiter, authenticate, createProductComment);
+router.get('/menu-item/:menuItemId', optionalAuthenticate, getMenuItemComments);
+router.post('/menu-item/:menuItemId', commentLimiter, authenticate, createMenuItemComment);
+router.put('/:id/reaction', authenticate, reactionLimiter, setCommentReaction);
 
 // ==================== إشراف التاجر ====================
 // القراءة كالتقييمات والزبائن: المالك وموظّفوه. والكتابة (ردّ، إخفاء، حذف)

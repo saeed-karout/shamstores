@@ -54,7 +54,8 @@ const SOURCE_LABELS: Record<string, string> = {
   snapchat: 'سناب شات',
   google: 'غوغل',
   youtube: 'يوتيوب',
-  x: 'X'
+  x: 'X',
+  souq: 'سوق شام ستورز'
 };
 
 const VisitsPanel: React.FC<Props> = ({ period, colors: C }) => {

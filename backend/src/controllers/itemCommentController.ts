@@ -7,7 +7,12 @@
 // يأتي **قبل** الشراء («هل القماش يتمدّد؟»، «هل فيها مكسّرات؟»). حصرُه
 // بالمشترين يُسكت بالضبط الزبون الذي يحتاج الجواب ليشتري.
 //
-// **ولأنه مفتوح، فهو هدفٌ للإغراق.** ثلاث طبقات تحرسه:
+// **مفتوحٌ للقراءة، والكتابة بحساب.** كان الضيف يعلّق باسمٍ يكتبه، فصار
+// الاسم قناعاً: أيّ أحدٍ يكتب «أم محمد» أو اسم منافسٍ ويمدح أو يذمّ. الآن
+// الاسم من الحساب وحده، والضيف يقرأ ويُدعى للدخول. تعليقات الضيوف القديمة
+// تبقى معروضة (بلا `userId`) — حذفُها يمحو أسئلةً أُجيب عنها.
+//
+// **وهو هدفٌ للإغراق رغم الحساب** (الحسابات تُنشأ ببريدٍ مؤقّت). ثلاث طبقات:
 //   1. حدٌّ لكل عنوان IP في المسار (`itemCommentRoutes.ts`).
 //   2. تنقيةٌ هنا: لا HTML، لا محارف تحكّم، طولٌ محدود، وروابط قليلة —
 //      تعليقٌ بخمسة روابط إعلانٌ لا سؤال.
@@ -31,6 +36,8 @@ const BODY_MIN = 2;
 const BODY_MAX = 1000;
 const NAME_MIN = 2;
 const NAME_MAX = 60;
+/** قيم التفاعل المقبولة: إعجاب، عدم إعجاب، وصفرٌ يعني الإلغاء */
+const REACTION_VALUES = new Set([1, -1, 0]);
 /** أكثر من رابطين في تعليقٍ واحد = إعلانٌ غالباً */
 const MAX_LINKS = 2;
 /** النافذة التي يُرفض فيها النصّ نفسه على الصنف نفسه */
@@ -84,15 +91,28 @@ interface CommentRow {
   body: string;
   createdAt: Date;
   isMerchantReply: boolean;
+  likes: number;
+  dislikes: number;
 }
 
-/** ما يُعرض للعامّة — بلا معرّف الحساب ولا ما يدلّ عليه */
-const toPublic = (row: CommentRow) => ({
+/** تفاعل القارئ نفسه بكل تعليق — فارغٌ للضيف */
+type MyReactions = Map<string, number>;
+
+/**
+ * ما يُعرض للعامّة — بلا معرّف الحساب ولا ما يدلّ عليه.
+ *
+ * `myReaction` تفاعل القارئ وحده (1 أو ‎-1 أو 0): يلوّن زرّه، ولا يكشف من
+ * تفاعل غيره — العدّادان أرقامٌ لا قوائم أسماء.
+ */
+const toPublic = (row: CommentRow, mine?: MyReactions) => ({
   id: row.id,
   authorName: row.authorName,
   body: row.body,
   createdAt: row.createdAt,
-  isMerchantReply: row.isMerchantReply
+  isMerchantReply: row.isMerchantReply,
+  likes: Math.max(0, row.likes),
+  dislikes: Math.max(0, row.dislikes),
+  myReaction: mine?.get(row.id) ?? 0
 });
 
 const PUBLIC_SELECT = {
@@ -100,7 +120,9 @@ const PUBLIC_SELECT = {
   authorName: true,
   body: true,
   createdAt: true,
-  isMerchantReply: true
+  isMerchantReply: true,
+  likes: true,
+  dislikes: true
 } as const;
 
 // ==================== الصنف المستهدف ====================
@@ -161,23 +183,32 @@ const itemFilter = (kind: ItemKind, id: string) =>
 // ==================== عامّ: القراءة ====================
 
 /**
- * تعليقات صنفٍ — الظاهرة وحدها، الأحدث أولاً، وتحت كلٍّ ردودُه الظاهرة.
+ * تعليقات صنفٍ — الظاهرة وحدها، وتحت كلٍّ ردودُه الظاهرة.
+ *
+ * الترتيب `sort=newest` (الافتراضيّ) أو `sort=top` للأكثر إعجاباً — والتعادل
+ * يُحسم بالأحدث كي لا تتبدّل الصفحات بين طلبين.
  *
  * صفحاتٌ لا مؤشّر (`page`): العدد الكلّي يُعرض في العنوان («التعليقات ١٢»)
  * فنحسبه على أيّ حال، والإزاحة على عشرات الصفوف رخيصة.
+ *
+ * **تفاعل القارئ باستعلامٍ واحد** لكل الصفحة (التعليقات وردودها معاً)، لا
+ * استعلامٌ لكل تعليق — القاعدة في الإنتاج بعشرة اتصالاتٍ فقط.
  */
 const listForItem = (kind: ItemKind) => async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = String(req.params.productId || req.params.menuItemId || '');
     const page = toInt(req.query.page, 1, 10_000);
     const limit = toInt(req.query.limit, PUBLIC_PAGE_DEFAULT, PUBLIC_PAGE_MAX);
+    const sortTop = req.query.sort === 'top';
 
     const where = { ...itemFilter(kind, id), parentId: null, isHidden: false };
 
     const [rows, total] = await Promise.all([
       prisma.itemComment.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: sortTop
+          ? [{ likes: 'desc' as const }, { createdAt: 'desc' as const }]
+          : { createdAt: 'desc' as const },
         skip: (page - 1) * limit,
         take: limit,
         select: {
@@ -189,10 +220,26 @@ const listForItem = (kind: ItemKind) => async (req: AuthRequest, res: Response):
       prisma.itemComment.count({ where })
     ]);
 
+    let mine: MyReactions | undefined;
+    if (req.user?.id && rows.length) {
+      const ids = rows.flatMap((row) => [row.id, ...row.replies.map((r) => r.id)]);
+      const reactions = await prisma.itemCommentReaction.findMany({
+        where: { userId: req.user.id, commentId: { in: ids } },
+        select: { commentId: true, value: true }
+      });
+      mine = new Map(reactions.map((r) => [r.commentId, r.value]));
+    }
+
+    // ردٌّ يختلف باختلاف القارئ لا يجوز أن تخزّنه وسيطةٌ مشتركة
+    if (req.user?.id) res.setHeader('Cache-Control', 'private, no-store');
+
     res.json({
       success: true,
       data: {
-        comments: rows.map((row) => ({ ...toPublic(row), replies: row.replies.map(toPublic) })),
+        comments: rows.map((row) => ({
+          ...toPublic(row, mine),
+          replies: row.replies.map((r) => toPublic(r, mine))
+        })),
         total,
         page,
         limit,
@@ -211,10 +258,13 @@ export const getMenuItemComments = listForItem('menuItem');
 // ==================== عامّ: الكتابة ====================
 
 /**
- * تعليقٌ جديد — من ضيفٍ باسمٍ يكتبه، أو من زبونٍ مسجَّل باسم حسابه.
+ * تعليقٌ جديد — من زبونٍ مسجَّل وحده، باسم حسابه.
  *
- * **اسم الحساب يغلب ما يُكتب:** المسجَّل لا يحتاج أن يكتب اسمه، ولو سُمح له
- * بتغييره لصار الحساب قناعاً يعلّق خلفه بأسماء غيره.
+ * **الاسم من الحساب لا من الجسم:** لو قُبل اسمٌ مكتوب لصار الحساب قناعاً
+ * يعلّق خلفه صاحبه بأسماء غيره. و`authorName` في الجسم يُتجاهَل تماماً.
+ *
+ * **وصاحب النشاط لا يعلّق على صنفه كزبون:** تعليقه يظهر بلا شارة المتجر
+ * فيبدو مديحاً من زبون. جوابه مكانه «الردّ» من اللوحة، بشارةٍ واضحة.
  */
 const createForItem = (kind: ItemKind) => async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -234,30 +284,35 @@ const createForItem = (kind: ItemKind) => async (req: AuthRequest, res: Response
       return;
     }
 
-    // الاسم: من الحساب إن وُجد، وإلا ممّا كتبه الضيف
-    let userId: string | null = null;
-    let authorName = '';
-    if (req.user?.id) {
-      const account = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, name: true } });
-      if (account) {
-        userId = account.id;
-        authorName = sanitize(account.name, NAME_MAX);
-      }
-    }
-    if (!authorName) authorName = sanitize(req.body?.authorName, NAME_MAX);
-
-    if (authorName.length < NAME_MIN) {
-      res.status(400).json({ success: false, error: 'اكتب اسمك ليظهر مع تعليقك' });
+    // المسار خلف `authenticate` — والفحص هنا حارسٌ ثانٍ لو نُقل المعالج
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'سجّل الدخول لتعلّق', requiresLogin: true });
       return;
     }
-    if (countLinks(authorName) > 0) {
-      res.status(400).json({ success: false, error: 'الاسم لا يقبل روابط' });
+    const account = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, name: true } });
+    if (!account) {
+      res.status(401).json({ success: false, error: 'سجّل الدخول لتعلّق', requiresLogin: true });
+      return;
+    }
+    const userId = account.id;
+    const authorName = sanitize(account.name, NAME_MAX);
+
+    if (authorName.length < NAME_MIN || countLinks(authorName) > 0) {
+      res.status(400).json({ success: false, error: 'أضف اسمك في صفحة حسابك ليظهر مع تعليقك' });
       return;
     }
 
     const target = await resolveTarget(kind, id);
     if (!target) {
       res.status(404).json({ success: false, error: 'الصنف غير متاح للتعليق' });
+      return;
+    }
+
+    const ownBusiness =
+      (target.storeId && req.user.storeId === target.storeId) ||
+      (target.restaurantId && req.user.restaurantId === target.restaurantId);
+    if (ownBusiness) {
+      res.status(403).json({ success: false, error: 'ردّ على زبائنك من «التعليقات» في لوحة التحكّم' });
       return;
     }
 
@@ -309,6 +364,108 @@ const createForItem = (kind: ItemKind) => async (req: AuthRequest, res: Response
 
 export const createProductComment = createForItem('product');
 export const createMenuItemComment = createForItem('menuItem');
+
+// ==================== عامّ: الإعجاب ====================
+
+/** تعارضٌ عابر: طلبٌ متزامنٌ من الحساب نفسه غيّر التفاعل قبلنا */
+class ReactionRace extends Error {}
+
+/**
+ * يضع تفاعل القارئ على تعليق: `value` = 1 إعجاب، ‎-1 عدم إعجاب، 0 إلغاء.
+ *
+ * **صريحٌ لا تبديل:** الواجهة ترسل الحالة المقصودة لا «اقلب» — فنقرتان من
+ * تبويبين تنتهيان بما قصده صاحبهما، وإعادة الطلب بعد انقطاعٍ لا تعكسه.
+ *
+ * **العدّادان يُحدَّثان بالفرق في المعاملة نفسها:** من إعجابٍ إلى عدمه =
+ * likes‎-1 وdislikes+1. والتحديث مشروطٌ بالقيمة القديمة (`updateMany`
+ * بـ`value` السابقة) — فطلبان متزامنان من الحساب نفسه لا يطرحان مرّتين:
+ * الثاني لا يجد الصفّ بقيمته القديمة فيُعاد مرّةً على الحالة الجديدة.
+ * والإنشاء يحرسه القيد الفريد (P2002) بالطريقة نفسها.
+ */
+export const setCommentReaction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, error: 'سجّل الدخول لتتفاعل مع التعليقات', requiresLogin: true });
+      return;
+    }
+    const userId = req.user.id;
+    const value = Number(req.body?.value);
+    if (!REACTION_VALUES.has(value)) {
+      res.status(400).json({ success: false, error: 'تفاعلٌ غير صالح' });
+      return;
+    }
+
+    // تعليقٌ ظاهر، وأصله ظاهرٌ إن كان ردّاً — المخفيّ لا يُعرض فلا يُتفاعَل معه
+    const comment = await prisma.itemComment.findFirst({
+      where: {
+        id: req.params.id,
+        isHidden: false,
+        OR: [{ parentId: null }, { parent: { isHidden: false } }]
+      },
+      select: { id: true }
+    });
+    if (!comment) {
+      res.status(404).json({ success: false, error: 'التعليق غير موجود' });
+      return;
+    }
+
+    const apply = () => prisma.$transaction(async (tx) => {
+      const existing = await tx.itemCommentReaction.findUnique({
+        where: { commentId_userId: { commentId: comment.id, userId } },
+        select: { value: true }
+      });
+      const old = existing?.value ?? 0;
+      if (old === value) return;
+
+      if (value === 0) {
+        const { count } = await tx.itemCommentReaction.deleteMany({ where: { commentId: comment.id, userId, value: old } });
+        if (count === 0) throw new ReactionRace();
+      } else if (old === 0) {
+        await tx.itemCommentReaction.create({ data: { commentId: comment.id, userId, value } });
+      } else {
+        const { count } = await tx.itemCommentReaction.updateMany({
+          where: { commentId: comment.id, userId, value: old },
+          data: { value }
+        });
+        if (count === 0) throw new ReactionRace();
+      }
+
+      const likesDelta = (value === 1 ? 1 : 0) - (old === 1 ? 1 : 0);
+      const dislikesDelta = (value === -1 ? 1 : 0) - (old === -1 ? 1 : 0);
+      await tx.itemComment.update({
+        where: { id: comment.id },
+        data: { likes: { increment: likesDelta }, dislikes: { increment: dislikesDelta } },
+        select: { id: true }
+      });
+    });
+
+    try {
+      await apply();
+    } catch (err: any) {
+      if (!(err instanceof ReactionRace) && err?.code !== 'P2002') throw err;
+      // محاولةٌ ثانية واحدة على الحالة الجديدة — لا حلقة إعادة (سقف الاتصالات)
+      await apply();
+    }
+
+    const fresh = await prisma.itemComment.findUnique({
+      where: { id: comment.id },
+      select: { likes: true, dislikes: true }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        id: comment.id,
+        likes: Math.max(0, fresh?.likes ?? 0),
+        dislikes: Math.max(0, fresh?.dislikes ?? 0),
+        myReaction: value
+      }
+    });
+  } catch (error) {
+    console.error('setCommentReaction failed:', error);
+    res.status(500).json({ success: false, error: 'تعذّر حفظ تفاعلك' });
+  }
+};
 
 // ==================== التاجر ====================
 
@@ -376,11 +533,16 @@ export const getManageComments = async (req: AuthRequest, res: Response): Promis
           isHidden: true,
           isMerchantReply: true,
           userId: true,
+          likes: true,
+          dislikes: true,
           product: { select: { id: true, name: true, imageUrl: true } },
           menuItem: { select: { id: true, name: true, image: true } },
           replies: {
             orderBy: { createdAt: 'asc' },
-            select: { id: true, authorName: true, body: true, createdAt: true, isHidden: true, isMerchantReply: true }
+            select: {
+              id: true, authorName: true, body: true, createdAt: true, isHidden: true, isMerchantReply: true,
+              likes: true, dislikes: true
+            }
           }
         }
       }),
@@ -401,6 +563,8 @@ export const getManageComments = async (req: AuthRequest, res: Response): Promis
           isMerchantReply: row.isMerchantReply,
           // التاجر يرى إن كان الكاتب ضيفاً — بلا هويّة الحساب نفسها
           isGuest: !row.userId,
+          likes: Math.max(0, row.likes),
+          dislikes: Math.max(0, row.dislikes),
           item: row.product
             ? { kind: 'product', id: row.product.id, name: row.product.name, image: row.product.imageUrl }
             : row.menuItem
@@ -474,7 +638,10 @@ export const replyToComment = async (req: AuthRequest, res: Response): Promise<v
         parentId: parent.id,
         isMerchantReply: true
       },
-      select: { id: true, authorName: true, body: true, createdAt: true, isHidden: true, isMerchantReply: true }
+      select: {
+        id: true, authorName: true, body: true, createdAt: true, isHidden: true, isMerchantReply: true,
+        likes: true, dislikes: true
+      }
     });
 
     res.status(201).json({ success: true, data: reply, message: 'نُشر الردّ' });
@@ -545,6 +712,7 @@ export default {
   getMenuItemComments,
   createProductComment,
   createMenuItemComment,
+  setCommentReaction,
   getManageComments,
   replyToComment,
   setCommentVisibility,

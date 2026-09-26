@@ -15,6 +15,7 @@ import {
   IoPerson,
   IoStatsChart,
   IoWallet,
+  IoCash,
   IoSettings,
   IoPricetag,
   IoRocket,
@@ -41,7 +42,9 @@ import {
   IoClose,
   IoRefresh,
   IoGrid,
-  IoChatbubblesOutline
+  IoChatbubblesOutline,
+  IoShieldCheckmark,
+  IoHelpBuoy
 } from 'react-icons/io5';
 import { BrandLogo } from '../marketing/Brand';
 import { useBusinessSummary } from '../../hooks/useBusinessSummary';
@@ -99,6 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
       { path: '/admin/branches', icon: IoGitBranch, label: 'الفروع' },
       { path: '/admin/stores', icon: IoStorefront, label: 'المتاجر' },
       { path: '/admin/contact-messages', icon: IoChatbubbleEllipses, label: 'رسائل التواصل' },
+      { path: '/admin/verifications', icon: IoShieldCheckmark, label: 'طلبات التوثيق', badge: 'جديد' },
       { path: '/admin/features', icon: IoRocket, label: 'الميزات', badge: 'جديد' },
       { path: '/admin/platform-settings', icon: IoSettings, label: 'إعدادات المنصة', badge: 'جديد' },
       { path: '/admin/subscriptions', icon: IoDiamond, label: 'الاشتراكات', badge: 'جديد' },
@@ -147,6 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
     items.push({ path: '/restaurant/pos', icon: IoCard, label: 'الكاشير', badge: 'جديد' });
     items.push({ path: '/restaurant/affiliates', icon: IoTrendingUp, label: 'المسوّقون', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });
+    items.push({ path: '/restaurant/cod-settlement', icon: IoCash, label: 'تسوية التحصيل', badge: 'جديد' });
     if (hasDelivery) items.push({ path: '/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
     if (hasDelivery) items.push({ path: '/drivers', icon: IoCar, label: 'السائقين' });
     if (hasMarketing) items.push({ path: '/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
@@ -157,6 +162,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
     // إخفاؤها يحمي الواجهة من الفوضى ويكلّف كل فرصة ترقية.
     items.push({ path: '/features', icon: IoSparkles, label: 'الميزات', badge: 'جديد' });
     items.push({ path: '/plans', icon: IoRocket, label: 'الخطط' });
+    items.push({ path: '/verification', icon: IoShieldCheckmark, label: 'توثيق النشاط', badge: 'جديد' });
+    items.push({ path: '/help', icon: IoHelpBuoy, label: 'مركز المساعدة' });
     items.push({ path: '/profile', icon: IoPerson, label: 'حسابي' });
     items.push({ path: '/settings', icon: IoSettings, label: 'الإعدادات' });
     return items;
@@ -181,12 +188,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onOpen }) => {
     items.push({ path: '/store/pos', icon: IoCard, label: 'الكاشير', badge: 'جديد' });
     items.push({ path: '/store/affiliates', icon: IoTrendingUp, label: 'المسوّقون', badge: 'جديد' });
     items.push({ path: '/finance', icon: IoWallet, label: 'القسم المالي', badge: 'جديد' });
+    items.push({ path: '/store/cod-settlement', icon: IoCash, label: 'تسوية التحصيل', badge: 'جديد' });
     if (hasOnlineOrders) items.push({ path: '/store/delivery', icon: IoNavigate, label: 'طلبات التوصيل' });
     if (hasOnlineOrders) items.push({ path: '/store/drivers', icon: IoCar, label: 'السائقين' });
     if (hasTableQr) items.push({ path: '/store/qr-codes', icon: IoQrCode, label: 'رموز QR' });
     if (hasMarketing) items.push({ path: '/store/marketing', icon: IoMegaphone, label: 'التسويق', badge: 'جديد' });
     items.push({ path: '/features', icon: IoSparkles, label: 'الميزات', badge: 'جديد' });
     items.push({ path: '/store/plans', icon: IoRocket, label: 'الخطط' });
+    items.push({ path: '/verification', icon: IoShieldCheckmark, label: 'توثيق النشاط', badge: 'جديد' });
+    items.push({ path: '/help', icon: IoHelpBuoy, label: 'مركز المساعدة' });
     items.push({ path: '/profile', icon: IoPerson, label: 'حسابي' });
     items.push({ path: '/store/settings', icon: IoSettings, label: 'الإعدادات' });
     return items;
@@ -359,14 +369,14 @@ const OWNER_GROUPS: Array<{ title: string; paths: string[] }> = [
   { title: 'البيع', paths: ['/orders', '/store/orders', '/restaurant/pos', '/store/pos', '/tables', '/qr-codes', '/store/qr-codes', '/delivery', '/store/delivery', '/drivers', '/store/drivers'] },
   { title: 'الكتالوج', paths: ['/menu', '/store/products', '/store/inventory'] },
   { title: 'الزبائن والتسويق', paths: ['/restaurant/customers', '/store/customers', '/restaurant/comments', '/store/comments', '/coupons', '/store/coupons', '/restaurant/campaigns', '/store/campaigns', '/restaurant/automations', '/store/automations', '/restaurant/affiliates', '/store/affiliates', '/marketing', '/store/marketing'] },
-  { title: 'التقارير', paths: ['/analytics', '/store/analytics', '/finance'] },
-  { title: 'الإعداد', paths: ['/restaurant/shipping', '/store/shipping', '/staff', '/store/staff', '/features', '/plans', '/store/plans', '/settings', '/store/settings', '/profile'] }
+  { title: 'التقارير', paths: ['/analytics', '/store/analytics', '/finance', '/store/cod-settlement', '/restaurant/cod-settlement'] },
+  { title: 'الإعداد', paths: ['/restaurant/shipping', '/store/shipping', '/staff', '/store/staff', '/features', '/plans', '/store/plans', '/verification', '/settings', '/store/settings', '/profile', '/help'] }
 ];
 
 const ADMIN_GROUPS: Array<{ title: string; paths: string[] }> = [
   { title: '', paths: ['/admin'] },
   { title: 'الأنشطة', paths: ['/admin/restaurants', '/admin/branches', '/admin/stores', '/admin/orders', '/admin/drivers', '/admin/qr-codes'] },
-  { title: 'الحسابات', paths: ['/admin/users', '/admin/staff', '/admin/contact-messages'] },
+  { title: 'الحسابات', paths: ['/admin/users', '/admin/staff', '/admin/verifications', '/admin/contact-messages'] },
   { title: 'الإيرادات', paths: ['/admin/plans', '/admin/subscriptions', '/admin/features'] },
   { title: 'المنصّة', paths: ['/admin/push-notifications', '/admin/advertisements', '/admin/platform-settings'] }
 ];

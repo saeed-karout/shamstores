@@ -20,6 +20,8 @@ import {
   IoBagHandleOutline,
   IoRefresh,
   IoSearch,
+  IoThumbsDownOutline,
+  IoThumbsUpOutline,
   IoTrashOutline
 } from 'react-icons/io5';
 import api from '../../services/api';
@@ -36,7 +38,23 @@ interface Reply {
   createdAt: string;
   isHidden: boolean;
   isMerchantReply: boolean;
+  likes?: number;
+  dislikes?: number;
 }
+
+/**
+ * عدّادا الإعجاب — للقراءة وحدها، فالتاجر لا يصوّت على زبائنه.
+ * يُخفى حين يكون صفراً: سطرٌ من «٠ ٠» تحت كل تعليقٍ ضجيجٌ لا معلومة.
+ */
+const Reactions: React.FC<{ likes?: number; dislikes?: number }> = ({ likes = 0, dislikes = 0 }) => {
+  if (!likes && !dislikes) return null;
+  return (
+    <span className="cm-reactions" aria-label={`${likes} إعجاب، ${dislikes} عدم إعجاب`}>
+      <span><IoThumbsUpOutline size={13} aria-hidden="true" /> {likes}</span>
+      <span><IoThumbsDownOutline size={13} aria-hidden="true" /> {dislikes}</span>
+    </span>
+  );
+};
 
 interface ManagedComment extends Reply {
   isGuest: boolean;
@@ -356,6 +374,7 @@ const CommentsPage: React.FC = () => {
                   </div>
 
                   <p className="cm-body">{c.body}</p>
+                  <Reactions likes={c.likes} dislikes={c.dislikes} />
 
                   {c.replies.length > 0 && (
                     <div className="cm-replies">
@@ -378,6 +397,7 @@ const CommentsPage: React.FC = () => {
                             </button>
                           </div>
                           <p>{r.body}</p>
+                          <Reactions likes={r.likes} dislikes={r.dislikes} />
                         </div>
                       ))}
                     </div>

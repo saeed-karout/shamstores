@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import api from '@/services/api';
 import { SkeletonScope, SkeletonLine, SkeletonCircle } from '@/components/common/Skeleton';
 import { getImageUrl } from '@/utils/imageHelpers';
+import TrackPaymentInfo from '@/components/storefront/checkout/TrackPaymentInfo';
 
 const C = {
   bg: '#082E24', card: '#112E23', surf: '#0F3D31', accent: '#C8E235',
@@ -94,8 +95,14 @@ const TrackOrder: React.FC = () => {
 
   const fetchOrder = async () => {
     try {
-      const response = await api.get(`/orders/${orderId}/track`);
-      setOrder(response);
+      const response: any = await api.get(`/orders/${orderId}/track`);
+      // الخادم يعيد `{ success, data }`، وحالات المخطّط (preparing/ready/
+      // delivering/served) تُطوى في خطوات الصفحة الأربع
+      const raw = response?.data || response;
+      const STEP: Record<string, OrderStatus['status']> = {
+        preparing: 'processing', ready: 'processing', delivering: 'shipped', served: 'delivered'
+      };
+      setOrder(raw ? { ...raw, status: STEP[raw.status] || raw.status } : raw);
       setError(null);
     } catch (err: any) {
       console.error('Error fetching order:', err);
@@ -383,16 +390,24 @@ const TrackOrder: React.FC = () => {
                     <p style={{ color: C.text, fontWeight: 500 }}>{product?.name || t('منتج')}</p>
                     <p style={{ color: C.muted, fontSize: 14 }}>الكمية: {item.quantity}</p>
                   </div>
-                  <p style={{ color: C.accent, fontWeight: 700 }}>{formatPrice(item.price * item.quantity)}</p>
+                  {!(order as any).pricesHidden && (
+                    <p style={{ color: C.accent, fontWeight: 700 }}>{formatPrice(item.price * item.quantity, (order as any).business?.currency)}</p>
+                  )}
                 </div>
               );
             })}
           </div>
-          <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: C.text, fontWeight: 700 }}>{t('الإجمالي')}</span>
-            <span style={{ color: C.accent, fontWeight: 700, fontSize: 18 }}>{formatPrice(order.total)}</span>
-          </div>
+          {/* هديةٌ طلب دافعها إخفاء الأسعار: لا إجمالي — الخادم لا يرسله أصلاً */}
+          {!(order as any).pricesHidden && (
+            <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: C.text, fontWeight: 700 }}>{t('الإجمالي')}</span>
+              <span style={{ color: C.accent, fontWeight: 700, fontSize: 18 }}>{formatPrice(order.total, (order as any).business?.currency)}</span>
+            </div>
+          )}
         </div>
+
+        {/* الهدية والعربون والأقساط والمعاينة */}
+        <TrackPaymentInfo order={order} t={t} colors={C} />
 
         {/* Dates */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24 }}>

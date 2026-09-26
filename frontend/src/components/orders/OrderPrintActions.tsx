@@ -12,7 +12,8 @@ import { printInvoice, printShippingLabel, PrintableOrder } from '@/utils/printO
 
 const OrderPrintActions: React.FC<{ order: PrintableOrder }> = ({ order }) => {
   const { data: business } = useBusinessSummary();
-  const shippable = !order.orderType || order.orderType === 'delivery';
+  // `shipping` أيضاً: طلبُ محافظةٍ بعيدة هو أحوج الطلبات إلى بوليصة
+  const shippable = !order.orderType || order.orderType === 'delivery' || order.orderType === 'shipping';
   const info = {
     name: business?.name || 'متجرنا',
     logo: business?.logo,

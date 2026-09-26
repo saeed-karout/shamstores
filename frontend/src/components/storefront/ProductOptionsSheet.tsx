@@ -52,6 +52,11 @@ interface Props {
   onConfirm: (result: OptionsResult) => void;
   /** تُستدعى حين يختار الزبون قيمة لها صورة — لتتبعها الصورة المعروضة */
   onPreviewImage?: (image: string) => void;
+  /**
+   * اختيارٌ سبق على الصفحة (لونٌ ضُغطت عيّنته فوق الصورة) — يبدأ به اللوح
+   * كي لا يختار الزبون اللون مرّتين. يُقرأ عند الفتح فقط.
+   */
+  initialSelection?: OptionSelection;
 }
 
 /** يقرأ الخيارات بأي شكل وصلت به — مصفوفة أو نص JSON */
@@ -81,7 +86,8 @@ const ProductOptionsSheet: React.FC<Props> = ({
   submitting,
   onClose,
   onConfirm,
-  onPreviewImage
+  onPreviewImage,
+  initialSelection
 }) => {
   const { t } = useT();
   const [selection, setSelection] = useState<OptionSelection>({});
@@ -97,9 +103,18 @@ const ProductOptionsSheet: React.FC<Props> = ({
       if (group.type === 'single' && group.required && group.values.length > 0) {
         initial[group.name] = group.values[0].label;
       }
+      // ما اختاره الزبون على الصفحة يغلب القيمة الأولى — إن كان قيمةً صالحة
+      const preset = initialSelection?.[group.name];
+      if (typeof preset === 'string' && group.values.some((v) => v.label === preset)) {
+        initial[group.name] = group.type === 'multi' ? [preset] : preset;
+      }
     });
     setSelection(initial);
     setQuantity(1);
+    // initialSelection خارج التبعيات عمداً: يتبدّل مع كل لونٍ يُختار داخل
+    // اللوح (المعرض يلحق اللون)، ولو أعاد التهيئة لمسح المقاس الذي اختاره
+    // الزبون قبل ثانية
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, options]);
 
   const priceDelta = useMemo(() => {

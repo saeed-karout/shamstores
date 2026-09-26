@@ -58,6 +58,10 @@
 .cm-reply-head b { color: #084835; font-size: 12.5px; }
 .cm-reply p { margin: 0; font-size: 13.5px; line-height: 1.75; color: #10231b; white-space: pre-wrap; overflow-wrap: anywhere; }
 
+/* عدّادا الإعجاب: رماديّان صغيران — مؤشّرٌ على ما يهمّ الزبائن، لا فعل */
+.cm-reactions { display: inline-flex; gap: 12px; font-size: 12px; color: #5f736a; font-variant-numeric: tabular-nums; }
+.cm-reactions > span { display: inline-flex; align-items: center; gap: 4px; }
+
 .cm-actions { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .cm-actions .pc-toggle { margin-inline-end: auto; }
 .cm-actions .pc-toggle:disabled { opacity: 0.5; cursor: wait; }
@@ -117,6 +121,7 @@
   .cm-row { padding: 16px 20px; grid-template-columns: minmax(0, 1fr) auto; column-gap: 20px; }
   .cm-row > .cm-head,
   .cm-row > .cm-body,
+  .cm-row > .cm-reactions,
   .cm-row > .cm-replies,
   .cm-row > .cm-composer { grid-column: 1; }
   .cm-row > .cm-actions { grid-column: 2; grid-row: 1 / span 3; align-self: start; flex-direction: column; align-items: stretch; }

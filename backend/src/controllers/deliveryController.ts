@@ -5,6 +5,7 @@ import { AuthRequest } from '../types';
 import prisma from '../services/prisma';
 import { emitOrderRealtimeEvent } from '../realtime/socket';
 import { pushToUser } from '../services/driverPush.service';
+import { recordFromDriver as recordCodFromDriver } from '../services/cod.service';
 
 // ==================== دوال مساعدة ====================
 
@@ -222,6 +223,17 @@ export const confirmPayment = async (
         ...(method && PAYMENT_METHODS.includes(method) ? { paymentMethod: method as any } : {})
       }
     });
+
+    // ما قبضه السائق يدخل تسوية التحصيل تلقائياً — `amountCollected`
+    // اختياريّ، وبدونه يُعتبر إجمالي الطلب. فشلُه لا يُفشل تأكيد الدفع:
+    // التاجر يستطيع تسجيله من لوحته، أمّا سائقٌ عالقٌ عند الباب فلا.
+    if (req.user?.role === 'delivery_driver' && driverId) {
+      try {
+        await recordCodFromDriver(orderId, driverId, req.body?.amountCollected, req.body?.collectionNote);
+      } catch (err) {
+        console.error('تعذّر تسجيل التحصيل في التسوية:', err);
+      }
+    }
 
     try {
       emitOrderRealtimeEvent({

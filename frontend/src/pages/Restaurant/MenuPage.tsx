@@ -14,6 +14,11 @@ import { IoAdd, IoPencil, IoTrash, IoEye, IoEyeOff, IoClose, IoSearch, IoLayersO
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { getImageUrl } from '@/utils/imageHelpers';
+import useUsdPricing from '@/hooks/useUsdPricing';
+import UsdPriceFields from '@/components/pricing/UsdPriceFields';
+import AiImportTool from '@/components/ai/AiImportTool';
+import AiDescribeButton from '@/components/ai/AiDescribeButton';
+import EnhanceImageButton from '@/components/ai/EnhanceImageButton';
 
 const C = {
   bg:     '#F4F7F4',
@@ -136,6 +141,11 @@ const MenuPage: React.FC = () => {
     image: '',
   });
 
+  // التسعير بالدولار — حقلٌ منفصل عن `itemForm` كي لا يمسّ وضع الليرة
+  const usdPricing = useUsdPricing();
+  const [priceUsd, setPriceUsd] = useState('');
+  // عنوان محرّكات البحث — يملؤه مساعد الوصف غالباً، ويعدّله التاجر
+  const [seoTitle, setSeoTitle] = useState('');
   const [itemForm, setItemForm] = useState({
     restaurantId: '',
     categoryId: '',
@@ -162,6 +172,8 @@ const MenuPage: React.FC = () => {
   };
 
   const resetItemForm = () => {
+    setPriceUsd('');
+    setSeoTitle('');
     setItemForm({
       restaurantId: selectedRestaurantId === 'all' ? (restaurant?.id || '') : selectedRestaurantId,
       categoryId: '', name: '', nameEn: '', description: '', descriptionEn: '',
@@ -222,6 +234,8 @@ const MenuPage: React.FC = () => {
     if (isStaff) { toast.error('ليس لديك صلاحية لإدارة العناصر'); return; }
     if (item) {
       setSelectedItem(item);
+      setSeoTitle((item as any).seoTitle || '');
+      setPriceUsd((item as any).priceUsd != null ? String((item as any).priceUsd) : '');
       setItemForm({
         restaurantId: item.restaurantId,
         categoryId: item.categoryId, name: item.name, nameEn: item.nameEn || '',
@@ -284,11 +298,13 @@ const MenuPage: React.FC = () => {
 
   const handleSaveItem = async () => {
     try {
-      if (!itemForm.name || !itemForm.price || !itemForm.categoryId) {
+      // بالدولار: الليرة معاينةٌ فقط، والخادم يعيد حسابها من `priceUsd`
+      const usdSyp = usdPricing.isUsd ? usdPricing.preview(priceUsd) : null;
+      if (!itemForm.name || !itemForm.categoryId || (usdPricing.isUsd ? !usdSyp : !itemForm.price)) {
         toast.error('يرجى إكمال جميع الحقول المطلوبة');
         return;
       }
-      const basePrice = parseFloat(itemForm.price) || 0;
+      const basePrice = usdSyp ?? (parseFloat(itemForm.price) || 0);
       const sizesObject: { [key: string]: number } = {};
       if (itemForm.hasSizes) {
         sizes.forEach(size => { if (size.name) sizesObject[size.name] = size.price > 0 ? size.price : basePrice; });
@@ -299,6 +315,7 @@ const MenuPage: React.FC = () => {
       }
       const data = {
         ...itemForm,
+        seoTitle,
         restaurantId: itemForm.restaurantId || selectedRestaurantId,
         price: basePrice,
         discountedPrice: itemForm.discountedPrice ? parseFloat(itemForm.discountedPrice) : null,
@@ -309,6 +326,7 @@ const MenuPage: React.FC = () => {
         calories: itemForm.calories ? parseInt(itemForm.calories) : null,
         sizes: itemForm.hasSizes ? sizesObject : null,
         addons: itemForm.hasAddons ? addonsObject : null,
+        ...(usdPricing.isUsd ? { priceUsd: parseFloat(priceUsd) } : {}),
       };
       if (!selectedItem && isOwner && menuItems.length >= permissions.getMaxItems()) {
         toast.error(`لقد تجاوزت الحد المسموح به من العناصر (${permissions.getMaxItems()})`);
@@ -514,6 +532,17 @@ const MenuPage: React.FC = () => {
             {catFilter === 'all' ? 'كلّ الأطباق' : categories.find((c) => c.id === catFilter)?.name || 'الأطباق'}
             <span>{visibleItems.length}</span>
           </h2>
+          {(isSuperAdmin || isOwner) && (
+            <div className="pc-section-tools">
+              <AiImportTool
+                kind="restaurant"
+                colors={{ text: C.text, muted: C.muted, card: C.card, surface: C.surf, border: C.border, accent: C.accent, bg: C.bg }}
+                onDone={refresh}
+                branchId={selectedRestaurantId && selectedRestaurantId !== 'all' ? selectedRestaurantId : undefined}
+                categories={categories.map((c) => c.name)}
+              />
+            </div>
+          )}
         </div>
 
         {visibleItems.length === 0 ? (
@@ -653,6 +682,22 @@ const MenuPage: React.FC = () => {
             <label style={labelStyle}>اسم العنصر (إنجليزي)</label>
             <input type="text" value={itemForm.nameEn} onChange={(e) => setItemForm({ ...itemForm, nameEn: e.target.value })} style={inputStyle} />
           </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <AiDescribeButton
+              name={itemForm.name}
+              price={itemForm.price}
+              category={categories.find((c) => c.id === itemForm.categoryId)?.name || null}
+              notes={itemForm.description}
+              imageUrl={itemForm.image || null}
+              hasExisting={!!(itemForm.description.trim() || itemForm.descriptionEn.trim())}
+              onApply={(copy) => {
+                setItemForm((f) => ({ ...f, description: copy.description, descriptionEn: copy.descriptionEn, nameEn: f.nameEn || copy.nameEn }));
+                if (copy.seoTitle) setSeoTitle(copy.seoTitle);
+              }}
+              plansHref="/plans"
+              colors={C}
+            />
+          </div>
           <div>
             <label style={labelStyle}>الوصف (عربي)</label>
             <textarea value={itemForm.description} onChange={(e) => setItemForm({ ...itemForm, description: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} />
@@ -661,6 +706,22 @@ const MenuPage: React.FC = () => {
             <label style={labelStyle}>الوصف (إنجليزي)</label>
             <textarea value={itemForm.descriptionEn} onChange={(e) => setItemForm({ ...itemForm, descriptionEn: e.target.value })} style={{ ...inputStyle, resize: 'vertical' }} rows={3} />
           </div>
+          <div>
+            <label style={labelStyle}>عنوان الصفحة في محرّكات البحث</label>
+            <input type="text" maxLength={90} value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} style={inputStyle} placeholder={`${itemForm.name || 'اسم الصنف'} | ${restaurant?.name || 'مطعمك'}`} />
+          </div>
+          {usdPricing.isUsd && usdPricing.config ? (
+            <UsdPriceFields
+              config={usdPricing.config}
+              preview={usdPricing.preview}
+              priceUsd={priceUsd}
+              onChange={(next) => next.priceUsd !== undefined && setPriceUsd(next.priceUsd)}
+              inputStyle={inputStyle}
+              labelStyle={labelStyle}
+              colors={C}
+              showOriginal={false}
+            />
+          ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={labelStyle}>السعر الأساسي (ل.س)</label>
@@ -671,6 +732,7 @@ const MenuPage: React.FC = () => {
               <input type="number" step="0.01" min="0" value={itemForm.discountedPrice} onChange={(e) => setItemForm({ ...itemForm, discountedPrice: e.target.value })} style={inputStyle} placeholder="0.00" />
             </div>
           </div>
+          )}
           <div>
             <label style={labelStyle}>رمز الصنف / الباركود</label>
             <input
@@ -745,7 +807,17 @@ const MenuPage: React.FC = () => {
             </div>
           </div>
           <div>
-            <label style={labelStyle}>الصورة</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>الصورة</label>
+              <EnhanceImageButton
+                imageUrl={itemForm.image || null}
+                colors={C}
+                onEnhanced={async (file) => {
+                  const result = await api.upload<{ imageUrl: string }>('/upload', file, 'items');
+                  setItemForm((f) => ({ ...f, image: result.imageUrl }));
+                }}
+              />
+            </div>
             <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'item')} style={inputStyle} disabled={uploading} />
             {uploading && <p style={{ fontSize: 13, color: C.accent, marginTop: 4 }}>جاري رفع الصورة...</p>}
             {itemForm.image && <img src={getImageUrl(itemForm.image)} alt="معاينة" style={{ width: 128, height: 128, objectFit: 'cover', marginTop: 8, borderRadius: 8 }} />}
