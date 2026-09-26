@@ -491,7 +491,11 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
     }
 
     const isDineInAtTable = orderType === 'dine_in' && !!tableId;
-    if (!isDineInAtTable && (!customerName.trim() || !customerPhone.trim())) {
+    // صاحب الحساب لا يُسأل عمّا نعرفه — إلا في الهدية (البيانات للمستلم)
+    const account = isAuthenticated && user && !checkoutExtras.giftOn ? { name: user.name, phone: (user as any).phone } : null;
+    const effectiveName = customerName.trim() || account?.name?.trim() || '';
+    const effectivePhone = customerPhone.trim() || account?.phone?.trim() || '';
+    if (!isDineInAtTable && (!effectiveName || !effectivePhone)) {
       toast.error(t('الاسم ورقم الهاتف مطلوبان'));
       return;
     }
@@ -511,8 +515,8 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
       const orderData = {
         restaurantId: restaurant?.id,
         tableId: tableId || null,
-        customerName: customerName.trim() || undefined,
-        customerPhone: customerPhone.trim() || undefined,
+        customerName: effectiveName || undefined,
+        customerPhone: effectivePhone || undefined,
         customerAddress: orderType === 'delivery' ? address.trim() : undefined,
         notes: orderNotes.trim() || undefined,
         items: cart.map((item) => ({
@@ -1167,6 +1171,7 @@ const RestaurantPublicMenu: React.FC<RestaurantPublicMenuProps> = ({
         summaryExtra={checkoutExtras.summary}
         extraMissing={checkoutExtras.missing}
         customerTitle={checkoutExtras.customerTitle}
+        account={isAuthenticated && user && !checkoutExtras.giftOn ? { name: user.name, phone: (user as any).phone } : null}
       />
 
       {/* ==================== تمّ تسجيل الطلب ==================== */}

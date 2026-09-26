@@ -911,7 +911,11 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       navigate('/user/login');
       return;
     }
-    if (!customerName.trim() || !customerPhone.trim()) {
+    // صاحب الحساب لا يُسأل عمّا نعرفه — إلا في الهدية (البيانات للمستلم)
+    const account = isAuthenticated && user && !checkoutExtras.giftOn ? { name: user.name, phone: (user as any).phone } : null;
+    const effectiveName = customerName.trim() || account?.name?.trim() || '';
+    const effectivePhone = customerPhone.trim() || account?.phone?.trim() || '';
+    if (!effectiveName || !effectivePhone) {
       toast.error(t('الاسم ورقم الهاتف مطلوبان'));
       return;
     }
@@ -933,8 +937,8 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
       // تفعلها منذ البداية. إلزام المتجر بتسجيل الدخول كان حاجزاً بلا سبب.
       const orderData = {
         storeId: store?.id,
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
+        customerName: effectiveName,
+        customerPhone: effectivePhone,
         notes: orderNotes.trim() || undefined,
         items: cart.map((item) => ({
           productId: item.id,
@@ -1571,6 +1575,16 @@ const StorePublicMenu: React.FC<StorePublicMenuProps> = ({
         summaryExtra={checkoutExtras.summary}
         extraMissing={checkoutExtras.missing}
         customerTitle={checkoutExtras.customerTitle}
+        account={isAuthenticated && user && !checkoutExtras.giftOn ? { name: user.name, phone: (user as any).phone } : null}
+        couponLoginRequired={!isAuthenticated}
+        onLoginRequest={() => {
+          try {
+            localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
+          } catch {
+            /* وضع التصفّح الخاص قد يمنع التخزين — الدخول يبقى ممكناً */
+          }
+          navigate('/user/login');
+        }}
       />
 
       {/* ==================== تمّ تسجيل الطلب ==================== */}

@@ -569,7 +569,12 @@ const EN: Record<string, string> = {
   'بانتظار الدفع': 'Awaiting payment',
   'جدول الأقساط': 'Installment plan',
   'القسط': 'Installment',
-  'مستحقّ': 'Due'
+  'مستحقّ': 'Due',
+
+  // بيانات صاحب الحساب في السلّة، والكوبون للمسجّلين
+  'يُرسَل الطلب باسم حسابك': 'Ordering with your account details',
+  'بيانات أخرى': 'Use other details',
+  'الكوبونات للمسجّلين — سجّل الدخول لتستخدم كود الخصم': 'Coupons are for signed-in customers — sign in to use a discount code'
 };
 
 export interface StorefrontI18n {

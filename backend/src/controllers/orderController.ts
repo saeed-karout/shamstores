@@ -295,7 +295,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
     }
 
     const {
-      tableId, customerName, customerPhone,
+      tableId, customerName: rawCustomerName, customerPhone: rawCustomerPhone,
       items: orderItemsData, notes, paymentMethod = 'cash',
       subtotal, couponCode, discountAmount, total,
       orderSource = 'restaurant',
@@ -310,6 +310,25 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
 
     if (!orderItemsData || !Array.isArray(orderItemsData) || orderItemsData.length === 0) {
       res.status(400).json({ success: false, error: 'الطلب يجب أن يحتوي على عناصر على الأقل' });
+      return;
+    }
+
+    // **الزبون المسجَّل لا يُسأل عمّا نعرفه.** اسمه وهاتفه من حسابه إن لم
+    // يكتب غيرهما — إلا في الهدية: هناك الاسم والهاتف للمستلم لا للدافع،
+    // وملؤهما من حساب الدافع يوصل الطلب إلى الشخص الخطأ.
+    const isGiftOrder = !!req.body?.gift && typeof req.body.gift === 'object' && req.body.gift.enabled !== false;
+    let customerName = typeof rawCustomerName === 'string' ? rawCustomerName.trim() : '';
+    let customerPhone = typeof rawCustomerPhone === 'string' ? rawCustomerPhone.trim() : '';
+    if (userId && !isGiftOrder && (!customerName || !customerPhone)) {
+      const account = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, phone: true } });
+      if (!customerName && account?.name) customerName = account.name;
+      if (!customerPhone && account?.phone) customerPhone = account.phone;
+    }
+
+    // الكوبون للمسجَّلين وحدهم: حدّ الاستخدام لكل زبون لا معنى له لضيفٍ بلا
+    // هوية — يعيد كتابة الكود بعدد ما شاء من الأسماء
+    if (couponCode && !userId) {
+      res.status(401).json({ success: false, error: 'سجّل الدخول لاستخدام كوبون الخصم', code: 'login_required_for_coupon' });
       return;
     }
 

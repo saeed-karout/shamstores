@@ -112,6 +112,14 @@ export interface CartSheetProps {
   extraMissing?: string[];
   /** عنوان قسم «بياناتك» — في طلب الهدية هي بيانات المستلم */
   customerTitle?: string;
+  /**
+   * الزبون المسجَّل — اسمه وهاتفه من حسابه فلا يُسأل عنهما. تمرّره الصفحة
+   * `null` في طلب الهدية: هناك البيانات للمستلم لا لصاحب الحساب.
+   */
+  account?: { name?: string | null; phone?: string | null } | null;
+  /** الكوبون للمسجَّلين — يُعرض بدل حقله تنبيهٌ وزرّ دخول */
+  couponLoginRequired?: boolean;
+  onLoginRequest?: () => void;
 }
 
 const REQUIRED_MARK = <span style={{ color: '#FF6B6B' }}>*</span>;
@@ -161,6 +169,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
   couponCode,
   onCouponApply,
   onCouponRemove,
+  account,
+  couponLoginRequired,
+  onLoginRequest,
   paymentOptions = null,
   paymentMethod = 'cash',
   onPaymentMethodChange,
@@ -173,6 +184,13 @@ const CartSheet: React.FC<CartSheetProps> = ({
 }) => {
   const { t, lang } = useT();
   const [couponInput, setCouponInput] = useState('');
+  // «بيانات أخرى»: صاحب الحساب يطلب لغيره دون أن تكون هدية (زميلٌ يستلم عنه)
+  const [useOtherContact, setUseOtherContact] = useState(false);
+  const accountName = account?.name?.trim() || '';
+  const accountPhone = account?.phone?.trim() || '';
+  const fromAccount = !!account && !useOtherContact && !!(accountName || accountPhone);
+  const showNameField = !fromAccount || !accountName;
+  const showPhoneField = !fromAccount || !accountPhone;
   const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   const subtotal = useMemo(
@@ -193,8 +211,8 @@ const CartSheet: React.FC<CartSheetProps> = ({
 
   const missing: string[] = [];
   if (items.length === 0) missing.push('السلة فارغة');
-  if (nameRequired && !customerName.trim()) missing.push('الاسم');
-  if (phoneRequired && !customerPhone.trim()) missing.push('رقم الهاتف');
+  if (nameRequired && showNameField && !customerName.trim()) missing.push('الاسم');
+  if (phoneRequired && showPhoneField && !customerPhone.trim()) missing.push('رقم الهاتف');
   if (addressRequired && !deliveryFields && !address.trim()) missing.push('عنوان التوصيل');
   if (addressRequired && deliveryFields) missing.push(...deliveryMissing);
   // تُطلب فقط حين يضبط المتجر مناطقه — وإلا منعنا الطلب في متاجر لم تُهيّأ
@@ -517,6 +535,39 @@ const CartSheet: React.FC<CartSheetProps> = ({
           <section style={{ marginBottom: 18 }}>
             <h4 style={sectionTitle}>{t(customerTitle || 'بياناتك')}</h4>
             <div style={{ display: 'grid', gap: 10 }}>
+              {fromAccount && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    padding: '11px 14px',
+                    borderRadius: sd.rCard,
+                    border: `1px solid ${sf.border}`,
+                    background: sf.surface
+                  }}
+                >
+                  <span style={{ display: 'grid', gap: 2, minWidth: 0 }}>
+                    <span style={{ color: sf.muted, fontSize: 12 }}>{t('يُرسَل الطلب باسم حسابك')}</span>
+                    <span style={{ color: sf.text, fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {accountName}
+                      {accountPhone && (
+                        <span style={{ color: sf.muted, fontWeight: 500, direction: 'ltr', unicodeBidi: 'isolate' }}> · {accountPhone}</span>
+                      )}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setUseOtherContact(true)}
+                    style={{ background: 'transparent', border: 'none', color: sf.accent, fontSize: 12.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+                  >
+                    {t('بيانات أخرى')}
+                  </button>
+                </div>
+              )}
+
+              {showNameField && (
               <div>
                 <label style={fieldLabel} htmlFor="sf-cart-name">
                   {t('الاسم')} {nameRequired && REQUIRED_MARK}
@@ -531,7 +582,9 @@ const CartSheet: React.FC<CartSheetProps> = ({
                   style={inputStyle}
                 />
               </div>
+              )}
 
+              {showPhoneField && (
               <div>
                 <label style={fieldLabel} htmlFor="sf-cart-phone">
                   {t('رقم الهاتف')} {phoneRequired && REQUIRED_MARK}
@@ -547,6 +600,7 @@ const CartSheet: React.FC<CartSheetProps> = ({
                   style={{ ...inputStyle, direction: 'ltr', textAlign: 'start' }}
                 />
               </div>
+              )}
 
               {orderType === 'delivery' && deliveryFields}
 
@@ -720,7 +774,47 @@ const CartSheet: React.FC<CartSheetProps> = ({
           {onCouponApply && (
             <section style={{ marginBottom: 18 }}>
               <h4 style={sectionTitle}>{t('كوبون خصم')}</h4>
-              {couponCode ? (
+              {couponLoginRequired && !couponCode ? (
+                <div
+                  role="note"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    padding: '11px 14px',
+                    borderRadius: sd.rCard,
+                    border: `1px dashed ${sf.border}`,
+                    background: sf.surface
+                  }}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: sf.muted, fontSize: 13, lineHeight: 1.6 }}>
+                    <IoTicketOutline size={16} style={{ flexShrink: 0 }} />
+                    {t('الكوبونات للمسجّلين — سجّل الدخول لتستخدم كود الخصم')}
+                  </span>
+                  {onLoginRequest && (
+                    <button
+                      type="button"
+                      onClick={onLoginRequest}
+                      style={{
+                        minHeight: 38,
+                        padding: '0 14px',
+                        borderRadius: sd.rButton,
+                        border: 'none',
+                        background: sf.accent,
+                        color: sf.onAccent,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    >
+                      {t('تسجيل الدخول')}
+                    </button>
+                  )}
+                </div>
+              ) : couponCode ? (
                 <div
                   style={{
                     display: 'flex',
